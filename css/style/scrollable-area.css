@@ -1,0 +1,73 @@
+
+  .scrollable-area {
+    max-width: 80%;  /* Narrower max-width */
+    overflow-x: auto;}
+
+  .scrollable-area {
+    max-width: 75%;  /* Slightly wider max-width */
+    overflow-x: auto;}
+
+  .scrollable-area {
+    max-width: 75%;  /* Slightly wider max-width */
+    overflow-x: auto;
+    padding-bottom: 30px !important;}
+
+  .scrollable-area .chapter {
+    margin-bottom: 40px !important;}
+    background: rgba(255, 255, 255, 0.7);}
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);}
+
+  .scrollable-area::-webkit-scrollbar {
+    width: 10px;}
+
+  .scrollable-area::-webkit-scrollbar-track {
+    background: transparent;}
+
+  .scrollable-area::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;}
+
+  .scrollable-area::-webkit-scrollbar-thumb:hover {
+    background: #555;}
+
+  .scrollable-area {
+    direction: rtl;  /* Moves the scrollbar to the left */
+    height: 570px;
+    width: 600px;
+    position: relative;
+    top: -21px;
+    text-decoration: none; /* Removes underline */
+    color: inherit; /* Inherits the color of the surrounding text */
+    overflow-y: auto;
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    }
+
+  .scrollable-area > * {
+    direction: ltr;  /* Keeps the content scrolling normally */}
+
+@media screen and (max-width: 600px) {
+  .scrollable-area {
+    max-width: 70%;
+    overflow-x: auto;}
+}
+  .scrollable-area .chapter {
+    margin-bottom: 30px !important;}
+
+@media screen and (max-width: 600px) {
+  .scrollable-area {
+    max-width: 75%;  /* Slightly wider max-width */
+    overflow-x: auto;
+    padding-bottom: 30px !important;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);}
+}
+@media screen and (max-width: 600px) {
+  .scrollable-area {
+    max-width: 75%;  /* Slightly wider max-width */
+    overflow-x: auto;
+    padding-bottom: 30px !important;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    mask-image: linear-gradient(to bottom, transparent, black 10%, black 90%, transparent);}

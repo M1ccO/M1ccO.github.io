@@ -1,0 +1,43 @@
+  
+
+.heading h1 {
+  text-align:center;
+  font-size:50px;
+  text-transform:uppercase;
+  color:#222;
+  letter-spacing: 6px;
+  font-family:"Playfair Display", serif;
+  font-weight:400;
+  width: 820px;
+  position: relative;
+  top: -400px;
+  left: 20px;
+}
+
+.heading h1 span {
+  margin-top: -17px;
+  font-size:15px;
+  color:#444;
+  word-spacing: 6px;
+  font-weight:normal;
+  letter-spacing: 13px;
+  text-transform: uppercase;
+  font-family:"Raleway", sans-serif;
+  font-weight:500;
+  display: grid;
+  grid-template-columns: 0.2fr max-content 0.2fr;
+  grid-template-rows: 27px 0;
+  grid-gap: 9px;
+  position: relative;
+  left: 94px;
+  align-items: center;
+}
+
+.heading h1 span:after, h1 span:before {
+  content: " ";
+  display: block;
+  border-bottom: 1px solid #ccc;
+  border-top: 1px solid #ccc;
+  height: 1px;
+  background-color:#f8f8f8;
+}

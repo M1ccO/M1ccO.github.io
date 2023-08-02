@@ -1,0 +1,115 @@
+
+   body {
+      font-family: 'Comic Sans MS', serif;
+      line-height: 1.6;}
+h1, h2 {
+      color: dark-red;
+      font-weight: bold;}
+
+h1 {
+      font-size: 30px;
+      color: black;}
+
+h2 {
+      font-size: 25px;
+      color: black;}
+
+p, li {
+      font-size: 18px;
+      color: black; /* Inherits the color of the surrounding text */
+      font-weight: bold;}
+table {
+      font-size: 18px;
+      color: black;
+      font-weight: bold;
+      border: 1px solid black;
+      width: 100%;}
+th {
+      background-color: purple;
+      color: white;}
+td {
+      background-color: green;
+      color: white;}
+.placeholder {
+      background-color: #eee;
+      padding: 10px;
+      margin: 10px 0;}
+
+.quote {
+      font-size: 20px;
+      color: black;}
+
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;}
+
+.placeholder {
+    background-color: rgba(204, 0, 0, 0.2);}
+
+body {
+   background: linear-gradient(to bottom, whitesmoke, #7c0000e8);
+
+@media screen and (max-width: 600px) {
+  body {
+    font-size: 20px;}
+h1 {
+    font-size: 32px;}
+h2 {
+    font-size: 28px;}
+p, li {
+    font-size: 20px;}
+.quote {
+    font-size: 22px;}
+/* Add any other styles you want to change for smaller screens here */}
+h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 24px;
+  }
+@media screen and (max-width: 600px) {
+  h1, h2 {
+    text-align: left;}
+}
+@media screen and (max-width: 600px) {
+  h1, h2 {
+    text-align: left !important;}
+@media screen and (max-width: 600px) {
+  h1, h2 {
+    text-align: left !important;
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;}
+
+.summary {
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);}
+
+.chapter-summary {
+    text-align: left !important;
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    max-width: 90%;}
+
+.chapter-summary h2 {
+    font-family: 'Comic Sans MS', sans-serif;  /* Comic Sans font */}
+
+.chapter-summary h2 {
+    font-family: 'Comic Sans MS', sans-serif;  /* Comic Sans font */}
+
+.chapter-summary {
+    text-align: left !important;
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    max-width: 90%;
+    font-family: 'Comic Sans MS', sans-serif !important;  /* Apply Comic Sans to all elements in .chapter-summary */}
+
+/* Increase font size for "Character Development" section */
+  .chapter-summary h2:contains('Character Development') {
+    font-size: 24px !important;}

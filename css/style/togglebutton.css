@@ -1,0 +1,26 @@
+  <style>
+/* Style the Toggle Chapters and Toggle Summary buttons */
+    .toggle-button {
+      font-size: 14px;
+      position: relative;
+      padding: 5px 10px;
+      margin-top: 10px;
+      top: -10px; /* Example: Adjust the left position as needed */
+      left: 15px; /* Example: Adjust the left position as needed */
+      }
+
+  .toggle-button {
+    font-size: 18px; /* Increase font size */
+    font-family: 'Roboto', sans-serif; /* Use a modern font */
+    padding: 10px 20px; /* Increase padding */
+    background-color: #f0f0f0; /* Add a subtle background color */
+    border: none; /* Remove border */
+    border-radius: 5px; /* Slightly round the corners */
+    transition: background-color 0.3s ease, color 0.3s ease; /* Add a transition effect for hover */
+
+.toggle-button:hover {
+    background-color: #e0e0e0; /* Change background color on hover */
+    cursor: pointer; /* Change cursor to pointer on hover */
+}
+
+  </style>
