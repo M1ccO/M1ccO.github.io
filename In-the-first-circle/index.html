@@ -1,0 +1,3587 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, white, #690000);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-height: 100vh;
+    overflow-x: hidden;
+    /* overflow-y: auto; */  /* to allow scrolling if the content is longer than the viewport */
+}
+
+.hidden {
+    display: none !important;
+}
+
+body, html {
+    overflow-x: hidden;
+}
+.highlight {
+    background-color: yellow;
+}
+
+.heading h1 {
+    text-align: center;
+    margin-left: 6vw;
+    font-size: 50px;
+    text-transform: uppercase;
+    color: #222;
+    letter-spacing: 6px;
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+    width: 86%;
+    position: relative;
+    top: 20px;
+}
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;
+}
+.heading h1 span {
+    margin-top: -17px;
+    margin-left: 0vw;
+    font-size: 15px;
+    color: #444;
+    word-spacing: 6px;
+    font-weight: normal;
+    letter-spacing: 13px;
+    text-transform: uppercase;
+    font-family: "Raleway", sans-serif;
+    font-weight: 500;
+    display: flex;
+    position: relative;
+    /* left: 94px; */
+    align-items: center;
+    justify-content: center;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+
+.scrollable-area {
+    display: flex;
+    height: 65vh;
+    position: relative;
+    top: 4vh;
+    text-decoration: none;
+    color: inherit;
+    overflow-y: auto;
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+    align-content: flex-start;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+p, li {
+    font-size: 18px;
+    color: black;
+    font-weight: bold;
+}
+
+.scrollable-area li {
+    position: relative;
+    left: 10px;
+    margin-bottom: 1em;
+}
+.scrollable-area li a {
+    text-decoration: none;
+    color: inherit;
+    left: 31px;
+    position: relative;
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+.scrollable-area ul {
+    padding-left: 0;
+    list-style-type: none; /* Remove default bullet points */
+}
+.scrollable-area li::before {
+    content: '\2022';
+    margin-right: 0px;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.scrollable-area li::before {
+    content: "•";
+    position: absolute;
+    left: 1em;
+}
+.scrollable-area li:hover::before {
+    transform: translateX(-10px); /* Moves the bullet point to the right on hover */
+}
+.scrollable-area li:hover a {
+    color: #8B0000; /* Changes the color to dark red on hover */
+    transform: scale(1.1); /* Enlarges the text on hover */
+}
+.scrollable-area::-webkit-scrollbar {
+    width: 10px;
+}
+.scrollable-area::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;
+}
+.scrollable-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollable-area::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.scrollable-area > * {
+    direction: ltr;
+}
+.scrollable-area {
+    width: 52%;
+    position: relative;
+    margin: auto;
+    top: 2vh;
+    overflow: auto;
+    padding-bottom: 30px !important;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    align-content: center;
+}
+
+.scrollable-area, .summary, #searchResults {
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
+    max-height: 99%; /* Adjust this value as needed */
+}
+
+
+
+body {
+    font-family: 'Comic Sans MS', serif;
+    line-height: 1.6;
+    /* overflow-x: scroll; */
+}
+.summary {
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.toggle-button {
+    font-size: 18px;
+    font-family: 'Roboto', sans-serif;
+    /* padding: 10px 20px; */
+    background-color: #ffffff;
+    border-block-start-width: 2px;
+    border-color: black;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.toggle-button {
+    font-size: 14px;
+    position: relative;
+    padding: 5px 10px;
+    margin-top: 10px;
+    top: -10px;
+    left: 1px;
+}
+.toggle-button:hover {
+    background-color: #e0e0e0; /* Change background color on hover */
+    cursor: pointer; /* Change cursor to pointer on hover */
+}
+p, li {
+    font-size: 20px;
+    color: black;
+    font-family: fangsong;
+    line-height: 1.6;
+}
+h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+}
+table {
+    font-size: 18px;
+    color: black;
+    font-weight: bold;
+    border: 1px solid black;
+    width: 100%;
+}
+th {
+    background-color: #734e73;
+    color: white;
+}
+td {
+    background-color: #4a7f3f;
+    color: white;
+}
+.placeholder {
+      background-color: #eee;
+      padding: 10px;
+      margin: 10px 0;
+}
+.quote {
+      font-size: 20px;
+      color: black;
+}
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;
+}
+.summary {
+    background-color: #f0f0f0;
+    position: relative;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: white;
+    margin-top: 10vh;
+    margin-bottom: 2vh;
+    margin-left: auto;
+    margin-right: auto;
+    /* top: -4vh; */
+    padding: 20px;
+    max-width: 82%;
+    max-height: 100%;
+    border: 1px solid white;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    border: 2px solid black;
+    }
+.placeholder {
+    background-color: rgb(138 53 53 / 27%);
+}
+.hidden {
+    display: none;
+}
+
+#resultsContainer > div {
+    margin-bottom: 20px;
+}
+
+#resultsContainer h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+    text-shadow: 2px 2px 3px gray;
+}
+
+#resultsContainer ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+#resultsContainer .highlight {
+    background-color: yellow;
+}
+
+
+
+@media (max-width: 991.98px) {
+.scrollable-area {
+    min-width: 76vw;
+    max-width: 106vw;
+  }
+}
+@media (max-width: 767.98px) {
+.scrollable-area {
+    max-width: 95%;
+    min-width: 84vw;
+    margin-top: 8vh;
+    max-height: 64vh;
+  }
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+}
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 100%;
+    }
+}
+
+@media (max-width: 244px) {
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+}
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 70vh;
+    }
+}
+
+
+@media (max-width: 767.98px) {
+    table {
+        width: 100%;
+        border: none;
+    }
+    table td:first-child {color: white;}
+    table td:last-child {/* color: green; */}
+    table th, table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    table tr {
+        margin-bottom: 1rem;
+        display: block;
+        border: 1px solid #000000;
+    }
+    table td {
+        border: 1px solid #fff;
+        padding: 0.3rem;
+    }
+    table td:first-child {
+        background-color: #734e73;
+    }
+}
+
+@media (max-width: 767.98px) {
+    table th {
+        display: none;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+#searchContainer, #searchContainer.search-bar {
+    display: flex;
+    position: relative;
+}
+
+#searchContainer input,
+#searchContainer .search-btn, 
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    transition: all 0.25s ease-out;
+}
+
+#searchContainer input,
+#searchContainer .search-btn {
+    width: 3em;
+    height: 3em;
+}
+
+#searchContainer input:invalid:not(:focus),
+#searchContainer .search-btn {
+    cursor: pointer;
+}
+
+#searchContainer,
+#searchContainer input:focus,
+#searchContainer input:valid  {
+    width: 100%;
+}
+
+#searchContainer input:focus,
+#searchContainer input:not(:focus) + .search-btn:focus {
+    outline: transparent;
+}
+
+#searchContainer {
+    margin-top: -2.7vh;
+    margin-bottom: -11vh;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.5em;
+    justify-content: center;
+    max-width: 42vw;
+    min-width: fit-content;
+    order: 0;
+}
+
+#searchContainer input {
+    background: #81818100;
+    border-radius: 1.5em;
+    box-shadow: 0 0 0 0.4em #ffffff inset;
+    padding: 0.75em;
+    transform: translate(0.5em,0.5em) scale(0.5);
+    transform-origin: 100% 0;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+
+#searchContainer input::-webkit-search-decoration {
+    -webkit-appearance: none;
+}
+
+#searchContainer input:focus,
+#searchContainer input:valid {
+    background: #fff;
+    border-radius: 0.375em 0 0 0.375em;
+    box-shadow: 0 0 0 0.1em #d9d9d9 inset;
+    transform: scale(1);
+}
+
+#searchContainer .search-btn {
+    background: #ffffff;
+    border-radius: 0 0.75em 0.75em 0 / 0 1.5em 1.5em 0;
+    padding: 0.75em;
+    position: relative;
+    transform: translate(0.25em,0.25em) rotate(45deg) scale(0.25,0.125);
+    transform-origin: 0 50%;
+}
+
+#searchContainer input:not(:focus):hover {
+    transform: translate(0.5em,0.5em) scale(0.6);  /* scale the glass */
+}
+
+#searchContainer input:not(:focus):hover + .search-btn {
+    transform: translate(0.08em,0.32em) rotate(45deg) scale(0.3,0.15); /* scale the handle */
+}
+
+#searchContainer.active input:not(:focus):hover,
+#searchContainer.active input:not(:focus):hover + .search-btn {
+    transform: none;
+}
+
+
+
+
+
+#searchContainer .search-btn:hover {
+    /*box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.6);*/  /* Glow effect */
+}
+
+
+
+
+
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    content: "";
+    display: block;
+    opacity: 0;
+    position: absolute;
+}
+
+#searchContainer .search-btn:before {
+    border-radius: 50%;
+    box-shadow: 0 0 0 0.2em #f1f1f1 inset;
+    top: 0.75em;
+    left: 0.75em;
+    width: 1.2em;
+    height: 1.2em;
+}
+
+#searchContainer .search-btn:after {
+    background: #f1f1f1;
+    border-radius: 0 0.25em 0.25em 0;
+    top: 51%;
+    left: 51%;
+    width: 0.75em;
+    height: 0.25em;
+    transform: translate(0.2em,0) rotate(45deg);
+    transform-origin: 0 50%;
+}
+
+#searchContainer .search-btn span {
+    display: inline-block;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+}
+
+/* Active state */
+#searchContainer input:focus + .search-btn,
+#searchContainer input:valid + .search-btn {
+    background: #2762f3;
+    border-radius: 0 0.375em 0.375em 0;
+    transform: scale(1);
+}
+
+#searchContainer input:focus + .search-btn:before, 
+#searchContainer input:focus + .search-btn:after,
+#searchContainer input:valid + .search-btn:before, 
+#searchContainer input:valid + .search-btn:after {
+    opacity: 1;
+}
+
+#searchContainer input:focus + .search-btn:hover,
+#searchContainer input:valid + .search-btn:hover,
+#searchContainer input:valid:not(:focus) + .search-btn:focus {
+    background: #0c48db;
+}
+
+#searchContainer input:focus + .search-btn:active,
+#searchContainer input:valid + .search-btn:active {
+    transform: translateY(1px);
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    body, input {
+        color: #f1f1f1;
+    }
+    body {
+        background: #171717;
+    }
+    #searchContainer input {
+        box-shadow: 0 0 0 0.4em #f1f1f1 inset;
+    }
+    #searchContainer input:focus,
+    #searchContainer input:valid {
+        background: #3d3d3d;
+        box-shadow: 0 0 0 0.1em #3d3d3d inset;
+    }
+    #searchContainer .search-btn {
+        background: #f1f1f1;
+    }
+}
+
+
+
+
+</style>
+</head>
+<title>
+   In the First Circle - Book Summary
+  </title>
+<body>
+<!---------------------------------->
+<!---------- CHAPTER LIST ---------->
+<!---------------------------------->
+<div class="heading">
+<h1>
+    In the First Circle
+    <span>
+    ALEXANDR SOLZHENITSYN
+    </span>
+</h1>
+</div>
+<!-------- SEARCHBAR ---------->
+<!----------------------------->
+<div class="search-bar closed" id="searchContainer">
+<div class="hover-detect"></div>
+<input id="search-input" required="" type="search"/>
+<button class="search-btn" disabled=""><span>Search</span></button>
+</div>
+<div class="scrollable-area" style="border: 2px solid black;">
+<ul>
+<!-------------------------->
+<!------- CHAPTER 1 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-1')">
+        Chapter 1 -
+        <br/>
+        Torpedo
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 2 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-2')">
+        Chapter 2 -
+        <br/>
+        A Miscue
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 3 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-3')">
+        Chapter 3 -
+        <br/>
+        Sharashka
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 4 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-4')">
+        Chapter 4 -
+        <br/>
+        A Protestant Christmas
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 5 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-5')">
+        Chapter 5 -
+        <br/>
+        Boogie-Woogie
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 6 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-6')">
+        Chapter 6 -
+        <br/>
+        A Peaceful Existence
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 7 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-7')">
+        Chapter 7 -
+        <br/>
+        A Woman’s Heart
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 8 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-8')">
+        Chapter 8 -
+        <br/>
+        “Oh, Moment, Stay!”
+       </a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 9 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-9')">
+        Chapter 9 -
+        <br/>
+        The Fifth Year in Harness
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 10 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-10')">
+        Chapter 10 -
+        <br/>
+        The Rosicrucians
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 11 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-11')">
+        Chapter 11 -
+        <br/>
+        The Enchanted Castle
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 12 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-12')">
+        Chapter 12 -
+        <br/>
+        Number Seven
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 13 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-13')">
+        Chapter 13 -
+        <br/>
+        He Should Have Lied
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 14 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-14')">
+        Chapter 14 -
+        <br/>
+        The Blue Light
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 15 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-15')">
+        Chapter 15 -
+        <br/>
+        A Girl! A Girl!
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 16 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-16')">
+        Chapter 16 -
+        <br/>
+        A Troika of Liars
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 17 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-17')">
+        Chapter 17 -
+        <br/>
+        Hot Water
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 18 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-18')">
+        Chapter 18 -
+        <br/>
+        “Oh, Wonder-Working Steed”
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 19 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-19')">
+        Chapter 19 -
+        <br/>
+        The Birthday Hero
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 20 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-20')">
+        Chapter 20 -
+        <br/>
+        A Study of a Great Life
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 21 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-21')">
+        Chapter 21 -
+        <br/>
+        Give Us Back the Death Penalty!
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 22 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-22')">
+        Chapter 22 -
+        <br/>
+        The Emperor of the Earth
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 23 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-23')">
+        Chapter 23 -
+        <br/>
+        Language as an Instrument of Production
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 24 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-24')">
+        Chapter 24 -
+        <br/>
+        The Abyss Beckons Again
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 25 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-25')">
+        Chapter 25 -
+        <br/>
+        The Church of Nikita the Martyr
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 26 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-26')">
+        Chapter 26 -
+        <br/>
+        Sawing Wood
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 27 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-27')">
+        Chapter 27 -
+        <br/>
+        A Bit of Methodology
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 28 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-28')">
+        Chapter 28 -
+        <br/>
+        The Junior Lieutenant’s Job
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 29 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-29')">
+        Chapter 29 -
+        <br/>
+        The Lieutenant Colonel’s Job
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 30 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-30')">
+        Chapter 30 -
+        <br/>
+        A Puzzled Robot
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 31 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-31')">
+        Chapter 31 -
+        <br/>
+        How to Darn Socks
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 32 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-32')">
+        Chapter 32 -
+        <br/>
+        On the Path to a Million
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 33 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-33')">
+        Chapter 33 -
+        <br/>
+        Penalty Marks
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 34 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-34')">
+        Chapter 34 -
+        <br/>
+        Voiceprints
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 35 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-35')">
+        Chapter 35 -
+        <br/>
+        Kissing Is Forbidden
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 36 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-36')">
+        Chapter 36 -
+        <br/>
+        Phonoscopy
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 37 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-37')">
+        Chapter 37 -
+        <br/>
+        The Silent Alarm
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 38 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-38')">
+        Chapter 38 -
+        <br/>
+        Be Unfaithful to Me!
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 39 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-39')">
+        Chapter 39 -
+        <br/>
+        Fine Words, Those, “To the Taiga!”
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 40 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-40')">
+        Chapter 40 -
+        <br/>
+        A Rendezvous
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 41 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-41')">
+        Chapter 41 -
+        <br/>
+        And Another One
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 42 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-42')">
+        Chapter 42 -
+        <br/>
+        And Among the Kids
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 43 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-43')">
+        Chapter 43 -
+        <br/>
+        A Woman Was Washing the Staircase
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 44 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-44')">
+        Chapter 44 -
+        <br/>
+        Out in the Open
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 45 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-45')">
+        Chapter 45 -
+        <br/>
+        The Running Dogs of Imperialism
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 46 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-46')">
+        Chapter 46 -
+        <br/>
+        The Castle of the Holy Grail
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 47 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-47')">
+        Chapter 47 -
+        <br/>
+        Top-Secret Conversation
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 48 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-48')">
+        Chapter 48 -
+        <br/>
+        The Double Agent
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 49 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-49')">
+        Chapter 49 -
+        <br/>
+        Life Is Not a Novel
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 50 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-50')">
+        Chapter 50 -
+        <br/>
+        The Old Maid
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 51 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-51')">
+        Chapter 51 -
+        <br/>
+        Fire and Hay
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 52 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-52')">
+        Chapter 52 -
+        <br/>
+        To the Resurrection of the Dead!
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 53 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-53')">
+        Chapter 53 -
+        <br/>
+        The Ark
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 54 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-54')">
+        Chapter 54 -
+        <br/>
+        Leisure Amusements
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 55 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-55')">
+        Chapter 55 -
+        <br/>
+        Prince Igor
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 56 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-56')">
+        Chapter 56 -
+        <br/>
+        Winding Up the Twentieth
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 57 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-57')">
+        Chapter 57 -
+        <br/>
+        Prisoners’ Petty Matters
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 58 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-58')">
+        Chapter 58 -
+        <br/>
+        A Banquet of Friends
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 59 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-59')">
+        Chapter 59 -
+        <br/>
+        The Buddha’s Smile
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 60 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-60')">
+        Chapter 60 -
+        <br/>
+        But We Are Given Only One Conscience, Too
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 61 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-61')">
+        Chapter 61 -
+        <br/>
+        The Uncle at Tver
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 62 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-62')">
+        Chapter 62 -
+        <br/>
+        Two Sons-in-Law
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 63 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-63')">
+        Chapter 63 -
+        <br/>
+        The Diehard
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 64 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-64')">
+        Chapter 64 -
+        <br/>
+        Entered Cities First
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 65 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-65')">
+        Chapter 65 -
+        <br/>
+        A Duel Not by the Rules
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 66 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-66')">
+        Chapter 66 -
+        <br/>
+        Going to the People
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 67 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-67')">
+        Chapter 67 -
+        <br/>
+        Spiridon
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 68 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-68')">
+        Chapter 68 -
+        <br/>
+        Spiridon’s Criterion
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 69 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-69')">
+        Chapter 69 -
+        <br/>
+        Behind a Closed Visor
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 70 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-70')">
+        Chapter 70 -
+        <br/>
+        Dotty
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 71 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-71')">
+        Chapter 71 -
+        <br/>
+        Let’s Agree That This Didn’t Happen
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 72 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-72')">
+        Chapter 72 -
+        <br/>
+        Civic Temples
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 73 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-73')">
+        Chapter 73 -
+        <br/>
+        A Circle of Wrongs
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 74 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-74')">
+        Chapter 74 -
+        <br/>
+        Monday Dawn
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 75 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-75')">
+        Chapter 75 -
+        <br/>
+        Four Nails
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 76 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-76')">
+        Chapter 76 -
+        <br/>
+        Favorite Profession
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 77 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-77')">
+        Chapter 77 -
+        <br/>
+        The Decision Taken
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 78 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-78')">
+        Chapter 78 -
+        <br/>
+        The Professional Party Secretary
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 79 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-79')">
+        Chapter 79 -
+        <br/>
+        The Decision Explained
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 80 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-80')">
+        Chapter 80 -
+        <br/>
+        One Hundred Forty-Seven Rubles
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 81 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-81')">
+        Chapter 81 -
+        <br/>
+        The Scientific Elite
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 82 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-82')">
+        Chapter 82 -
+        <br/>
+        Indoctrination in Optimism
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 83 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-83')">
+        Chapter 83 -
+        <br/>
+        The King of Stool Pigeons
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 84 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-84')">
+        Chapter 84 -
+        <br/>
+        As for Shooting . . .
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 85 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-85')">
+        Chapter 85 -
+        <br/>
+        Prince Kurbsky
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 86 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-86')">
+        Chapter 86 -
+        <br/>
+        No Fisher of Men
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 87 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-87')">
+        Chapter 87 -
+        <br/>
+        At the Fount of Science
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 88 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-88')">
+        Chapter 88 -
+        <br/>
+        The Leading Ideology
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 89 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-89')">
+        Chapter 89 -
+        <br/>
+        Little Quail
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 90 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-90')">
+        Chapter 90 -
+        <br/>
+        On the Back Stairway
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 91 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-91')">
+        Chapter 91 -
+        <br/>
+        Abandon Hope, All Ye Who Enter Here
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 92 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-92')">
+        Chapter 92 -
+        <br/>
+        Keep Forever
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 93 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-93')">
+        Chapter 93 -
+        <br/>
+        Second Wind
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 94 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-94')">
+        Chapter 94 -
+        <br/>
+        Always Caught Off Guard
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 95 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-95')">
+        Chapter 95 -
+        <br/>
+        Farewell, Sharashka
+       </a>
+</li>
+<!--------------------------->
+<!------- CHAPTER 96 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-96')">
+        Chapter 96 -
+        <br/>
+        Meat
+       </a>
+</li>
+</ul>
+</div>
+</body></html>
+<!----------------------------------->
+<!------ END OF CHAPTER LIST -------->
+<!----------------------------------->
+<!----->
+<!--- SEARCH RESULTS HIGHLIGHTED ----->
+<!------------------------------------>
+<div class="summary" id="searchResults" style="display: none;">
+<button class="toggle-button" id="backToChapters">Back to Chapters</button>
+<div id="resultsContainer"><!-- Results will be appended here --></div>
+</div>
+<!----->
+<!-------------------------------->
+<!------- CHAPTER SUMMARIES ----->
+<!------------------------------>
+<!----- CHAPTER 1 SUMMARY ----->
+<div class="summary chapter-summary" id="chapter-1" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-1'); showSearchBar()">
+     Hide Summary
+    </button>
+<h2>
+     Summary of Chapter 1: Torpedo
+    </h2>
+<p style="margin-bottom: 15px;">
+     In this opening chapter, we are introduced to the main protagonist, Innokenty Volodin, a State Counselor Grade Two in the Ministry of Foreign Affairs. Innokenty is shown to be a nervous and agitated man, seemingly burdened by a significant decision he must make. He contemplates whether to make an urgent phone call, which could have grave consequences.
+    </p>
+<!-- Characters in Chapter -->
+<h2>
+     Characters in Chapter
+    </h2>
+<ul>
+<li>
+      Innokenty Volodin: State Counselor Grade Two in the Ministry of Foreign Affairs, the main protagonist.
+     </li>
+<li>
+      Taxi Driver: Takes Innokenty on a ride through the city.
+     </li>
+<li>
+      Woman: Observed by Innokenty as he passes the Arbat.
+     </li>
+<li>
+      Rough-Looking Character: Occupied the phone booth before Innokenty.
+     </li>
+<li>
+      Air Attaché: The person Innokenty tries to reach through a phone call.
+     </li>
+</ul>
+<!-- Character Development -->
+<h2>
+     Character Development
+    </h2>
+<table>
+<tr>
+<th>
+       Character
+      </th>
+<th>
+       Development
+      </th>
+</tr>
+<tr>
+<td>
+       Innokenty Volodin
+      </td>
+<td>
+       Innokenty is portrayed as a man in a state of fear and anxiety, struggling with a life-altering decision. His nervousness and agitation suggest that he is facing a dangerous situation that requires immediate action. His determination to make a crucial phone call, despite the risks involved, highlights his sense of duty and concern for a matter of great importance.
+      </td>
+</tr>
+</table>
+<!-- Key Themes and Topics -->
+<h2>
+     Key Themes and Topics
+    </h2>
+<ul>
+<li>
+      Fear and Risk: The chapter explores the theme of fear and the willingness to take risks when faced with critical decisions that could have significant consequences.
+     </li>
+<li>
+      Secrecy and Diplomacy: The mention of an atomic bomb and the urgency of Innokenty's call suggest a connection to espionage and diplomatic intrigue.
+     </li>
+</ul>
+<!-- Quotations -->
+<h2>
+     Quotations
+    </h2>
+<ul>
+<li>
+      "They—the Western diplomats—had two weeks of vacation ahead of them. Trusting babes! Stupid donkeys!"
+     </li>
+<li>
+      "Remember, though: not a word in English. Let alone French. Mustn't leave the smallest clue for the tracker dogs."
+     </li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>
+     Chapter Timeline
+    </h2>
+<ol>
+<li>
+      The chapter starts at five minutes past four on a December day.
+     </li>
+<li>
+      Innokenty lingers in his office, contemplating the phone call.
+     </li>
+<li>
+      He rushes out of the ministry building, grabs a taxi, and arrives at the Arbat.
+     </li>
+<li>
+      Innokenty makes a crucial phone call to the foreign embassy.
+     </li>
+<li>
+      The call gets disconnected abruptly.
+     </li>
+</ol>
+<!-- Character Relationships -->
+<h2>
+     Character Relationships
+    </h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+     Innokenty is the central character in the chapter, and his interactions involve the taxi driver and the rough-looking character in the phone booth. The identity of the Air Attaché and any specific relationships between characters are not detailed in this chapter.
+    </p>
+<!-- Links -->
+<h2>
+     Links
+    </h2>
+<ul>
+<li>
+<a href="https://en.wikipedia.org/wiki/Mokhovaya_Street">
+       Information on the Mokhovaya Street
+      </a>
+</li>
+<li>
+<a href="https://en.wikipedia.org/wiki/Arbat_Street,_Moscow">
+       Information on the Arbat
+      </a>
+</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 2 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-2" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-2'); showSearchBar()">
+     Hide Summary
+    </button>
+<h2>
+     Summary of Chapter 2: A Miscue
+    </h2>
+<p style="margin-bottom: 15px;">
+     In this chapter, we shift focus to Room 194 of the Moscow Central Automatic Telephone Exchange, where two lieutenants, Tyukin and Kuleshov, are on duty. Their task is to monitor and record calls to and from the U.S. Embassy. Feeling that nothing significant is likely to happen, they deviate from the strict instructions by not adhering to continuous monitoring. Tyukin is preoccupied with studying for a politics class, while Kuleshov deals with painful sores on his leg. Unexpectedly, the tape recorder starts recording a conversation from an unauthorized caller discussing the atomic bomb. Realizing his mistake in not intercepting the caller's number, Kuleshov panics and quickly rewinds the tape, worried that he might be in trouble for not following protocol. He then calls for emergency assistance.
+    </p>
+<!-- Characters in Chapter -->
+<h2>
+     Characters in Chapter
+    </h2>
+<ul>
+<li>
+      Lieutenant Tyukin: On duty with Kuleshov, studying for a politics class.
+     </li>
+<li>
+      Lieutenant Kuleshov: On duty with Tyukin, dealing with painful sores on his leg.
+     </li>
+<li>
+      Unnamed Caller: Speaks on the phone about the atomic bomb and is recorded by the surveillance system.
+     </li>
+</ul>
+<!-- Character Development -->
+<h2>
+     Character Development
+    </h2>
+<table>
+<tr>
+<th>
+       Character
+      </th>
+<th>
+       Development
+      </th>
+</tr>
+<tr>
+<td>
+       Lieutenant Tyukin
+      </td>
+<td>
+       In this chapter, we get a glimpse of the daily routine and minor transgressions of the two lieutenants on duty at the telephone exchange. Tyukin appears to be struggling with his studies and procrastination, while Kuleshov is facing personal health issues. Their deviations from protocol are shown to have unexpected consequences when the unauthorized call is recorded.
+      </td>
+</tr>
+<tr>
+<td>
+       Lieutenant Kuleshov
+      </td>
+<td>
+       In this chapter, we get a glimpse of the daily routine and minor transgressions of the two lieutenants on duty at the telephone exchange. Tyukin appears to be struggling with his studies and procrastination, while Kuleshov is facing personal health issues. Their deviations from protocol are shown to have unexpected consequences when the unauthorized call is recorded.
+      </td>
+</tr>
+</table>
+<!-- Key Themes and Topics -->
+<h2>
+     Key Themes and Topics
+    </h2>
+<ul>
+<li>
+      Surveillance and Security: The chapter highlights the surveillance operation to monitor calls to and from the U.S. Embassy and the strict protocols in place to ensure security.
+     </li>
+<li>
+      Human Error and Consequences: Kuleshov's failure to intercept the caller's number leads to panic and concern about potential repercussions.
+     </li>
+</ul>
+<!-- Quotations -->
+<h2>
+     Quotations
+    </h2>
+<ul>
+<li>
+      "He would never be able to take in any of that crap with a hangover on Monday morning, and the Party organizer had already rebuked him and threatened to bring him before the Party bureau."
+     </li>
+<li>
+      "The first thing he did was look over his shoulder. Tyukin was scribbling his summary and had eyes for nothing else."
+     </li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>
+     Chapter Timeline
+    </h2>
+<ol>
+<li>
+      The chapter takes place on the same evening as Chapter 1, a gloomy December day.
+     </li>
+<li>
+      The scene is set in Room 194 of the Moscow Central Automatic Telephone Exchange.
+     </li>
+<li>
+      Tyukin is studying for his politics class, while Kuleshov deals with his leg sores.
+     </li>
+<li>
+      The tape recorder unexpectedly starts recording an unauthorized call discussing the atomic bomb.
+     </li>
+<li>
+      Kuleshov panics and quickly rewinds the tape.
+     </li>
+<li>
+      He then calls for emergency assistance.
+     </li>
+</ol>
+<!-- Character Relationships -->
+<h2>
+     Character Relationships
+    </h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+     Tyukin and Kuleshov are colleagues on duty at the telephone exchange. There are no significant interactions between them in this chapter other than Tyukin being occupied with his studies while Kuleshov deals with the recording.
+    </p>
+<!-- Links -->
+<h2>
+     Links
+    </h2>
+<ul>
+<li>
+<a href="https://en.wikipedia.org/wiki/Moscow_Central_Automatic_Telephone_Exchange">
+       Information on the Moscow Central Automatic Telephone Exchange
+      </a>
+</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 3 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-3" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-3'); showSearchBar()">
+     Hide Summary
+    </button>
+<h2>
+     Summary of Chapter 3: Sharashka
+    </h2>
+<p style="margin-bottom: 15px;">
+     In this chapter, the new arrivals, Lev Grigorievich, and his companions are greeted by the current inmates of the sharashka. The sharashka is a special prison camp for intellectuals, where scientists and engineers work on various projects for the government. The new inmates are bombarded with questions about their backgrounds and the camps they came from. They are surprised by the conditions at the sharashka, which include better food, privileges, and access to books compared to regular labor camps. The conversation in the sharashka is lively and humorous, with the prisoners discussing their experiences and expressing their happiness about the relatively comfortable conditions in the camp.
+    </p>
+<!-- Characters in Chapter -->
+<h2>
+     Characters in Chapter
+    </h2>
+<ul>
+<li>
+      Lev Grigorievich: One of the new inmates, a linguist.
+     </li>
+<li>
+      Valentin: Another new inmate, who expresses his joy at the conditions in the sharashka.
+     </li>
+<li>
+      Current Inmates: The scientists and intellectuals already present in the sharashka.
+     </li>
+</ul>
+<!-- Character Development -->
+<h2>
+     Character Development
+    </h2>
+<table>
+<tr>
+<th>
+       Character
+      </th>
+<th>
+       Development
+      </th>
+</tr>
+<tr>
+<td>
+       Lev Grigorievich
+      </td>
+<td>
+       In this chapter, the camaraderie and jovial interactions between the current inmates and the new arrivals are highlighted. Valentin's expressions of happiness and Lev Grigorievich's explanations about the sharashka reveal the intellectual nature of the prisoners and their ability to find humor in their situation.
+      </td>
+</tr>
+<tr>
+<td>
+       Valentin
+      </td>
+<td>
+       In this chapter, the camaraderie and jovial interactions between the current inmates and the new arrivals are highlighted. Valentin's expressions of happiness and Lev Grigorievich's explanations about the sharashka reveal the intellectual nature of the prisoners and their ability to find humor in their situation.
+      </td>
+</tr>
+</table>
+<!-- Key Themes and Topics -->
+<h2>
+     Key Themes and Topics
+    </h2>
+<ul>
+<li>
+      Sharashka: The chapter introduces the concept of the sharashka, a special prison camp for intellectuals where they work on government projects.
+     </li>
+<li>
+      Prison Conditions: The chapter contrasts the conditions in the sharashka with those in regular labor camps, showing the relatively better treatment of intellectuals.
+     </li>
+</ul>
+<!-- Quotations -->
+<h2>
+     Quotations
+    </h2>
+<ul>
+<li>
+      “I don’t feel like supper when I know that people are walking around somewhere with numbers on their foreheads!”
+     </li>
+<li>
+      “What century are we living in?”
+     </li>
+<li>
+      “What’s the matter with you supermen? Never seen a real live zek before?"
+     </li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>
+     Chapter Timeline
+    </h2>
+<ol>
+<li>
+      The chapter takes place on the same day as the previous chapters, shortly after the new inmates arrive at the sharashka.
+     </li>
+<li>
+      The current inmates greet the new arrivals and engage in conversations about their backgrounds and experiences.
+     </li>
+</ol>
+<!-- Character Relationships -->
+<h2>
+     Character Relationships
+    </h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+     The chapter focuses on the interactions between the new inmates and the current prisoners in the sharashka. It highlights the camaraderie and humor shared among the intellectuals in the camp.
+    </p>
+<!-- Links -->
+<h2>
+     Links
+    </h2>
+<ul>
+<li>
+<a href="https://en.wikipedia.org/wiki/Sharashka">
+       Sharashka (Prison Camp)
+      </a>
+</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 4 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-4" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-4'); showSearchBar()">
+     Hide Summary
+    </button>
+<h2>
+     Summary of Chapter 4: A Protestant Christmas
+    </h2>
+<p style="margin-bottom: 15px;">
+     In this chapter, the inmates of the sharashka celebrate a Protestant Christmas in their prison cell. Max Adam, a German inmate, leads the group in a prayer. The atmosphere is bittersweet, as the German inmates reminisce about their homeland and the past Christmas celebrations. Lev Rubin, a Jew and a Communist who was once an expert on the German language, also joins the celebration. Despite some tension, they try to find common ground and celebrate the festive occasion together. Rubin later leaves the celebration and returns to his work in the acoustics laboratory.
+    </p>
+<!-- Characters in Chapter -->
+<h2>
+     Characters in Chapter
+    </h2>
+<ul>
+<li>
+      Max Adam: A German inmate who leads the Protestant Christmas celebration.
+     </li>
+<li>
+      Lev Rubin: A Jewish Communist and former expert on the German language.
+     </li>
+<li>
+      Other German Inmates: Various German prisoners who share in the Christmas celebration.
+     </li>
+<li>
+      SS Obersturmbannführer Simmel: A German inmate with a hardened expression of cruelty.
+     </li>
+</ul>
+<!-- Character Development -->
+<h2>
+     Character Development
+    </h2>
+<table>
+<tr>
+<th>
+       Character
+      </th>
+<th>
+       Development
+      </th>
+</tr>
+<tr>
+<td>
+       Max Adam
+      </td>
+<td>
+       In this chapter, the German inmates' emotions are highlighted as they celebrate Christmas in the sharashka. They remember their homeland and past celebrations, feeling nostalgia for the traditions they left behind. Lev Rubin's complex relationship with the Germans is explored, showing the unique position he holds as a Jew and a former enemy soldier.
+      </td>
+</tr>
+<tr>
+<td>
+       Lev Rubin
+      </td>
+<td>
+       In this chapter, the German inmates' emotions are highlighted as they celebrate Christmas in the sharashka. They remember their homeland and past celebrations, feeling nostalgia for the traditions they left behind. Lev Rubin's complex relationship with the Germans is explored, showing the unique position he holds as a Jew and a former enemy soldier.
+      </td>
+</tr>
+</table>
+<!-- Key Themes and Topics -->
+<h2>
+     Key Themes and Topics
+    </h2>
+<ul>
+<li>
+      Christmas Celebration: The chapter portrays the bittersweet atmosphere of celebrating Christmas in the sharashka, a prison camp for intellectuals.
+     </li>
+<li>
+      National Identity: The German inmates express their connection to their homeland and its history, contrasting it with their current situation in the sharashka.
+     </li>
+<li>
+      Rubin's Role: Rubin's role as an intellectual, former enemy soldier, and Jew is examined as he interacts with the German inmates.
+     </li>
+</ul>
+<!-- Quotations -->
+<h2>
+     Quotations
+    </h2>
+<ul>
+<li>
+      “Fate had intertwined Lev Rubin’s fortunes with those of Germany, in peace and war.”
+     </li>
+<li>
+      “The Christmas tree lights were reflected in moist eyes.”
+     </li>
+<li>
+      “Anyway, it was high time for him to be gone; he had not been released from the evening shift.”
+     </li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>
+     Chapter Timeline
+    </h2>
+<ol>
+<li>
+      The chapter takes place on Christmas Eve in the sharashka.
+     </li>
+<li>
+      The German inmates celebrate Christmas, reminiscing about their homeland and past experiences.
+     </li>
+</ol>
+<!-- Character Relationships -->
+<h2>
+     Character Relationships
+    </h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+     The chapter focuses on the relationships between the German inmates and Lev Rubin, a Jewish Communist. It explores the complex dynamics between these former enemies as they celebrate together in the sharashka.
+    </p>
+<!-- Links -->
+<h2>
+     Links
+    </h2>
+<ul>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 5 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-5" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-5'); showSearchBar()">
+     Hide Summary
+    </button>
+<h2>
+     Summary of Chapter 5: Boogie-Woogie
+    </h2>
+<p style="margin-bottom: 15px;">
+     In this chapter, the scene shifts to the acoustics laboratory, a spacious room filled with various scientific apparatus and equipment. Rubin, the main character, enters the room and encounters a young and flamboyant engineer named Valentin (Valentin is also referred to as Valentulya). Valentin is lively, talkative, and somewhat arrogant, claiming to be a skilled engineer and a lover of women. Rubin engages in a playful banter with Valentin, who is passionate about Western music and women. However, when Rubin switches off Valentin's radio to listen to Beethoven's Sonata No. 17, Valentin becomes upset about the restriction of his freedom.
+
+Later, Rubin discusses the situation with his friend Gleb, who remarks on Rubin's positive attitude towards the German inmates and how he spends time teaching Max Adam Russian. Rubin reflects on his dual identity as both a Jew and a Russian citizen and contemplates his role as a citizen of the world. The chapter ends with Valentin singing "Boogie-Woogie, boogie-woogie. Samba! Samba!" while grappling with a technical problem.
+    </p>
+<!-- Characters in Chapter -->
+<h2>
+     Characters in Chapter
+    </h2>
+<ul>
+<li>
+      Lev Rubin: The main character, a Jewish Communist and former expert on the German language.
+     </li>
+<li>
+Valentin (Valentulya): A flamboyant engineer and music enthusiast.
+     </li>
+<li>
+Gleb: A friend of Rubin and a fellow inmate in the acoustics laboratory.
+     </li>
+</ul>
+<!-- Character Development -->
+<h2>
+     Character Development
+    </h2>
+<table>
+<tr>
+<th>
+       Character
+      </th>
+<th>
+       Development
+      </th>
+</tr>
+<tr>
+<td>
+      Valentin (Valentulya)
+      </td>
+<td>
+      In this chapter, Valentin's lively and flamboyant personality is showcased. He is passionate about Western music, women, and his identity as an engineer. Rubin's playful banter with Valentin and his interactions with other inmates in the laboratory show his ability to connect with people from different backgrounds.
+      </td>
+</tr>
+</table>
+<!-- Key Themes and Topics -->
+<h2>
+     Key Themes and Topics
+    </h2>
+<ul>
+<li>
+      Freedom and Restrictions: Valentin's reaction to having his radio switched off by Rubin raises questions about freedom and personal choices within the constraints of a prison environment.
+     </li>
+<li>
+      Identity and Cosmopolitanism: Rubin contemplates his identity as both a Jew and a Russian citizen, and he sees himself as a citizen of the world.
+     </li>
+</ul>
+<!-- Quotations -->
+<h2>
+     Quotations
+    </h2>
+<ul>
+<li>
+      "How can a normal healthy human being not like lively, invigorating Western popular music? You must, surely, have danced the 'Blue Tango'?"
+     </li>
+<li>
+      "So they were right to lock us up. Of course they were."
+     </li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>
+     Chapter Timeline
+    </h2>
+<ol>
+<li>
+      The chapter takes place in the acoustics laboratory, where Rubin interacts with Valentin and Gleb.
+     </li>
+</ol>
+<!-- Character Relationships -->
+<h2>
+     Character Relationships
+    </h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+     The chapter explores Rubin's interactions with Valentin, a young and enthusiastic engineer. It also highlights Rubin's friendship with Gleb, who shares the acoustics laboratory with him.
+    </p>
+<!-- Links -->
+<h2>
+     Links
+    </h2>
+<ul>
+<li>
+<a href="https://en.wikipedia.org/wiki/Piano_Sonata_No._17_(Beethoven)">
+       Beethoven Piano Sonata 17
+      </a>
+</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 6 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-6" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-6'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 6: A Peaceful Existence</h2>
+<p>In this chapter, the focus is on Gleb Nerzhin, another inmate at the sharashka. Nerzhin is a mathematician and linguist who appears older than his age due to his time spent in prison. He is currently working on a research project related to the phonology of Russian speech with Rubin, the main character. The sharashka, once a place of relative freedom for the inmates, has now become more restrictive and demanding as the research project deadline approaches.
+
+Nerzhin is contemplating the parquet floors he worked on during his time outside the prison and worries about his reputation. Rubin tries to engage him in a discussion about a book by Hemingway, but Nerzhin refuses, feeling that his life is already in turmoil. Rubin then turns his attention to a map of China, marking the Communist forces' victory, but he is overwhelmed by a sense of sadness.
+
+Throughout the chapter, the Acoustics Laboratory continues its everyday activities, with people working on various tasks and the radio playing sentimental music. Serafima Vitalievna, an observer instructed to keep an eye on Nerzhin by Major Shikin, watches him carefully.
+</p>
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul>
+<li>Gleb Nerzhin: A mathematician and linguist in the sharashka.</li>
+<li>Rubin: The main character, a Jewish Communist and former expert on the German language.</li>
+<li>Major Shikin: The security officer in charge of the sharashka.</li>
+</ul>
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr>
+<td>Gleb Nerzhin</td>
+<td>Gleb Nerzhin is portrayed as an intellectual prisoner who is dedicated to his work but also contemplates his life and choices. He appears weary from his time in prison and expresses a desire to find his own way. </td></tr>
+<tr>
+</tr></table>
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul>
+<li>The Impact of Imprisonment: Nerzhin's appearance, behavior, and contemplative thoughts reflect the toll that imprisonment takes on individuals.</li>
+<li>Intellectual Pursuits: The chapter highlights the academic and research activities of the inmates in the Acoustics Laboratory.</li>
+</ul>
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul>
+<li> "A mere four years at the front and not quite five in jail, am I right? And already you’re tired! Better put in for a Crimean rest cure."</li>
+<li>"What do I want with bulls? You pathetic person! It’s one of the best books of the twentieth century!"</li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol>
+<li>The chapter takes place in the Acoustics Laboratory of the sharashka, with a focus on Gleb Nerzhin's thoughts and activities.</li>
+</ol>
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">The chapter focuses on the interaction between Gleb Nerzhin and Rubin, highlighting their friendship and shared experiences as prisoners in the sharashka. Additionally, Serafima Vitalievna's observation of Nerzhin hints at the heightened surveillance and security within the sharashka.</p>
+<!-- Links -->
+<h2>Links</h2>
+<ul>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 7 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-7" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-7'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 7: A Woman’s Heart</h2>
+<p style="margin-bottom: 15px;">Chapter 7 introduces Serafima Vitalievna, a young MGB lieutenant assigned to supervise the prisoners' work in the Acoustics Laboratory. The chapter delves into Simochka's background and her experiences since joining the sharashka. Simochka is a recent graduate from the Institute of Communications Engineering and was warned about the dangerous prisoners she would encounter at Marfino.
+    
+Despite the initial warnings, Simochka finds herself unable to feel fear or hatred towards the prisoners. She works closely with Gleb Nerzhin, assisting him in experiments on articulation tests. As they spend time together, Simochka starts to develop strong feelings for Nerzhin. One day, while fixing a microphone together in a small, soundproof booth, they share an intimate moment, and Nerzhin kisses Simochka.
+
+This moment marks a turning point for Simochka, who has never experienced romantic affection before. She feels a deep connection with Nerzhin, and the fear of getting caught becomes overshadowed by her newfound feelings for him.</p>
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul><li>Gleb Nerzhin: A mathematician and linguist, one of the prisoners working in the Acoustics Laboratory.</li></ul>
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr><td>Simochka</td><td>Simochka's character undergoes significant development in this chapter as she experiences her first romantic encounter with Gleb Nerzhin. Her initial caution and adherence to the rules start to fade away as she begins to develop feelings for him. This moment of vulnerability marks a shift in her personality, as she is willing to take risks for the sake of her emotions.</td></tr></table>
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul><li>Vulnerability and Risk: Simochka's newfound feelings make her more willing to take risks and challenge the rules of the sharashka.</li></ul>
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul><li>"So the steel chain forged with such reptilian cunning snapped at the link that had been fashioned from a woman’s heart."</li></ul>
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol><li>The chapter spans about a month since Simochka joined the sharashka and started working closely with Gleb Nerzhin.</li></ol>
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">The chapter focuses on the growing romantic relationship between Simochka and Gleb Nerzhin, as well as their professional collaboration in the Acoustics Laboratory.</p>
+<!-- Links -->
+<h2>Links</h2>
+</div>
+<!------------------------------>
+<!----- CHAPTER 8 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-8" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-8'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 8: “Oh, Moment, Stay!”</h2>
+<p style="margin-bottom: 15px;">In Chapter 8, Nerzhin and Lev Rubin engage in a philosophical discussion about war, happiness, and the concept of good memories. Nerzhin recounts a nostalgic memory from his time in the war with a young translator named Milka. He describes a moment when they found shelter in a bunker during a bombing raid and spent the night together. Rubin reflects on the idea that war, like many experiences in life, can have both good and bad aspects. He argues that the concept of happiness is...
+
+They also discuss Goethe's *Faust, Part 2*, particularly the contract between Faust and Mephistopheles, where Faust's soul can only be claimed by the devil if he utters the words "Stay, fleeting moment, thou art beautiful!" Rubin suggests that Goethe might be ridiculing the idea of human happiness, questioning whether it is attainable or real.</p>
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul><li>Gleb Nerzhin: The protagonist, a mathematician and linguist, and one of the prisoners in the sharashka.</li><li>Lev Rubin: A fellow prisoner who engages in philosophical discussions with Nerzhin.</li></ul>
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr><td>Nerzhin and Rubin</td><td>In this chapter, Nerzhin and Rubin engage in a thoughtful conversation that reveals their differing perspectives on war and happiness. Nerzhin shares a nostalgic memory from his war days, while Rubin provides a more skeptical viewpoint about the nature of happiness.</td></tr></table>
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul><li>Nostalgia and Memories: The chapter explores the power of memories and how they can evoke strong emotions, both positive and negative.</li><li>War and Happiness: The characters discuss the complexities of war experiences and how they can shape a person's perspective on happiness.</li></ul>
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul><li>"And suddenly it all came back in a rush... Did I ever tell you about Milka?"</li><li>"Goethe’s hymn to happiness, or is he ridiculing it?"</li><li>"But I’m in love—and I am happy! What do you say to that?"</li></ul>
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol><li>The chapter does not have a specific timeline as it primarily consists of a philosophical conversation between Nerzhin and Rubin.</li></ol>
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">The chapter revolves around the friendship and intellectual discussions between Gleb Nerzhin and Lev Rubin, two prisoners in the sharashka. They share their personal experiences and thoughts on various topics.</p>
+<!-- Links -->
+<h2>Links</h2>
+<ul><li><a href="https://en.wikipedia.org/wiki/Faust,_Part_Two">Faust Part 2</a></li></ul>
+</div>
+<!------------------------------>
+<!------------------------------>
+<!----- CHAPTER 9: The Fifth Year in Harness ------>
+<div class="summary chapter-summary" id="chapter-9" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-9'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 9: The Fifth Year in Harness</h2>
+<p style="margin-bottom: 15px;">In Chapter 9, the philosophical discussion between Nerzhin and Rubin is interrupted when Nerzhin is called to the office of Anton Nikolaevich, the director of the institute, at an unusual hour. Simochka, who delivered the message, appears concerned about the summons. Nerzhin doesn't seem overly worried and brushes it off as their work being unimportant. Rubin expresses his unease about the top brass taking an interest in them, fearing possible repercussions due to their discussions and activities related to voice analysis. Despite Rubin's concern, Nerzhin remains nonchalant, acknowledging the unpredictable nature of their situation in the prison camp. As Nerzhin prepares to leave for the meeting with Anton Nikolaevich, he hands the keys to the rolltop desk to Rubin, suggesting that if he doesn't return, Rubin should burn something significant. This remark hints at the possibility of further trouble for Nerzhin and adds an element of tension to the chapter.</p>
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul>
+<li>Gleb Nerzhin: The protagonist, a mathematician and linguist, and one of the prisoners in the sharashka.</li>
+<li>Lev Rubin: A fellow prisoner who engages in philosophical discussions with Nerzhin.</li>
+<li>Simochka: An assistant in the institute, who delivers the message about the meeting with Anton Nikolaevich.</li>
+
+</ul>
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr>
+<td>Gleb Nerzhin</td>
+<td>In this chapter, the focus shifts from the philosophical discussion between Nerzhin and Rubin to Nerzhin's unexpected summons to Anton Nikolaevich's office. The chapter emphasizes the uncertainty and apprehension that pervade life in the prison camp.</td>
+</tr>
+
+</table>
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul>
+<li>Uncertainty and Apprehension: The chapter highlights the unpredictability of life in the prison camp and the anxiety that comes with unexpected meetings with higher authorities.</li>
+<li>Consequences of Discussions: Rubin expresses concern about possible repercussions for their discussions and activities related to voice analysis.</li>
+</ul>
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul>
+<li>"I don’t like it when the top brass starts taking an interest in us."</li>
+<li>"Life here is like that. But burn you-know-what."</li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol>
+<li>The chapter takes place at around 10 o'clock on a Saturday evening when Nerzhin receives a summons to Anton Nikolaevich's office.</li>
+
+
+</ol>
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">The chapter focuses on Nerzhin's relationship with Rubin, Simochka, and the higher authorities represented by Anton Nikolaevich. It hints at potential consequences for their philosophical discussions and activities in the prison camp.</p>
+<!-- Links -->
+<h2>Links</h2>
+<ul>
+
+
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 10 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-10" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-10'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 10: The Rosicrucians</h2>
+<p style="margin-bottom: 15px;">In Chapter 9, the philosophical discussion between Nerzhin and Rubin is interrupted when Nerzhin is called to the office of Anton Nikolaevich, the director of the institute, at an unusual hour. Simochka, who delivered the message, appears concerned about the summons. Nerzhin doesn't seem overly worried and brushes it off as their work being unimportant. Rubin expresses his unease about the top brass taking an interest in them, fearing possible repercussions due to their discussions and activities related to voice analysis. Despite Rubin's concern, Nerzhin remains nonchalant, acknowledging the unpredictable nature of their situation in the prison camp. As Nerzhin prepares to leave for the meeting with Anton Nikolaevich, he hands the keys to the rolltop desk to Rubin, suggesting that if he doesn't return, Rubin should burn something significant. This remark hints at the possibility of further trouble for Nerzhin and adds an element of tension to the chapter.</p>
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul>
+<li>Gleb Vikentich Nerzhin</li>
+<li>Engineer Colonel Anton Nikolaevich Yakonov</li>
+<li>Pyotr Trofimovich Verenyov</li>
+
+</ul>
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr>
+<td>Gleb Nerzhin</td>
+<td>In this chapter, the focus shifts from the philosophical discussion between Nerzhin and Rubin to Nerzhin's unexpected summons to Anton Nikolaevich's office. The chapter emphasizes the uncertainty and apprehension that pervade life in the prison camp.</td>
+</tr>
+
+</table>
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul>
+<li>Intellectual Freedom: The chapter delves into the theme of intellectual freedom and the compromises one must make under oppressive regimes. Nerzhin's decision reflects the struggle of individuals living in a totalitarian society to maintain their independence of thought.</li>
+<li>Dilemmas of Life Choices: The chapter explores the dilemma of choosing between practicality and passion, security and freedom, and the various consequences that these decisions may have on one's life.</li>
+</ul>
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul>
+<li>"You can go. Mathematics! And articulation. You’ve traded the food of the gods for a mess of pottage." - Anton Nikolaevich Yakonov expresses his disapproval of Nerzhin's shift towards mathematical work.</li>
+<li></li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol>
+<li>Nerzhin visits Engineer Colonel Anton Nikolaevich Yakonov's office on the third floor of the sharashka.</li>
+
+
+</ol>
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">Gleb Nerzhin has a professional relationship with Engineer Colonel Anton Nikolaevich Yakonov, who oversees the research at the sharashka. Gleb Nerzhin reconnects with his former university professor, Pyotr Trofimovich Verenyov, who has been assigned to cryptographic research.</p>
+<!-- Links -->
+<h2>Links</h2>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Rosicrucianism">Rosicrucianism</a> (Note: Rosicrucians are mentioned humorously in the chapter, comparing mathematicians to a secret brotherhood like the Rosicrucians.)</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 11 SUMMARY ------>
+<!->
+<div class="summary chapter-summary" id="chapter-11" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-11'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 11: The Enchanted Castle</h2>
+<p style="margin-bottom: 15px;">
+Chapter 11, "The Enchanted Castle," delves into the day-to-day operations of the sharashka (a high-security research institute) through the eyes of Engineer Colonel Anton Nikolaevich Yakonov as well as the introduction of Yakov Ivanovich Mamurin. Yakonov is the chief engineer of the Special Technology Department of the MGB (Ministry of State Security) and is depicted as a figure of authority who, despite his empathetic demeanor, justifies and upholds the oppressive sharashka system. Later, The chapter presents a detailed account of Mamurin's background, the circumstances of his arrival at the sharashka, and his initial experiences there.
+
+The chapter begins with a detailed description of Yakonov's responsibilities and privileges in his role. Notably, he has the freedom to oversee the sharashka operations from a distance, present intellectual reports to an audience of high-ranking officials, and engage in independent studies. His high-ranking position affords him the freedom to move around the sharashka, a privilege that the zeks (prisoners) are denied.
+
+The narrative follows Yakonov as he takes a walk around the sharashka, observing the zeks' working and living conditions. His observations reflect a concern for their welfare, but not to the extent of challenging the system that has them imprisoned.
+
+As the narrative proceeds, we are introduced to Yakov Ivanovich Mamurin. Mamurin is a former high-ranking official, the head of Special and Secret Communications in the Ministry of the Interior, who had fallen from grace due to a minor technical error that resulted in interference during a phone call involving the "Leader of All Progressive Mankind". 
+
+This seemingly insignificant incident led to his immediate removal from his position and subsequent imprisonment, without a formal investigation or trial. His arrival at the sharashka was unusual, with the head of the Prisons Department of the MVD personally escorting him. This unexpected treatment stirred curiosity and speculation among the other prisoners.
+
+Mamurin's initial days in the sharashka were marked by solitude and despair. He was given a separate living space with slightly more privileges than the other prisoners, indicating his special status. However, the harsh reality of his fall from grace and his inability to reconcile with his new reality led him to isolate himself from the others.
+
+Despite his isolation, Mamurin attempted to regain his standing by engaging in work. He chose to join Lab Number Seven, one of the most promising projects at the sharashka, in a bid to prove his worth and hopefully redeem himself in the eyes of the Party and the government. This choice, however, brought him into conflict with Yakonov, who also held an interest in the project.
+</p>
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul>
+<li>Anton Nikolaevich Yakonov: The chief engineer of the Special Technology Department of the MGB who oversees the operations of the sharashka. His inspection of the sharashka forms a significant part of this chapter.</li>
+<li>Yakov Ivanovich Mamurin: A new arrival at the sharashka, Mamurin is a former high-ranking official who was removed from his position due to a minor error. His fall from grace, his arrival at the sharashka, and his attempts to regain his standing form the crux of his character in this chapter.</li>
+</ul>
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr>
+<td>Anton Nikolaevich Yakonov</td>
+<td>Yakonov is portrayed as an empathetic yet authoritative figure who upholds the oppressive sharashka system despite displaying concern for the prisoners.</td>
+</tr>
+<tr>
+<td>Yakov Ivanovich Mamurin</td>
+<td>This chapter presents a detailed account of Mamurin's background, his fall from grace, and his initial experiences at the sharashka. He is shown as a high-ranking official who has fallen out of favor and is now trying to navigate his new reality as a prisoner.</td>
+</tr>
+</table>
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul>
+<li>Authority and Power: The theme of authority and power is explored through Yakonov's inspection of the sharashka and Mamurin's attempts to regain his standing.</li>
+<li>Fall from Grace: Mamurin's fall from a high-ranking official to a prisoner presents the theme of 'fall from grace'. His struggle to accept his new reality underscores the harsh consequences of falling out of favor in an authoritative regime.</li>
+</ul>
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul>
+<li>"His position was such that he could exercise general supervision from a distance, make an occasional erudite report to an audience of high officeholders, indulge in a certain amount of independent study..."</li>
+<li>"One day the Leader of All Progressive Mankind, on the telephone to the Chinese province of Yenan, had been annoyed by interference and crackling in the receiver."</li>
+</ul>
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol>
+<li>The chapter largely takes place during Yakonov's walk around the sharashka, providing readers a glimpse into the working and living conditions of the zeks.</li>
+</ol>
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">Anton Nikolaevich Yakonov and the Zeks: As the chief engineer, Yakonov holds authority over the zeks. His interactions with them during his walk depict him as an authoritative figure who, despite showing concern for their welfare, supports the system that oppresses them.
+<br><br>
+Yakov Ivanovich Mamurin and the Zeks: Mamurin's arrival stirs curiosity among the zeks. His struggle to accept his new reality and his attempts to prove his worth mark his relationship with the other prisoners.
+</p>
+<!-- Links -->
+<h2>Links</h2>
+<ul>
+<li><a href="https://en.wikipedia.org/wiki/Sharashka">Sharashka</a>: A type of research and development institution in the Soviet Union where the staff was made up of gulag inmates.</li>
+<li><a href="https://en.wikipedia.org/wiki/Ministry_of_State_Security_(Soviet_Union)">Ministry for State Security (MGB)</a>: The intelligence, secret police, and internal security agency of the Soviet Union.</li>
+</ul>
+</div>
+<!->
+<!------------------------------>
+<!----- CHAPTER 12 SUMMARY ------>
+<!->
+<div class="summary chapter-summary" id="chapter-12" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-12'); showSearchBar()">Hide Summary</button>
+    <h2>Summary of Chapter 12: Number Seven</h2>
+    <p>
+        Chapter 12 of "Number Seven" immerses readers in the secretive and technologically advanced world of the Clipped Speech Laboratory. As the zeks toil tirelessly to convert human speech into electrical impulses, the chapter explores the intricate relationships, character dynamics, and moral dilemmas that drive the narrative forward. The pursuit of recognition and freedom, scientific ambition, and ethical implications form the thematic core of this engrossing chapter.
+    </p>
+    <p>
+        The chapter opens with an aura of mystique surrounding the Clipped Speech Laboratory, known as "Number Seven," in the Marfino sharashka. Hints of its real purpose emerge, leaving the inmates speculating and gossiping about the true nature of this clandestine project.
+    </p>
+    <p>
+        Located on the floor above the Acoustics Lab, Number Seven stands as a testament to cutting-edge technology within the sharashka. Engineer Colonel Yakonov leads this ambitious project, determined to manipulate human speech into electrical impulses with precision and accuracy. The zeks use advanced techniques such as clipping, damping, amplitude compression, and electronic differentiation to recreate human speech artificially.
+    </p>
+
+    <!-- Characters in Chapter -->
+    <h2>Characters in Chapter</h2>
+    <ul>
+        <li>Engineer Colonel Yakonov: The visionary leader of the Clipped Speech Laboratory.</li>
+        <li>Mamurin: A devoted prisoner within the laboratory, Mamurin seeks recognition and freedom above all else.</li>
+        <li>Markushev: Another engineer within the laboratory, Markushev is unwaveringly loyal to Yakonov and his ideas.</li>
+        <li>Amantai Bulatov: A Kazan Tatar serving ten years as an ex-POW.</li>
+        <li>Andrei Andreevich Potapov: A skilled expert in ultrahigh voltages and power station construction.</li>
+        <li>Engineer Khorobrov: Assigned to Number Seven from its inception.</li>
+        <li>Aleksandr Bobynin: A prisoner with a gloomy past and engineering genius.</li>
+    </ul>
+
+    <!-- Character Development -->
+    <h2>Character Development</h2>
+    <table>
+        <tr>
+            <th>Character</th>
+            <th>Development</th>
+        </tr>
+        <tr>
+            <td>Engineer Colonel Yakonov</td>
+            <td>Yakonov is portrayed as an empathetic yet authoritative figure who upholds the oppressive sharashka system despite displaying concern for the prisoners.</td>
+        </tr>
+        <tr>
+            <td>Yakov Ivanovich Mamurin</td>
+            <td>This chapter presents a detailed account of Mamurin's background, his fall from grace, and his initial experiences at the sharashka. He is shown as a high-ranking official who has fallen out of favor and is now trying to navigate his new reality as a prisoner.</td>
+        </tr>
+    </table>
+
+    <!-- Key Themes and Topics -->
+    <h2>Key Themes and Topics</h2>
+    <ul>
+        <li>Authority and Power: The theme of authority and power is explored through Yakonov's inspection of the sharashka and Mamurin's attempts to regain his standing.</li>
+        <li>Fall from Grace: Mamurin's fall from a high-ranking official to a prisoner presents the theme of 'fall from grace'. His struggle to accept his new reality underscores the harsh consequences of falling out of favor in an authoritative regime.</li>
+    </ul>
+
+    <!-- Quotations -->
+    <h2>Quotations</h2>
+    <ul>
+        <li>"Clipping, damping, amplitude compression, electronic differentiation - a parody of human speech engineered by us."</li>
+        <li>"The pursuit of success in the sharashka is the only path to freedom."</li>
+        <li>"Our work may lead to groundbreaking advancements, but we must also confront the ethical implications of our actions."</li>
+    </ul>
+
+    <!-- Chapter Timeline -->
+    <h2>Chapter Timeline</h2>
+    <ol>
+        <li>The chapter commences with the aura of mystery surrounding the Clipped Speech Laboratory and its significance within the sharashka.</li>
+        <li>The team engages in meticulous testing of the Clipped Speech system.</li>
+        <li>Bobynin's arrival adds a sense of urgency and pressure to the project.</li>
+        <li>Khorobrov's rebellious stand and Mamurin's relentless pursuit of excellence highlight the struggles for recognition and freedom.</li>
+        <li>Yakonov is summoned to the ministry, introducing uncertainty and tension.</li>
+    </ol>
+
+    <!-- Character Relationships -->
+    <h2>Character Relationships</h2>
+    <p class="placeholder" style="margin-bottom: 15px;">
+        The relationships between Yakonov and his team are characterized by loyalty, dedication, and a shared vision for the project's success. Mamurin's ambition and drive often put him in conflict with his peers, while Markushev's unwavering support for Yakonov strengthens the bond within the team. The chapter also explores the complexities of the relationships between the zeks, with individual motivations and desires driving their interactions.
+    </p>
+
+    <!-- Links -->
+    <h2>Links</h2>
+    <ul>
+        <li><a href="https://en.wikipedia.org/wiki/Clipping_(audio)#Amplitude_compression">Clipping and Amplitude Compression in Speech Processing</a></li>
+    </ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 13 SUMMARY ------>
+<!->
+<div class="summary chapter-summary" id="chapter-13" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-13'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 13: He Should Have Lied</h2>
+<p>
+    Chapter 13 opens with Nerzhin returning to the Acoustics Laboratory with a sense of unease. He senses that something significant has occurred, but he is not yet fully aware of the severity. Rubin is absent, but the rest of the team, including Valentin, are present. Valentin is engrossed in his work with a radio panel.
+</p>
+<p>
+    The pivotal event of the chapter revolves around Nerzhin and Serafima Vitalievna, referred to as Simochka. Simochka, a reader on the articulation project in the lab, is visibly agitated by Nerzhin's return. They retreat into a soundproof box, where Simochka expresses her concern over Nerzhin's impending transfer. She is deeply in love with Nerzhin, offering herself to him and even expressing a willingness to bear his child. Although Nerzhin is touched by her affection, he is unable to commit to her, given his complex situation. He also contemplates the need to safeguard his secret writings on the Russian Revolution, considering the possibility of entrusting them to Simochka.
+</p>
+
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul>
+    <li><strong>Nerzhin:</strong> The protagonist, who is a mathematician assigned to the Acoustics Lab.</li>
+    <li><strong>Rubin:</strong> A linguist assigned to the Acoustics Lab.</li>
+    <li><strong>Valentin:</strong> An engineer and radio expert working on a radio panel in the Acoustics Laboratory.</li>
+    <li><strong>Simochka (Serafima Vitalievna):</strong> A reader on the articulation project in the lab.</li>
+</ul>
+
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+    <tr>
+        <th>Character</th>
+        <th>Development</th>
+    </tr>
+    <tr>
+        <td>Nerzhin</td>
+        <td>His interaction with Simochka sheds light on his emotional complexity and his struggle to balance his personal feelings with the harsh realities of his situation.</td>
+    </tr>
+    <tr>
+        <td>Simochka</td>
+        <td>Her love for Nerzhin is revealed in this chapter, showing her as a deeply emotional and devoted character.</td>
+    </tr>
+</table>
+
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul>
+    <li>Love and Sacrifice: The theme of love and sacrifice is explored through the relationship between Nerzhin and Simochka.</li>
+    <li>Fear and Uncertainty: The looming transfer of Nerzhin intensifies the sense of fear and uncertainty.</li>
+</ul>
+
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul>
+    <li>"Why ask? We are people of the abyss. We disappear into the hole from which we surfaced . . . back to the camp."</li>
+    <li>"I’ll wait for you. How many years have you still got to do? Five? Well, I’ll wait five years for you! But will you come back to me when you’re released?"</li>
+    <li>"How can I check you in all this noise?"</li>
+</ul>
+
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<p>
+    The chapter's events unfold in the Acoustics Laboratory, with Nerzhin returning to the lab and having a significant interaction with Simochka.
+</p>
+
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+    The intimate interaction between Nerzhin and Simochka in this chapter reveals a deep emotional connection. Simochka's love for Nerzhin and her willingness to wait for him and bear his child demonstrate her devotion. Meanwhile, Nerzhin's reluctance to commit to her and his concern for his writings reveal the complexities of his situation and feelings.
+</p>
+
+<!-- Links -->
+<h2>Links</h2>
+<ul>
+    <li><a href="https://en.wikipedia.org/wiki/Sharashka">Sharashka - Wikipedia</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/Gulag">Gulag - Wikipedia</a></li>
+</ul>
+</div>
+<!->
+<!------------------------------>
+<!----- CHAPTER 14 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-14" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-14'); showSearchBar()">Hide Summary</button>
+<h2>Summary of Chapter 14: The Blue Light</h2>
+<p style="margin-bottom: 15px;">
+    Chapter 14 presents a nightly scenario within the cell, with the blue light being a significant aspect and a conversation starter. The inmates find the light irritating and intrusive due to its continuous presence and its perceived pressure on the eyes. Filled with conversations among the prisoners, each showcasing their unique personalities and backgrounds, the environment oscillates between camaraderie, tension, and curiosity. The chapter is marked by the absence of Bobynin, a prisoner who was summoned earlier and has not returned. This absence adds a certain level of uneasiness among the inmates. Later, another inmate, Pryanchikov, is also summoned away, further intensifying the mystery and tension. His peers urge him to voice their collective complaints to the higher authorities. The mystery behind these unusual summons and the absence of Bobynin stirs speculations, with one zek even suggesting that war might have broken out.
+</p>
+
+<!-- Characters in Chapter -->
+<h2>Characters in Chapter</h2>
+<ul>
+    <li><strong>Bobynin:</strong> A prisoner who was summoned earlier and hasn't returned.</li>
+    <li><strong>Pryanchikov:</strong> Another prisoner who is later summoned.</li>
+</ul>
+
+<!-- Character Development -->
+<h2>Character Development</h2>
+<table>
+<tr>
+<th>Character</th>
+<th>Development</th>
+</tr>
+<tr>
+<td>Bobynin</td>
+<td>His sudden and unexplained disappearance stirs concern and speculation among the inmates. The absence highlights his possible significance in the camp's dynamics or the unique situation he might be involved in.</td>
+</tr>
+<tr>
+<td>Pryanchikov</td>
+<td>Emerges as a potential representative for the inmates' grievances. His unexpected summons further indicates his importance in the camp's hierarchy or the special circumstances surrounding him.</td>
+</tr>
+</table>
+
+<!-- Key Themes and Topics -->
+<h2>Key Themes and Topics</h2>
+<ul>
+    <li>Uncertainty and Tension: The chapter delves into the feelings of uncertainty and tension, evident in the prisoners' speculations about the summons and Bobynin's unexplained absence.</li>
+    <li>Camaraderie: The inmates showcase camaraderie, engaging in discussions and debates, despite the looming tension and uncertainty.</li>
+</ul>
+
+<!-- Quotations -->
+<h2>Quotations</h2>
+<ul>
+    <li>“The filth are mighty busy in the middle of the night!”</li>
+    <li>“When war comes, they’ll mow us down wholesale. Or put something in the mush to infect us with plague, like the Germans did in concentration camps in ’45.”</li>
+</ul>
+
+<!-- Chapter Timeline -->
+<h2>Chapter Timeline</h2>
+<ol>
+    <li>Nighttime discussion about the blue light and various topics in the cell.</li>
+    <li>Bobynin's absence is noted and discussed.</li>
+    <li>Pryanchikov is summoned by a junior lieutenant, sparking further speculations.</li>
+    <li>Discussions continue about the possible reasons for these summons and Bobynin's disappearance.</li>
+</ol>
+
+<!-- Character Relationships -->
+<h2>Character Relationships</h2>
+<p class="placeholder" style="margin-bottom: 15px;">
+    The inmates in the cell share a sense of camaraderie and collective suffering. Despite the inherent tension and uncertainties, there exists unity as they navigate the same challenging conditions, sharing their thoughts and fears. The sudden summons of Pryanchikov and the unexplained absence of Bobynin bring additional tension within the cell.
+</p>
+
+<!-- Links -->
+<h2>Links</h2>
+<ul>
+    <li><a href="https://en.wikipedia.org/wiki/Labor_camp">Labor Camp - Wikipedia</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/Blue_light">The Blue Light (Physics) - Wikipedia</a></li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 15 SUMMARY ------>
+<!->
+
+<!------------------------------>
+<!----- CHAPTER 15 SUMMARY ------>
+<!->
+
+<!->
+<!------------------------------>
+<!----- CHAPTER 15 SUMMARY ------>
+<!->
+<!---- CHAPTER 15 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 16 SUMMARY ------>
+<!->
+<!---- CHAPTER 16 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 17 SUMMARY ------>
+<!->
+<!---- CHAPTER 17 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 18 SUMMARY ------>
+<!->
+<!---- CHAPTER 18 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 19 SUMMARY ------>
+<!->
+<!---- CHAPTER 19 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 20 SUMMARY ------>
+<!->
+<!---- CHAPTER 20 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 21 SUMMARY ------>
+<!->
+<!---- CHAPTER 21 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 22 SUMMARY ------>
+<!->
+<!---- CHAPTER 22 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 23 SUMMARY ------>
+<!->
+<!---- CHAPTER 23 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 24 SUMMARY ------>
+<!->
+<!---- CHAPTER 24 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 25 SUMMARY ------>
+<!->
+<!---- CHAPTER 25 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 26 SUMMARY ------>
+<!->
+<!---- CHAPTER 26 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 27 SUMMARY ------>
+<!->
+<!---- CHAPTER 27 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 28 SUMMARY ------>
+<!->
+<!---- CHAPTER 28 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 29 SUMMARY ------>
+<!->
+<!---- CHAPTER 29 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 30 SUMMARY ------>
+<!->
+<!---- CHAPTER 30 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 31 SUMMARY ------>
+<!->
+<!---- CHAPTER 31 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 32 SUMMARY ------>
+<!->
+<!---- CHAPTER 32 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 33 SUMMARY ------>
+<!->
+<!---- CHAPTER 33 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 34 SUMMARY ------>
+<!->
+<!---- CHAPTER 34 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 35 SUMMARY ------>
+<!->
+<!---- CHAPTER 35 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 36 SUMMARY ------>
+<!->
+<!---- CHAPTER 36 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 37 SUMMARY ------>
+<!->
+<!---- CHAPTER 37 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 38 SUMMARY ------>
+<!->
+<!---- CHAPTER 38 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 39 SUMMARY ------>
+<!->
+<!---- CHAPTER 39 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 40 SUMMARY ------>
+<!->
+<!---- CHAPTER 40 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 41 SUMMARY ------>
+<!->
+<!---- CHAPTER 41 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 42 SUMMARY ------>
+<!->
+<!---- CHAPTER 42 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 43 SUMMARY ------>
+<!->
+<!---- CHAPTER 43 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 44 SUMMARY ------>
+<!->
+<!---- CHAPTER 44 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 45 SUMMARY ------>
+<!->
+<!---- CHAPTER 45 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 46 SUMMARY ------>
+<!->
+<!---- CHAPTER 46 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 47 SUMMARY ------>
+<!->
+<!---- CHAPTER 47 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 48 SUMMARY ------>
+<!->
+<!---- CHAPTER 48 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 49 SUMMARY ------>
+<!->
+<!---- CHAPTER 49 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 50 SUMMARY ------>
+<!->
+<!---- CHAPTER 50 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 51 SUMMARY ------>
+<!->
+<!---- CHAPTER 51 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 52 SUMMARY ------>
+<!->
+<!---- CHAPTER 52 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 53 SUMMARY ------>
+<!->
+<!---- CHAPTER 53 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 54 SUMMARY ------>
+<!->
+<!---- CHAPTER 54 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 55 SUMMARY ------>
+<!->
+<!---- CHAPTER 55 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 56 SUMMARY ------>
+<!->
+<!---- CHAPTER 56 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 57 SUMMARY ------>
+<!->
+<!---- CHAPTER 57 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 58 SUMMARY ------>
+<!->
+<!---- CHAPTER 58 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 59 SUMMARY ------>
+<!->
+<!---- CHAPTER 59 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 60 SUMMARY ------>
+<!->
+<!---- CHAPTER 60 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 61 SUMMARY ------>
+<!->
+<!---- CHAPTER 61 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 62 SUMMARY ------>
+<!->
+<!---- CHAPTER 62 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 63 SUMMARY ------>
+<!->
+<!---- CHAPTER 63 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 64 SUMMARY ------>
+<!->
+<!---- CHAPTER 64 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 65 SUMMARY ------>
+<!->
+<!---- CHAPTER 65 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 66 SUMMARY ------>
+<!->
+<!---- CHAPTER 66 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 67 SUMMARY ------>
+<!->
+<!---- CHAPTER 67 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 68 SUMMARY ------>
+<!->
+<!---- CHAPTER 68 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 69 SUMMARY ------>
+<!->
+<!---- CHAPTER 69 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 70 SUMMARY ------>
+<!->
+<!---- CHAPTER 70 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 71 SUMMARY ------>
+<!->
+<!---- CHAPTER 71 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 72 SUMMARY ------>
+<!->
+<!---- CHAPTER 72 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 73 SUMMARY ------>
+<!->
+<!---- CHAPTER 73 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 74 SUMMARY ------>
+<!->
+<!---- CHAPTER 74 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 75 SUMMARY ------>
+<!->
+<!---- CHAPTER 75 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 76 SUMMARY ------>
+<!->
+<!---- CHAPTER 76 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 77 SUMMARY ------>
+<!->
+<!---- CHAPTER 77 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 78 SUMMARY ------>
+<!->
+<!---- CHAPTER 78 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 79 SUMMARY ------>
+<!->
+<!---- CHAPTER 79 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 80 SUMMARY ------>
+<!->
+<!---- CHAPTER 80 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 81 SUMMARY ------>
+<!->
+<!---- CHAPTER 81 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 82 SUMMARY ------>
+<!->
+<!---- CHAPTER 82 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 83 SUMMARY ------>
+<!->
+<!---- CHAPTER 83 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 84 SUMMARY ------>
+<!->
+<!---- CHAPTER 84 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 85 SUMMARY ------>
+<!->
+<!---- CHAPTER 85 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 86 SUMMARY ------>
+<!->
+<!---- CHAPTER 86 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 87 SUMMARY ------>
+<!->
+<!---- CHAPTER 87 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 88 SUMMARY ------>
+<!->
+<!---- CHAPTER 88 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 89 SUMMARY ------>
+<!->
+<!---- CHAPTER 89 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 90 SUMMARY ------>
+<!->
+<!---- CHAPTER 90 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 91 SUMMARY ------>
+<!->
+<!---- CHAPTER 91 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 92 SUMMARY ------>
+<!->
+<!---- CHAPTER 92 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 93 SUMMARY ------>
+<!->
+<!---- CHAPTER 93 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 94 SUMMARY ------>
+<!->
+<!---- CHAPTER 94 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 95 SUMMARY ------>
+<!->
+<!---- CHAPTER 95 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 96 SUMMARY ------>
+<!->
+<!---- CHAPTER 96 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 97 SUMMARY ------>
+<!->
+<!---- CHAPTER 97 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 98 SUMMARY ------>
+<!->
+<!---- CHAPTER 98 PLACEHOLDER --->
+<!->
+<!------------------------------>
+<!----- CHAPTER 99 SUMMARY ------>
+<!->
+<!---- CHAPTER 99 PLACEHOLDER --->
+
+<script>
+let viewState = 'chapterList';
+
+// JavaScript function to toggle visibility of chapter summaries and the scrollable area
+function toggleChapter(chapterId) {
+    const allChapterSummaries = document.getElementsByClassName("summary");
+    for (let i = 0; i < allChapterSummaries.length; i++) {
+        const chapter = allChapterSummaries[i];
+        if (chapter.id === chapterId) {
+            chapter.style.display = "block";
+        } else {
+            chapter.style.display = "none";
+        }
+    }
+
+    const scrollableArea = document.querySelector(".scrollable-area");
+    scrollableArea.style.display = "none"; // Hide the scrollable area when a chapter summary is displayed.
+    
+    // Hide the search bar when a chapter summary is displayed
+    const searchBarContainer = document.getElementById("searchContainer");
+    searchBarContainer.classList.remove("active");
+    searchBarContainer.classList.add("closed");
+}
+
+// JavaScript function to toggle visibility of individual chapter summary and show the scrollable area
+function toggleSummary(chapterId) {
+    const chapter = document.getElementById(chapterId);
+    chapter.style.display = chapter.style.display === "none" ? "block" : "none";
+
+    const scrollableArea = document.querySelector(".scrollable-area");
+    scrollableArea.style.display = "block"; // Show the scrollable area when a chapter summary is toggled.
+    
+    // Show the search bar when a chapter summary is toggled off
+    const searchBarContainer = document.getElementById("searchContainer");
+    searchBarContainer.classList.add("active");
+    searchBarContainer.classList.remove("closed");
+}
+
+
+// Existing code for opening and closing behavior of the search bar
+const searchBar = document.querySelector('#searchContainer input');
+const searchContainer = document.querySelector('#searchContainer');
+const searchButton = document.querySelector('#searchContainer .search-btn');
+
+searchBar.addEventListener('focus', function() {
+    searchContainer.classList.remove('closed');
+    searchButton.removeAttribute('disabled');  // Enable the button
+});
+
+searchBar.addEventListener('blur', function() {
+    // Only disable the button and close the search bar if there's no value in the search bar
+    if (!searchBar.value.trim()) {
+        searchContainer.classList.add('closed');
+        searchButton.setAttribute('disabled', '');  // Disable the button
+    }
+});
+
+
+
+
+
+// Transition animation for toggling between Chapter List and Chapter Summaries
+function toggleChapter(chapterId) {
+    const chapter = document.getElementById(chapterId);
+    const chapterList = document.querySelector('.scrollable-area');
+
+    // Move chapterList to the right
+    chapterList.style.opacity = 0;
+    chapterList.style.transform = 'translateX(100%)';
+
+    setTimeout(() => {
+        chapterList.style.display = 'none';
+
+        // Start chapter off-screen to the left
+        chapter.style.display = 'grid';
+        chapter.style.opacity = 0;
+        chapter.style.transform = 'translateX(-100%)';  // Initial state, off to the left
+        
+        // Fade-in and slide-in effect for the chapter summary
+        setTimeout(() => {
+            chapter.style.opacity = 1;
+            chapter.style.transform = 'translateX(0)';
+        }, 50);  
+    }, 300);  
+}
+
+// Transition animation for hiding Chapter Summaries and showing Chapter List
+function toggleSummary(chapterId) {
+    const chapter = document.getElementById(chapterId);
+    const chapterList = document.querySelector('.scrollable-area');
+
+    // Hide the chapter summary with a fade-out and slide-out effect to the left
+    chapter.style.opacity = 0;
+    chapter.style.transform = 'translateX(-100%)';
+
+    setTimeout(() => {
+        chapter.style.display = 'none';
+
+        chapterList.style.display = 'block';
+        chapterList.style.opacity = 0;  
+        chapterList.style.transform = 'translateX(100%)';  // Initial state, off to the right
+
+        // Fade-in and slide-in effect for the chapter list
+        setTimeout(() => {
+            chapterList.style.opacity = 1;
+            chapterList.style.transform = 'translateX(0)';
+        }, 50);  
+    }, 300);  
+}
+
+
+
+
+
+
+
+
+
+
+
+// Function to search through summaries
+function searchSummaries() {
+    // Get the user's input from the search bar
+    let input = document.getElementById("search-input").value.toLowerCase();
+    let keywords = input.split(',').map(k => k.trim());  // Split the input by comma and trim each keyword
+
+
+    // Get all the chapter-summary elements
+    let summaries = document.getElementsByClassName("summary");
+    let hasSummaryIds = Array.from(summaries).map(summary => summary.id);
+
+    let chapters = document.querySelectorAll('li a');
+    for(let chapter of chapters) {
+        let onclickAttribute = chapter.getAttribute('onclick');
+        if(onclickAttribute) {
+            let chapterId = onclickAttribute.replace('toggleChapter(\'', '').replace('\')', '');
+
+            if (hasSummaryIds.includes(chapterId)) {
+                let summaryContent = document.getElementById(chapterId).innerText.toLowerCase();
+                
+                // Check if all keywords match
+                let hasAllKeywords = keywords.every(keyword => summaryContent.includes(keyword));
+
+                if (hasAllKeywords || input === "") {
+                    chapter.parentNode.style.display = "block";
+                } else {
+                    chapter.parentNode.style.display = "none";
+                }
+            } else {
+                chapter.parentNode.style.display = "none";
+            }
+        }
+    }
+}
+
+
+// Function to reset the visibility of all chapters
+function resetChapterVisibility() {
+    const chapters = document.querySelectorAll('.scrollable-area li');
+    for (let chapter of chapters) {
+        chapter.style.display = 'block';
+    }
+}
+
+// Add an input event listener to the search input to detect when it's cleared
+document.getElementById("search-input").addEventListener('input', function() {
+    if (this.value === '') {
+        resetChapterVisibility();
+    }
+});
+
+// Event listener for real-time search as user types
+document.getElementById("search-input").addEventListener("keyup", searchSummaries);
+
+document.getElementById("search-input").addEventListener("keyup", function(event) {
+    // Check for the "Enter" key
+    if (event.keyCode === 13) {
+        event.preventDefault();  // Prevent any default behavior (like form submission)
+
+        const keyword = document.getElementById('search-input').value;
+        
+        // If the search results are already visible, use the update transition
+        if (document.getElementById('searchResults').style.display === 'block') {
+            updateSearchResults(() => {
+                displaySearchResults(keyword);  // Display the updated search results
+            });
+        } else {
+            // Otherwise, use the original transition function
+            showSearchResults();
+            displaySearchResults(keyword);
+        }
+
+        // Set the searchContainer to active
+        document.getElementById("searchContainer").classList.add('active');
+    } else {
+        // If it's not the "Enter" key, continue with the real-time search
+        searchSummaries();
+    }
+});
+
+
+
+const searchInput = document.getElementById('search-input');
+
+searchInput.addEventListener('keydown', function(e) {
+    if (e.keyCode === 13 || e.key === 'Enter') {
+        e.preventDefault(); // Prevent the default action (like form submission)
+
+        // Execute your search logic (same as what you have for the search button)
+        const keyword = searchInput.value;
+
+        // If the search results are already visible, use the update transition
+        if (document.getElementById('searchResults').style.display === 'block') {
+            updateSearchResults(() => {
+                displaySearchResults(keyword);  // Display the updated search results
+            });
+        } else {
+            // Otherwise, use the original transition function
+            showSearchResults();
+            displaySearchResults(keyword);
+        }
+
+        // Set the searchContainer to active
+        document.getElementById("searchContainer").classList.add('active');
+
+        // If on a mobile device, blur the input to close the keyboard
+        if (window.innerWidth < 768) {
+            searchInput.blur();
+        }
+    }
+});
+
+
+
+
+// Event listener for ESC button to close the searchbar
+searchBar.addEventListener('input', function() {
+    escPressCount = 0;
+});
+
+let escPressCount = 0;  // Counter to keep track of the number of ESC key presses
+
+document.addEventListener("keydown", function(event) {
+    const summaries = document.querySelectorAll('.chapter-summary');
+    const openSummary = Array.from(summaries).find(summary => summary.style.display !== 'none');
+    const searchInput = document.querySelector('#search-input');
+
+    if (event.key === "Escape") {
+        if (openSummary) {
+            // If a CHAPTER SUMMARY is open, use the ESC key to hide the summary.
+            const summaryId = openSummary.getAttribute('id');
+            toggleSummary(summaryId);
+            escPressCount = 0;  // Reset the counter
+        } else {
+            if (window.innerWidth < 768) {
+                if (escPressCount === 0) {
+                    searchInput.focus();  // Refocus on the search bar
+                } else if (escPressCount === 1) {
+                    searchInput.value = '';  // Clear the search bar
+                } else if (escPressCount === 2) {
+                    hideSearchResults();
+                    document.getElementById("searchContainer").classList.remove('active');
+                    searchInput.blur();  // Remove focus
+                    escPressCount = -1;  // Reset to -1 so it will become 0 after incrementing
+                }
+            } else {
+                if (escPressCount === 0) {
+                    searchInput.value = '';  // Clear the search bar
+                } else if (escPressCount === 1) {
+                    hideSearchResults();
+                    document.getElementById("searchContainer").classList.remove('active');
+                    searchInput.blur();  // Remove focus
+                    escPressCount = -1;  // Reset to -1 so it will become 0 after incrementing
+                }
+            }
+            escPressCount++;
+        }
+    }
+});
+
+
+
+
+
+
+// Add event listener to the entire document
+document.addEventListener('click', function(event) {
+    const searchContainer = document.getElementById("searchContainer");
+    const searchInput = document.getElementById("search-input");
+    
+    // Check if the click was outside the searchContainer
+    if (!searchContainer.contains(event.target)) {
+        // Clear the search bar
+        searchInput.value = '';
+        resetChapterVisibility();
+
+        // Close the search bar (or any other action you want to achieve)
+        // Depending on your CSS, you might have a class to toggle its visibility or appearance
+        searchContainer.classList.remove('active');  // Assuming 'active' is the class that makes the search bar appear active
+    }
+});
+
+
+
+
+
+
+// Helper function to get all chapter names from the index page
+function getAllChapterNames() {
+    const chapterLinks = document.querySelectorAll('.scrollable-area a');
+    const chapterNames = [];
+    
+    chapterLinks.forEach(link => {
+        // Extract only the chapter name (without "Chapter X - ")
+        const chapterName = link.innerText.split('-')[1].trim();
+        chapterNames.push(chapterName);
+    });
+
+    return chapterNames;
+}
+
+// Search for sentences through the chapter summaries and show them in the place of chapter list
+function extractSentences(summaryElement, input) {
+    let keywords = [];
+
+    // If the input contains commas, split by comma. Otherwise, treat the whole input as a single keyword (or sentence).
+    if (input.includes(',')) {
+        keywords = input.split(",").map(k => k.trim().toLowerCase());
+    } else {
+        keywords = [input.toLowerCase()];
+    }
+
+    // Set to store unique sentences
+    let uniqueSentences = new Set();
+
+    const relevantNodes = Array.from(summaryElement.querySelectorAll('p, ul, td, ol'));
+
+    keywords.forEach(keyword => {
+        relevantNodes.forEach(node => {
+            const nodeText = node.innerText || "";
+            const regex = new RegExp(`([^\.!?]*${keyword}[^\.!?]*[\.!?])`, 'ig');
+            const matches = nodeText.match(regex);
+            if (matches) {
+                matches.forEach(sentence => {
+                    uniqueSentences.add(sentence);
+                });
+            }
+        });
+    });
+
+    // Convert set back to array
+    return [...uniqueSentences];
+}
+
+function displaySearchResults(keywords) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    resultsContainer.innerHTML = '';  // Clear previous results
+
+    // Split the keywords by comma and trim each keyword
+    keywords = keywords.split(",").map(k => k.trim().toLowerCase());
+
+    const summaries = document.querySelectorAll('.chapter-summary');
+    summaries.forEach(summary => {
+        const chapterText = summary.innerText.toLowerCase();
+
+        // Check if all keywords are present in the chapter
+        if (keywords.every(keyword => chapterText.includes(keyword))) {
+            const chapterDiv = document.createElement('div');
+            const chapterTitle = summary.querySelector('h2').innerText;
+            const chapterHeading = document.createElement('h3');
+            chapterHeading.innerText = chapterTitle;
+            chapterDiv.appendChild(chapterHeading);
+
+            const sentencesList = document.createElement('ul');
+
+            // For each keyword, extract sentences containing that keyword
+            keywords.forEach(keyword => {
+                const sentences = extractSentences(summary, keyword);
+                sentences.forEach(sentence => {
+                    const highlighted = sentence.replace(new RegExp(`(${keyword})`, 'ig'), '<span class="highlight">$1</span>');
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = highlighted;
+                    sentencesList.appendChild(listItem);
+                });
+            });
+
+            chapterDiv.appendChild(sentencesList);
+            resultsContainer.appendChild(chapterDiv);
+        }
+    });
+
+    showSearchResults();  // Show the results area
+}
+
+
+
+
+
+
+document.querySelector('.search-btn').addEventListener('click', function() {
+    const keyword = document.getElementById('search-input').value;
+
+    // If the search results are already visible, use the update transition
+    if (document.getElementById('searchResults').style.display === 'block') {
+        updateSearchResults(() => {
+            displaySearchResults(keyword);  // Display the updated search results
+        });
+    } else {
+        // Otherwise, use the original transition function
+        showSearchResults();
+        displaySearchResults(keyword);
+    }
+
+    // Set the searchContainer to active
+    document.getElementById("searchContainer").classList.add('active');
+
+    // Blur the input to close the keyboard
+    document.getElementById('search-input').blur();
+});
+
+
+
+
+// Event delegation for the 'backToChapters' button
+document.body.addEventListener('click', function(event) {
+    if (event.target.id === 'backToChapters') {
+        console.log("Back to Chapter list button clicked");
+        
+        // Use the transition function to hide the search results and show the chapter list
+        hideSearchResults();
+
+        // Remove the active class from searchContainer
+        document.getElementById("searchContainer").classList.remove('active');
+    }
+});
+
+
+
+
+
+// Transition animation for showing the Search Results and hiding Chapter List/Chapter Summaries
+function showSearchResults() {
+    const searchResults = document.getElementById('searchResults');
+    const chapterList = document.querySelector('.scrollable-area');
+
+    // Check if the search results are already displayed
+    if (searchResults.style.display === 'grid') {
+        // If they are, simply return to avoid the transition
+        return;
+    }
+
+    chapterList.style.opacity = 0;
+    chapterList.style.transform = 'translateX(-100%)';
+
+    // Listen for the end of the chapterList's transition
+    chapterList.addEventListener('transitionend', function transitionEndHandler() {
+        chapterList.removeEventListener('transitionend', transitionEndHandler);  // Remove the event listener
+
+        chapterList.style.display = 'none';
+
+        searchResults.style.display = 'grid';
+        searchResults.style.opacity = 0;
+        searchResults.style.transform = 'translateX(100%)';
+
+        setTimeout(() => {
+            searchResults.style.opacity = 1;
+            searchResults.style.transform = 'translateX(0)';
+        }, 50);
+    });
+}
+
+
+
+
+// Transition animation for hiding Search Results and showing Chapter List
+function hideSearchResults() {
+    const searchResults = document.getElementById('searchResults');
+    const chapterList = document.querySelector('.scrollable-area');
+    
+    searchResults.style.opacity = 0;
+    searchResults.style.transform = 'translateX(100%)';
+
+    setTimeout(() => {
+        searchResults.style.display = 'none';
+
+        chapterList.style.display = 'block';
+        chapterList.style.opacity = 0;
+        chapterList.style.transform = 'translateX(-100%)';
+
+        setTimeout(() => {
+            chapterList.style.opacity = 1;
+            chapterList.style.transform = 'translateX(0)';
+        }, 50);
+    }, 300);
+}
+
+
+function updateSearchResults(callback) {
+    const searchResults = document.getElementById('searchResults');
+    
+    // Reset any transform property to ensure there's no slide effect
+    searchResults.style.transform = 'none';
+
+    // Fade out the current search results
+    searchResults.style.opacity = 0;
+    
+    setTimeout(() => {
+        // After the fade-out, call the provided callback (which will update the content)
+        callback();
+
+        // Reset any transform again before fading in
+        searchResults.style.transform = 'none';
+
+        // Fade in the updated search results
+        searchResults.style.opacity = 1;
+    }, 300); // Assuming a 300ms duration, adjust as needed
+}
+
+
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Prevent the default form submission behavior
+
+    const keyword = document.getElementById('search-input').value;
+
+    // If the search results are already visible, use the update transition
+    if (document.getElementById('searchResults').style.display === 'block') {
+        updateSearchResults(() => {
+            displaySearchResults(keyword);  // Display the updated search results
+        });
+    } else {
+        // Otherwise, use the original transition function
+        showSearchResults();
+        displaySearchResults(keyword);
+    }
+
+    // Set the searchContainer to active
+    document.getElementById("searchContainer").classList.add('active');
+
+    // Blur the input to close the keyboard
+    document.getElementById('search-input').blur();
+});
+
+
+
+
+</script>
