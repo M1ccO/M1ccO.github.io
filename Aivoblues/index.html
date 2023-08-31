@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to bottom, white, #003702);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-height: 100vh;
+    overflow-x: hidden;
+    /* overflow-y: auto; */  /* to allow scrolling if the content is longer than the viewport */
+}
+
+.hidden {
+    display: none !important;
+}
+
+body, html {
+    overflow-x: hidden;
+}
+.highlight {
+    background-color: yellow;
+}
+
+.heading h1 {
+    text-align: center;
+    margin-left: 6vw;
+    font-size: 50px;
+    text-transform: uppercase;
+    color: #222;
+    letter-spacing: 6px;
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+    width: 86%;
+    position: relative;
+    top: 20px;
+}
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;
+}
+.heading h1 span {
+    margin-top: -17px;
+    margin-left: 0vw;
+    font-size: 15px;
+    color: #444;
+    word-spacing: 6px;
+    font-weight: normal;
+    letter-spacing: 13px;
+    text-transform: uppercase;
+    font-family: "Raleway", sans-serif;
+    font-weight: 500;
+    display: flex;
+    position: relative;
+    /* left: 94px; */
+    align-items: center;
+    justify-content: center;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+
+.scrollable-area {
+    display: flex;
+    height: 65vh;
+    position: relative;
+    top: 4vh;
+    text-decoration: none;
+    color: inherit;
+    overflow-y: auto;
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+    align-content: flex-start;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+p, li {
+    font-size: 18px;
+    color: black;
+    font-weight: bold;
+}
+
+.scrollable-area li {
+    position: relative;
+    left: 10px;
+    margin-bottom: 1em;
+}
+.scrollable-area li a {
+    text-decoration: none;
+    color: inherit;
+    left: 31px;
+    position: relative;
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+.scrollable-area ul {
+    padding-left: 0;
+    list-style-type: none; /* Remove default bullet points */
+}
+.scrollable-area li::before {
+    content: '\2022';
+    margin-right: 0px;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.scrollable-area li::before {
+    content: "•";
+    position: absolute;
+    left: 1em;
+}
+.scrollable-area a {
+    transform-origin: top left; /* This sets the scaling origin to the top left */
+}
+
+.scrollable-area li:hover a {
+    color: green;
+    transform: scale(1.1); /* This scales the text */
+}
+.scrollable-area::-webkit-scrollbar {
+    width: 10px;
+}
+.scrollable-area::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;
+}
+.scrollable-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollable-area::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.scrollable-area > * {
+    direction: ltr;
+}
+.scrollable-area {
+    width: 52%;
+    position: relative;
+    margin: auto;
+    top: 2vh;
+    overflow: auto;
+    padding-bottom: 30px !important;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    align-content: center;
+}
+
+.scrollable-area, .summary, #searchResults {
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
+    max-height: 99%; /* Adjust this value as needed */
+}
+.scrollable-area .chapter-heading {
+    font-size: 20px; /* Adjust as needed */
+    color: #333;    /* Adjust color as needed */
+    font-weight: bold;
+    margin: 10px 0;  /* Add some spacing above and below the heading */
+    padding-left: 1em; /* To align with your chapter list */
+    text-decoration: none;
+    color: inherit;
+}
+
+
+body {
+    font-family: 'Comic Sans MS', serif;
+    line-height: 1.6;
+    /* overflow-x: scroll; */
+}
+.summary {
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.toggle-button {
+    font-size: 18px;
+    font-family: 'Roboto', sans-serif;
+    /* padding: 10px 20px; */
+    background-color: #ffffff;
+    border-block-start-width: 2px;
+    border-color: black;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.toggle-button {
+    font-size: 14px;
+    position: relative;
+    padding: 5px 10px;
+    margin-top: 10px;
+    top: -10px;
+    left: 1px;
+}
+.toggle-button:hover {
+    background-color: #e0e0e0; /* Change background color on hover */
+    cursor: pointer; /* Change cursor to pointer on hover */
+}
+p, li {
+    font-size: 20px;
+    color: black;
+    font-family: fangsong;
+    line-height: 1.6;
+}
+h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+}
+table {
+    font-size: 18px;
+    color: black;
+    font-weight: bold;
+    border: 1px solid black;
+    width: 100%;
+}
+th {
+    background-color: #734e73;
+    color: white;
+}
+td {
+    background-color: #4a7f3f;
+    color: white;
+}
+.placeholder {
+      background-color: #eee;
+      padding: 10px;
+      margin: 10px 0;
+}
+.quote {
+      font-size: 20px;
+      color: black;
+}
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;
+}
+.summary {
+    background-color: #f0f0f0;
+    position: relative;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: white;
+    margin-top: 10vh;
+    margin-bottom: 2vh;
+    margin-left: auto;
+    margin-right: auto;
+    /* top: -4vh; */
+    padding: 20px;
+    max-width: 82%;
+    max-height: 100%;
+    border: 1px solid white;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    border: 2px solid black;
+    }
+.placeholder {
+    background-color: rgb(138 53 53 / 27%);
+}
+.hidden {
+    display: none;
+}
+
+#resultsContainer > div {
+    margin-bottom: 20px;
+}
+
+#resultsContainer h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+    text-shadow: 2px 2px 3px gray;
+}
+
+#resultsContainer ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+#resultsContainer .highlight {
+    background-color: yellow;
+}
+
+
+
+@media (max-width: 991.98px) {
+.scrollable-area {
+    min-width: 76vw;
+    max-width: 106vw;
+  }
+}
+@media (max-width: 767.98px) {
+.scrollable-area {
+    max-width: 95%;
+    min-width: 84vw;
+    margin-top: 8vh;
+    max-height: 64vh;
+  }
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+}
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 100%;
+    }
+}
+
+@media (max-width: 244px) {
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+}
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 70vh;
+    }
+}
+
+
+@media (max-width: 767.98px) {
+    table {
+        width: 100%;
+        border: none;
+    }
+    table td:first-child {color: white;}
+    table td:last-child {/* color: green; */}
+    table th, table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    table tr {
+        margin-bottom: 1rem;
+        display: block;
+        border: 1px solid #000000;
+    }
+    table td {
+        border: 1px solid #fff;
+        padding: 0.3rem;
+    }
+    table td:first-child {
+        background-color: #734e73;
+    }
+}
+
+@media (max-width: 767.98px) {
+    table th {
+        display: none;
+    }
+}
+
+
+
+
+
+
+
+
+
+
+#searchContainer, #searchContainer.search-bar {
+    display: flex;
+    position: relative;
+}
+
+#searchContainer input,
+#searchContainer .search-btn, 
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    transition: all 0.25s ease-out;
+}
+
+#searchContainer input,
+#searchContainer .search-btn {
+    width: 3em;
+    height: 3em;
+}
+
+#searchContainer input:invalid:not(:focus),
+#searchContainer .search-btn {
+    cursor: pointer;
+}
+
+#searchContainer,
+#searchContainer input:focus,
+#searchContainer input:valid  {
+    width: 100%;
+}
+
+#searchContainer input:focus,
+#searchContainer input:not(:focus) + .search-btn:focus {
+    outline: transparent;
+}
+
+#searchContainer {
+    margin-top: -2.7vh;
+    margin-bottom: -11vh;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.5em;
+    justify-content: center;
+    max-width: 42vw;
+    min-width: fit-content;
+    order: 0;
+}
+
+#searchContainer input {
+    background: #81818100;
+    border-radius: 1.5em;
+    box-shadow: 0 0 0 0.4em #ffffff inset;
+    padding: 0.75em;
+    transform: translate(0.5em,0.5em) scale(0.5);
+    transform-origin: 100% 0;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+
+#searchContainer input::-webkit-search-decoration {
+    -webkit-appearance: none;
+}
+
+#searchContainer input:focus,
+#searchContainer input:valid {
+    background: #fff;
+    border-radius: 0.375em 0 0 0.375em;
+    box-shadow: 0 0 0 0.1em #d9d9d9 inset;
+    transform: scale(1);
+}
+
+#searchContainer .search-btn {
+    background: #ffffff;
+    border-radius: 0 0.75em 0.75em 0 / 0 1.5em 1.5em 0;
+    padding: 0.75em;
+    position: relative;
+    transform: translate(0.25em,0.25em) rotate(45deg) scale(0.25,0.125);
+    transform-origin: 0 50%;
+}
+
+#searchContainer input:not(:focus):hover {
+    transform: translate(0.5em,0.5em) scale(0.6);  /* scale the glass */
+}
+
+#searchContainer input:not(:focus):hover + .search-btn {
+    transform: translate(0.08em,0.32em) rotate(45deg) scale(0.3,0.15); /* scale the handle */
+}
+
+#searchContainer.active input:not(:focus):hover,
+#searchContainer.active input:not(:focus):hover + .search-btn {
+    transform: none;
+}
+
+
+
+
+
+#searchContainer .search-btn:hover {
+    /*box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.6);*/  /* Glow effect */
+}
+
+
+
+
+
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    content: "";
+    display: block;
+    opacity: 0;
+    position: absolute;
+}
+
+#searchContainer .search-btn:before {
+    border-radius: 50%;
+    box-shadow: 0 0 0 0.2em #f1f1f1 inset;
+    top: 0.75em;
+    left: 0.75em;
+    width: 1.2em;
+    height: 1.2em;
+}
+
+#searchContainer .search-btn:after {
+    background: #f1f1f1;
+    border-radius: 0 0.25em 0.25em 0;
+    top: 51%;
+    left: 51%;
+    width: 0.75em;
+    height: 0.25em;
+    transform: translate(0.2em,0) rotate(45deg);
+    transform-origin: 0 50%;
+}
+
+#searchContainer .search-btn span {
+    display: inline-block;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+}
+
+/* Active state */
+#searchContainer input:focus + .search-btn,
+#searchContainer input:valid + .search-btn {
+    background: #2762f3;
+    border-radius: 0 0.375em 0.375em 0;
+    transform: scale(1);
+}
+
+#searchContainer input:focus + .search-btn:before, 
+#searchContainer input:focus + .search-btn:after,
+#searchContainer input:valid + .search-btn:before, 
+#searchContainer input:valid + .search-btn:after {
+    opacity: 1;
+}
+
+#searchContainer input:focus + .search-btn:hover,
+#searchContainer input:valid + .search-btn:hover,
+#searchContainer input:valid:not(:focus) + .search-btn:focus {
+    background: #0c48db;
+}
+
+#searchContainer input:focus + .search-btn:active,
+#searchContainer input:valid + .search-btn:active {
+    transform: translateY(1px);
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    body, input {
+        color: #f1f1f1;
+    }
+    body {
+        background: #171717;
+    }
+    #searchContainer input {
+        box-shadow: 0 0 0 0.4em #f1f1f1 inset;
+    }
+    #searchContainer input:focus,
+    #searchContainer input:valid {
+        background: #3d3d3d;
+        box-shadow: 0 0 0 0.1em #3d3d3d inset;
+    }
+    #searchContainer .search-btn {
+        background: #f1f1f1;
+    }
+}
+</style>
+</head>
+<title>
+AIVOBLUES - Book Summary
+  </title>
+<body>
+<!---------------------------------->
+<!---------- CHAPTER LIST ---------->
+<!---------------------------------->
+<div class="heading">
+<h1>
+    Aivoblues
+    <span>
+    Anders Hansen
+    </span>
+</h1>
+</div>
+<!-------- SEARCHBAR ---------->
+<!----------------------------->
+<div class="search-bar closed" id="searchContainer">
+<div class="hover-detect"></div>
+<input id="search-input" required="" type="search"/>
+<button class="search-btn" disabled=""><span>Search</span></button>
+</div>
+<div class="scrollable-area" style="border: 2px solid black;">
+<ul>
+<!-------------------------->
+<!------- CHAPTER 1 -------->
+<ul>
+<li>
+<a href="#" onclick="toggleChapter('chapter-12')">
+ESIPUHE</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 1 -------->
+  <li>
+<a href="#" onclick="toggleChapter('chapter-1')">
+1 - SELVIYTYJÄT</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 2 -------->
+<ul>
+  <li>
+<a href="#" onclick="toggleChapter('chapter-2')">
+2 - MIKSI TUNTEITA ON OLEMASSA?</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 3 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-3')">
+3 - AHDISTUS JA PANIIKKI</a>
+  </li>
+<!-------------------------->
+<!------- CHAPTER 4 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-4')">
+4 - MASENNUS</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 5 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-5')">
+5 - YKSINÄISYYS</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 6 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-6')">
+6 - LIIKUNTA</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 7 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-7')">
+7 - VOIDAANKO NYT AIEMPAA HUONOMMIN?</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 8 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-8')">
+8 - KOHTALOVAISTO</a>
+</li>
+<!-------------------------->
+<!------- CHAPTER 9 -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-9')">
+9 - ONNELLISUUSANSA</a>
+</li>
+<!--------------------------->
+<!------- JÄLKISANAT -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-10')">
+JÄLKISANAT</a>
+</li>
+<!--------------------------->
+<!------- 10 AJATUSTA -------->
+<li>
+<a href="#" onclick="toggleChapter('chapter-11')">
+10 TÄRKEINTÄ AJATUSTA</a>
+</li>
+</ul>
+</div>
+<!----------------------------------->
+<!------ END OF CHAPTER LIST -------->
+<!----------------------------------->
+<!----->
+<!--- SEARCH RESULTS HIGHLIGHTED ----->
+<!------------------------------------>
+<div class="summary" id="searchResults" style="display: none;">
+<button class="toggle-button" id="backToChapters">Back to Chapters</button>
+<div id="resultsContainer"><!-- Results will be appended here --></div>
+</div>
+<!->
+<!-------------------------------->
+<!------- CHAPTER SUMMARIES ----->
+<!->
+<!------------------------------>
+<!----- ESIPUHE SUMMARY ------>
+<!->
+<div class="summary chapter-summary" id="chapter-12" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-12'); showSearchBar()">Piilota Yhteenveto</button>
+<h2>Esipuheen yhteenveto</h2>
+<p style="margin-bottom: 15px;">Ihmiset kohtaavat joskus psykologista ahdistusta, vaikka olosuhteet ovat suotuisat. Tämä on hämmentävää ottaen huomioon aivojemme monimutkaisuuden ja kyvyn. Kirjoittaja pohtii tätä paradoksia korostaen tunteidemme biologisen näkökulman merkitystä.</p>
+
+<!-- Main Concepts -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Ihmisen aivojen monimutkaisuus</li>
+<li>Psyykkinen hyvinvointi modernissa maailmassa</li>
+</ul>
+
+<!-- Historical Context (if applicable) -->
+<h2>Historiallinen Konteksti</h2>
+<p style="margin-bottom: 15px;">Tämä luku ei keskity erityisesti historialliseen kontekstiin, mutta mainitsee nykyaikaisen elämäntavan ja sen vaikutukset mielenterveyteen.</p>
+
+<!-- Psychological Insights -->
+<h2>Psykologiset Oivallukset</h2>
+<ul>
+<li>Biologinen näkökulma tunteisiimme</li>
+<li>Aivojen toiminta masennuksen ja ahdistuksen aikana</li>
+</ul>
+
+<!-- Evolutionary Perspective -->
+<h2>Evolutionäärinen Näkökulma</h2>
+<p style="margin-bottom: 15px;">Kirjailija korostaa ihmisen biologista luonnetta ja miten se vaikuttaa nykypäivän hyvinvointiin ja pahoinvointiin.</p>
+
+<!-- Key Themes and Topics -->
+<h2>Avain Teemat ja Aiheet</h2>
+<ul>
+<li>Aivojen kyky ja rajoitukset</li>
+<li>Mielenterveyden tila modernissa maailmassa</li>
+</ul>
+
+<!-- Quotations -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Tavattuani tuhansia potilaita olen käsittänyt tämän tiedon tärkeyden. Se auttaa ymmärtämään, mihin kannattaa keskittyä voidakseen mahdollisimman hyvin."</li>
+<li>"Aloitetaan alusta – siis todellakin, aivan alusta."</li>
+</ul>
+
+<!-- Scientific Debates or Controversies (if applicable) -->
+<h2>Tieteelliset Väittelyt tai Kiistat</h2>
+<p style="margin-bottom: 15px;">Luvussa ei erityisesti keskitytä tieteellisiin väittelyihin tai kiistoihin.</p>
+
+<!-- Links -->
+<h2>Linkit</h2>
+<ul>
+<!-- You can insert relevant links here -->
+</ul>
+</div>
+<!->
+<!------------------------------>
+<!----- CHAPTER 1 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-1" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-1'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Kappaleen 1 yhteenveto: SELVIYTYJÄT</h2>
+<p style="margin-bottom: 15px;">
+    Kappale käsittelee ihmisen evoluutiota ja selviytymistä kymmenien tuhansien vuosien aikana. Teksti keskittyy erityisesti ihmisen selviytymiseen, tunteiden merkitykseen selviytymisessä ja ihmisen evolutiivisen historian vaikutukseen nykyihmisen mielenterveyteen ja tunne-elämään.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Ihmisen evoluution ja selviytymisen historia</li>
+<li>Tunteiden rooli ja merkitys ihmisen selviytymisessä</li>
+<li>Mielenterveyden haasteet ja niiden yhteys evoluutioon</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+    Teksti alkaa kuvitteellisella matkalla 250 000 vuoden taakse, jolloin "Eeva" eli itäisessä Afrikassa. Kuvaillaan Eevan ja hänen jälkeläistensä selviytymistä ajan myötä ja kuinka heidän selviytymisvaistonsa ja ominaisuutensa ovat periytyneet nykypäivän ihmisille.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+    Selviytyminen on ollut keskeinen tekijä ihmisen evoluutiossa. Esivanhempiemme on täytynyt selvitä monista haasteista, kuten sairauksista, nälästä ja vaaroista, jotta heidän jälkeläisensä voisivat jatkaa sukua. Tämä selviytymisvaisto ja siihen liittyvät tunteet ovat edelleen osa nykyihmisen psyykettä.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<ul>
+<li>Tunteilla on ollut keskeinen rooli selviytymisessä.</li>
+<li>Esivanhempiemme tunteet, kuten pelko, ovat auttaneet heitä välttämään vaaroja ja lisäämään mahdollisuuksiaan selvitä.</li>
+<li>Nykyaikainen elämä ja sen haasteet voivat olla ristiriidassa evolutiivisesti kehittyneiden tunteidemme ja vaistojemme kanssa.</li>
+</ul>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+    Vaikka nykyaikana ihmiset elävät suhteellisen turvallisessa ympäristössä, meidän biologiamme ja psyykemme eivät ole ehtineet sopeutua näihin muutoksiin. Tämä voi selittää joitakin nykyihmisen mielenterveyden haasteita.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Kun tätä toistetaan kymmenen tuhannen sukupolven ajan, tapaat Eevan lapsenlapsen lapsenlapsen lapsenlapsen lapsenlapset. Keitä he ovat? Me, tietenkin."</li>
+<li>"Sopeutuminen: Survival of the fittest ilmaisu saa ajattelemaan fyysisesti ja psyykkisesti huippukuntoista henkilöä."</li>
+<li>"Evoluution yksioikoisen logiikan mukaan väliä on vain sillä, että he selvisivät hengissä ja saivat lapsia."</li>
+<li>"Aivojen tärkein tehtävä on siis selviytyä."</li>
+<li>"Kuten sanottua olemme selviytyjien jälkeläisiä, eikä meidän ehkä ole tarkoituskaan voida hyvin."</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 2 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-2" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-2'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Luvun 2 yhteenveto: MIKSI TUNTEITA ON OLEMASSA?</h2>
+<p style="margin-bottom: 15px;">
+    Kappale käsittelee tunteiden merkitystä ihmisen selviytymisessä ja niiden evolutiivista roolia. Se tuo esiin kuinka aivojen mantelitumake auttaa meitä reagoimaan vaarallisiin tilanteisiin sekä kuinka tunteet ovat kehittyneet evoluution myötä ohjaamaan ja suojelemaan meitä.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Mantelitumakkeen rooli vaaran havaitsemisessa</li>
+<li>Tunteiden evolutiivinen merkitys selviytymisessä</li>
+<li>Aivojen kyky yhdistää sisäinen ja ulkoinen maailma tunteiksi</li>
+</ul>
+
+<!-- Aivojen rooli ja toiminta -->
+<h2>Aivojen rooli ja toiminta</h2>
+<p style="margin-bottom: 15px;">
+    Aivot käsittelevät valtavia määriä tietoa joka sekunti, mutta voivat keskittyä vain yhteen asiaan kerrallaan. Ne prosessoivat tiedon tunteiden muodossa, ohjaten käyttäytymistämme selviytymisen ja lisääntymisen kannalta optimaalisella tavalla.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<ul>
+<li>Tunteet ovat kehittyneet ohjaamaan käyttäytymistämme evoluution myötä.</li>
+<li>Ne ohjaavat meitä välttämään vaaroja ja hakeutumaan tilanteisiin, jotka edistävät selviytymistämme.</li>
+<li>Tunteiden ohimenevyys ja niiden vaikutus motivaatioon</li>
+</ul>
+
+<!-- Yksilölliset erot -->
+<h2>Yksilölliset erot</h2>
+<p style="margin-bottom: 15px;">
+    Vaikka kaikilla ihmisillä on samanlaiset aivot, on yksilöllisiä eroja siinä, kuinka voimme tuntea ja reagoida eri tilanteisiin. Nämä erot voivat johtua erilaisista aivojen rakenteista ja toiminnoista.
+</p>
+
+<!-- Tunteiden synty -->
+<h2>Tunteiden synty</h2>
+<p style="margin-bottom: 15px;">
+    Tunteet syntyvät, kun aivot yhdistävät ulkoisen ympäristön tapahtumat sisäisiin muutoksiin. Esimerkiksi päätös syödä banaani perustuu aivojen arvioon ravinnon tarpeesta ja saatavuudesta.
+</p>
+
+<!-- Evoluution ja nykyajan ristiriita -->
+<h2>Evoluution ja nykyajan ristiriita</h2>
+<p style="margin-bottom: 15px;">
+    Vaikka tunteemme ovat kehittyneet evoluution myötä, ne eivät aina sovi nykyajan elämään ja haasteisiin. Tämä voi aiheuttaa ristiriitoja ja haasteita nykyaikaisessa yhteiskunnassa.
+</p>
+</div>
+<!------------------------------>
+<!----- CHAPTER 3 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-3" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-3'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Kappaleen 3 yhteenveto: AHDISTUS ja PANIIKKI</h2>
+<p style="margin-bottom: 15px;">
+Kappale alkaa syvällisellä tarkastelulla siitä, mikä ahdistus on sekä biologiselta että psykologiselta kannalta. Ahdistus määritellään sekä fyysiseksi reaktioksi, joka valmistaa kehoa vastaamaan uhkaan, että kokemukseksi, joka voi vaikuttaa yksilön ajatteluun ja käyttäytymiseen. Kappaleessa keskustellaan siitä, miten ahdistus on kehittynyt evoluutioprosessissa ja kuinka se on auttanut esi-isiämme vastaamaan vaaroihin ja selviytymään haasteista.
+
+Keskustelu siirtyy sitten ahdistuksen ja pelon välisiin eroihin. Pelko kuvataan voimakkaaksi, akuutiksi tunnereaktioksi, joka syntyy, kun yksilö kohtaa välittömän uhan. Ahdistus taas määritellään ennakoivaksi tunteeksi, joka herää, kun yksilö havaitsee mahdollisen tulevan uhan. Tämä ero auttaa ymmärtämään, kuinka nämä kaksi tunnetta ohjaavat käyttäytymistämme eri tavoin ja kuinka ne vaikuttavat päätöksentekoon.
+
+Kun tarkastellaan ahdistuksen neurobiologiaa, kappale keskittyy aivojen rakenteisiin ja toimintoihin, jotka liittyvät ahdistuksen ja pelon tuntemiseen. Erityisesti amygdala ja sen rooli näiden tunteiden kokemisessa tuodaan esiin. Lisäksi serotoniinin merkitys ahdistuksessa ja mielialan säätelyssä käsitellään yksityiskohtaisesti.
+
+Lopuksi kappale tarkastelee, miten ahdistuksen hoito on kehittynyt historian aikana. Keskustelussa otetaan huomioon sekä perinteiset hoitomenetelmät että nykyaikaiset lähestymistavat, kuten kognitiivinen käyttäytymisterapia ja lääkitys. Kappale korostaa yksilöllisen hoidon merkitystä ja sitä, että ahdistuksen hoito voi vaatia monipuolista lähestymistapaa. Lisäksi kappaleessa pohditaan, kuinka nykyinen ymmärrys ahdistuksen neurobiologiasta voi auttaa kehittämään uusia, tehokkaampia hoitomenetelmiä.
+</p>
+
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Ahdistus: Monisyinen tunnereaktio, joka on seurausta sekä biologisista että psykologisista tekijöistä</li>
+<li>Pelko vs. Ahdistus: Kaksi erilaista tunnereaktiota, joilla on erilaiset roolit ihmisen selviytymisstrategiassa</li>
+<li>Paniikki: Äkillinen voimakas pelon tunne, joka voi johtaa hallitsemattomaan käyttäytymiseen</li>
+<li>Amygdala: Aivojen osa, joka on vastuussa ahdistuksen, pelon ja paniikin tuntemuksista</li>
+<li>Serotoniini: Keskeinen neurotransmitteri, joka vaikuttaa mielialaan ja on yhteydessä ahdistukseen</li>
+</ul>
+
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Ahdistuksen ymmärrys ja hoito ovat kehittyneet vuosisatojen ajan. Alkukantaisissa yhteiskunnissa ahdistus saatettiin nähdä jumalallisen seuraamuksen tai pahan hengen aiheuttamana, kun taas nykyaikainen tieteellinen lähestymistapa pyrkii ymmärtämään ahdistusta neurobiologisten, psykologisten ja sosiaalisten tekijöiden kautta.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Ahdistuksen evoluutiobiologinen tarkastelu paljastaa sen merkityksen osana ihmisen selviytymismekanismia. Tämä tunne on kehittynyt auttamaan esi-isiämme tunnistamaan ja reagoimaan vaaroihin, antaen heille etulyöntiaseman monissa vaarallisissa tilanteissa.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<ul>
+<li>Ahdistus ja pelko ovat keskeisiä tunteita, jotka ohjaavat päätöksentekoa ja toimintaa</li>
+<li>Ne ovat syvästi kytköksissä aivojemme biologisiin prosesseihin ja vaikuttavat käyttäytymiseemme monin tavoin</li>
+<li>Tunteiden ymmärtäminen ja hallinta ovat avainasemassa hyvinvoinnin ja terveyden ylläpitämisessä</li>
+</ul>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Vaikka elämme erilaisessa maailmassa kuin esi-isämme, ahdistuksen biologinen perusta ei ole muuttunut. Nykyaikaiset stressitekijät, kuten työpaine, sosiaaliset odotukset ja informaatioähky, voivat aiheuttaa ahdistusta, mutta sen biologinen ja evolutiivinen perusta pysyy samana.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Ahdistus on yhtä luonnollinen osa biologiaamme kuin nälkä ja uupumuskin."</li>
+<li>"Ahdistus ja pelko ovat kaksi eri asiaa, mutta molemmat ovat olennaisia selviytymisemme kannalta."</li>
+<li>"Aivot ovat monimutkainen elin, mutta niiden ymmärtäminen auttaa meitä ymmärtämään itseämme paremmin."</li>
+<li>"Ahdistuksen hoito on yksilöllistä ja voi sisältää monenlaisia lähestymistapoja."</li>
+<li>"Ymmärrys ahdistuksen neurobiologiasta voi avata ovia uusille ja tehokkaammille hoitomuodoille."</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 4 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-4" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-4'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Kappaleen 4 yhteenveto: Masennuksen monimuotoinen maailma</h2>
+<p style="margin-bottom: 15px;">
+Tämä kappale tarjoaa kokonaisvaltaisen syventymisen masennukseen, yhteen monimutkaisimmista ja yleisimmistä mielenterveyden häiriöistä, joka koskettaa miljoonia ihmisiä eri puolilla maailmaa. Keskustelu alkaa masennuksen määritelmällä ja sen moninaisilla ilmenemismuodoilla, kuten lievästä masennuksesta vakavaan masennukseen ja kaksisuuntaiseen mielialahäiriöön. Genetiikka esitetään merkittävänä tekijänä masennuksen ymmärtämisessä. Tekstissä korostetaan, että vaikka yksittäistä "masennusgeeniä" ei ole tunnistettu, useat geneettiset tekijät yhdessä ympäristötekijöiden kanssa voivat altistaa yksilön masennukselle. Kappaleessa tarkastellaan myös, kuinka yksilöiden kokemukset ja elämäntapahtumat, kuten trauma tai menetys, voivat laukaista tai pahentaa masennuksen oireita. Seuraavaksi paneudutaan syvällisesti masennuksen historialliseen kontekstiin, ja kuinka masennusta on vuosisatojen ajan yritetty ymmärtää ja hoitaa. Erityisesti kuinka vanhat käsitykset, kuten humoraalioppi, ovat antaneet tietä nykyaikaisemmille, tieteellisemmille näkemyksille masennuksesta. Kappaleessa käsitellään myös masennuksen hoidon nykypäivän haasteita ja mahdollisuuksia. Modernit hoitomuodot, kuten terapia ja lääkitys, sekä niiden tehokkuus ja haasteet ovat keskeisessä roolissa tässä keskustelussa. Lopuksi korostetaan masennuksen yksilöllisyyttä ja kuinka tärkeää on löytää kullekin yksilölle sopiva hoitomuoto.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Masennus: Saattaa ilmetä eri ihmisillä eri tavoin, mutta yleisesti ottaen se heikentää elämänlaatua ja mielialaa.</li>
+<li>Stressi: Keskeinen tekijä masennuksen kehittymisessä ja voi laukaista masennuksen oireita.</li>
+<li>Geenit ja masennus: Vaikka yksittäistä "masennusgeeniä" ei olekaan löydetty, on monia geenejä, jotka voivat vaikuttaa masennuksen kehittymiseen.</li>
+<li>Geneettinen monimuotoisuus: Masennuksen genetiikka on monimutkainen ja siihen voi liittyä monia tekijöitä.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Käsitys masennuksesta on muuttunut vuosikymmenten aikana. Alun perin toivottiin, että genetiikka voisi tarjota selkeitä vastauksia masennuksen syihin, mutta nykyaikainen tutkimus on osoittanut asian olevan monimutkaisempi.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Vaikka kappale ei keskity vahvasti evoluutioon, on selvää, että masennuksella, kuten monilla muillakin mielenterveyden häiriöillä, on evoluutiobiologinen tausta.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<ul>
+<li>Masennus on ennen kaikkea tunneperäinen sairaus.</li>
+<li>Se vaikuttaa siihen, kuinka koemme maailman ja kuinka reagoimme ympäristömme tapahtumiin.</li>
+<li>Masennus voi vääristää todellisuudenkokemustamme ja tehdä arkisista asioista ylitsepääsemättömän tuntuisia.</li>
+</ul>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Nykyaikaiset elämäntavat, kuten jatkuva kiire, stressi ja sosiaaliset paineet, voivat vaikuttaa masennuksen esiintyvyyteen. On tärkeää pohtia, kuinka nykyaikainen ympäristömme ja evoluution aikanaan muovaamat selviytymismekanismimme kohtaavat.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Geneettinen koodimme on monimutkainen, ja sen ymmärtäminen on avain monien sairauksien, kuten masennuksen, ymmärtämiseen."</li>
+<li>"Vaikka olemme edistyneet paljon masennuksen ymmärtämisessä, paljon on vielä opittavaa."</li>
+<li>"Masennus ei ole vain yksilön sairaus, vaan se vaikuttaa yhteisöihin, perheisiin ja koko yhteiskuntaan."</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 5 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-5" style="display: none;">
+    <button class="toggle-button" onclick="toggleSummary('chapter-5'); showSearchBar()">Piilota yhteenveto</button>
+
+    <h2>Yhteenveto kappaleesta 5: YKSINÄISYYS</h2>
+    <p style="margin-bottom: 15px;">
+    Tämä kappale on omistettu itsetuntemukselle ja sen merkitykselle yksilön elämässä. Aluksi kappale korostaa itsetuntemuksen tärkeyttä, ei vain henkilökohtaisessa kehityksessä, mutta myös sen roolissa yksilön hyvinvoinnissa ja suhteessa ympäröivään maailmaan.
+
+Keskustelu jatkuu syventämällä itsetuntemuksen eri ulottuvuuksia. Tekstissä pohditaan, kuinka yksilön elämäntapahtumat, kuten menetykset, saavutukset ja haasteet, vaikuttavat siihen, miten hän näkee itsensä. On myös tärkeää ymmärtää, että itsetuntemus ei ole staattinen tila, vaan se kehittyy ja muovautuu ajan myötä kokemusten ja elämänvaiheiden mukaan.
+
+Seuraavaksi kappale sukeltaa itsetuntemuksen historiallisiin näkökulmiin, kuinka eri kulttuurit ja aikakaudet ovat vaikuttaneet siihen, miten yksilö tuntee ja ymmärtää itsensä. Eri aikakausina, kuten antiikin Kreikassa ja renessanssin Euroopassa, itsetuntemuksella oli erilaiset merkitykset ja roolit yhteiskunnassa.
+
+Nykyajan haasteet, kuten sosiaalisen median vaikutus itsetuntemukseen, nousevat myös esille. Tekstissä korostetaan, kuinka digitaalinen maailma on luonut uusia tapoja ymmärtää itseämme, mutta myös kuinka se voi haastaa tai jopa vääristää itsetuntemustamme. Sosiaalisen median aikakaudella on helppo verrata itseään muihin ja se voi vaikuttaa yksilön itsetuntoon ja itseymmärrykseen.
+
+Kappale päätyy pohtimaan, kuinka tärkeää on rakentaa terve ja realistinen itsetuntemus tässä monimutkaisessa ja jatkuvasti muuttuvassa maailmassa. Teksti korostaa, että vaikka ulkoiset tekijät voivat vaikuttaa itsetuntemukseemme, yksilön sisäinen maailma ja henkilökohtaiset kokemukset ovat avainasemassa muodostettaessa kokonaisvaltaista kuvaa itsestämme.
+</p>
+
+    <!-- Pääkäsitteet -->
+    <h2>Pääkäsitteet</h2>
+    <ul>
+        <li>Itsetuntemus: Ei pelkästään yksilön ymmärrystä itsestään, vaan myös hänen suhteestaan ympäröivään maailmaan.</li>
+        <li>Henkilökohtainen hyvinvointi: Kuinka itsetuntemus vaikuttaa paitsi mielenterveyteen, myös fyysiseen terveyteen ja sosiaaliseen hyvinvointiin.</li>
+        <li>Sosiaalinen media ja itsetuntemus: Nykyaikaisen teknologian kaksoisrooli.</li>
+    </ul>
+
+    <!-- Historiallinen konteksti -->
+    <h2>Historiallinen konteksti</h2>
+    <p style="margin-bottom: 15px;">
+        Käsitykset itsetuntemuksesta ovat muuttuneet ajan mittaan. Antiikin filosofit, kuten Sokrates, korostivat "Tunne itsesi" -periaatetta, kun taas renessanssin ajattelijat keskittyivät yksilön potentiaaliin ja autonomiaan.
+    </p>
+
+    <!-- Evoluutioperspektiivi -->
+    <h2>Evoluutioperspektiivi</h2>
+    <p style="margin-bottom: 15px;">
+        Itsetuntemuksen evoluutiobiologista taustaa voisi tarkastella sen kautta, kuinka varhaiset ihmiset oppivat ymmärtämään itseään suhteessa muihin ja ympäristöönsä.
+    </p>
+
+    <!-- Tunteiden rooli -->
+    <h2>Tunteiden rooli</h2>
+    <ul>
+        <li>Itsetuntemuksessa on keskeistä ymmärtää omia tunteitaan.</li>
+        <li>Tunteiden alkuperä, vaikutukset ja niiden hallinta.</li>
+        <li>Ymmärrys omista tunnereaktioista ja niiden hallinnasta.</li>
+    </ul>
+
+    <!-- Nykyaika vs. Evoluutio -->
+    <h2>Nykyaika vs. Evoluutio</h2>
+    <p style="margin-bottom: 15px;">
+        Moderni elämä asettaa omat haasteensa itsetuntemukselle. Esimerkiksi jatkuva tietotulva, sosiaalisen median paineet ja globalisaation vaikutukset voivat vaikuttaa siihen, kuinka ymmärrämme itsemme ja paikkamme maailmassa.
+    </p>
+
+    <!-- Lainaukset -->
+    <h2>Lainaukset</h2>
+    <ul>
+        <li>"Itsetuntemus on matka, joka ei koskaan pääty."</li>
+        <li>"Nykyaikainen teknologia voi auttaa meitä ymmärtämään itseämme paremmin, mutta se voi myös johtaa harhaan."</li>
+    </ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 6 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-6" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-6'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Yhteenveto kappaleesta 6: LIIKUNTA</h2>
+<p style="margin-bottom: 15px;">
+Kappale 6 keskittyy syvällisesti fyysisen aktiivisuuden ja mielenterveyden väliseen yhteyteen. Tekstissä tuodaan esiin, kuinka liikunta voi vaikuttaa paitsi fyysiseen terveyteen, myös mielen hyvinvointiin. Tämä yhteys on erityisen merkittävä nykypäivänä, kun yhä useammat ihmiset kamppailevat mielenterveyden ongelmien, kuten stressin, masennuksen ja ahdistuksen, kanssa.
+
+Aluksi kappale keskittyy HPA-akseliin, joka on tärkeä osa ihmisen stressivastetta. Tekstissä korostetaan, kuinka tämä akseli reagoi erilaisiin stressitekijöihin ja kuinka sen toimintaa voidaan säädellä liikunnan avulla. On huomionarvoista, että liikunnan vaikutukset HPA-akseliin eivät ole pelkästään biologisia, vaan ne voivat myös vaikuttaa yksilön tunteisiin ja kokemukseen itsestään.
+
+Seuraavaksi kappale tarkastelee, kuinka kouluympäristössä on hyödynnetty liikuntaa oppimisen ja hyvinvoinnin edistämiseksi. Esimerkkinä mainitaan Göteborgissa sijaitseva Jättestensskolan, jossa on otettu käyttöön päivittäiset liikuntahetket oppilaiden koulumenestyksen parantamiseksi.
+
+Kappale jatkaa tarkastelemalla liikunnan vaikutusta aivoihin. Tekstissä korostetaan, että vaikka aivojen ja mielen toimintaa on perinteisesti tarkasteltu erillään toisistaan, ne ovat itse asiassa tiiviissä yhteydessä toisiinsa. Fyysinen aktiivisuus voi vaikuttaa aivojen toimintaan monin tavoin, mukaan lukien neurotransmitterien, kuten serotoniinin ja dopamiinin, tasojen säätely.
+
+Lopuksi kappale korostaa, että vaikka liikunnan ja mielenterveyden välinen yhteys on monimutkainen, on selvää, että fyysinen aktiivisuus on avainasemassa yksilön kokonaisvaltaisen hyvinvoinnin edistämisessä.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>HPA-akseli: Keskeinen osa ihmisen stressivastetta, joka voi reagoida erilaisiin stressitekijöihin ja jonka toimintaa voidaan säädellä liikunnan avulla.</li>
+<li>Liikunnan psykologiset vaikutukset: Liikunnan kyky vaikuttaa yksilön tunteisiin, itsetuntoon ja mielialaan.</li>
+<li>Aivojen ja liikunnan yhteys: Kuinka fyysinen aktiivisuus voi vaikuttaa aivojen toimintaan, mukaan lukien neurotransmitterien tasojen säätely.</li>
+<li>Koululiikunta: Liikunnan käyttö oppimisen ja hyvinvoinnin edistämiseksi kouluympäristössä.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Vaikka liikunnan ja mielenterveyden välinen yhteys on tunnustettu jo vuosikymmenien ajan, nykyinen ymmärrys tästä yhteydestä on paljon syvällisempi ja monimutkaisempi. Aikaisemmat sukupolvet näkivät liikunnan lähinnä kehon fyysisenä harjoituksena, mutta nykypäivänä ymmärrämme sen vaikutukset myös mielen hyvinvointiin.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Ihmiskeho on kehittynyt olemaan aktiivinen, ja liikunta on ollut keskeinen osa ihmisen evoluutiota. Vaikka nykypäivän yhteiskunnassa monet fyysiset haasteet ovat vähentyneet, kehomme ja mielenterveytemme kaipaavat edelleen säännöllistä liikuntaa.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<p style="margin-bottom: 15px;">
+Liikunta voi vaikuttaa moniin tunteisiin, kuten itsetuntoon, ahdistukseen, masennukseen ja stressiin. Fyysisen aktiivisuuden avulla yksilö voi kokea parempaa mielialaa, lisääntynyttä energiaa ja vähemmän negatiivisia tunteita.
+</p>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Vaikka evoluutioprosessi on muokannut ihmiskehoa olemaan aktiivinen, nykypäivän elämäntapa on usein passiivinen. Tämä ristiriita voi vaikuttaa sekä fyysiseen että mielenterveyteen, ja liikunta on yksi tapa tasapainottaa näitä kahta näkökulmaa.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Aivot ja ruumis ovat kiinteässä yhteydessä toisiinsa."</li>
+<li>"Aivot eivät ole kehittyneet ajattelemaan, tuntemaan tai tuottamaan tietoisuutta, vaan ne kehittyivät ohjaamaan ja hallitsemaan ruumista."</li>
+<li>"Tunteisiin, masennukseen ja ahdistukseen vaikuttamiseen ei siis riitä se, että aivotoiminta saadaan niin sanotusti oikealle tolalle tai tasapainotettua lääkkeillä."</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- CHAPTER 7 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-7" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-7'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Kappaleen 7 yhteenveto: Mielenterveyden periytyvyys ja esivanhempiemme kokemukset</h2>
+<p style="margin-bottom: 15px;">
+Kappale 7 on syvällinen sukellus mielenterveyden periytyvyyteen ja siihen, kuinka esivanhempiemme elinolosuhteet ja ympäristö ovat mahdollisesti vaikuttaneet heidän mielenterveyteensä. Se esittelee ajatuksen, että nykypäivän mielenterveysongelmat voivat juontua juurensa kauas menneisyyteen ja pohtii, miten esihistoriallisten yhteisöjen kokemukset saattavat heijastua nykyajan ihmisten mielenterveyteen. Tekstissä käsitellään mielenterveyden evoluutiohistoriaa ja pohditaan, ovatko mielenterveysongelmat, joita koemme nykypäivänä, samoja, jotka ovat vaivanneet esi-isiämme. Kappaleessa otetaan kantaa siihen, kuinka ympäristön muutokset ja sosiaalisten rakenteiden kehittyminen ovat vaikuttaneet ihmisen mielenterveyteen. Erityistä huomiota kiinnitetään metsästäjä-keräilijäyhteisöihin, jotka edustavat lähimmin esihistoriallisten yhteisöjemme elinolosuhteita. Tekstissä pohditaan, kuinka nykypäivän metsästäjä-keräilijöiden kokemukset mielenterveysongelmista voivat tarjota ikkunan menneisyyteen ja antaa viitteitä siitä, miten esivanhempamme ovat kohdanneet nämä ongelmat. Lisäksi kappaleessa käsitellään nykypäivän yhteiskunnan suhtautumista mielenterveysongelmiin. Tekstissä esitellään, kuinka mielenterveyden ymmärrys on kehittynyt ajan myötä ja kuinka tämä kehittyminen on vaikuttanut mielenterveyden hoitoon ja hoitomenetelmiin.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Mielenterveyden evoluutiohistoria: Pohdinta siitä, kuinka esihistoriallisten yhteisöjen elinolosuhteet ovat vaikuttaneet heidän mielenterveyteensä ja kuinka nämä kokemukset heijastuvat nykypäivän ihmisiin.</li>
+<li>Metsästäjä-keräilijäyhteisöt: Nykypäivän metsästäjä-keräilijäyhteisöjen kokemukset mielenterveysongelmista ja niiden merkitys ymmärtääksemme esivanhempiemme kokemuksia.</li>
+<li>Mielenterveyden hoito: Kuinka mielenterveyden ymmärrys ja hoitomenetelmät ovat kehittyneet ajan myötä ja miten ne ovat vaikuttaneet yksilöiden hyvinvointiin.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Mielenterveyden ymmärrys on kehittynyt ajan myötä, ja se on heijastellut aikakauden kulttuurisia, sosiaalisia ja filosofisia arvoja. Vaikka mielenterveysongelmat ovat olleet osa ihmiskuntaa sen alusta lähtien, niiden ymmärrys, diagnoosi ja hoito ovat muuttuneet merkittävästi.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Ihmisen evoluutiohistorian aikana ympäristön muutokset, kuten siirtyminen metsästäjä-keräilijäyhteisöistä maanviljelyyn, ovat vaikuttaneet mielenterveyteen. Mielenterveyden haasteet ovat voineet olla osa selviytymisstrategiaa tietyissä ympäristöissä.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<p style="margin-bottom: 15px;">
+Mielenterveysongelmat, kuten masennus, ahdistus ja stressi, ovat tiiviisti yhteydessä ihmisen tunteisiin. Nämä tunteet ovat vastauksia ympäristön haasteisiin ja ne ovat olleet osa ihmisen selviytymisstrategiaa.
+</p>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Nykypäivän elämäntapa, joka on usein kiireinen, eristäytynyt ja stressaava, on ristiriidassa evoluutioperimämme kanssa, joka on muodostunut erilaisissa ympäristöissä ja sosiaalisissa rakenteissa.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<blockquote>
+<p>"Voisiko olla niin, että ahdistus, masennus ja muut mielenterveyden ongelmat ovat peruja niiltä ajoilta, kun elämä oli jatkuvaa selviytymistaistelua?"</p>
+</blockquote>
+<blockquote>
+<p>"Metsästäjä-keräilijöiden elämäntapa edustaa ihmiskunnan historiaa paljon paremmin kuin nykyinen elämäntapamme."</p>
+</blockquote>
+</div>
+<!------------------------------>
+<!----- CHAPTER 8 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-8" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-8'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Yhteenveto kappaleesta 8: KOHTALOVAISTO</h2>
+<p style="margin-bottom: 15px;">
+Kappale 8, nimeltään "KOHTALOVAISTO", sukeltaa syvälle ihmisen sisäiseen kamppailuun ja sen ymmärtämiseen, kuinka biologia ja geneettinen perimä määrittävät tai vaikuttavat meidän mielenterveyteemme. Tekstissä pohditaan perustavanlaatuista kysymystä: olemmeko todella oman kohtalomme herroja, vai ovatko geneettinen perimämme ja biologiamme määrääviä tekijöitä siinä, kuinka koemme maailman ja itsemme? Teksti tuo esiin yksilöiden taipumuksen nähdä itsensä uhreina omalle biologialleen, antaen merkittävän painoarvon geneettiselle perimälle ja sen roolille mielenterveydessä. Kuitenkin, samalla kun kappale kuvaa tätä determinististä näkökulmaa, se myös korostaa, kuinka tieto, ymmärrys ja oivallus voivat auttaa yksilöitä haastamaan ja muokkaamaan näitä sisäisiä käsityksiä. Tekstissä painotetaan, että vaikka biologia ja geneettinen perimä ovat olennaisia ymmärtämään yksilön mielenterveyttä, ne eivät ole ainoita määrittäviä tekijöitä. Kappale myös varoittaa vaaroista, jotka liittyvät liialliseen nojaamiseen ja identifioitumiseen saatuun diagnoosiin, ja kuinka tällainen liiallinen yksinkertaistaminen voi rajoittaa yksilön käsitystä itsestään ja mahdollisuuksistaan.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Kohtalovaisto: Ihmisten taipumus nähdä asiat väistämättöminä ja muuttumattomina.</li>
+<li>Biologinen determinismi: Ajatus, että yksilön ominaisuudet, mukaan lukien mielenterveys, määräytyvät pääasiassa geneettisen perimän perusteella.</li>
+<li>Diagnoosin identiteetti: Vaara, että yksilö identifioi itsensä ensisijaisesti saamansa diagnoosin perusteella, mikä voi vääristää hänen käsitystään itsestään ja tulevaisuudestaan.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Mielenterveyden ja biologian suhteen ymmärrys on muuttunut vuosien varrella. Vaikka biologialla on merkitystä, on tärkeää tunnustaa, että yksilöiden kokemukset, ympäristö ja oppiminen ovat myös olennaisia tekijöitä. Tämä näkökulma on erityisen tärkeä nykyaikana, kun geneettinen testaus ja biologinen ymmärrys ovat yhä saatavilla ja voivat vaikuttaa yksilöiden käsitykseen itsestään.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Ihmisen aivot ovat kehittyneet selviytymään ja mukautumaan erilaisiin ympäristöihin. Vaikka tietyt geneettiset tekijät voivat altistaa yksilön mielenterveysongelmille, aivot ovat myös mukautumiskykyiset ja voivat oppia ja muuttua kokemusten perusteella.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<p style="margin-bottom: 15px;">
+Tunteet ovat keskeisiä ymmärtämään, kuinka yksilöt kokevat itsensä ja maailmansa. Kun yksilöt tunnistavat ja ymmärtävät tunteensa, he voivat nähdä itsensä ja haasteensa eri valossa eivätkä näe itseään pelkästään biologiansa uhreina.
+</p>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Vaikka geneettinen perimä ja biologia ovat tärkeitä, nykyajan ympäristö ja haasteet ovat erilaisia kuin ne, joille esivanhempamme kehittyivät. On tärkeää ymmärtää, että yksilöt voivat oppia, mukautua ja muuttua nykyajan haasteiden edessä.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Voisiko olla niin, että ahdistus, masennus ja muut mielenterveyden ongelmat ovat peruja niiltä ajoilta, kun elämä oli jatkuvaa selviytymistaistelua?"</li>
+<li>"Metsästäjä-keräilijöiden elämäntapa edustaa ihmiskunnan historiaa paljon paremmin kuin nykyinen elämäntapamme."</li>
+<li>"Kukaan ei ole yhtä kuin
+</div>
+<!------------------------------>
+<!----- CHAPTER 9 SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-9" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-9'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Yhteenveto kappaleesta 9: ONNELLISUUSANSA</h2>
+<p style="margin-bottom: 15px;">
+Tässä kappaleessa pohditaan onnellisuuden luonnetta ja sen tavoittelun paradoksia. Vaikka aivot eivät ole kehittyneet voimaan hyvin, ihmiset pyrkivät jatkuvasti saavuttamaan onnellisuuden tilan. Onnellisuuden määritelmä on monimutkainen ja subjektiivinen, mutta yhteiskunnassamme siihen liittyy usein epärealistisia odotuksia. Mainonta ja media voivat asettaa epärealistisia odotuksia siitä, miltä onnen tulisi tuntua, mikä voi johtaa pettymykseen ja onnellisuuden tavoittelun ansaan. Kappale korostaa, että onnellisuus ei ole jatkuva tunnetila, vaan pikemminkin seurauksena merkityksellisistä kokemuksista ja syvällisestä itseymmärryksestä. Onnellisuuden tavoittelun sijaan ihmiset voisivat keskittyä löytämään merkityksen elämässään.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+    <li>Onnellisuuden määritelmä: Yhteiskunnan näkökulma onnellisuudesta ja kuinka se voi vaihdella yksilöittäin.</li>
+    <li>Aivojen ennusteet: Aivot ennakoivat tulevaa ja vertaavat ennusteitaan todellisiin kokemuksiin, mikä vaikuttaa onnellisuuden kokemukseen.</li>
+    <li>Epärealistiset odotukset: Miten mainonta ja yhteiskunnalliset normit voivat asettaa epärealistisia odotuksia onnellisuudesta.</li>
+    <li>Merkityksellisyys vs. Onnellisuus: Onnellisuus ei ole jatkuva tunnetila, vaan se on usein seurausta merkityksellisistä kokemuksista.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Onnellisuuden käsite ja sen tavoittelu ovat muuttuneet vuosien varrella. Vaikka onnellisuuden määritelmä on muuttunut kulttuurisesti ja historiallisesti, nyky-yhteiskunnan käsitys onnellisuudesta on muodostunut vain muutaman sukupolven aikana, erityisesti mainonnan ja median vaikutuksesta.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Aivot eivät ole kehittyneet voimaan hyvin, vaan ne ovat evoluution myötä kehittyneet reagoimaan ja ennakoimaan ympäristön haasteita. Aivot pyrkivät ennustamaan tulevaa ja vertaavat ennusteita todellisiin kokemuksiin.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<p style="margin-bottom: 15px;">
+Onnellisuus liittyy usein tunteisiin, ja sen määritelmä voi vaihdella yksilöittäin. Onnellisuuden tavoittelu voi olla ristiriidassa todellisten tunteiden ja yhteiskunnan asettamien odotusten välillä. Onnellisuuden tavoittelu voi myös aiheuttaa pettymyksen tunteita, kun odotukset eivät täyty.
+</p>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Nyky-yhteiskunnan paineet ja odotukset voivat olla ristiriidassa evolutiivisten taipumustemme kanssa. Vaikka evoluutio on ohjelmoinut meidät toimimaan tietyllä tavalla, nykyiset yhteiskunnalliset odotukset ja normit voivat johtaa onnellisuuden tavoittelun ansaan.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+    <li>"Onnellisuutta on kuitenkin vaikea määritellä..."</li>
+    <li>"Onnellisuus on siis pitkäkestoinen merkityksellisyyden kokemus ennemmin kuin tunne siitä, että on onnensa kukkuloilla."</li>
+    <li>"Meidät on siis biologisesti koodattu vertaamaan kokemuksia odotuksiimme sen sijaan, että tarkastelisimme tapahtumia objektiivisesti."</li>
+    <li>"Minusta onnellisuus ei tarkoita sen paremmin pyrkimystä ikuiseen tanssiin ruusuilla kuin kaiken epämieluisan karttamistakaan."</li>
+    <li>"Onnellisuutta ei siis kannata pitää erillisenä tavoitteena vaan seurauksena."</li>
+</ul>
+</div>
+
+<!------------------------------>
+<!----- JÄLKISANAT SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-10" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-10'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Yhteenveto jälkisanoista: JÄLKISANAT</h2>
+<p style="margin-bottom: 15px;">
+Jälkisanoissa kirjoittaja palaa muistoihinsa opiskeluaikanaan, kun hän vieraili ruumiinavaushuoneella ja piti käsissään ihmisaivoja. Tämä kokemus herätti hänessä syvällisiä pohdintoja ihmisen biologisesta olemuksesta, aivojen roolista ja merkityksestä elämässämme sekä siitä, miten aivot ovat kehittyneet selviytymisen näkökulmasta. Kirjoittaja korostaa, että vaikka aivot ovat monimutkainen elin, ne ovat osa suurempaa järjestelmää ja niiden ensisijainen tehtävä on edistää selviytymistä. Kirjoittaja myös muistuttaa lukijaa ihmisen biologisesta perustasta ja kritisoi yhteiskunnan taipumusta keskittyä liikaa sosiaalisiin ja kulttuurisiin tekijöihin unohtaen biologisen taustan.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Ihmisaivot: Kirjoittaja kuvaa syvällistä kokemustaan pitelemässä ihmisen aivoja ja miettii niiden merkitystä yksilön elämässä.</li>
+<li>Selviytyminen: Aivojen päätehtävänä on selviytyminen, ja ne ovat kehittyneet vuosien varrella tukemaan tätä tavoitetta.</li>
+<li>Biologinen näkökulma: Kirjoittaja korostaa, että ihmiset ovat ensisijaisesti biologisia olentoja ja että meidän pitäisi ymmärtää ja arvostaa tätä näkökulmaa enemmän.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Kirjoittaja viittaa omaan opiskeluaikaansa ja kuinka hänen käsityksensä aivoista ja ihmisen biologisesta olemuksesta muuttui tuon ajan kuluessa. Hän myös mainitsee yhteiskunnan muuttuvan suhtautumisen mielenterveysongelmiin ja aivojen rooliin niissä.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Aivot ovat kehittyneet selviytymään. Ne ovat sopeutuneet tunnistamaan ja reagoimaan uhkiin, ja ne tuottavat tunteita, jotka ohjaavat käyttäytymistä selviytymisen kannalta edulliseen suuntaan.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<p style="margin-bottom: 15px;">
+Kirjoittaja kuvaa, kuinka aivot tuottavat epämukavia tunteita vastauksena uhkaaviin tilanteisiin. Nämä tunteet, kuten huoli, alakuloisuus ja sosiaalisen eristäytymisen tunne, ovat keinoja ohjata käyttäytymistämme ja varmistaa selviytyminen.
+</p>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Vaikka nykyaika tuo mukanaan omat haasteensa ja paineensa, ihmisen biologinen olemus ja tarpeet ovat pysyneet suhteellisen muuttumattomina. Aivojen ensisijainen tehtävä on edelleen selviytyminen, vaikka ympäristö ja haasteet ovat muuttuneet.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Käsissäni oli hänen minuutensa syntysija."</li>
+<li>"Aivot eivät näytä todellista maailmaa."</li>
+<li>"Aivot ovat vain selviytymiseen tarkoitettu laitteisto, jota vaivaavat erilaiset bugit ovat evoluution valossa monesti ihan fiksuja."</li>
+<li>"Se on korvien ja varpaiden välissä, joten eiköhän kaikki toimi kuten pitää."</li>
+</ul>
+</div>
+
+<!------------------------------>
+<!----- JÄLKISANAT SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-10" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-10'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Yhteenveto jälkisanoista: JÄLKISANAT</h2>
+<p style="margin-bottom: 15px;">
+Jälkisanoissa kirjoittaja palaa muistoihinsa opiskeluaikanaan, kun hän vieraili ruumiinavaushuoneella ja piti käsissään ihmisaivoja. Tämä kokemus herätti hänessä syvällisiä pohdintoja ihmisen biologisesta olemuksesta, aivojen roolista ja merkityksestä elämässämme sekä siitä, miten aivot ovat kehittyneet selviytymisen näkökulmasta. Kirjoittaja korostaa, että vaikka aivot ovat monimutkainen elin, ne ovat osa suurempaa järjestelmää ja niiden ensisijainen tehtävä on edistää selviytymistä. Kirjoittaja myös muistuttaa lukijaa ihmisen biologisesta perustasta ja kritisoi yhteiskunnan taipumusta keskittyä liikaa sosiaalisiin ja kulttuurisiin tekijöihin unohtaen biologisen taustan.
+</p>
+
+<!-- Pääkäsitteet -->
+<h2>Pääkäsitteet</h2>
+<ul>
+<li>Ihmisaivot: Kirjoittaja kuvaa syvällistä kokemustaan pitelemässä ihmisen aivoja ja miettii niiden merkitystä yksilön elämässä.</li>
+<li>Selviytyminen: Aivojen päätehtävänä on selviytyminen, ja ne ovat kehittyneet vuosien varrella tukemaan tätä tavoitetta.</li>
+<li>Biologinen näkökulma: Kirjoittaja korostaa, että ihmiset ovat ensisijaisesti biologisia olentoja ja että meidän pitäisi ymmärtää ja arvostaa tätä näkökulmaa enemmän.</li>
+</ul>
+
+<!-- Historiallinen konteksti -->
+<h2>Historiallinen konteksti</h2>
+<p style="margin-bottom: 15px;">
+Kirjoittaja viittaa omaan opiskeluaikaansa ja kuinka hänen käsityksensä aivoista ja ihmisen biologisesta olemuksesta muuttui tuon ajan kuluessa. Hän myös mainitsee yhteiskunnan muuttuvan suhtautumisen mielenterveysongelmiin ja aivojen rooliin niissä.
+</p>
+
+<!-- Evoluutioperspektiivi -->
+<h2>Evoluutioperspektiivi</h2>
+<p style="margin-bottom: 15px;">
+Aivot ovat kehittyneet selviytymään. Ne ovat sopeutuneet tunnistamaan ja reagoimaan uhkiin, ja ne tuottavat tunteita, jotka ohjaavat käyttäytymistä selviytymisen kannalta edulliseen suuntaan.
+</p>
+
+<!-- Tunteiden rooli -->
+<h2>Tunteiden rooli</h2>
+<p style="margin-bottom: 15px;">
+Kirjoittaja kuvaa, kuinka aivot tuottavat epämukavia tunteita vastauksena uhkaaviin tilanteisiin. Nämä tunteet, kuten huoli, alakuloisuus ja sosiaalisen eristäytymisen tunne, ovat keinoja ohjata käyttäytymistämme ja varmistaa selviytyminen.
+</p>
+
+<!-- Nykyaika vs. Evoluutio -->
+<h2>Nykyaika vs. Evoluutio</h2>
+<p style="margin-bottom: 15px;">
+Vaikka nykyaika tuo mukanaan omat haasteensa ja paineensa, ihmisen biologinen olemus ja tarpeet ovat pysyneet suhteellisen muuttumattomina. Aivojen ensisijainen tehtävä on edelleen selviytyminen, vaikka ympäristö ja haasteet ovat muuttuneet.
+</p>
+
+<!-- Lainaukset -->
+<h2>Lainaukset</h2>
+<ul>
+<li>"Käsissäni oli hänen minuutensa syntysija."</li>
+<li>"Aivot eivät näytä todellista maailmaa."</li>
+<li>"Aivot ovat vain selviytymiseen tarkoitettu laitteisto, jota vaivaavat erilaiset bugit ovat evoluution valossa monesti ihan fiksuja."</li>
+<li>"Se on korvien ja varpaiden välissä, joten eiköhän kaikki toimi kuten pitää."</li>
+</ul>
+</div>
+<!------------------------------>
+<!----- JÄLKISANAT SUMMARY ------>
+<div class="summary chapter-summary" id="chapter-11" style="display: none;">
+<button class="toggle-button" onclick="toggleSummary('chapter-11'); showSearchBar()">Piilota yhteenveto</button>
+
+<h2>Kymmenen tärkeintä ajatustani</h2>
+<ul>
+  <li><strong>OLET SELVIYTYJÄ.</strong><br> Ihmisen pääasiallinen biologinen tehtävä on selviytyä ja jatkaa sukuaan. Se muistuttaa meitä siitä, että täydellinen terveys tai jatkuva onnellisuus ei ole evoluution päämäärä.</li>
+  <li><strong>TUNTEIDEN TARKOITUS.</strong><br> Tunteet ovat väliaikaisia reaktioita ympäristön ja elimistömme tilanteisiin ja ne ohjaavat käyttäytymistämme.</li>
+  <li><strong>AHDISTUS JA MASENNUS.</strong><br> Ahdistus ja masennus ovat osa normaalia ihmisen kokemusta eikä niitä tulisi nähdä pelkästään sairauksina tai vikoina.</li>
+  <li><strong>MUISTOT MUUTTUVAT.</strong><br> Muistot voivat muuttua ajan myötä. Traumaattisten kokemusten läpikäyminen voi auttaa paranemisessa.</li>
+  <li><strong>ELÄMÄNTAVAT JA AIVOT.</strong><br> Elämäntavat, kuten unen saanti ja sosiaalisen median käyttö, voivat vaikuttaa aivojen toimintaan.</li>
+  <li><strong>LIIKKUMINEN SUOJAA.</strong><br> Liikunta on sekä fyysisesti että mentaalisesti hyödyllistä ja voi edistää parempaa mielenterveyttä.</li>
+  <li><strong>YKSINÄISYYDEN VAIKUTUS.</strong><br> Yksinäisyys ei ole vain emotionaalinen tila, vaan sillä voi olla konkreettisia terveysvaikutuksia.</li>
+  <li><strong>GEENIEN JA YMPÄRISTÖN MERKITYS.</strong><br> Vaikka geneettinen perimä vaikuttaa moniin asioihin, ympäristö ja elämäntavat voivat olla yhtä merkittäviä tai jopa merkittävämpiä.</li>
+  <li><strong>HITOT ONNESTA!</strong><br> Jatkuva onnellisuuden tavoittelu voi olla taakka ja johtaa päinvastaiseen tulokseen.</li>
+  <li><strong>MIKÄ TÄRKEINTÄ – HAE APUA.</strong><br> Mielenterveysongelmien kohtaaminen ja niihin avun hakeminen ei ole heikkouden merkki. Se on samanlaista kuin hakea apua fyysisiin sairauksiin.</li>
+</ul>
+</div>
+
+<!->
+<script>
+let viewState = 'chapterList';
+
+// JavaScript function to toggle visibility of chapter summaries and the scrollable area
+function toggleChapter(chapterId) {
+    const allChapterSummaries = document.getElementsByClassName("summary");
+    for (let i = 0; i < allChapterSummaries.length; i++) {
+        const chapter = allChapterSummaries[i];
+        if (chapter.id === chapterId) {
+            chapter.style.display = "block";
+        } else {
+            chapter.style.display = "none";
+        }
+    }
+
+    const scrollableArea = document.querySelector(".scrollable-area");
+    scrollableArea.style.display = "none"; // Hide the scrollable area when a chapter summary is displayed.
+    
+    // Hide the search bar when a chapter summary is displayed
+    const searchBarContainer = document.getElementById("searchContainer");
+    searchBarContainer.classList.remove("active");
+    searchBarContainer.classList.add("closed");
+}
+
+// JavaScript function to toggle visibility of individual chapter summary and show the scrollable area
+function toggleSummary(chapterId) {
+    const chapter = document.getElementById(chapterId);
+    chapter.style.display = chapter.style.display === "none" ? "block" : "none";
+
+    const scrollableArea = document.querySelector(".scrollable-area");
+    scrollableArea.style.display = "block"; // Show the scrollable area when a chapter summary is toggled.
+    
+    // Show the search bar when a chapter summary is toggled off
+    const searchBarContainer = document.getElementById("searchContainer");
+    searchBarContainer.classList.add("active");
+    searchBarContainer.classList.remove("closed");
+}
+
+
+// Existing code for opening and closing behavior of the search bar
+const searchBar = document.querySelector('#searchContainer input');
+const searchContainer = document.querySelector('#searchContainer');
+const searchButton = document.querySelector('#searchContainer .search-btn');
+
+searchBar.addEventListener('focus', function() {
+    searchContainer.classList.remove('closed');
+    searchButton.removeAttribute('disabled');  // Enable the button
+});
+
+searchBar.addEventListener('blur', function() {
+    // Only disable the button and close the search bar if there's no value in the search bar
+    if (!searchBar.value.trim()) {
+        searchContainer.classList.add('closed');
+        searchButton.setAttribute('disabled', '');  // Disable the button
+    }
+});
+
+
+
+
+
+// Transition animation for toggling between Chapter List and Chapter Summaries
+function toggleChapter(chapterId) {
+    const chapter = document.getElementById(chapterId);
+    const chapterList = document.querySelector('.scrollable-area');
+
+    // Move chapterList to the right
+    chapterList.style.opacity = 0;
+    chapterList.style.transform = 'translateX(100%)';
+
+    setTimeout(() => {
+        chapterList.style.display = 'none';
+
+        // Start chapter off-screen to the left
+        chapter.style.display = 'grid';
+        chapter.style.opacity = 0;
+        chapter.style.transform = 'translateX(-100%)';  // Initial state, off to the left
+        
+        // Fade-in and slide-in effect for the chapter summary
+        setTimeout(() => {
+            chapter.style.opacity = 1;
+            chapter.style.transform = 'translateX(0)';
+        }, 50);  
+    }, 300);  
+}
+
+// Transition animation for hiding Chapter Summaries and showing Chapter List
+function toggleSummary(chapterId) {
+    const chapter = document.getElementById(chapterId);
+    const chapterList = document.querySelector('.scrollable-area');
+
+    // Hide the chapter summary with a fade-out and slide-out effect to the left
+    chapter.style.opacity = 0;
+    chapter.style.transform = 'translateX(-100%)';
+
+    setTimeout(() => {
+        chapter.style.display = 'none';
+
+        chapterList.style.display = 'block';
+        chapterList.style.opacity = 0;  
+        chapterList.style.transform = 'translateX(100%)';  // Initial state, off to the right
+
+        // Fade-in and slide-in effect for the chapter list
+        setTimeout(() => {
+            chapterList.style.opacity = 1;
+            chapterList.style.transform = 'translateX(0)';
+        }, 50);  
+    }, 300);  
+}
+
+
+
+
+
+
+
+
+
+
+
+// Function to search through summaries
+function searchSummaries() {
+    // Get the user's input from the search bar
+    let input = document.getElementById("search-input").value.toLowerCase();
+    let keywords = input.split(',').map(k => k.trim());  // Split the input by comma and trim each keyword
+
+
+    // Get all the chapter-summary elements
+    let summaries = document.getElementsByClassName("summary");
+    let hasSummaryIds = Array.from(summaries).map(summary => summary.id);
+
+    let chapters = document.querySelectorAll('li a');
+    for(let chapter of chapters) {
+        let onclickAttribute = chapter.getAttribute('onclick');
+        if(onclickAttribute) {
+            let chapterId = onclickAttribute.replace('toggleChapter(\'', '').replace('\')', '');
+
+            if (hasSummaryIds.includes(chapterId)) {
+                let summaryContent = document.getElementById(chapterId).innerText.toLowerCase();
+                
+                // Check if all keywords match
+                let hasAllKeywords = keywords.every(keyword => summaryContent.includes(keyword));
+
+                if (hasAllKeywords || input === "") {
+                    chapter.parentNode.style.display = "block";
+                } else {
+                    chapter.parentNode.style.display = "none";
+                }
+            } else {
+                chapter.parentNode.style.display = "none";
+            }
+        }
+    }
+}
+
+
+// Function to reset the visibility of all chapters
+function resetChapterVisibility() {
+    const chapters = document.querySelectorAll('.scrollable-area li');
+    for (let chapter of chapters) {
+        chapter.style.display = 'block';
+    }
+}
+
+// Add an input event listener to the search input to detect when it's cleared
+document.getElementById("search-input").addEventListener('input', function() {
+    if (this.value === '') {
+        resetChapterVisibility();
+    }
+});
+
+// Event listener for real-time search as user types
+document.getElementById("search-input").addEventListener("keyup", searchSummaries);
+
+document.getElementById("search-input").addEventListener("keyup", function(event) {
+    // Check for the "Enter" key
+    if (event.keyCode === 13) {
+        event.preventDefault();  // Prevent any default behavior (like form submission)
+
+        const keyword = document.getElementById('search-input').value;
+        
+        // If the search results are already visible, use the update transition
+        if (document.getElementById('searchResults').style.display === 'block') {
+            updateSearchResults(() => {
+                displaySearchResults(keyword);  // Display the updated search results
+            });
+        } else {
+            // Otherwise, use the original transition function
+            showSearchResults();
+            displaySearchResults(keyword);
+        }
+
+        // Set the searchContainer to active
+        document.getElementById("searchContainer").classList.add('active');
+    } else {
+        // If it's not the "Enter" key, continue with the real-time search
+        searchSummaries();
+    }
+});
+
+
+
+const searchInput = document.getElementById('search-input');
+
+searchInput.addEventListener('keydown', function(e) {
+    if (e.keyCode === 13 || e.key === 'Enter') {
+        e.preventDefault(); // Prevent the default action (like form submission)
+
+        // Execute your search logic (same as what you have for the search button)
+        const keyword = searchInput.value;
+
+        // If the search results are already visible, use the update transition
+        if (document.getElementById('searchResults').style.display === 'block') {
+            updateSearchResults(() => {
+                displaySearchResults(keyword);  // Display the updated search results
+            });
+        } else {
+            // Otherwise, use the original transition function
+            showSearchResults();
+            displaySearchResults(keyword);
+        }
+
+        // Set the searchContainer to active
+        document.getElementById("searchContainer").classList.add('active');
+
+        // If on a mobile device, blur the input to close the keyboard
+        if (window.innerWidth < 768) {
+            searchInput.blur();
+        }
+    }
+});
+
+
+
+
+// Event listener for ESC button to close the searchbar
+searchBar.addEventListener('input', function() {
+    escPressCount = 0;
+});
+
+let escPressCount = 0;  // Counter to keep track of the number of ESC key presses
+
+document.addEventListener("keydown", function(event) {
+    const summaries = document.querySelectorAll('.chapter-summary');
+    const openSummary = Array.from(summaries).find(summary => summary.style.display !== 'none');
+    const searchInput = document.querySelector('#search-input');
+
+    if (event.key === "Escape") {
+        if (openSummary) {
+            // If a CHAPTER SUMMARY is open, use the ESC key to hide the summary.
+            const summaryId = openSummary.getAttribute('id');
+            toggleSummary(summaryId);
+            escPressCount = 0;  // Reset the counter
+        } else {
+            if (window.innerWidth < 768) {
+                if (escPressCount === 0) {
+                    searchInput.focus();  // Refocus on the search bar
+                } else if (escPressCount === 1) {
+                    searchInput.value = '';  // Clear the search bar
+                } else if (escPressCount === 2) {
+                    hideSearchResults();
+                    document.getElementById("searchContainer").classList.remove('active');
+                    searchInput.blur();  // Remove focus
+                    escPressCount = -1;  // Reset to -1 so it will become 0 after incrementing
+                }
+            } else {
+                if (escPressCount === 0) {
+                    searchInput.value = '';  // Clear the search bar
+                } else if (escPressCount === 1) {
+                    hideSearchResults();
+                    document.getElementById("searchContainer").classList.remove('active');
+                    searchInput.blur();  // Remove focus
+                    escPressCount = -1;  // Reset to -1 so it will become 0 after incrementing
+                }
+            }
+            escPressCount++;
+        }
+    }
+});
+
+
+
+
+
+
+// Add event listener to the entire document
+document.addEventListener('click', function(event) {
+    const searchContainer = document.getElementById("searchContainer");
+    const searchInput = document.getElementById("search-input");
+    
+    // Check if the click was outside the searchContainer
+    if (!searchContainer.contains(event.target)) {
+        // Clear the search bar
+        searchInput.value = '';
+        resetChapterVisibility();
+
+        // Close the search bar (or any other action you want to achieve)
+        // Depending on your CSS, you might have a class to toggle its visibility or appearance
+        searchContainer.classList.remove('active');  // Assuming 'active' is the class that makes the search bar appear active
+    }
+});
+
+
+
+
+
+
+// Helper function to get all chapter names from the index page
+function getAllChapterNames() {
+    const chapterLinks = document.querySelectorAll('.scrollable-area a');
+    const chapterNames = [];
+    
+    chapterLinks.forEach(link => {
+        // Extract only the chapter name (without "Chapter X - ")
+        const chapterName = link.innerText.split('-')[1].trim();
+        chapterNames.push(chapterName);
+    });
+
+    return chapterNames;
+}
+
+// Search for sentences through the chapter summaries and show them in the place of chapter list
+function extractSentences(summaryElement, input) {
+    let keywords = [];
+
+    // If the input contains commas, split by comma. Otherwise, treat the whole input as a single keyword (or sentence).
+    if (input.includes(',')) {
+        keywords = input.split(",").map(k => k.trim().toLowerCase());
+    } else {
+        keywords = [input.toLowerCase()];
+    }
+
+    // Set to store unique sentences
+    let uniqueSentences = new Set();
+
+    const relevantNodes = Array.from(summaryElement.querySelectorAll('p, ul, td, ol'));
+
+    keywords.forEach(keyword => {
+        relevantNodes.forEach(node => {
+            const nodeText = node.innerText || "";
+            const regex = new RegExp(`([^\.!?]*${keyword}[^\.!?]*[\.!?])`, 'ig');
+            const matches = nodeText.match(regex);
+            if (matches) {
+                matches.forEach(sentence => {
+                    uniqueSentences.add(sentence);
+                });
+            }
+        });
+    });
+
+    // Convert set back to array
+    return [...uniqueSentences];
+}
+
+function displaySearchResults(keywords) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    resultsContainer.innerHTML = '';  // Clear previous results
+
+    // Split the keywords by comma and trim each keyword
+    keywords = keywords.split(",").map(k => k.trim().toLowerCase());
+
+    const summaries = document.querySelectorAll('.chapter-summary');
+    summaries.forEach(summary => {
+        const chapterText = summary.innerText.toLowerCase();
+
+        // Check if all keywords are present in the chapter
+        if (keywords.every(keyword => chapterText.includes(keyword))) {
+            const chapterDiv = document.createElement('div');
+            const chapterTitle = summary.querySelector('h2').innerText;
+            const chapterHeading = document.createElement('h3');
+            chapterHeading.innerText = chapterTitle;
+            chapterDiv.appendChild(chapterHeading);
+
+            const sentencesList = document.createElement('ul');
+
+            // For each keyword, extract sentences containing that keyword
+            keywords.forEach(keyword => {
+                const sentences = extractSentences(summary, keyword);
+                sentences.forEach(sentence => {
+                    const highlighted = sentence.replace(new RegExp(`(${keyword})`, 'ig'), '<span class="highlight">$1</span>');
+                    const listItem = document.createElement('li');
+                    listItem.innerHTML = highlighted;
+                    sentencesList.appendChild(listItem);
+                });
+            });
+
+            chapterDiv.appendChild(sentencesList);
+            resultsContainer.appendChild(chapterDiv);
+        }
+    });
+
+    showSearchResults();  // Show the results area
+}
+
+
+
+
+
+
+document.querySelector('.search-btn').addEventListener('click', function() {
+    const keyword = document.getElementById('search-input').value;
+
+    // If the search results are already visible, use the update transition
+    if (document.getElementById('searchResults').style.display === 'block') {
+        updateSearchResults(() => {
+            displaySearchResults(keyword);  // Display the updated search results
+        });
+    } else {
+        // Otherwise, use the original transition function
+        showSearchResults();
+        displaySearchResults(keyword);
+    }
+
+    // Set the searchContainer to active
+    document.getElementById("searchContainer").classList.add('active');
+
+    // Blur the input to close the keyboard
+    document.getElementById('search-input').blur();
+});
+
+
+
+
+// Event delegation for the 'backToChapters' button
+document.body.addEventListener('click', function(event) {
+    if (event.target.id === 'backToChapters') {
+        console.log("Back to Chapter list button clicked");
+        
+        // Use the transition function to hide the search results and show the chapter list
+        hideSearchResults();
+
+        // Remove the active class from searchContainer
+        document.getElementById("searchContainer").classList.remove('active');
+    }
+});
+
+
+
+
+
+// Transition animation for showing the Search Results and hiding Chapter List/Chapter Summaries
+function showSearchResults() {
+    const searchResults = document.getElementById('searchResults');
+    const chapterList = document.querySelector('.scrollable-area');
+
+    // Check if the search results are already displayed
+    if (searchResults.style.display === 'grid') {
+        // If they are, simply return to avoid the transition
+        return;
+    }
+
+    chapterList.style.opacity = 0;
+    chapterList.style.transform = 'translateX(-100%)';
+
+    // Listen for the end of the chapterList's transition
+    chapterList.addEventListener('transitionend', function transitionEndHandler() {
+        chapterList.removeEventListener('transitionend', transitionEndHandler);  // Remove the event listener
+
+        chapterList.style.display = 'none';
+
+        searchResults.style.display = 'grid';
+        searchResults.style.opacity = 0;
+        searchResults.style.transform = 'translateX(100%)';
+
+        setTimeout(() => {
+            searchResults.style.opacity = 1;
+            searchResults.style.transform = 'translateX(0)';
+        }, 50);
+    });
+}
+
+
+
+
+// Transition animation for hiding Search Results and showing Chapter List
+function hideSearchResults() {
+    const searchResults = document.getElementById('searchResults');
+    const chapterList = document.querySelector('.scrollable-area');
+    
+    searchResults.style.opacity = 0;
+    searchResults.style.transform = 'translateX(100%)';
+
+    setTimeout(() => {
+        searchResults.style.display = 'none';
+
+        chapterList.style.display = 'block';
+        chapterList.style.opacity = 0;
+        chapterList.style.transform = 'translateX(-100%)';
+
+        setTimeout(() => {
+            chapterList.style.opacity = 1;
+            chapterList.style.transform = 'translateX(0)';
+        }, 50);
+    }, 300);
+}
+
+
+function updateSearchResults(callback) {
+    const searchResults = document.getElementById('searchResults');
+    
+    // Reset any transform property to ensure there's no slide effect
+    searchResults.style.transform = 'none';
+
+    // Fade out the current search results
+    searchResults.style.opacity = 0;
+    
+    setTimeout(() => {
+        // After the fade-out, call the provided callback (which will update the content)
+        callback();
+
+        // Reset any transform again before fading in
+        searchResults.style.transform = 'none';
+
+        // Fade in the updated search results
+        searchResults.style.opacity = 1;
+    }, 300); // Assuming a 300ms duration, adjust as needed
+}
+
+
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Prevent the default form submission behavior
+
+    const keyword = document.getElementById('search-input').value;
+
+    // If the search results are already visible, use the update transition
+    if (document.getElementById('searchResults').style.display === 'block') {
+        updateSearchResults(() => {
+            displaySearchResults(keyword);  // Display the updated search results
+        });
+    } else {
+        // Otherwise, use the original transition function
+        showSearchResults();
+        displaySearchResults(keyword);
+    }
+
+    // Set the searchContainer to active
+    document.getElementById("searchContainer").classList.add('active');
+
+    // Blur the input to close the keyboard
+    document.getElementById('search-input').blur();
+});
+
+
+
+
+</script>
