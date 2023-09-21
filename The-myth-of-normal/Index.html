@@ -9,7 +9,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: linear-gradient(to bottom, white, #690000);
+    background: linear-gradient(to left, #c8e24c, #e2002f);
     background-size: 100% 100%;
     background-repeat: no-repeat;
     min-height: 100vh;
@@ -53,7 +53,7 @@ body, html {
     margin-left: 6vw;
     font-size: 50px;
     text-transform: uppercase;
-    color: #222;
+    color: #fffdfd;
     letter-spacing: 6px;
     font-family: "Playfair Display", serif;
     font-weight: 400;
@@ -64,11 +64,14 @@ body, html {
 h1, h2 {
     text-shadow: 2px 2px 3px gray;
 }
+.heading h3{
+   Font-size: 20px;
+}
 .heading h1 span {
     margin-top: -17px;
     margin-left: 0vw;
     font-size: 15px;
-    color: #444;
+    color: #fff;
     word-spacing: 6px;
     font-weight: normal;
     letter-spacing: 13px;
@@ -132,6 +135,19 @@ p, li {
     transition: color 0.3s ease, transform 0.3s ease;
     display: inline-block;
 }
+
+.h3 {
+    font-size: 25px;
+    margin-top: 7vh;
+    position: relative;
+    left: 31px;
+    text-decoration: none;
+    color: black;
+    font-family: fangsong;
+    font-weight: bold;
+    transition: color 0.3s ease, transform 0.3s ease;  /* Add transitions for color and transform */
+}
+
 .scrollable-area ul {
     padding-left: 0;
     list-style-type: none; /* Remove default bullet points */
@@ -143,7 +159,7 @@ p, li {
     transition: transform 0.3s ease;
 }
 .scrollable-area li::before {
-    content: "ï";
+    content: "‚Ä¢";
     position: absolute;
     left: 1em;
 }
@@ -154,6 +170,11 @@ p, li {
     color: #8B0000; /* Changes the color to dark red on hover */
     transform: scale(1.1); /* Enlarges the text on hover */
 }
+.h3:hover {
+    color: #8B0000;  /* Changes the color to dark red on hover */
+    transform: scale(1.1) !important;  /* Enlarges the text on hover */
+}
+
 .scrollable-area::-webkit-scrollbar {
     width: 10px;
 }
@@ -177,7 +198,7 @@ p, li {
     top: 2vh;
     overflow: auto;
     padding-bottom: 30px !important;
-    background: rgba(255, 255, 255, 0.7);
+    background: #ffffff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     align-content: center;
 }
@@ -234,7 +255,7 @@ p, li {
     color: black;
     font-family: fangsong;
     line-height: 1.6;
-    margin-bottom: 10px
+    margin-bottom: 10px;
 }
 h2 {
     margin-top: 0;
@@ -270,7 +291,7 @@ h1, h2 {
     text-shadow: 2px 2px 3px gray;
 }
 .summary {
-    background-color: #f0f0f0;
+    background-color: #ffffff;
     position: relative;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
     color: white;
@@ -620,7 +641,7 @@ h1, h2 {
 <h1>
     The Myth Of Normal
     <span>
-    GABOR MAT…
+    GABOR MAT√à
     </span>
 </h1>
 </div>
@@ -635,13 +656,8 @@ h1, h2 {
 <ul>
 <!-------------------------->
 <!------- CHAPTER 1 -------->
-<li>
-  <a href="#" onclick="toggleChapter('chapter-1')" class="subheading-text">
-    Chapter 1 -
-    <br/>
-    Torpedo
-  </a>
-</li>
+<a href="#" onclick="toggleChapter('chapter-1')" class="heading h3">
+        INTRODUCTION</a>
 <!-------------------------->
 <!------- CHAPTER 2 -------->
 <li>
@@ -693,7 +709,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-7')">
         Chapter 7 -
         <br/>
-        A Womanís Heart
+        A Woman‚Äôs Heart
        </a>
 </li>
 <!-------------------------->
@@ -702,7 +718,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-8')">
         Chapter 8 -
         <br/>
-        ìOh, Moment, Stay!î
+        ‚ÄúOh, Moment, Stay!‚Äù
        </a>
 </li>
 <!-------------------------->
@@ -792,7 +808,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-18')">
         Chapter 18 -
         <br/>
-        ìOh, Wonder-Working Steedî
+        ‚ÄúOh, Wonder-Working Steed‚Äù
        </a>
 </li>
 <!--------------------------->
@@ -882,7 +898,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-28')">
         Chapter 28 -
         <br/>
-        The Junior Lieutenantís Job
+        The Junior Lieutenant‚Äôs Job
        </a>
 </li>
 <!--------------------------->
@@ -891,7 +907,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-29')">
         Chapter 29 -
         <br/>
-        The Lieutenant Colonelís Job
+        The Lieutenant Colonel‚Äôs Job
        </a>
 </li>
 <!--------------------------->
@@ -981,7 +997,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-39')">
         Chapter 39 -
         <br/>
-        Fine Words, Those, ìTo the Taiga!î
+        Fine Words, Those, ‚ÄúTo the Taiga!‚Äù
        </a>
 </li>
 <!--------------------------->
@@ -1143,7 +1159,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-57')">
         Chapter 57 -
         <br/>
-        Prisonersí Petty Matters
+        Prisoners‚Äô Petty Matters
        </a>
 </li>
 <!--------------------------->
@@ -1161,7 +1177,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-59')">
         Chapter 59 -
         <br/>
-        The Buddhaís Smile
+        The Buddha‚Äôs Smile
        </a>
 </li>
 <!--------------------------->
@@ -1242,7 +1258,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-68')">
         Chapter 68 -
         <br/>
-        Spiridonís Criterion
+        Spiridon‚Äôs Criterion
        </a>
 </li>
 <!--------------------------->
@@ -1269,7 +1285,7 @@ h1, h2 {
 <a href="#" onclick="toggleChapter('chapter-71')">
         Chapter 71 -
         <br/>
-        Letís Agree That This Didnít Happen
+        Let‚Äôs Agree That This Didn‚Äôt Happen
        </a>
 </li>
 <!--------------------------->
@@ -1543,7 +1559,7 @@ h1, h2 {
       Rough-Looking Character: Occupied the phone booth before Innokenty.
      </li>
 <li>
-      Air AttachÈ: The person Innokenty tries to reach through a phone call.
+      Air Attach√©: The person Innokenty tries to reach through a phone call.
      </li>
 </ul>
 <!-- Character Development -->
@@ -1586,7 +1602,7 @@ h1, h2 {
     </h2>
 <ul>
 <li>
-      "Theyóthe Western diplomatsóhad two weeks of vacation ahead of them. Trusting babes! Stupid donkeys!"
+      "They‚Äîthe Western diplomats‚Äîhad two weeks of vacation ahead of them. Trusting babes! Stupid donkeys!"
      </li>
 <li>
       "Remember, though: not a word in English. Let alone French. Mustn't leave the smallest clue for the tracker dogs."
@@ -1618,7 +1634,7 @@ h1, h2 {
      Character Relationships
     </h2>
 <p class="placeholder" style="margin-bottom: 15px;">
-     Innokenty is the central character in the chapter, and his interactions involve the taxi driver and the rough-looking character in the phone booth. The identity of the Air AttachÈ and any specific relationships between characters are not detailed in this chapter.
+     Innokenty is the central character in the chapter, and his interactions involve the taxi driver and the rough-looking character in the phone booth. The identity of the Air Attach√© and any specific relationships between characters are not detailed in this chapter.
     </p>
 <!-- Links -->
 <h2>
@@ -1836,13 +1852,13 @@ h1, h2 {
     </h2>
 <ul>
 <li>
-      ìI donít feel like supper when I know that people are walking around somewhere with numbers on their foreheads!î
+      ‚ÄúI don‚Äôt feel like supper when I know that people are walking around somewhere with numbers on their foreheads!‚Äù
      </li>
 <li>
-      ìWhat century are we living in?î
+      ‚ÄúWhat century are we living in?‚Äù
      </li>
 <li>
-      ìWhatís the matter with you supermen? Never seen a real live zek before?"
+      ‚ÄúWhat‚Äôs the matter with you supermen? Never seen a real live zek before?"
      </li>
 </ul>
 <!-- Chapter Timeline -->
@@ -1885,7 +1901,7 @@ h1, h2 {
 <p>Around this tree, six men dressed in blue denims reminiscent of parachutist uniforms gather to say a Protestant Christmas prayer. These men are in a prison room, surrounded by double bunks. While the majority of inmates are working the evening shift, these six have gathered for a somber celebration.</p>
 <p>One of the men, Max Adam, leads the prayer. Afterward, the men reminisce about their homeland, Germany, and the warmth and joy of the Christmas celebrations there. However, one of the men, Lev Rubin, stands out. He is a Jew and a Communist, and his history is intertwined with Germany both in peace and in war. During the war, he was a major in the Department of Psychological Warfare and had interacted extensively with German prisoners of war, attempting to convert them to the Communist cause.</p>
 <p>Despite being on opposing sides, Rubin had developed an affinity for the Germans. However, his empathy for them, after the war, resulted in him being imprisoned. Around the Christmas tree, the men share food and converse, with the conversations steering to memories of wartime Germany.</p>
-<p>However, the conversation takes a tense turn when someone brings up the Ardennes offensive and a speech by Goebbels from Christmas 1944. Rubin acknowledges the speech's success, but SS Obersturmbannf¸hrer Simmel, another prisoner, takes offense at Rubin commenting on Goebbels. The tension between Rubin and Simmel is palpable, with the former trying to keep the peace.</p>
+<p>However, the conversation takes a tense turn when someone brings up the Ardennes offensive and a speech by Goebbels from Christmas 1944. Rubin acknowledges the speech's success, but SS Obersturmbannf√ºhrer Simmel, another prisoner, takes offense at Rubin commenting on Goebbels. The tension between Rubin and Simmel is palpable, with the former trying to keep the peace.</p>
 <p>Despite the undercurrent of tension, the men share news and updates. Rubin primarily speaks about the success of the Chinese Communists. However, it's evident that some of the Germans, like Max, secretly listen to international broadcasts and are more informed about global events than Rubin might assume.</p>
 <p>Eventually, Rubin excuses himself to return to work. As he leaves, he navigates the prison's hallways, noting the unique structure of the prison which used to be a seminary. He then enters a door marked "Acoustics Laboratory."</p>
 <p>This chapter provides a deep exploration of human connections, nostalgia, and the complex interplay of personal beliefs and backgrounds in a shared environment. It paints a picture of prisoners clinging to fragments of their past while navigating the harsh realities of their present.</p>
@@ -1894,7 +1910,7 @@ h1, h2 {
 <ul>
     <li><span class="highlighted-text">Max Adam</span>: A central figure who leads the Protestant Christmas prayer and is seen as a leader among the German prisoners.</li>
     <li><span class="highlighted-text">Lev Rubin</span>: A Jewish Communist prisoner who has a complicated relationship with Germany and the other inmates. He spent the war trying to convert German prisoners to Communism.</li>
-    <li><span class="highlighted-text">SS Obersturmbannf¸hrer Simmel</span>: Another prisoner with a strong aversion to Rubin, especially when Rubin comments on Goebbels.</li>
+    <li><span class="highlighted-text">SS Obersturmbannf√ºhrer Simmel</span>: Another prisoner with a strong aversion to Rubin, especially when Rubin comments on Goebbels.</li>
 </ul>
 <!-- Character Development -->
 <h2>Character Development</h2>
@@ -1912,7 +1928,7 @@ h1, h2 {
         <td>Complex character evolution, revealing his wartime activities, his sympathy for the Germans, and his subsequent imprisonment. He tries to maintain peace among the inmates.</td>
     </tr>
     <tr>
-        <td>SS Obersturmbannf¸hrer Simmel</td>
+        <td>SS Obersturmbannf√ºhrer Simmel</td>
         <td>Depicted as antagonistic, especially towards Rubin. His past affiliations and current disposition come to light, highlighting tensions within the group.</td>
     </tr>
 </table>
@@ -1926,9 +1942,9 @@ h1, h2 {
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìFate had intertwined Lev Rubinís fortunes with those of Germany, in peace and war.î</li>
-<li>ìBut in his efforts to convert Germans, he had inevitably begun to feel close to them, gotten to like them, and, once Germany was prostrate, to pity them.î</li>
-<li>ìBut the other Germans were all insistent that Rubin should be there.î</li>
+<li>‚ÄúFate had intertwined Lev Rubin‚Äôs fortunes with those of Germany, in peace and war.‚Äù</li>
+<li>‚ÄúBut in his efforts to convert Germans, he had inevitably begun to feel close to them, gotten to like them, and, once Germany was prostrate, to pity them.‚Äù</li>
+<li>‚ÄúBut the other Germans were all insistent that Rubin should be there.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -1995,9 +2011,9 @@ h1, h2 {
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìHow can a normal healthy human being not like lively, invigorating Western popular music?î</li>
-<li>ìWithout a duly witnessed reference from your Belgian boss, our administration cannotóî</li>
-<li>ìListen, what the hell díyou think youíre doing? Canít a man feel free even in prison? If thereís no freedom there, where can he expect to find it?î</li>
+<li>‚ÄúHow can a normal healthy human being not like lively, invigorating Western popular music?‚Äù</li>
+<li>‚ÄúWithout a duly witnessed reference from your Belgian boss, our administration cannot‚Äî‚Äù</li>
+<li>‚ÄúListen, what the hell d‚Äôyou think you‚Äôre doing? Can‚Äôt a man feel free even in prison? If there‚Äôs no freedom there, where can he expect to find it?‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2021,9 +2037,9 @@ h1, h2 {
 <h2>Summary of Chapter 6: A Peaceful Existence</h2>
 <p>Chapter 6 revolves around the tranquil yet deceptive environment of a research institute referred to as a "sharashka." The sharashka is a form of prison where intellectuals and scientists are held, but instead of enduring typical labor camp tasks, they work on scientific and technological projects for the state.</p>
 
-<p>The central character introduced is Gleb Nerzhin, a prisoner who, despite his incarceration, has managed to maintain a semblance of order and calm in his life. His appearance and mannerisms reflect the impact of his confinement; his movements are minimal, conserving energy for the long sentence ahead of him. Nerzhinís workspace is a mess of documents and books, a scene he deliberately sets up every evening as a form of camouflage to deceive any potential inspectors.</p>
+<p>The central character introduced is Gleb Nerzhin, a prisoner who, despite his incarceration, has managed to maintain a semblance of order and calm in his life. His appearance and mannerisms reflect the impact of his confinement; his movements are minimal, conserving energy for the long sentence ahead of him. Nerzhin‚Äôs workspace is a mess of documents and books, a scene he deliberately sets up every evening as a form of camouflage to deceive any potential inspectors.</p>
 
-<p>On this particular evening, Nerzhin is not engrossed in his work but instead gazes outside, contemplating the lights of Moscow. His workspace and other amenities hint at his seniority and historical connection with the sharashka. The chapter provides a brief history of the sharashkaís inception, how it was established in the outskirts of Moscow and had evolved over time. Initially, the environment was relatively relaxed for the prisoners, but as time passed, restrictions tightened.</p>
+<p>On this particular evening, Nerzhin is not engrossed in his work but instead gazes outside, contemplating the lights of Moscow. His workspace and other amenities hint at his seniority and historical connection with the sharashka. The chapter provides a brief history of the sharashka‚Äôs inception, how it was established in the outskirts of Moscow and had evolved over time. Initially, the environment was relatively relaxed for the prisoners, but as time passed, restrictions tightened.</p>
 
 <p>Nerzhin's current research revolves around developing a scrambler telephone system. Specifically, he and his colleague Rubin are trying to find a method to identify unique voice characteristics over the phone. The project is daunting and progress has been slow, leading to a lighthearted exchange between the two about their commitment to the task. Their conversation provides insight into their shared history: both men served at the same fronts during the war, were awarded similar medals, were arrested in the same month, and were given the same sentence duration. Their bond is evident, and their shared experiences provide a backdrop for their camaraderie.</p>
 
@@ -2069,8 +2085,8 @@ h1, h2 {
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìThe history of 1917 holds no surprises for a mathematician. A tangent soaring at ninety degrees toward infinity at once plunges into the abyss of minus infinity.î</li>
-<li>ìIíve lived for thirty years without Hemingway, and I expect to go on a bit longer.î</li>
+<li>‚ÄúThe history of 1917 holds no surprises for a mathematician. A tangent soaring at ninety degrees toward infinity at once plunges into the abyss of minus infinity.‚Äù</li>
+<li>‚ÄúI‚Äôve lived for thirty years without Hemingway, and I expect to go on a bit longer.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2092,8 +2108,8 @@ h1, h2 {
 <!----- CHAPTER 7 SUMMARY ------>
 <div class="summary chapter-summary" id="chapter-7" style="display: none;">
 <button class="toggle-button" onclick="toggleSummary('chapter-7'); showSearchBar()">Hide Summary</button>
-<h2>Summary of Chapter 7: A Womanís Heart</h2>
-<p>Chapter 7 delves into the life of SERAFIMA VITALIEVNA, affectionately known as Simochka, a young MGB lieutenant in a "sharashka" ñ a secret scientific research institute. In this unique setting, MGB officers, like Simochka, oversee the work of prisoners. Simochka, fresh from the Institute of Communications Engineering, finds herself in this covert environment, tasked with ensuring prisoners' compliance and the security of confidential documents.</p>
+<h2>Summary of Chapter 7: A Woman‚Äôs Heart</h2>
+<p>Chapter 7 delves into the life of SERAFIMA VITALIEVNA, affectionately known as Simochka, a young MGB lieutenant in a "sharashka" ‚Äì a secret scientific research institute. In this unique setting, MGB officers, like Simochka, oversee the work of prisoners. Simochka, fresh from the Institute of Communications Engineering, finds herself in this covert environment, tasked with ensuring prisoners' compliance and the security of confidential documents.</p>
 <p>Despite her education, Simochka and her peers possess limited practical knowledge due to a flawed academic system that emphasized non-academic activities, and where exams were often passed through cheating. At the onset, Simochka and other young officers are warned to view the prisoners as potential threats, characterized as deceptive and dangerous. However, as she spends more time in the institute, Simochka's perception of the prisoners, especially those in her lab, shifts. She grows to respect their expertise and the resilience with which they face their difficult circumstances.</p>
 <p>A significant portion of the chapter focuses on Simochka's evolving relationship with a prisoner named Gleb Nerzhin. They collaborate on articulation tests, and over time, Simochka becomes deeply curious about Nerzhin, particularly some concealed notes he writes. Their professional relationship takes an intimate turn in a soundproof testing booth, where Nerzhin kisses Simochka, marking a pivotal romantic moment in her life, previously marred by feelings of unattractiveness and neglect.</p>
 <p>The chapter underscores the unpredictability of human emotions and relationships, even in highly regimented environments. It suggests that genuine human connections can emerge even in the most unlikely places, highlighting the strength and vulnerability of a woman's heart.</p>
@@ -2134,9 +2150,9 @@ h1, h2 {
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-    <li>ìIím active because I hate activity.î ñ A line by Nerzhin that encapsulates his character's philosophy.</li>
-    <li>ìWhat do you like, then?î she asked timidly. ìThinking.î ñ This interaction between Simochka and Nerzhin highlights the latter's introspective nature.</li>
-    <li>ìThe door isnít locked!î ñ Simochka's expression of vulnerability and fear during her intimate moment with Nerzhin.</li>
+    <li>‚ÄúI‚Äôm active because I hate activity.‚Äù ‚Äì A line by Nerzhin that encapsulates his character's philosophy.</li>
+    <li>‚ÄúWhat do you like, then?‚Äù she asked timidly. ‚ÄúThinking.‚Äù ‚Äì This interaction between Simochka and Nerzhin highlights the latter's introspective nature.</li>
+    <li>‚ÄúThe door isn‚Äôt locked!‚Äù ‚Äì Simochka's expression of vulnerability and fear during her intimate moment with Nerzhin.</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2172,7 +2188,7 @@ h1, h2 {
 
     <li><span class="highlighted-text">War vs. Personal Pleasures:</span> The characters grapple with the duality of war experiences. One recalls the intimate moment in the bunker, while the other contrasts it with the struggles faced by families back home. This sparks a debate on the nature of relationships and the human spirit, arguing about the merits of monogamy.</li>
 
-    <li><span class="highlighted-text">Warís True Nature:</span> The conversation shifts to the true nature of war. One character recalls an incident in a prison cell where a professor passionately argued about the good side of war, only to be rebuked by front-line soldiers who had seen its horrors firsthand.</li>
+    <li><span class="highlighted-text">War‚Äôs True Nature:</span> The conversation shifts to the true nature of war. One character recalls an incident in a prison cell where a professor passionately argued about the good side of war, only to be rebuked by front-line soldiers who had seen its horrors firsthand.</li>
 
     <li><span class="highlighted-text">Memory and Perception:</span> They reflect on how memories are selective, often highlighting the pleasant moments and downplaying the traumas. The horrors of war, they agree, are best remembered from a distance.</li>
 
@@ -2219,9 +2235,9 @@ h1, h2 {
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìThe Taoist ethic says that ëweapons are the instruments of misfortune, not honor. The wise man wins reluctantly.íî</li>
-<li>ìMemory is treacherous, and all the honors sink to the bottom óand only the pleasant things remain.î</li>
-<li>ìStay, fleeting moment, thou art beautiful!î</li>
+<li>‚ÄúThe Taoist ethic says that ‚Äòweapons are the instruments of misfortune, not honor. The wise man wins reluctantly.‚Äô‚Äù</li>
+<li>‚ÄúMemory is treacherous, and all the honors sink to the bottom ‚Äîand only the pleasant things remain.‚Äù</li>
+<li>‚ÄúStay, fleeting moment, thou art beautiful!‚Äù</li>
 </ul>
 
 <!-- Chapter Timeline -->
@@ -2292,9 +2308,9 @@ The primary relationship explored in the chapter is between the unnamed protagon
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìTo understand what happiness means, let us first consider being full.î - Nerzhin</li>
-<li>ìHe is a very great man!î - Rubin about the leader</li>
-<li>ìI train my mind to soar above it all . . . but the world around me makes me giddy, I lose control, I snap at people, get indignant.î - Nerzhin</li>
+<li>‚ÄúTo understand what happiness means, let us first consider being full.‚Äù - Nerzhin</li>
+<li>‚ÄúHe is a very great man!‚Äù - Rubin about the leader</li>
+<li>‚ÄúI train my mind to soar above it all . . . but the world around me makes me giddy, I lose control, I snap at people, get indignant.‚Äù - Nerzhin</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2374,9 +2390,9 @@ Nerzhin and Rubin share a deep bond, evident in their passionate debate. Their i
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìDo you know, Gleb Vikentich, I happened to think of you half an hour ago, and I started wondering what wind exactly had blown you into the Acoustics Lab, toóeróRoitman?î</li>
-<li>ìI must say, this ritual restraint is one of the things I envy about the mathematical fraternity. All my life Iíve thought of mathematicians as a sort of Rosicrucian brotherhood, and Iíve always regretted that it was never my luck to be initiated into their mysteries.î</li>
-<li>ìMy dear Pyotr Trofimovich, I donít want any thanks from them, I donít want their forgiveness, and Iím not interested in catching minnows for them. . . .î</li>
+<li>‚ÄúDo you know, Gleb Vikentich, I happened to think of you half an hour ago, and I started wondering what wind exactly had blown you into the Acoustics Lab, to‚Äîer‚ÄîRoitman?‚Äù</li>
+<li>‚ÄúI must say, this ritual restraint is one of the things I envy about the mathematical fraternity. All my life I‚Äôve thought of mathematicians as a sort of Rosicrucian brotherhood, and I‚Äôve always regretted that it was never my luck to be initiated into their mysteries.‚Äù</li>
+<li>‚ÄúMy dear Pyotr Trofimovich, I don‚Äôt want any thanks from them, I don‚Äôt want their forgiveness, and I‚Äôm not interested in catching minnows for them. . . .‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2473,7 +2489,7 @@ Yakov Ivanovich Mamurin and the Zeks: Mamurin's arrival stirs curiosity among th
 <div class="summary chapter-summary" id="chapter-12" style="display: none;">
 <button class="toggle-button" onclick="toggleSummary('chapter-12'); showSearchBar()">Hide Summary</button>
 <h2>Summary of Chapter 12: Number Seven</h2>
-<p>Chapter 12, titled "Number Seven," unravels within the confines of the Marfino sharashka, a research facility where imprisoned scientists and engineers are compelled to work on state projects. The focal point of the chapter is the project known as Number Seven, or more colloquially as the ìClipped Speech Laboratory.î This project aims to compress speech into electrical impulses and reproduce it, ensuring the voice at the other end is recognizable.</p>
+<p>Chapter 12, titled "Number Seven," unravels within the confines of the Marfino sharashka, a research facility where imprisoned scientists and engineers are compelled to work on state projects. The focal point of the chapter is the project known as Number Seven, or more colloquially as the ‚ÄúClipped Speech Laboratory.‚Äù This project aims to compress speech into electrical impulses and reproduce it, ensuring the voice at the other end is recognizable.</p>
 <p>From the outset, there's an undercurrent of tension, with the inhabitants of the sharashka aware that the success or failure of this project can make or break their chances at freedom. It's revealed that the machinery and the idea behind this project are American, even though officially they're considered "ours." Thus, the American journals that carry information about this technology are treated with high secrecy within the institute.</p>
 <p>Throughout the chapter, the work environment is depicted as intense, with the looming pressure of the project's success hanging over everyone. There's a clear hierarchy, with characters like Yakonov and Mamurin holding power. Yet, amidst this, there are individuals like Bobynin, whose moral superiority renders them untouchable.</p> 
 <p>One of the significant moments in the chapter is when Khorobrov decides to leave before work is officially over, leading to a confrontation with Mamurin. This encounter highlights the simmering tensions and the stark contrast between the world inside the sharashka and the world outside.</p>
@@ -2523,8 +2539,8 @@ Yakov Ivanovich Mamurin and the Zeks: Mamurin's arrival stirs curiosity among th
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìI would have preferred not to mention it out loud. But since you insist, I am at present on my way to the lavatory, or shall I say the john. If all goes well there, I shall proceed to the prison and go to bed.î - Khorobrov's defiant response to Mamurin.</li>
-<li>ìNonsense! Itís one step forward, one step back! What we need is method!î - Bobynin's critical take on the project's progress.</li>
+<li>‚ÄúI would have preferred not to mention it out loud. But since you insist, I am at present on my way to the lavatory, or shall I say the john. If all goes well there, I shall proceed to the prison and go to bed.‚Äù - Khorobrov's defiant response to Mamurin.</li>
+<li>‚ÄúNonsense! It‚Äôs one step forward, one step back! What we need is method!‚Äù - Bobynin's critical take on the project's progress.</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2602,8 +2618,8 @@ In this chapter, Nerzhin, the protagonist, is returning to the Acoustics Laborat
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìWhy ask? We are people of the abyss. We disappear into the hole from which we surfaced . . . back to the camp,î Gleb explained.</li>
-<li>ìIíll wait for you. How many years have you still got to do? Five? Well, Iíll wait five years for you! But will you come back to me when youíre released?î</li>
+<li>‚ÄúWhy ask? We are people of the abyss. We disappear into the hole from which we surfaced . . . back to the camp,‚Äù Gleb explained.</li>
+<li>‚ÄúI‚Äôll wait for you. How many years have you still got to do? Five? Well, I‚Äôll wait five years for you! But will you come back to me when you‚Äôre released?‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2633,7 +2649,7 @@ In this chapter, Nerzhin, the protagonist, is returning to the Acoustics Laborat
 <p style="margin-bottom: 15px;">
     Daily struggles, such as the cold, the need for fresh air, and the early darkness, become focal points of their conversations. These discussions often meander into nostalgic tales, revealing their backgrounds, past wars they've witnessed, experiences in different prisons or "sharashkas," and other memories from a world outside the prison walls.</p>
 <p style="margin-bottom: 15px;">
-    The concept of sharashkas is explored ó these are specialized prisons where intellectuals, scientists, and engineers were forced to work on state projects. These establishments are depicted as unexpectedly productive due to the absence of personal rivalries and ambition; prisoners are all equally constrained and equally rewarded.</p>
+    The concept of sharashkas is explored ‚Äî these are specialized prisons where intellectuals, scientists, and engineers were forced to work on state projects. These establishments are depicted as unexpectedly productive due to the absence of personal rivalries and ambition; prisoners are all equally constrained and equally rewarded.</p>
 <p style="margin-bottom: 15px;">
     Tension rises when a prisoner named Bobynin is suddenly taken away without explanation. This event triggers anxiety and speculation among the other prisoners, leaving them to wonder about their own fates. Soon after, Pryanchikov is also summoned, and his peers urge him to raise their collective grievances to the higher-ups. The chapter closes with the prisoners' ruminations, oscillating between fearful speculations about potential wars or mass executions and memories of fellow prisoners who once managed to bring about positive changes.</p>
 <p style="margin-bottom: 15px;">
@@ -2682,10 +2698,10 @@ In this chapter, Nerzhin, the protagonist, is returning to the Acoustics Laborat
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìI WILL THROW a shoe at that blue bulb one of these days. It gets on my nerves.î</li>
-<li>ìMamaís got blue shoulder boards now! But let me ask you, can people ever be trusted with real democracy?î</li>
-<li>ìWorkers of the world, unite! Ha-ha! Adieu!î</li>
-<li>ìSock it to them, Val boy. Every bit of it! Donít be shy!î</li>
+<li>‚ÄúI WILL THROW a shoe at that blue bulb one of these days. It gets on my nerves.‚Äù</li>
+<li>‚ÄúMama‚Äôs got blue shoulder boards now! But let me ask you, can people ever be trusted with real democracy?‚Äù</li>
+<li>‚ÄúWorkers of the world, unite! Ha-ha! Adieu!‚Äù</li>
+<li>‚ÄúSock it to them, Val boy. Every bit of it! Don‚Äôt be shy!‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2713,9 +2729,9 @@ In this chapter, Nerzhin, the protagonist, is returning to the Acoustics Laborat
 <p style="margin-bottom: 15px;">Chapter 15 is set in a prison known as a "sharashka" in Moscow, where intellectuals and professionals were imprisoned and used for their expertise. The prisoners sleep in a semi-circular room that has a unique dome with five arched windows. These windows offer them a view of a park and, occasionally, the sounds of singing from girls in a nearby suburb.</p>
 <p>The central characters in this chapter are Nerzhin and Ruska Doronin. Nerzhin, who is about to turn thirty-one, is introspective, reflecting on his decision to refuse to join a cryptographic group, a decision that he perceives will lead to his transfer to a harsher camp in Siberia or the Arctic. He ponders on his past, his time in the sharashka, and whether he's resilient enough for the challenges that lie ahead.</p>
 <p>The two share a late-night conversation about history, the nature of human suffering, and their yearning for intimacy. Ruska reveals an interest in Klara, the prosecutor's daughter, although she doesn't make a direct appearance in this chapter.</p>
-<p>Ruska, a younger prisoner, is restless. When he asks Nerzhin for a cigarette, it becomes clear that he's not just agitated about sleep but is deeply troubled by his thoughts on history and the cyclical nature of human suffering. Through their conversation, the reader learns of Ruska's past ñ a life of evading the Soviet police force, a brief stint at university, and his imprisonment. Despite his young age, Ruska is jaded and disillusioned. He dismisses the idea of studying history, pointing out its repetitiveness and the tragedies that befall good men. Ruska passionately argues that the most significant loss for prisoners like them isn't the lack of intellectual freedom but the deprivation of female companionship.</p>
+<p>Ruska, a younger prisoner, is restless. When he asks Nerzhin for a cigarette, it becomes clear that he's not just agitated about sleep but is deeply troubled by his thoughts on history and the cyclical nature of human suffering. Through their conversation, the reader learns of Ruska's past ‚Äì a life of evading the Soviet police force, a brief stint at university, and his imprisonment. Despite his young age, Ruska is jaded and disillusioned. He dismisses the idea of studying history, pointing out its repetitiveness and the tragedies that befall good men. Ruska passionately argues that the most significant loss for prisoners like them isn't the lack of intellectual freedom but the deprivation of female companionship.</p>
 <p>Their conversation dives deep into the psychological and emotional turmoil of being imprisoned. While Nerzhin tries to advise Ruska to find solace in philosophy and intellectual pursuits, his own inner thoughts reveal his own desperate yearning for intimacy. Nerzhin reminisces about his youthful ignorance regarding relationships and the pain of missed opportunities.</p>
-<p>As the chapter nears its end, Ruska admits there's someone he thinks of ñ Klara, the prosecutor's daughter. This revelation leaves the reader in anticipation, curious about the implications of Ruska's feelings for Klara and how it might impact his future in the prison.</p>
+<p>As the chapter nears its end, Ruska admits there's someone he thinks of ‚Äì Klara, the prosecutor's daughter. This revelation leaves the reader in anticipation, curious about the implications of Ruska's feelings for Klara and how it might impact his future in the prison.</p>
 <!-- Characters in Chapter -->
 <h2>Characters in Chapter</h2>
 <ul>
@@ -2748,28 +2764,28 @@ In this chapter, Nerzhin, the protagonist, is returning to the Acoustics Laborat
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>"History is so monotonous that it makes you sick to read it. Itís as bad as Pravda."</li>
-<li>"We can doubt, we must doubt. But we must have something to love, donít you think?"</li>
-<li>ìHell, I donít know. Look, I myself think that mankind has a great need of skepticism. We need it to crack open rock-
+<li>"History is so monotonous that it makes you sick to read it. It‚Äôs as bad as Pravda."</li>
+<li>"We can doubt, we must doubt. But we must have something to love, don‚Äôt you think?"</li>
+<li>‚ÄúHell, I don‚Äôt know. Look, I myself think that mankind has a great need of skepticism. We need it to crack open rock-
 hard heads, to choke fanatical throats. It is needed here more than anywhere, yet it establishes itself on Russian soil with more than usual
 difficulty. But skepticism cannot give a man a firm footing. And that is
-something he must have.î</li>
-<li>ìWhat is the most important thing theyíve deprived us
+something he must have.‚Äù</li>
+<li>‚ÄúWhat is the most important thing they‚Äôve deprived us
 of, would you say? The right to attend meetings? Politics classes? The right
 to subscribe to State Loans? The one and only thing that the Big Chief
-could do to hurt us was to deprive us of women! So thatís what he has done.
-For twenty-five years! The swine! I wonder if anybody realizes,î</li>
-<li>ìRead enough history, and youíll want to be a villain yourself. It pays
-better. If it hadnít been for the great Hannibal, we would never have heard
+could do to hurt us was to deprive us of women! So that‚Äôs what he has done.
+For twenty-five years! The swine! I wonder if anybody realizes,‚Äù</li>
+<li>‚ÄúRead enough history, and you‚Äôll want to be a villain yourself. It pays
+better. If it hadn‚Äôt been for the great Hannibal, we would never have heard
 of Carthage, but the wretched place banished him, confiscated his property,
-and razed his dwelling to the ground! Thereís nothing new under the sun.
+and razed his dwelling to the ground! There‚Äôs nothing new under the sun.
 All that time ago, Gnaeus Naevius was put in the stocks for writing daring
 plays. The Aetolians, long before we thought of it, proclaimed a false
-amnesty to entice ÈmigrÈs back home and put them to death. The Romans
-had already arrived at a truth that the Gulag keeps forgetting: Itís
+amnesty to entice √©migr√©s back home and put them to death. The Romans
+had already arrived at a truth that the Gulag keeps forgetting: It‚Äôs
 uneconomic to let a slave go hungry; you must feed him. The whole of
-history is one unmitigated fuck-up. Itís every man for himself and the devil
-take the hindmost. Thereís neither truth nor error, no progress, no future.î</li>
+history is one unmitigated fuck-up. It‚Äôs every man for himself and the devil
+take the hindmost. There‚Äôs neither truth nor error, no progress, no future.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2874,9 +2890,9 @@ take the hindmost. Thereís neither truth nor error, no progress, no future.î</li
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìWhatís it mean, canít be encoded?î<li>
-<li>ìDo you take me for an idiot? Whatís it mean, canít be encoded?î<li>
-<li>ìI can forgive anything but not deception!î<li>
+<li>‚ÄúWhat‚Äôs it mean, can‚Äôt be encoded?‚Äù<li>
+<li>‚ÄúDo you take me for an idiot? What‚Äôs it mean, can‚Äôt be encoded?‚Äù<li>
+<li>‚ÄúI can forgive anything but not deception!‚Äù<li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2942,8 +2958,8 @@ Despite Abakumov's clear position of authority, Pryanchikov remains blissfully u
 <h2>Quotations</h2>
 <ul>
 <li>"For Pryanchikov neither the driver nor his two companions in plainclothes existed; it was as though he were inhaling and exhaling flame, not air."</li>
-<li>"Youíre a senior engineer in the group working on the, er . . . artificial speech device?"</li>
-<li>"For one thing, thereís no hot water! You get back from work late at night, and thereís no hot water to make tea with."</li>
+<li>"You‚Äôre a senior engineer in the group working on the, er . . . artificial speech device?"</li>
+<li>"For one thing, there‚Äôs no hot water! You get back from work late at night, and there‚Äôs no hot water to make tea with."</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -2968,9 +2984,9 @@ The relationship between Pryanchikov and Abakumov is one of vast disparity in po
 <!----- CHAPTER 18 SUMMARY ------>
 <div class="summary chapter-summary" id="chapter-18" style="display: none;">
 <button class="toggle-button" onclick="toggleSummary('chapter-18'); showSearchBar()">Hide Summary</button>
-<h2>Summary of Chapter 18: ìOh, Wonder-Working Steedî</h2>
+<h2>Summary of Chapter 18: ‚ÄúOh, Wonder-Working Steed‚Äù</h2>
 <p style="margin-bottom: 15px;">In this chapter, the setting is a ministerial office. A man named Bobynin, dressed in blue overalls similar to Pryanchikov but different in demeanor, enters. Despite the significant setting, Bobynin's entrance and demeanor are casual, even dismissive, as if he frequents the place. His nonchalance irritates Abakumov, the minister.</p>
-<p style="margin-bottom: 15px;">Bobynin's demeanor contrasts starkly with the power dynamics expected in the room. When challenged by Abakumov for sitting without permission, he retorts with a relaxed Chinese proverb about the merits of sitting and lying down. When asked if he recognizes the minister, Bobynin cheekily compares him to Marshal Gˆring, a German military leader, highlighting a time when he had shown a similar irreverence towards Gˆring. Abakumov is taken aback by Bobynin's audacity.</p>
+<p style="margin-bottom: 15px;">Bobynin's demeanor contrasts starkly with the power dynamics expected in the room. When challenged by Abakumov for sitting without permission, he retorts with a relaxed Chinese proverb about the merits of sitting and lying down. When asked if he recognizes the minister, Bobynin cheekily compares him to Marshal G√∂ring, a German military leader, highlighting a time when he had shown a similar irreverence towards G√∂ring. Abakumov is taken aback by Bobynin's audacity.</p>
 <p style="margin-bottom: 15px;">Bobynin's fearlessness is rooted in the fact that he has nothing left to lose. He speaks of his family's death, his long imprisonment, and the hardships he has faced. Despite being in the presence of power, he feels powerful in his own right because he is free from any attachment. This perspective is encapsulated in his statement that when you take everything from a man, he becomes free.</p>
 <p style="margin-bottom: 15px;">The crux of the chapter revolves around a "speech clipping apparatus" that Bobynin, an engineer, is working on. Abakumov needs this apparatus urgently, but Bobynin bluntly states that it can't be hurried. He criticizes the system, emphasizing the lack of resources, the stifling atmosphere of suspicion, and the mismanagement that hampers progress. Bobynin's outburst paints a picture of an oppressive system that stifles innovation and productivity.</p>
 <p style="margin-bottom: 15px;">Towards the end, a sense of urgency engulfs Abakumov. He is under pressure to report to Stalin, a notoriously unforgiving leader, about the progress of the apparatus. Bobynin's revelations leave him in a bind. The chapter closes with Abakumov's fury directed at the trio from the Special Technology Department, who had presumably misled him.</p>
@@ -3008,9 +3024,9 @@ The relationship between Pryanchikov and Abakumov is one of vast disparity in po
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìWell, thereís a Chinese saying that standing is better than walking, sitting is better than standing, and lying down is better still.î</li>
-<li>ìI see the difference between us very clearly: You need me, and I donít need you!î</li>
-<li>ìThe man from whom youíve taken everything is no longer in your power; he is free again.î</li>
+<li>‚ÄúWell, there‚Äôs a Chinese saying that standing is better than walking, sitting is better than standing, and lying down is better still.‚Äù</li>
+<li>‚ÄúI see the difference between us very clearly: You need me, and I don‚Äôt need you!‚Äù</li>
+<li>‚ÄúThe man from whom you‚Äôve taken everything is no longer in your power; he is free again.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3070,9 +3086,9 @@ The relationship between Pryanchikov and Abakumov is one of vast disparity in po
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìIt was not nausea, but a sort of heavy upward pressure from the stomach.î</li>
-<li>ìIt was easy enough to shut yourself off from the spatial universe, refuse to move about in it. But it was impossible to shut yourself off from time.î</li>
-<li>ìThe Revolution had left them orphaned and godless, and that was dangerous.î</li>
+<li>‚ÄúIt was not nausea, but a sort of heavy upward pressure from the stomach.‚Äù</li>
+<li>‚ÄúIt was easy enough to shut yourself off from the spatial universe, refuse to move about in it. But it was impossible to shut yourself off from time.‚Äù</li>
+<li>‚ÄúThe Revolution had left them orphaned and godless, and that was dangerous.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3106,7 +3122,7 @@ By the chapter's end, the stage is set for a crucial meeting between Abakumov an
 
 <p>The chapter sets the stage by reflecting on the vast span of a life, likened to two-thirds of a century. The initial periods of this life are described as obscured, almost lost in a "blue haze". The narrative poses a rhetorical question, pondering who could have foreseen the life's eventual trajectory based on its humble beginnings.</p>
 <p>The protagonist, referred to as "Soso" in his younger days (a reference to Joseph Stalin's childhood nickname), had a challenging start. He was born out of wedlock, with his birth records bearing the name of an impoverished, alcoholic shoemaker. His mother lacked formal education. The imagery depicts a young Soso playing in puddles near Queen Tamara's hill, painting a picture of his destitute childhood environment.</p>
-<p>Despite these hardships, circumstances aligned to provide Soso with opportunities not typically available to someone of his background. He was admitted to religious institutions for education ó first to a church school and later to a seminary. This was unusual, given that he wasn't from a family with priestly lineage.</p>
+<p>Despite these hardships, circumstances aligned to provide Soso with opportunities not typically available to someone of his background. He was admitted to religious institutions for education ‚Äî first to a church school and later to a seminary. This was unusual, given that he wasn't from a family with priestly lineage.</p>
 <p>His dedication to religious studies and services was profound. Young Soso immersed himself deeply into religious texts, including the Old and New Testaments, the Lives of the Saints, and church history. His commitment was such that he even served as an altar boy. A visual representation in the form of a snapshot is mentioned, showing Dzhugashvili (Stalin's real surname) in a gray cassock, poised for a life dedicated to the church.</p>
 <p>However, the narrative hints at a turning point. While the young novice had the makings of a future archbishop, his faith in God was tested and seemingly waned. The small town, with its rivers and serene landscape, was contrasted with the bustling city of Tiflis, where modern ideas, including skepticism towards religion, were taking root.</p>
 
@@ -3152,7 +3168,7 @@ By the chapter's end, the stage is set for a crucial meeting between Abakumov an
    <li>Following his self-imposed isolation from other revolutionaries during exile, Stalin seeks a simpler, honest life. At 35, he yearns for stability and despises the years he spent amidst what he perceives as "pathetic hacks" of the revolutionary movement. Alongside, he starts a family with his Cheldonian wife, welcoming the birth of their son.</li>
    <li>However, the onset of World War I disrupts this semblance of stability. Rather than risking the uncertainties and dangers of war, Stalin prefers the relative safety of his exile. His past associations with the Police Department come back to haunt him when he's conscripted into the Imperial Russian Army, marking the beginning of his military career.</li>
    <li>This new phase is riddled with challenges and uncertainties. At 38, Stalin finds himself in the unfamiliar terrains of Siberia, ill-equipped for the war and far removed from the political intrigues of the cities. The narrative paints a poignant picture: a man, once poised for leadership within the revolutionary movement, now reduced to a mere foot soldier, vulnerable to the brutalities of war.</li>
-   <li>Yet, fate has other plans. News from Petrograd brings a seismic shift ó the abdication of the tsar and the end of the Russian Empire. This moment is described with a palpable sense of collective euphoria, with people rejoicing in the streets. The empire's fall, which seemed an impossible dream, becomes a reality.</li>
+   <li>Yet, fate has other plans. News from Petrograd brings a seismic shift ‚Äî the abdication of the tsar and the end of the Russian Empire. This moment is described with a palpable sense of collective euphoria, with people rejoicing in the streets. The empire's fall, which seemed an impossible dream, becomes a reality.</li>
    <li>However, Stalin's response is muted, held back by personal fears and past associations. The haunting image of Azef, likely a symbol of betrayal and its consequences, lingers over him, casting a shadow over the jubilant atmosphere.</li>
 </ul>
 <p>This section underscores Stalin's journey from political prominence to personal isolation</p>
@@ -3192,7 +3208,7 @@ By the chapter's end, the stage is set for a crucial meeting between Abakumov an
     <li><span class="highlighted-text">Election as Secretary-General:</span> Stalin's election as the secretary-general in May 1922 marks a significant moment. His approach post this elevation is contrasted with what others might have done. While others might have reveled in the achievement or engaged in theoretical pursuits, Stalin senses the urgency of the moment. He recognizes the fragility of the revolution's achievements and the need for decisive action.</li>
     <li><span class="highlighted-text">Dealing with Lenin:</span> The narrative delves into Stalin's complex relationship with Lenin, especially as Lenin's health deteriorates. While acknowledging Lenin's monumental role, Stalin also perceives him as increasingly erratic and a potential obstacle. The idea of sending Lenin to the Caucasus for rest is considered, with the intention of isolating him from Party affairs.</li>
 </ul>
-<p>This section offers a deep dive into Stalin's political acumen, his ability to navigate the complex dynamics within the Bolshevik movement, and his strategic positioning vis-‡-vis other major figures like Trotsky and Lenin.</p>
+<p>This section offers a deep dive into Stalin's political acumen, his ability to navigate the complex dynamics within the Bolshevik movement, and his strategic positioning vis-√†-vis other major figures like Trotsky and Lenin.</p>
 
 <span class="subheading-text">LEGACY AND REFLECTION</span>
 
@@ -3234,15 +3250,15 @@ By the chapter's end, the stage is set for a crucial meeting between Abakumov an
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìAnd who then could have imagined in his wildest dreams how it would end?î</li>
-<li>ìLooking backward, it was difficult to resurrect and believe in the beginning.î</li>
-<li>ìAn illegitimate son, registered in the name of a drunken, penniless cobbler.î</li>
-<li>ìGrubby little Soso forever splashing about in the puddles near Queen Tamaraís hill.î</li>
-<li>ìHow could such a child ever escape from the depths of degradation, let alone become ruler of the world?î</li>
-<li>ìFrom the highest point of the blackened iconostasis, the God of Sabaoth sternly summoned the novice prostrate on the cold stone flags.î</li>
-<li>ìYes, there it was in his Biography, a snapshot of Dzhugashvili wearing a gray cassock with a round, buttoned collar before he was expelled.î</li>
-<li>ìThere was no color in his boyishly oval face; he looked exhausted by prayer.î</li>
-<li>ìHis hair, grown long in readiness for his ordination, was carefully parted, humbly smeared with oil from the icon lamps, and combed down right over his ears.î</li>
+<li>‚ÄúAnd who then could have imagined in his wildest dreams how it would end?‚Äù</li>
+<li>‚ÄúLooking backward, it was difficult to resurrect and believe in the beginning.‚Äù</li>
+<li>‚ÄúAn illegitimate son, registered in the name of a drunken, penniless cobbler.‚Äù</li>
+<li>‚ÄúGrubby little Soso forever splashing about in the puddles near Queen Tamara‚Äôs hill.‚Äù</li>
+<li>‚ÄúHow could such a child ever escape from the depths of degradation, let alone become ruler of the world?‚Äù</li>
+<li>‚ÄúFrom the highest point of the blackened iconostasis, the God of Sabaoth sternly summoned the novice prostrate on the cold stone flags.‚Äù</li>
+<li>‚ÄúYes, there it was in his Biography, a snapshot of Dzhugashvili wearing a gray cassock with a round, buttoned collar before he was expelled.‚Äù</li>
+<li>‚ÄúThere was no color in his boyishly oval face; he looked exhausted by prayer.‚Äù</li>
+<li>‚ÄúHis hair, grown long in readiness for his ordination, was carefully parted, humbly smeared with oil from the icon lamps, and combed down right over his ears.‚Äù</li>
 </ul>
 
 <!-- Chapter Timeline -->
@@ -3256,7 +3272,7 @@ By the chapter's end, the stage is set for a crucial meeting between Abakumov an
 <!-- Character Relationships -->
 <h2>Character Relationships</h2>
 <p class="placeholder" style="margin-bottom: 15px;">
-The chapter intricately traces the dynamics between Stalin and other significant figures of the Bolshevik movement. Stalin's relationship with Lenin is especially poignant, marked by admiration, collaboration, and eventual differences. They shared revolutionary fervor, with Lenin acknowledging Stalin's strengths, once referring to him as ìthe marvelous Georgian.î Their interactions in various locations, including Tammerfors, Stockholm, and London, reveal mutual respect but also underlying tensions. Other relationships, like those with Trotsky and Krupskaya, underscore the complex tapestry of alliances and rivalries that shaped the early Soviet era.
+The chapter intricately traces the dynamics between Stalin and other significant figures of the Bolshevik movement. Stalin's relationship with Lenin is especially poignant, marked by admiration, collaboration, and eventual differences. They shared revolutionary fervor, with Lenin acknowledging Stalin's strengths, once referring to him as ‚Äúthe marvelous Georgian.‚Äù Their interactions in various locations, including Tammerfors, Stockholm, and London, reveal mutual respect but also underlying tensions. Other relationships, like those with Trotsky and Krupskaya, underscore the complex tapestry of alliances and rivalries that shaped the early Soviet era.
 </p>
 
 <!-- Links -->
@@ -3290,14 +3306,14 @@ The chapter intricately traces the dynamics between Stalin and other significant
 
 <span class="subheading-text">The Meeting with Stalin</span>
 <p>Abakumov's dread is further magnified when he finally gets the summons to meet Stalin. As he enters, there's a palpable tension. Every detail, from the way doors are half-opened to Stalin's silence, adds to the intense anxiety. Abakumov's greeting, which comes out as hoarse and possibly not deferential enough, only deepens the unease.</p>
-<p>Stalin's room is described in detail, emphasizing its starkness and the absence of decor. The environment complements Stalin's demeanor ó unyielding, cold, and imposing. Even Abakumov, the Minister of State Security, is not immune to the fear Stalin instills. Familiar with interrogation tactics himself, Abakumov finds himself on the other side of the table, struggling to maintain composure in the face of Stalin's chilling silence.</p>
+<p>Stalin's room is described in detail, emphasizing its starkness and the absence of decor. The environment complements Stalin's demeanor ‚Äî unyielding, cold, and imposing. Even Abakumov, the Minister of State Security, is not immune to the fear Stalin instills. Familiar with interrogation tactics himself, Abakumov finds himself on the other side of the table, struggling to maintain composure in the face of Stalin's chilling silence.</p>
 
 <span class="subheading-text">Stalin's Study and His Dominance</span>
 <p>The narrative delves deeper into the details of Stalin's study, painting a picture of a room that mirrors its owner's stark and imposing persona. Abakumov stands there, almost cowering, while Stalin continues to write. Despite Stalin's dominating presence, there's a hint at the paradoxical power dynamics: while Abakumov is wholly in Stalin's hands, the Leader too is, in some ways, reliant on Abakumov's State Security system. However, this power balance is precarious, and the narrative suggests that Abakumov would likely never be able to assert his authority over Stalin.</p>
 <p>Stalin's aura is further described, emphasizing the weight and significance of his every gesture. His every movement, once benign in his younger days, has now taken on a terrifying significance due to his ruthless actions over the years.</p>
 
 <span class="subheading-text">Stalin's Distrust</span>
-<p>The narrative shifts to focus on Stalin's inherent distrust of everyone around him. From his mother to his Revolutionary comrades, from peasants to engineers, and even his children ó no one was above Stalin's suspicion. He had lived a life devoid of trust, and in his eyes, he was always justified in his distrust.</p>
+<p>The narrative shifts to focus on Stalin's inherent distrust of everyone around him. From his mother to his Revolutionary comrades, from peasants to engineers, and even his children ‚Äî no one was above Stalin's suspicion. He had lived a life devoid of trust, and in his eyes, he was always justified in his distrust.</p>
 <p>However, there was one notable exception: Adolf Hitler. The narrative delves into the relationship between Stalin and Hitler, highlighting Stalin's initial trust in the German leader. Stalin observed Hitler's conquests with a sort of malicious satisfaction, even when there were clear signs and warnings about Hitler's intentions against the Soviet Union. Stalin's miscalculations and misplaced trust in Hitler led to the devastating consequences of the German invasion of the Soviet Union.</p>
 
 <span class="subheading-text">Stalin's Mistrust and Abakumov's Struggles</span>
@@ -3366,19 +3382,19 @@ The chapter intricately traces the dynamics between Stalin and other significant
 <h2>Quotations</h2>
 <ul>
 <!-- Note: Placeholder quotations, you can replace these with actual quotes from the book. -->
-<li>ìWhat made Stalin terrifying was that any slip in dealing with him was like
-mishandling a detonator: You would do it only once in your lifeî</li>
-<li>ìWorst of all was when Stalin said nothing and you were left to torment
-yourself with conjectureî</li>
-<li>ìStalin had not trusted his own mother. Nor God. Nor his Revolutionary
+<li>‚ÄúWhat made Stalin terrifying was that any slip in dealing with him was like
+mishandling a detonator: You would do it only once in your life‚Äù</li>
+<li>‚ÄúWorst of all was when Stalin said nothing and you were left to torment
+yourself with conjecture‚Äù</li>
+<li>‚ÄúStalin had not trusted his own mother. Nor God. Nor his Revolutionary
 comrades. Nor the peasants. There was one man he had trusted, and only one, in a life free of trust and
-mistakes. That man was Adolf Hitler.î</li>
+mistakes. That man was Adolf Hitler.‚Äù</li>
 <li>": twenty-five years, not just ten! Ten is like sending them to
 school, not to prison! Ten is fine for schoolboys. Once they start shaving,
-itís twenty-five! Theyíre young enough! Theyíll survive!î</li>
+it‚Äôs twenty-five! They‚Äôre young enough! They‚Äôll survive!‚Äù</li>
 <li>"We
 badly need capital punishment! Please, Comrade Stalin, give us back the
-death penalty!î A cry from a loving heart.</li>
+death penalty!‚Äù A cry from a loving heart.</li>
 </ul>
 
 <!-- Chapter Timeline -->
@@ -3453,9 +3469,9 @@ death penalty!î A cry from a loving heart.</li>
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìBut Stalin had a passing acquaintance with an uncomplicated version of world history, and he knew that given time people will forgive all bad things, indeed forget them, or remember them as good.î</li>
-<li>ìIn that context, by the way, completely incorrect ideas had entrenched themselves.î</li>
-<li>ìLeaving aside the deliverance of 1941, Stalin had never noticed anyone but himself making things happen, never felt anyone at his side, elbow to elbow.î</li>
+<li>‚ÄúBut Stalin had a passing acquaintance with an uncomplicated version of world history, and he knew that given time people will forgive all bad things, indeed forget them, or remember them as good.‚Äù</li>
+<li>‚ÄúIn that context, by the way, completely incorrect ideas had entrenched themselves.‚Äù</li>
+<li>‚ÄúLeaving aside the deliverance of 1941, Stalin had never noticed anyone but himself making things happen, never felt anyone at his side, elbow to elbow.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3482,7 +3498,7 @@ death penalty!î A cry from a loving heart.</li>
 <p style="margin-bottom: 15px;">
     The chapter opens with Engineer Colonel Yakonov exiting the ministry and mistaking another car for his own. The setting reveals a cold, foggy night transitioning into dawn, with the city quiet and still. A young student observes Yakonov and wonders about his own future, unaware of the internal turmoil Yakonov is experiencing.</p>
 <p style="margin-bottom: 15px;">
-    Yakonov's driver, who had been waiting for him since midnight, is puzzled by his chiefís unusual demeanor. After driving aimlessly through the streets of Moscow, they pass notable landmarks, including the Kremlin. The driver senses Yakonov's distress but struggles to determine how to help him. Eventually, near the Moscow River, Yakonov decides to walk alone, leaving the car and his driver behind.
+    Yakonov's driver, who had been waiting for him since midnight, is puzzled by his chief‚Äôs unusual demeanor. After driving aimlessly through the streets of Moscow, they pass notable landmarks, including the Kremlin. The driver senses Yakonov's distress but struggles to determine how to help him. Eventually, near the Moscow River, Yakonov decides to walk alone, leaving the car and his driver behind.
 </p>
 <p style="margin-bottom: 15px;">
     As Yakonov walks along the embankment, he reflects on recent events. He, along with others, was summoned to the ministry for the second time and faced the wrath of Abakumov, a high-ranking official. Yakonov was accused of deception and sabotage and given a final deadline to complete a project known as the Scrambler. He remembers the pressure and threats that followed from colleagues like Selivanovsky and Oskolupov.
@@ -3536,9 +3552,9 @@ death penalty!î A cry from a loving heart.</li>
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìIf language is superstructural, why does it not change from one social epoch to another?î</li>
-<li>ìThe superstructure is created by the base precisely in order toÖî</li>
-<li>ìWe shall need a blitzkrieg in Korea, tooÖî</li>
+<li>‚ÄúIf language is superstructural, why does it not change from one social epoch to another?‚Äù</li>
+<li>‚ÄúThe superstructure is created by the base precisely in order to‚Ä¶‚Äù</li>
+<li>‚ÄúWe shall need a blitzkrieg in Korea, too‚Ä¶‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3569,7 +3585,7 @@ death penalty!î A cry from a loving heart.</li>
    The chapter opens with Engineer Colonel Yakonov exiting the ministry and mistaking another car for his own. The setting reveals a cold, foggy night transitioning into dawn, with the city quiet and still. A young student observes Yakonov and wonders about his own future, unaware of the internal turmoil Yakonov is experiencing.
 </p>
 <p style="margin-bottom: 15px;">
-    Yakonov's driver, who had been waiting for him since midnight, is puzzled by his chiefís unusual demeanor. After driving aimlessly through the streets of Moscow, they pass notable landmarks, including the Kremlin. The driver senses Yakonov's distress but struggles to determine how to help him. Eventually, near the Moscow River, Yakonov decides to walk alone, leaving the car and his driver behind.
+    Yakonov's driver, who had been waiting for him since midnight, is puzzled by his chief‚Äôs unusual demeanor. After driving aimlessly through the streets of Moscow, they pass notable landmarks, including the Kremlin. The driver senses Yakonov's distress but struggles to determine how to help him. Eventually, near the Moscow River, Yakonov decides to walk alone, leaving the car and his driver behind.
 </p>
 <p style="margin-bottom: 15px;">
     As Yakonov walks along the embankment, he reflects on recent events. He, along with others, was summoned to the ministry for the second time and faced the wrath of Abakumov, a high-ranking official. Yakonov was accused of deception and sabotage and given a final deadline to complete a project known as the Scrambler. He remembers the pressure and threats that followed from colleagues like Selivanovsky and Oskolupov. The chapter portrays Yakonov's emotional turmoil, the oppressive system of the Soviet Union, and the haunting memories of the past.
@@ -3608,8 +3624,8 @@ death penalty!î A cry from a loving heart.</li>
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìIt wasnít the first time he had called his driver ëold fellow.í But there was such sadness in his voice that he seemed to be saying good-bye forever.î</li>
-<li>ìOnly sick people alone with their illness (and not in a hospital!) could live an untroubled life in the Soviet Union.î</li>
+<li>‚ÄúIt wasn‚Äôt the first time he had called his driver ‚Äòold fellow.‚Äô But there was such sadness in his voice that he seemed to be saying good-bye forever.‚Äù</li>
+<li>‚ÄúOnly sick people alone with their illness (and not in a hospital!) could live an untroubled life in the Soviet Union.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3687,9 +3703,9 @@ Yakonov's relationship with his driver is professional but with an undercurrent 
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìHow cleverly Russians chose sites for churches and monasteries in ancient times.î</li>
-<li>ìBut itís going, Anton,î she cried. ìMoscow is going!î</li>
-<li>ìImagine yourself dying and suddenly asking for an Orthodox funeral.î</li>
+<li>‚ÄúHow cleverly Russians chose sites for churches and monasteries in ancient times.‚Äù</li>
+<li>‚ÄúBut it‚Äôs going, Anton,‚Äù she cried. ‚ÄúMoscow is going!‚Äù</li>
+<li>‚ÄúImagine yourself dying and suddenly asking for an Orthodox funeral.‚Äù</li>
 </ul>
     
 <!-- Chapter Timeline -->
@@ -3771,9 +3787,9 @@ The chapter effectively juxtaposes the bleakness of the prison camp with the pri
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìThereís no other way! If you begin to doubt a single dogma of the faith, a single word of the scriptures, all is lost! You are one of the godless!î</li>
-<li>ìThatís what repels people! All or nothing! No compromises, no allowances made.î</li>
-<li>ìYou must get used to it. I freely admit that Iím like one of those wooden eggs you can take apart. I am made up of nine spheres, one inside the other.î</li>
+<li>‚ÄúThere‚Äôs no other way! If you begin to doubt a single dogma of the faith, a single word of the scriptures, all is lost! You are one of the godless!‚Äù</li>
+<li>‚ÄúThat‚Äôs what repels people! All or nothing! No compromises, no allowances made.‚Äù</li>
+<li>‚ÄúYou must get used to it. I freely admit that I‚Äôm like one of those wooden eggs you can take apart. I am made up of nine spheres, one inside the other.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3821,7 +3837,7 @@ Dmitri Sologdin and Nerzhin share a bond of friendship. They engage in deep phil
 <ul>
     <li><span class="highlighted-text">Nerzhin</span>: A prisoner who is engaged in a deep conversation with Sologdin about life, challenges, and their perspectives on various topics.</li>
     <li><span class="highlighted-text">Sologdin</span>: Another prisoner who shares his philosophical insights and his longing to communicate with his loved one, Nina.</li>
-    <li><span class="highlighted-text">Junior Lieutenant Nadelashin</span>: A prison officer, formerly a sergeant major, who interacts with the prisoners and is referred to as ìjuniorî by them.</li>
+    <li><span class="highlighted-text">Junior Lieutenant Nadelashin</span>: A prison officer, formerly a sergeant major, who interacts with the prisoners and is referred to as ‚Äújunior‚Äù by them.</li>
     <li><span class="highlighted-text">Lieutenant Colonel Klimentiev</span>: A higher-ranking prison officer, referred to humorously as "Klimentiadis" by the prisoners.</li>
 </ul>
 <!-- Character Development -->
@@ -3848,15 +3864,15 @@ Dmitri Sologdin and Nerzhin share a bond of friendship. They engage in deep phil
 <h2>Key Themes and Topics</h2>
 <ul>
     <li><span class="highlighted-text">Resilience in Adversity:</span> The chapter emphasizes the importance of resilience and perseverance, especially in challenging situations like prison.</li>
-    <li><span class="highlighted-text">Philosophical Insights:</span> Through Sologdinís dialogues, the chapter delves into philosophical insights on embracing difficulties and the nature of work and challenges.</li>
+    <li><span class="highlighted-text">Philosophical Insights:</span> Through Sologdin‚Äôs dialogues, the chapter delves into philosophical insights on embracing difficulties and the nature of work and challenges.</li>
     <li><span class="highlighted-text">Political Climate:</span> The references to Lenin and the Revolution provide a glimpse into the political climate of the time.</li>
 </ul>
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìIn the sphere of the unknown, we should regard difficulties as a hidden treasure!î</li>
-<li>ìThe most promising path for investigation is that on which the greatest external meets the smallest internal resistance.î</li>
-<li>ìThe rule for the last few inches amounts to just this: Do not give up work at this point!î</li>
+<li>‚ÄúIn the sphere of the unknown, we should regard difficulties as a hidden treasure!‚Äù</li>
+<li>‚ÄúThe most promising path for investigation is that on which the greatest external meets the smallest internal resistance.‚Äù</li>
+<li>‚ÄúThe rule for the last few inches amounts to just this: Do not give up work at this point!‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -3993,7 +4009,7 @@ The chapter delves into Nadelashin's background. He comes from a lineage of tail
     <li><span class="highlighted-text">Lieutenant Colonel Klimentiev</span>: A disciplined officer in charge of a special prison. He is strict and believes in maintaining order and discipline within the prison.</li>
     <li><span class="highlighted-text">Junior Lieutenant Nadelashin</span>: A nervous junior officer who is apprehensive of Klimentiev. He is prone to making minor mistakes and is often reprimanded by Klimentiev.</li>
     <li><span class="highlighted-text">Nerzhin</span>: A prisoner who is informed about a surprise visit from his wife. He struggles to maintain a stoic facade but is clearly elated at the news.</li>
-    <li><span class="highlighted-text">Nerzhinís wife</span>: Desperate to see her husband, she encounters Klimentiev on a metro and pleads for a chance to visit her husband.</li>
+    <li><span class="highlighted-text">Nerzhin‚Äôs wife</span>: Desperate to see her husband, she encounters Klimentiev on a metro and pleads for a chance to visit her husband.</li>
 </ul>
 <!-- Character Development -->
 <h2>Character Development</h2>
@@ -4025,9 +4041,9 @@ The chapter delves into Nadelashin's background. He comes from a lineage of tail
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìWriting poste restante is forbidden,î he said, just loudly enough for her to hear above the racket of the train. ìYou have to give an address.î</li>
-<li>ìYou have been granted permission to visit. Come at ten a.m. tomorrow.î</li>
-<li>ìIt is very, very important to me,î she assured him, wide-eyed, trying to detect any sign of wavering in Klimentievís face.</li>
+<li>‚ÄúWriting poste restante is forbidden,‚Äù he said, just loudly enough for her to hear above the racket of the train. ‚ÄúYou have to give an address.‚Äù</li>
+<li>‚ÄúYou have been granted permission to visit. Come at ten a.m. tomorrow.‚Äù</li>
+<li>‚ÄúIt is very, very important to me,‚Äù she assured him, wide-eyed, trying to detect any sign of wavering in Klimentiev‚Äôs face.</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -4102,8 +4118,8 @@ The relationship between Klimentiev and Nadelashin is hierarchical, with the for
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-    <li>ìItís not the sea that drowns you, itís the puddle.î</li>
-    <li>ìYou must know that Iíve signed one oath of loyalty. If I sign this other now, itíll be a bit of a contradiction, wonít it?î</li>
+    <li>‚ÄúIt‚Äôs not the sea that drowns you, it‚Äôs the puddle.‚Äù</li>
+    <li>‚ÄúYou must know that I‚Äôve signed one oath of loyalty. If I sign this other now, it‚Äôll be a bit of a contradiction, won‚Äôt it?‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -4187,8 +4203,8 @@ The chapter concludes with an anecdote about Berkalov, an artillery officer who 
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìDarning is only effective when it is carried out conscientiously. God forbid that you should adopt a formal attitude to it.î - Abramson's advice on the art of darning.</li>
-<li>ìBerkalov was an old-time artillery officer, the inventor of the BS-3 cannon... Thatís the sort of thing that can happen to a man in Russia.î - A tale illustrating the unpredictability of life in Russia.</li>
+<li>‚ÄúDarning is only effective when it is carried out conscientiously. God forbid that you should adopt a formal attitude to it.‚Äù - Abramson's advice on the art of darning.</li>
+<li>‚ÄúBerkalov was an old-time artillery officer, the inventor of the BS-3 cannon... That‚Äôs the sort of thing that can happen to a man in Russia.‚Äù - A tale illustrating the unpredictability of life in Russia.</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
@@ -4271,8 +4287,8 @@ The relationships among the characters shed light on the dynamics of prison life
 <!-- Quotations -->
 <h2>Quotations</h2>
 <ul>
-<li>ìHa ha! The soldier wouldnít let me cross! Me? He wouldnít let my immortal soul cross!î</li>
-<li>ìAs you can see, thereís still quite a lot of work to be done. But this design will be the best of all those so far submitted. It will mean your release and the quashing of your conviction.î</li>
+<li>‚ÄúHa ha! The soldier wouldn‚Äôt let me cross! Me? He wouldn‚Äôt let my immortal soul cross!‚Äù</li>
+<li>‚ÄúAs you can see, there‚Äôs still quite a lot of work to be done. But this design will be the best of all those so far submitted. It will mean your release and the quashing of your conviction.‚Äù</li>
 </ul>
 <!-- Chapter Timeline -->
 <h2>Chapter Timeline</h2>
