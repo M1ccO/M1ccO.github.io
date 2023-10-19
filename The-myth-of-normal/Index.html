@@ -133,7 +133,7 @@ p, li {
     display: inline-block;
 }
 
-.scrollable-area .h3 {
+.scrollable-area .h3 a {
     font-size: 25px;
     margin-top: 7vh;
     position: relative;
@@ -142,7 +142,7 @@ p, li {
     color: black;
     font-family: fangsong;
     font-weight: bold;
-    transition: color 0.3s ease, transform 0.3s ease;  /* Add transitions for color and transform */
+    transition: color 0.3s ease, transform 0.3s ease;
 }
 
 .scrollable-area ul {
@@ -170,9 +170,9 @@ p, li {
 .scrollable-area .h3{
     transform-origin: top left; /* This sets the scaling origin to the top left */
 }
-.scrollable-area .h3:hover {
-    color: #8B0000; /* Changes the color to dark red on hover */
-    transform: scale(1.1); /* Enlarges the text on hover */
+.scrollable-area .h3 a:hover {
+    color: #8B0000;
+    transform: scale(1.1);
 }
 
 .scrollable-area::-webkit-scrollbar {
@@ -648,7 +648,7 @@ h1, h2 {
 <input id="search-input" required="" type="search"/>
 <button class="search-btn" disabled=""><span>Search</span></button>
 </div>
-<div class="scrollable-area" style="border: 2px solid black;">
+<div class="scrollable-area">
 <!-------------------------->
 <!------- CHAPTER 1 -------->
 <div class="h3">
