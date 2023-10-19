@@ -133,7 +133,7 @@ p, li {
     display: inline-block;
 }
 
-.heading h3 {
+.scrollable-area h3 {
     font-size: 25px;
     margin-top: 7vh;
     position: relative;
@@ -167,7 +167,7 @@ p, li {
     color: #8B0000; /* Changes the color to dark red on hover */
     transform: scale(1.1); /* Enlarges the text on hover */
 }
-.heading h3:hover {
+.scrollable-area h3:hover {
     color: #8B0000;  /* Changes the color to dark red on hover */
     transform: scale(1.1) !important;  /* Enlarges the text on hover */
 }
@@ -649,8 +649,10 @@ h1, h2 {
 <ul>
 <!-------------------------->
 <!------- CHAPTER 1 -------->
-<a href="#" onclick="toggleChapter('chapter-1')" class="heading h3">
+<div class="h3">
+<a href="#" onclick="toggleChapter('chapter-1')">
         INTRODUCTION</a>
+</div>
 <!-------------------------->
 <!------- CHAPTER 2 -------->
 <li>
