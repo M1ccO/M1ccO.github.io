@@ -124,7 +124,7 @@ p, li {
 
 .scrollable-area li {
     position: relative;
-    left: 10px;
+    left: 15px;
     margin-bottom: 1em;
 }
 .scrollable-area li a {
@@ -163,14 +163,14 @@ p, li {
     position: absolute;
     left: 1em;
 }
-.scrollable-area li:hover::before {
-    transform: translateX(-10px); /* Moves the bullet point to the right on hover */
+.scrollable-area a {
+    transform-origin: top left; /* This sets the scaling origin to the top left */
 }
 .scrollable-area li:hover a {
     color: #8B0000; /* Changes the color to dark red on hover */
     transform: scale(1.1); /* Enlarges the text on hover */
 }
-.h3:hover {
+.heading h3:hover {
     color: #8B0000;  /* Changes the color to dark red on hover */
     transform: scale(1.1) !important;  /* Enlarges the text on hover */
 }
@@ -624,10 +624,6 @@ h1, h2 {
         background: #f1f1f1;
     }
 }
-
-
-
-
 </style>
 </head>
 <title>
