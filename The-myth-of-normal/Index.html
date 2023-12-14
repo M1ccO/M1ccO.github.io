@@ -74,6 +74,7 @@ body {
 
 body, html {
     overflow-x: hidden;
+    scroll-behavior: smooth;
 }
 .highlight {
     background-color: yellow;
@@ -896,22 +897,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
             });
         }
     };
-});
-
-
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        const targetId = this.getAttribute('href');
-        const targetElement = document.querySelector(targetId);
-
-        if (targetElement) {
-            targetElement.scrollIntoView({
-                behavior: 'smooth'
-            });
-        }
-    });
 });
 
 
