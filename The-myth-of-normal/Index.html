@@ -22,8 +22,8 @@ body {
 }
 
 #button {
-   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-  display: block;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  display: flex;
   background-color: #f50404;
   width: 50px;
   height: 50px;
@@ -32,14 +32,17 @@ body {
   border-color: black;
   border-style: inset;
   position: fixed;
-  bottom: 30px;
-  right: 50%;
-  transition: background-color .3s, 
-    transform: translateY(100%); /* Initially positioned off-screen */
+  top: 91%; /* Center vertically */
+  left: 47%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Adjust to center the button itself */
   opacity: 0;
-  /visibility: hidden;
+  /* visibility: hidden; */ /* Uncomment this if needed */
   z-index: 1000;
+  justify-content: center;
+  align-content: center;
 }
+
+
 #button::after {
   content: "\f077";
   font-family: FontAwesome;
@@ -86,13 +89,18 @@ body, html {
 .subheading-text {
   font-weight: bold;
   color: black !important;
-  font-size: 20px;
+  font-size: 23px;
   text-decoration: none;
   font-family: 'Concert One', sans-serif;
   letter-spacing: 1.7px;
-    margin-top: 15px;
+    margin-top: 5px;
     margin-bottom: 5px;
 }
+.subheading-text.highlighted {
+  background-color: yellow; /* Or any other highlight color */
+  transition: background-color 0.3s ease;
+}
+
 .heading h1 {
     text-align: center;
     margin-left: 6vw;
@@ -149,10 +157,12 @@ h1, h2 {
     position: relative;
     top: 4vh;
     text-decoration: none;
+    border-style: solid;
+    border-width: 1px;
     color: inherit;
     overflow-y: auto;
     background-color: #f0f0f0;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 9px 9px 16px rgba(0, 0, 0, 0.5);
     flex-direction: column;
     align-content: flex-start;
     justify-content: flex-start;
@@ -203,7 +213,7 @@ p, li {
     transition: transform 0.3s ease;
 }
 .scrollable-area li::before {
-    content: "•";
+    content: "�";
     position: absolute;
     left: 1em;
 }
@@ -247,7 +257,7 @@ p, li {
     overflow: auto;
     padding-bottom: 30px !important;
     background: #ffffff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    box-shadow: 5 0 10px rgba(0, 0, 0, 0.5);
     align-content: center;
 }
 
@@ -666,7 +676,7 @@ h1, h2 {
 <h1>
     The Myth Of Normal
     <span>
-    GABOR MATÈ
+    GABOR MAT�
     </span>
 </h1>
 </div>
@@ -698,11 +708,11 @@ h1, h2 {
         <li><a href="#" onclick="toggleChapter('chapter-3')">
             Chapter 3: You Rattle My Brain: Our Highly Interpersonal Biology</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-4')">
-            Chapter 4: Everything I’m Surrounded By: Dispatches from the New Science</a></li>
+            Chapter 4: Everything I�m Surrounded By: Dispatches from the New Science</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-5')">
             Chapter 5: Mutiny on the Body: The Mystery of the Rebellious Immune System</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-6')">
-            Chapter 6: It Ain’t a Thing: Disease as Process</a></li>
+            Chapter 6: It Ain�t a Thing: Disease as Process</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-7')">
             Chapter 7: A Traumatic Tension: Attachment vs. Authenticity</a></li>
     </ul>
@@ -716,7 +726,7 @@ h1, h2 {
         <li><a href="#" onclick="toggleChapter('chapter-8')">
             Chapter 8: Who Are We Really? Human Nature, Human Needs</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-9')">
-            Chapter 9: A Sturdy or Fragile Foundation: Children’s Irreducible Needs</a></li>
+            Chapter 9: A Sturdy or Fragile Foundation: Children�s Irreducible Needs</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-10')">
             Chapter 10: Trouble at the Threshold(Before We Come into the World)</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-11')">
@@ -756,11 +766,11 @@ h1, h2 {
         <li><a href="#" onclick="toggleChapter('chapter-20')">
             Chapter 20: Robbing the Human Spirit: Disconnection and Its Discontents</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-21')">
-            Chapter 21: They Just Don’t Care If It Kills You: Sociopathy as Strategy</a></li>
+            Chapter 21: They Just Don�t Care If It Kills You: Sociopathy as Strategy</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-22')">
             Chapter 22: The Assaulted Sense of Self: How Race and Class Get Under the Skin</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-23')">
-            Chapter 23: Society’s Shock Absorbers: Why Women Have It Worse</a></li>
+            Chapter 23: Society�s Shock Absorbers: Why Women Have It Worse</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-24')">
             Chapter 24: We Feel Their Pain: Our Trauma-Infused Politics</a></li>
     </ul>
@@ -774,7 +784,7 @@ h1, h2 {
         <li><a href="#" onclick="toggleChapter('chapter-25')">
             Chapter 25: Mind in the Lead: The Possibility of Healing</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-26')">
-            Chapter 26: Four A’s and Five Compassions: Some Healing Principles</a></li>
+            Chapter 26: Four A�s and Five Compassions: Some Healing Principles</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-27')">
             Chapter 27: A Dreadful Gift: Disease as Teacher</a></li>
         <li><a href="#" onclick="toggleChapter('chapter-28')">
@@ -809,16 +819,25 @@ h1, h2 {
  <button class="toggle-button" onclick="toggleSummary('chapter-1'); showSearchBar()">Hide Summary</button>
     <h2>Structured Overview: CHAPTER 1</h2>
     <ul>
-        <li><a href="#personal-narrative" class="highlighted-text">Personal Narrative of Trauma:</a>
-The author shares a personal experience demonstrating how past trauma can influence present behavior, showing the long-lasting impact of traumatic events.</li>
-        <li><a href="#definition-nature" class="highlighted-text">Definition and Nature of Trauma:</a> Trauma is defined as an inner injury, a lasting rupture within the self due to difficult or hurtful events. It's not the events themselves, but the internal impact they have.</li>
-        <li><a href="#impact-behavior" class="highlighted-text">Trauma’s Impact on Behavior and Relationships:</a> Trauma significantly shapes behavior, social habits, and ways of thinking. It can disrupt rational thought and significantly affect close relationships.</li>
+        <li><a href="#list1" class="highlighted-text">
+	Personal Narrative of Trauma:
+	</a>
+The author shares a personal experience demonstrating how past trauma can influence present behavior, showing the long-lasting impact of traumatic events.
+</li>
+        <li><a href="#list2" class="highlighted-text">
+Definition and Nature of Trauma:
+</a> Trauma is defined as an inner injury, a lasting rupture within the self due to difficult or hurtful events. It's not the events themselves, but the internal impact they have.
+</li>
+        <li><a href="#list3" class="highlighted-text">
+Trauma�s Impact on Behavior and Relationships:
+</a> Trauma significantly shapes behavior, social habits, and ways of thinking. It can disrupt rational thought and significantly affect close relationships.
+</li>
         <!-- Add more overview headings and content as needed -->
     </ul>
 
  <!-- In-Depth Analysis -->
  <h2>In-Depth Analysis: CHAPTER 1</h2>
- <span class="subheading-text" id="personal-narrative">Personal Narrative of Trauma</span>
+ <span class="subheading-text" id="list1">Personal Narrative of Trauma</span>
  <!-- Content for Personal Narrative of Trauma -->
 <p style="margin-bottom: 15px;">
 The section on the personal narrative of trauma in the document highlights the profound and lasting impact of traumatic events on individuals. It delves into the story of the author or a character who has experienced a significant traumatic event. This narrative serves as a powerful illustration of how trauma can shape an individual's life, influencing their behavior, relationships, and worldview. The story typically focuses on the internal struggles faced by the individual, such as recurring flashbacks, emotional turmoil, and the challenges in coping with everyday life following the trauma. The narrative emphasizes the complexity of trauma's impact, showing that it's not just the physical scars that linger, but the emotional and psychological ones that can be even more debilitating.
@@ -826,7 +845,7 @@ The section on the personal narrative of trauma in the document highlights the p
 <p style="margin-bottom: 15px;">
 The personal nature of this narrative makes the concept of trauma more tangible and relatable. It moves the discussion from abstract definitions to real-world implications, demonstrating how trauma can disrupt one's sense of self and alter their perception of the world. This narrative also sheds light on the often silent and invisible struggle many individuals face, highlighting the need for understanding, empathy, and support for those who have endured traumatic experiences.
 </p>
- <span class="subheading-text" id="definition-nature">Definition and Nature of Trauma</span>
+ <span class="subheading-text" id="list2">Definition and Nature of Trauma</span>
  <!-- Content for Definition and Nature of Trauma -->
  <p style="margin-bottom: 15px;">
 This takeaway explores the essence of trauma, defining it as an internal injury, a disruption within the self that results from difficult or hurtful events. The focus is on the psychological and emotional dimensions of trauma rather than the external events themselves. This definition underscores the subjective nature of trauma; what may be traumatic to one person might not be to another, depending on their individual experiences and resilience.
@@ -837,8 +856,8 @@ The nature of trauma is complex and multifaceted. It's not just about the events
 <p style="margin-bottom: 15px;">
 Understanding the nature of trauma is crucial for both individuals who experience it and those who support them. It helps in recognizing the signs and symptoms of trauma, facilitating early intervention and support. This understanding also challenges the stigma often associated with trauma, acknowledging it as a valid and serious impact on mental health that deserves attention and care.
 </p>
- <span class="subheading-text" id="impact-behavior">Trauma’s Impact on Behavior and Relationships</span>
- <!-- Content for Trauma’s Impact on Behavior and Relationships -->
+ <span class="subheading-text" id="list3">Trauma�s Impact on Behavior and Relationships</span>
+ <!-- Content for Trauma�s Impact on Behavior and Relationships -->
  <p style="margin-bottom: 15px;">
 Trauma significantly shapes not just the individual psyche but also one's behavior and interactions with others. The document delves into how traumatic experiences can alter an individual's social habits, thought patterns, and relationship dynamics. It highlights the tendency of traumatized individuals to develop coping mechanisms, which may include withdrawal, aggression, or hyper-vigilance. These behaviors often stem from the need to protect oneself from further harm, but they can inadvertently strain relationships and social interactions.
 </p>
@@ -855,6 +874,7 @@ Understanding how trauma impacts behavior and relationships is vital for both th
 </html>
 <a id="button"></a>
 <script>
+
 document.addEventListener('DOMContentLoaded', (event) => {
     var backToTopBtn = document.getElementById("button");
 
