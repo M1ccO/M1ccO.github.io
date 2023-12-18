@@ -814,7 +814,7 @@ h1, h2 {
 <!----->
 <!------------------------------ >
 <!----- CHAPTER 1 ANALYSIS ------>
-<div class="summary chapter-summary" id="chapter-1">
+<div class="summary chapter-summary" id="chapter-1" style="display: none;">
  <button class="toggle-button" onclick="toggleSummary('chapter-1'); showSearchBar()">Hide Summary</button>
     <h2>Structured Overview: CHAPTER 1</h2>
 <ul>
@@ -904,7 +904,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     };
 });
 
-
+	
 let viewState = 'chapterList';
 
 // JavaScript function to toggle visibility of chapter summaries and the scrollable area
@@ -1062,9 +1062,6 @@ function resetChapterVisibility() {
         chapter.style.display = 'block';
     }
 }
-
-	
-
 
 // Add an input event listener to the search input to detect when it's cleared
 document.getElementById("search-input").addEventListener('input', function() {
@@ -1446,4 +1443,3 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
 
 
 </script>
-
