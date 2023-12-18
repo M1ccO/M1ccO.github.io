@@ -960,62 +960,6 @@ searchBar.addEventListener('blur', function() {
 
 
 
-
-
-// Transition animation for toggling between Chapter List and Chapter Summaries
-function toggleChapter(chapterId) {
-    const chapter = document.getElementById(chapterId);
-    const chapterList = document.querySelector('.scrollable-area');
-
-    // Move chapterList to the right
-    chapterList.style.opacity = 0;
-    chapterList.style.transform = 'translateX(100%)';
-
-    setTimeout(() => {
-        chapterList.style.display = 'none';
-
-        // Start chapter off-screen to the left
-        chapter.style.display = 'grid';
-        chapter.style.opacity = 0;
-        chapter.style.transform = 'translateX(-100%)';  // Initial state, off to the left
-        
-        // Fade-in and slide-in effect for the chapter summary
-        setTimeout(() => {
-            chapter.style.opacity = 1;
-            chapter.style.transform = 'translateX(0)';
-        }, 50);  
-    }, 300);  
-}
-
-// Transition animation for hiding Chapter Summaries and showing Chapter List
-function toggleSummary(chapterId) {
-    const chapter = document.getElementById(chapterId);
-    const chapterList = document.querySelector('.scrollable-area');
-
-    // Hide the chapter summary with a fade-out and slide-out effect to the left
-    chapter.style.opacity = 0;
-    chapter.style.transform = 'translateX(-100%)';
-
-    setTimeout(() => {
-        chapter.style.display = 'none';
-
-        chapterList.style.display = 'block';
-        chapterList.style.opacity = 0;  
-        chapterList.style.transform = 'translateX(100%)';  // Initial state, off to the right
-
-        // Fade-in and slide-in effect for the chapter list
-        setTimeout(() => {
-            chapterList.style.opacity = 1;
-            chapterList.style.transform = 'translateX(0)';
-        }, 50);  
-    }, 300);  
-}
-
-
-
-
-
-
 // Function to search through summaries
 function searchSummaries() {
     // Get the user's input from the search bar
