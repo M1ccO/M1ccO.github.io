@@ -677,6 +677,13 @@ h1, h2 {
     </span>
 </h1>
 </div>
+<!-------- SEARCHBAR ---------->
+<!----------------------------->
+<div class="search-bar closed" id="searchContainer">
+<div class="hover-detect"></div>
+<input id="search-input" required="" type="search"/>
+<button class="search-btn" disabled=""><span>Search</span></button>
+</div>
 <div class="scrollable-area">
 <!------ INTRODUCTION ------->
 <!--------------------------->
@@ -792,12 +799,17 @@ h1, h2 {
     </ul>
 </div>
 </body>
-</html>
 <!----------------------------------->
 <!------ END OF CHAPTER LIST -------->
 <!----------------------------------->
 <!----->
-
+<!--- SEARCH RESULTS HIGHLIGHTED ----->
+<!------------------------------------>
+<div class="summary" id="searchResults" style="display: none;">
+<button class="toggle-button" id="backToChapters">Back to Chapters</button>
+<div id="resultsContainer"><!-- Results will be appended here --></div>
+</div>
+<!----->
 <!------------------------------ >
 <!----- CHAPTER 1 ANALYSIS ------>
 <div class="summary chapter-summary" id="chapter-1" style="display: none;">
