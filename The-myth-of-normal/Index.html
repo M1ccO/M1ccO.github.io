@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
 <link href="https://fonts.googleapis.com/css2?family=Concert+One&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
 <link href="https://fonts.googleapis.com/css?family=Merriweather:400,900,900i" rel="stylesheet">
@@ -21,6 +21,53 @@ body {
     /* overflow-y: auto; */  /* to allow scrolling if the content is longer than the viewport */
 }
 
+#button {
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  display: flex;
+  background-color: #f50404;
+  width: 50px;
+  height: 50px;
+  text-align: center;
+  border-radius: 4px;
+  border-color: black;
+  border-style: inset;
+  position: fixed;
+  top: 91%; /* Center vertically */
+  left: 47%; /* Center horizontally */
+  transform: translate(-50%, -50%); /* Adjust to center the button itself */
+  opacity: 0;
+  /* visibility: hidden; */ /* Uncomment this if needed */
+  z-index: 1000;
+  justify-content: center;
+  align-content: center;
+}
+
+
+#button::after {
+  content: "\f077";
+  font-family: FontAwesome;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 2em;
+  line-height: 50px;
+  color: #fff;
+}
+#button:hover {
+  cursor: pointer;
+  background-color: #333;
+}
+#button:active {
+  background-color: #555;
+}
+#button.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+#myBtn:hover {
+  background-color: #555; /* Add a dark-grey background on hover */
+}
+
 .hidden {
     display: none !important;
 }
@@ -28,7 +75,592 @@ body, html {
     overflow-x: hidden;
     scroll-behavior: smooth;
 }
+.highlight {
+    background-color: yellow;
+}
 
+.heading h1 {
+    text-align: center;
+    margin-left: 6vw;
+    font-size: 50px;
+    text-transform: uppercase;
+    color: #fffdfd;
+    letter-spacing: 6px;
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+    width: 86%;
+    position: relative;
+    top: 20px;
+}
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;
+}
+.heading h1 span {
+    margin-top: -17px;
+    margin-left: 0vw;
+    font-size: 15px;
+    color: #fff;
+    word-spacing: 6px;
+    font-weight: normal;
+    letter-spacing: 13px;
+    text-transform: uppercase;
+    font-family: "Raleway", sans-serif;
+    font-weight: 500;
+    display: flex;
+    position: relative;
+    /* left: 94px; */
+    align-items: center;
+    justify-content: center;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+
+.scrollable-area {
+    display: flex;
+    height: 65vh;
+    position: relative;
+    top: 4vh;
+    text-decoration: none;
+    border-style: solid;
+    border-width: 1px;
+    color: inherit;
+    overflow-y: auto;
+    background-color: #f0f0f0;
+    box-shadow: 9px 9px 16px rgba(0, 0, 0, 0.5);
+    flex-direction: column;
+    align-content: flex-start;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+p, li {
+    font-size: 18px;
+    color: black;
+    font-weight: bold;
+}
+.subheading-text {
+  font-weight: bold;
+  color: black !important;
+  font-size: 23px;  /* Was 23px */
+  text-decoration: none;
+  font-family: 'Concert One', sans-serif;
+  letter-spacing: 1.7px;
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+.highlighted-text {
+  font-weight: bold;
+  color: black !important;
+  font-size: 21px;  /* Was 21px */
+  text-decoration: underline;
+  font-family: 'Concert One', sans-serif;
+  letter-spacing: 1.7px;
+}
+.scrollable-area li {
+    position: relative;
+    left: 24px;
+    margin-right: 13vw;
+    margin-bottom: 1em;
+}
+.scrollable-area li a {
+    text-decoration: none;
+    color: inherit;
+    left: 31px;
+    position: relative;
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+
+.scrollable-area .h3 a {
+    font-size: 25px;
+    position: relative;
+    left: 31px;
+    text-decoration: none;
+    color: black;
+    font-family: fangsong;
+    font-weight: bold;
+}
+.scrollable-area .h3 {
+    margin-top: 3vh;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+.scrollable-area ul {
+    padding-left: 0;
+    list-style-type: none; /* Remove default bullet points */
+}
+.scrollable-area li::before {
+    content: '\2022';
+    margin-right: 0px;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.scrollable-area li::before {
+    content: "�";
+    position: absolute;
+    left: 1em;
+}
+.scrollable-area a {
+    transform-origin: top left; /* This sets the scaling origin to the top left */
+}
+.scrollable-area li:hover a {
+    color: #FF0000;  /* Bright red color */
+    transform: scale(1.03); /* Enlarges the text on hover */
+}
+.scrollable-area .h3{
+    transform-origin: top left; /* This sets the scaling origin to the top left */
+}
+.scrollable-area .h3 a:hover {
+    color: #FF0000;  /* Bright red color */
+}
+.scrollable-area .h3:hover {
+    transform: scale(1.03);
+}
+.scrollable-area::-webkit-scrollbar {
+    width: 10px;
+}
+.scrollable-area::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;
+}
+.scrollable-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollable-area::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.scrollable-area > * {
+    direction: ltr;
+}
+.scrollable-area {
+    width: 52%;
+    position: relative;
+    margin: auto;
+    top: 2vh;
+    overflow: auto;
+    padding-bottom: 30px !important;
+    background: #ffffff;
+    box-shadow: 5 0 10px rgba(0, 0, 0, 0.5);
+    align-content: center;
+}
+
+.scrollable-area, .summary, #searchResults {
+    transition: opacity 0.3s ease, transform 0.3s ease, max-height 0.3s ease;
+    max-height: 99%; /* Adjust this value as needed */
+}
+.scrollable-area .chapter-heading {
+    font-size: 20px; /* Adjust as needed */
+    color: #333;    /* Adjust color as needed */
+    font-weight: bold;
+    margin: 10px 0;  /* Add some spacing above and below the heading */
+    padding-left: 1em; /* To align with your chapter list */
+    text-decoration: none;
+    color: inherit;
+}
+
+
+body {
+    font-family: 'Comic Sans MS', serif;
+    line-height: 1.6;
+    /* overflow-x: scroll; */
+}
+
+.summary {
+    background-color: #f0f0f0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+.summary {
+    background-color: #ffffff;
+    position: relative;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: white;
+    margin-top: 10vh;
+    margin-bottom: 2vh;
+    margin-left: auto;
+    margin-right: auto;
+    /* top: -4vh; */
+    padding: 20px;
+    max-width: 82%;
+    max-height: 100%;
+    border: 1px solid white;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    border: 2px solid black;
+    }	
+
+.toggle-button {
+    font-size: 18px;
+    font-family: 'Roboto', sans-serif;
+    /* padding: 10px 20px; */
+    background-color: #ffffff;
+    border-block-start-width: 2px;
+    border-color: black;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+.toggle-button {
+    font-size: 14px;
+    position: relative;
+    padding: 5px 10px;
+    margin-top: 10px;
+    top: -10px;
+    left: 1px;
+}
+.toggle-button:hover {
+    background-color: #e0e0e0; /* Change background color on hover */
+    cursor: pointer; /* Change cursor to pointer on hover */
+}
+p, li {
+    font-size: 20px;
+    color: black;
+    font-family: fangsong;
+    line-height: 1.6;
+    margin-bottom: 10px;
+}
+h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+}
+table {
+    font-size: 18px;
+    color: black;
+    font-weight: bold;
+    border: 1px solid black;
+    width: 100%;
+}
+th {
+    background-color: #734e73;
+    color: white;
+}
+td {
+    background-color: #4a7f3f;
+    color: white;
+}
+.placeholder {
+      background-color: #eee;
+      padding: 10px;
+      margin: 10px 0;
+}
+.quote {
+      font-size: 20px;
+      color: black;
+}
+h1, h2 {
+    text-shadow: 2px 2px 3px gray;
+}
+
+.placeholder {
+    background-color: rgb(138 53 53 / 27%);
+}
+.hidden {
+    display: none;
+}
+
+#resultsContainer > div {
+    margin-bottom: 20px;
+}
+
+#resultsContainer h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+    text-shadow: 2px 2px 3px gray;
+}
+
+#resultsContainer ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+
+#resultsContainer .highlight {
+    background-color: yellow;
+}
+
+
+
+@media (max-width: 991.98px) {
+.scrollable-area {
+    min-width: 76vw;
+    max-width: 106vw;
+  }
+}
+@media (max-width: 767.98px) {
+.scrollable-area {
+    max-width: 95%;
+    min-width: 84vw;
+    margin-top: 8vh;
+    max-height: 64vh;
+  }
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+}
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 100%;
+    }
+}
+
+@media (max-width: 244px) {
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+}
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 70vh;
+    }
+}
+
+
+@media (max-width: 767.98px) {
+    table {
+        width: 100%;
+        border: none;
+    }
+    table td:first-child {color: white;}
+    table td:last-child {/* color: green; */}
+    table th, table td {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    table tr {
+        margin-bottom: 1rem;
+        display: block;
+        border: 1px solid #000000;
+    }
+    table td {
+        border: 1px solid #fff;
+        padding: 0.3rem;
+    }
+    table td:first-child {
+        background-color: #734e73;
+    }
+}
+
+@media (max-width: 767.98px) {
+    table th {
+        display: none;
+    }
+}
+
+#searchContainer, #searchContainer.search-bar {
+    display: flex;
+    position: relative;
+}
+
+#searchContainer input,
+#searchContainer .search-btn, 
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    transition: all 0.25s ease-out;
+}
+
+#searchContainer input,
+#searchContainer .search-btn {
+    width: 3em;
+    height: 3em;
+}
+
+#searchContainer input:invalid:not(:focus),
+#searchContainer .search-btn {
+    cursor: pointer;
+}
+
+#searchContainer,
+#searchContainer input:focus,
+#searchContainer input:valid  {
+    width: 100%;
+}
+
+#searchContainer input:focus,
+#searchContainer input:not(:focus) + .search-btn:focus {
+    outline: transparent;
+}
+
+#searchContainer {
+    margin-top: -2.7vh;
+    margin-bottom: -11vh;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.5em;
+    justify-content: center;
+    max-width: 42vw;
+    min-width: fit-content;
+    order: 0;
+}
+
+#searchContainer input {
+    background: #81818100;
+    border-radius: 1.5em;
+    box-shadow: 0 0 0 0.4em #ffffff inset;
+    padding: 0.75em;
+    transform: translate(0.5em,0.5em) scale(0.5);
+    transform-origin: 100% 0;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+
+
+#searchContainer input::-webkit-search-decoration {
+    -webkit-appearance: none;
+}
+
+#searchContainer input:focus,
+#searchContainer input:valid {
+    background: #fff;
+    border-radius: 0.375em 0 0 0.375em;
+    box-shadow: 0 0 0 0.1em #d9d9d9 inset;
+    transform: scale(1);
+}
+
+#searchContainer .search-btn {
+    background: #ffffff;
+    border-radius: 0 0.75em 0.75em 0 / 0 1.5em 1.5em 0;
+    padding: 0.75em;
+    position: relative;
+    transform: translate(0.25em,0.25em) rotate(45deg) scale(0.25,0.125);
+    transform-origin: 0 50%;
+}
+
+#searchContainer input:not(:focus):hover {
+    transform: translate(0.5em,0.5em) scale(0.6);  /* scale the glass */
+}
+
+#searchContainer input:not(:focus):hover + .search-btn {
+    transform: translate(0.08em,0.32em) rotate(45deg) scale(0.3,0.15); /* scale the handle */
+}
+
+#searchContainer.active input:not(:focus):hover,
+#searchContainer.active input:not(:focus):hover + .search-btn {
+    transform: none;
+}
+#searchContainer .search-btn:hover {
+    /*box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.6);*/  /* Glow effect */
+}
+
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    content: "";
+    display: block;
+    opacity: 0;
+    position: absolute;
+}
+
+#searchContainer .search-btn:before {
+    border-radius: 50%;
+    box-shadow: 0 0 0 0.2em #f1f1f1 inset;
+    top: 0.75em;
+    left: 0.75em;
+    width: 1.2em;
+    height: 1.2em;
+}
+
+#searchContainer .search-btn:after {
+    background: #f1f1f1;
+    border-radius: 0 0.25em 0.25em 0;
+    top: 51%;
+    left: 51%;
+    width: 0.75em;
+    height: 0.25em;
+    transform: translate(0.2em,0) rotate(45deg);
+    transform-origin: 0 50%;
+}
+
+#searchContainer .search-btn span {
+    display: inline-block;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+}
+
+/* Active state */
+#searchContainer input:focus + .search-btn,
+#searchContainer input:valid + .search-btn {
+    background: #2762f3;
+    border-radius: 0 0.375em 0.375em 0;
+    transform: scale(1);
+}
+
+#searchContainer input:focus + .search-btn:before, 
+#searchContainer input:focus + .search-btn:after,
+#searchContainer input:valid + .search-btn:before, 
+#searchContainer input:valid + .search-btn:after {
+    opacity: 1;
+}
+
+#searchContainer input:focus + .search-btn:hover,
+#searchContainer input:valid + .search-btn:hover,
+#searchContainer input:valid:not(:focus) + .search-btn:focus {
+    background: #0c48db;
+}
+
+#searchContainer input:focus + .search-btn:active,
+#searchContainer input:valid + .search-btn:active {
+    transform: translateY(1px);
+}
+
+@media screen and (prefers-color-scheme: dark) {
+    body, input {
+        color: #f1f1f1;
+    }
+    body {
+        background: #171717;
+    }
+    #searchContainer input {
+        box-shadow: 0 0 0 0.4em #f1f1f1 inset;
+    }
+    #searchContainer input:focus,
+    #searchContainer input:valid {
+        background: #3d3d3d;
+        box-shadow: 0 0 0 0.1em #3d3d3d inset;
+    }
+    #searchContainer .search-btn {
+        background: #f1f1f1;
+    }
+}
 </style>
 <title>
    The Myth Of Normal - Book Summary
