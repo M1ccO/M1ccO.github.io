@@ -21,52 +21,7 @@ body {
     /* overflow-y: auto; */  /* to allow scrolling if the content is longer than the viewport */
 }
 
-#button {
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-  display: flex;
-  background-color: #f50404;
-  width: 50px;
-  height: 50px;
-  text-align: center;
-  border-radius: 4px;
-  border-color: black;
-  border-style: inset;
-  position: fixed;
-  top: 91%; /* Center vertically */
-  left: 47%; /* Center horizontally */
-  transform: translate(-50%, -50%); /* Adjust to center the button itself */
-  opacity: 0;
-  /* visibility: hidden; */ /* Uncomment this if needed */
-  z-index: 1000;
-  justify-content: center;
-  align-content: center;
-}
 
-
-#button::after {
-  content: "\f077";
-  font-family: FontAwesome;
-  font-weight: normal;
-  font-style: normal;
-  font-size: 2em;
-  line-height: 50px;
-  color: #fff;
-}
-#button:hover {
-  cursor: pointer;
-  background-color: #333;
-}
-#button:active {
-  background-color: #555;
-}
-#button.show {
-  opacity: 1;
-  visibility: visible;
-}
-
-#myBtn:hover {
-  background-color: #555; /* Add a dark-grey background on hover */
-}
 
 .hidden {
     display: none !important;
