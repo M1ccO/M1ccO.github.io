@@ -164,7 +164,7 @@ p, li {
 .highlighted-text {
   font-weight: bold;
   color: black !important;
-  font-size: 30px;  /* Was 21px */
+  font-size: 21px;  /* Was 21px */
   text-decoration: underline;
   font-family: 'Concert One', sans-serif;
   /* letter-spacing: 1.7px; */
@@ -819,13 +819,19 @@ h1, h2 {
     <h2>Structured Overview: CHAPTER 1</h2>
 <ul>
     <li>
-	<span onclick="scrollToSection('list-1')" class="highlighted-text">Personal Narrative of Trauma:</span>
+	<span class="highlighted-text" data-target="list-1" onclick="scrollToSection('list-1')">
+	Personal Narrative of Trauma:
+	</span>
         The author shares a personal experience demonstrating how past trauma can influence present behavior, showing the long-lasting impact of traumatic events.</li>
     <li>
-        <span onclick="scrollToSection('list-2')" class="highlighted-text">Definition and Nature of Trauma:</span>
+	<span class="highlighted-text" data-target="list-1" onclick="scrollToSection('list-2')">
+	Definition and Nature of Trauma:
+	</span>
         Trauma is defined as an inner injury, a lasting rupture within the self due to difficult or hurtful events. It's not the events themselves, but the internal impact they have.</li>
     <li>
-        <span onclick="scrollToSection('list-3')" class="highlighted-text">Trauma’s Impact on Behavior and Relationships:</span>
+	<span class="highlighted-text" data-target="list-1" onclick="scrollToSection('list-3')">
+	Trauma’s Impact on Behavior and Relationships:
+	</span>
         Trauma significantly shapes behavior, social habits, and ways of thinking. It can disrupt rational thought and significantly affect close relationships.</li>
 </ul>
 <!-- In-Depth Analysis -->
@@ -863,6 +869,12 @@ Understanding how trauma impacts behavior and relationships is vital for both th
 </div>
 <a id="button"></a>
 <script>
+document.querySelectorAll('.highlighted-text').forEach(item => {
+    item.addEventListener('touchstart', function() {
+        scrollToSection(this.getAttribute('data-target'));
+    });
+});
+	
 function scrollToSection(sectionId) {
     const section = document.getElementById(sectionId);
     if (section) {
