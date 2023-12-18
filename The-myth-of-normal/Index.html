@@ -818,19 +818,20 @@ h1, h2 {
  <button class="toggle-button" onclick="toggleSummary('chapter-1'); showSearchBar()">Hide Summary</button>
     <h2>Structured Overview: CHAPTER 1</h2>
 <ul>
-    <li onclick="scrollToSection('list-1')">
-        Personal Narrative of Trauma:
+    <li onclick="scrollToElement('list-1')">
+        <span class="highlighted-text">Personal Narrative of Trauma:</span>
         The author shares a personal experience demonstrating how past trauma can influence present behavior.
     </li>
-    <li onclick="scrollToSection('list-2')">
-        Definition and Nature of Trauma:
+    <li onclick="scrollToElement('list-2')">
+        <span class="highlighted-text">Definition and Nature of Trauma:</span>
         Trauma is defined as an inner injury, a lasting rupture within the self due to difficult events.
     </li>
-    <li onclick="scrollToSection('list-3')">
-        Trauma’s Impact on Behavior and Relationships:
+    <li onclick="scrollToElement('list-3')">
+        <span class="highlighted-text">Trauma’s Impact on Behavior and Relationships:</span>
         Trauma shapes behavior, social habits, and ways of thinking.
     </li>
 </ul>
+
 
 <!-- In-Depth Analysis -->
  <h2>In-Depth Analysis: CHAPTER 1</h2>
@@ -867,18 +868,14 @@ Understanding how trauma impacts behavior and relationships is vital for both th
 </div>
 <a id="button"></a>
 <script>
-document.querySelectorAll('.highlighted-text').forEach(item => {
-    item.addEventListener('touchstart', function() {
-        scrollToSection(this.getAttribute('data-target'));
-    });
-});
-	
-function scrollToSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
+function scrollToElement(elementId) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        const yOffset = element.getBoundingClientRect().top + window.pageYOffset;
+        window.scrollTo({ top: yOffset, behavior: 'smooth' });
     }
 }
+
 
 	
 document.addEventListener('DOMContentLoaded', (event) => {
