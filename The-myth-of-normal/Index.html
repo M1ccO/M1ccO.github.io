@@ -869,15 +869,15 @@ Understanding how trauma impacts behavior and relationships is vital for both th
 <a id="button"></a>
 <script>
 function scrollToElement(elementId) {
-    const element = document.getElementById(elementId);
+    var element = document.getElementById(elementId);
     if (element) {
-        const yOffset = element.getBoundingClientRect().top + window.pageYOffset;
-        window.scrollTo({ top: yOffset, behavior: 'smooth' });
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        console.error('Element not found:', elementId);
     }
 }
 
 
-	
 document.addEventListener('DOMContentLoaded', (event) => {
     var backToTopBtn = document.getElementById("button");
 
