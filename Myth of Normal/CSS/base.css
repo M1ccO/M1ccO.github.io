@@ -1,0 +1,49 @@
+/* ==================================================
+   Base Styles
+   ================================================== */
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(to left, #c8e24c, #e2002f);
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    max-height: 100vh;
+    overflow-x: hidden;
+    /* overflow-y: auto; */  /* to allow scrolling if the content is longer than the viewport */
+}
+.hidden {
+    display: none !important;
+}
+body, html {
+    overflow-x: hidden;
+    /* scroll-behavior: smooth; */
+}
+body {
+    font-family: 'Comic Sans MS', serif;
+    line-height: 1.6;
+    /* overflow-x: scroll; */
+}
+.hidden {
+    display: none;
+}
+
+
+
+
+
+
+
+/* ==================================================
+   Media Queries
+   ================================================== */
+@media screen and (prefers-color-scheme: dark) {
+    body, input {
+        color: #f1f1f1;
+    }
+    body {
+        background: #171717;
+    }
+}

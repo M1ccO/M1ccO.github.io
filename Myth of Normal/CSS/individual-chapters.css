@@ -1,0 +1,81 @@
+/* ==================================================
+   Individual Chapters Style
+   ================================================== */
+.summary {
+    background-color: #ffffff;
+    /* display: flex; */
+    position: relative;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    color: white;
+    margin-top: 10vh;
+    margin-bottom: 2vh;
+    margin-left: auto;
+    margin-right: auto;
+    top: -4vh;
+    padding: 20px;
+    max-width: 82%;
+    max-height: 100%;
+    border: 1px solid white;
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    border: 2px solid black;
+    justify-content: space-evenly;
+    align-content: center;
+    align-items: flex-start;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    }	
+
+
+
+
+/* ==================================================
+   Chapter Transitions
+   ================================================== */
+div[id^="chapter-"] {
+    transform: translateX(0%); /* Start off-screen */
+    transition: transform 0.5s ease;
+}
+
+div[id^="chapter-"].slide-in {
+    transform: translateX(-300%); /* Slide into view */
+}
+
+div[id^="chapter-"].slide-out {
+    transform: translateX(100%); /* Slide out of view */
+}
+
+
+
+
+
+
+
+
+
+/* ==================================================
+   Media Queries - 767.98px - Tablets
+   ================================================== */
+@media (max-width: 767.98px) {
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 100%;
+    }
+}
+
+
+
+
+/* ==================================================
+   Media Queries - 244px - M.Phones
+   ================================================== */
+@media (max-width: 244px) {
+.summary {
+    top: 0vh;
+    padding: 5px;
+    max-width: 90%;
+    max-height: 70vh;
+    }
+}

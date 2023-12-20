@@ -1,0 +1,22 @@
+/* ==================================================
+   Back To Main List Button
+   ================================================== */
+.back-to-main-button {
+    font-size: 14px; /* Adjusted to match second definition */
+    font-family: 'Roboto', sans-serif;
+    background-color: #ffffff;
+    border-block-start-width: 2px;
+    border-color: black;
+    border-radius: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    position: relative;
+    padding: 5px 10px;
+    margin-top: 10px;
+    top: -10px;
+    left: 1px;
+}
+
+.back-to-main-button:hover {
+    background-color: #e0e0e0;
+    cursor: pointer;
+}
