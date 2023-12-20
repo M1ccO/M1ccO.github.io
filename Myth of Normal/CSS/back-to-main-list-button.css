@@ -5,6 +5,7 @@
     font-size: 14px; /* Adjusted to match second definition */
     font-family: 'Roboto', sans-serif;
     background-color: #ffffff;
+    text-decoration: none;
     border-block-start-width: 2px;
     border-color: black;
     border-radius: 5px;
