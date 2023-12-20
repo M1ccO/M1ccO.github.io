@@ -2,7 +2,10 @@
 
 
 function navigateBack() {
-    window.location.href = '../Index.html'; // Navigate to the main page
+    swup.loadPage({
+        url: '../Index.html', // Change this URL to the correct path of your Index.html page
+        method: 'GET'
+    });
 }
 
 
