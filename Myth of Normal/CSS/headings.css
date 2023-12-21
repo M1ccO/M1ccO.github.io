@@ -55,7 +55,7 @@ h2 {
 }
 
 h1, h2 {
-    text-shadow: 2px 2px 3px gray;
+    text-shadow: 5px 5px 8px black;
 }
 
 
@@ -98,7 +98,6 @@ h1, h2 {
     font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
     letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
     margin-left: 6vw;
-    
     width: 86%
     top: 20px;
 }
