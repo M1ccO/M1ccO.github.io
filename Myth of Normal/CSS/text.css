@@ -4,14 +4,12 @@
 .highlight {
     background-color: yellow;
 }
-
-h1, h2 {
-    text-shadow: 2px 2px 3px gray;
-}
 p, li {
-    font-size: 18px;
+    font-size: 20px;
     color: black;
-    font-weight: bold;
+    font-family: fangsong;
+    line-height: 1.6;
+    margin-bottom: 10px;
 }
 .subheading-text {
   font-weight: bold;
@@ -31,13 +29,6 @@ p, li {
   font-family: 'Concert One', sans-serif;
   letter-spacing: 1.7px;
 }
-p, li {
-    font-size: 20px;
-    color: black;
-    font-family: fangsong;
-    line-height: 1.6;
-    margin-bottom: 10px;
-}
 table {
     font-size: 18px;
     color: black;
@@ -53,19 +44,10 @@ td {
     background-color: #4a7f3f;
     color: white;
 }
-.placeholder {
-      background-color: #eee;
-      padding: 10px;
-      margin: 10px 0;
-}
 .quote {
       font-size: 20px;
       color: black;
 }
-.placeholder {
-    background-color: rgb(138 53 53 / 27%);
-}
-
 
 
 
