@@ -1,18 +1,14 @@
 // Functions.js
 
-document.addEventListener('DOMContentLoaded', (event) => {
-    // You can safely call scrollToElement or any DOM manipulation functions here
-    scrollToElement('someElementId');
-
-    // More DOM manipulations or event listener attachments can go here
+document.addEventListener('DOMContentLoaded', function() {
+    window.scrollToElement = function(elementId) {
+        var element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'auto' });
+        }
+    };
 });
 
-function scrollToElement(elementId) {
-    var element = document.getElementById(elementId);
-    if (element) {
-        element.scrollIntoView({ behavior: 'auto' });
-    }
-}
 
 
 
