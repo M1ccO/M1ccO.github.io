@@ -4,9 +4,13 @@
 function scrollToElement(elementId) {
     var element = document.getElementById(elementId);
     if (element) {
-        element.scrollIntoView({ behavior: 'auto' });
+        var topPosition = element.getBoundingClientRect().top + window.pageYOffset;
+
+        // Scroll to the element
+        window.scrollTo({ top: topPosition, behavior: 'auto' });
     }
 }
+
 
 
 
