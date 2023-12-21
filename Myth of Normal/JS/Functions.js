@@ -10,8 +10,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 function scrollToElement(elementId) {
     var element = document.getElementById(elementId);
     if (element) {
-        var topPosition = element.getBoundingClientRect().top + window.pageYOffset;
-        window.scrollTo({ top: topPosition, behavior: 'auto' });
+        element.scrollIntoView({ behavior: 'auto' });
     }
 }
 
