@@ -48,7 +48,10 @@ td {
       font-size: 20px;
       color: black;
 }
-
+a[href^="#section"] {
+    text-decoration: none; /* Removes the underline */
+    color: black; /* Change the text color to black or any other color */
+}
 
 
 
