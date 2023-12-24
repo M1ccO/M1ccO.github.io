@@ -2,12 +2,19 @@
 
 
 const swup = new Swup({
-  elements: [
-    // Specify the selectors Swup should handle
-    'a[href^="/"]:not([href^="#"])', // All internal links except anchor links
-    // Add other selectors as needed
-  ]
+
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        let target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+            target.scrollIntoView({
+                behavior: 'smooth'
+            });
+        }
+    });
 });
+
 
 
 
