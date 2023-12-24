@@ -1,9 +1,9 @@
 // Functions.js
 
-import Swup from 'https://unpkg.com/swup@3?module';
 const swup = new Swup({
-  containers: ["#swup"]
+  linkSelector: 'a:not([href^="#"])' // Handles all links except in-page anchors
 });
+
 
 
 
