@@ -1,8 +1,6 @@
 // Functions.js
 
 
-const swup = new Swup({
-
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
     anchor.addEventListener('click', function (e) {
         e.preventDefault();
