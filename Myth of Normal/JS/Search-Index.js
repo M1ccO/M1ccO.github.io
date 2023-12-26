@@ -35,5 +35,5 @@ function performSearch(query) {
 
 // Redirect to search-results.html with query and type as URL parameters
 function redirectToSearchResults(query, type) {
-    window.location.href = 'CONTENT/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
+    window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
 }
