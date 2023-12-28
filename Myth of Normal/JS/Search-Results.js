@@ -12,7 +12,7 @@ window.onload = function() {
 
 function searchChapters(searchTerms, isKeywordSearch) {
     var results = [];
-    var chaptersToSearch = 33; // Assuming you have 33 chapters
+    var chaptersToSearch = 1; // Assuming you have 1 chapters
     for (var i = 1; i <= chaptersToSearch; i++) {
         fetch('../Content/chapter-' + i + '.html') // Adjust the path if necessary
             .then(response => response.text())
