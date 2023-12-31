@@ -11,58 +11,61 @@ window.onload = function() {
 };
 
 function searchChapters(searchTerms, isKeywordSearch) {
-    // Fetch the content of chapter-1.html directly
     fetch('../Content/chapter-1.html')
         .then(response => response.text())
         .then(content => {
-            if (isContentMatching(content, searchTerms, isKeywordSearch)) {
-                // If content matches, display the result
-                displayResults([{ chapter: 1, content: content }]);
+            let matchingSentences = extractSentences(content, searchTerms, isKeywordSearch);
+            if (matchingSentences.length > 0) {
+                displayResults([{ chapter: 1, content: matchingSentences }]);
             } else {
-                // If no match, clear the results
                 displayResults([]);
             }
         })
         .catch(error => {
             console.error('Error fetching chapter:', error);
-            displayResults([]); // Display no results in case of error
+            displayResults([]);
         });
 }
 
 
-
-function isContentMatching(content, searchTerms, isKeywordSearch) {
-    // Create a temporary DOM element to parse the HTML content
+function extractSentences(content, searchTerms, isKeywordSearch) {
+    let uniqueSentences = new Set();
     var tempDiv = document.createElement('div');
     tempDiv.innerHTML = content;
+    const relevantNodes = Array.from(tempDiv.querySelectorAll('p, ul, td, ol'));
 
-    // Extract text from <p> and <li> tags
-    var texts = [];
-    tempDiv.querySelectorAll('p, li').forEach(element => {
-        texts.push(element.textContent || element.innerText);
+    searchTerms.forEach(term => {
+        relevantNodes.forEach(node => {
+            const nodeText = node.innerText || "";
+            const regex = isKeywordSearch ? 
+                new RegExp(`([^\.!?]*${term}[^\.!?]*[\.!?])`, 'ig') :
+                new RegExp(`([^\.!?]*${searchTerms[0]}[^\.!?]*[\.!?])`, 'ig');
+            const matches = nodeText.match(regex);
+            if (matches) {
+                matches.forEach(sentence => uniqueSentences.add(sentence));
+            }
+        });
     });
 
-    // Join all extracted texts into a single string
-    var allText = texts.join(' ');
-
-    // Check if the search terms are present in the text
-    if (isKeywordSearch) {
-        // For keyword search, check each term separately
-        return searchTerms.every(term => allText.toLowerCase().includes(term.toLowerCase()));
-    } else {
-        // For sentence search, check the entire phrase
-        return allText.toLowerCase().includes(searchTerms[0].toLowerCase());
-    }
+    return [...uniqueSentences];
 }
+
+
 
 
 function displayResults(results) {
     var resultsContainer = document.getElementById('resultsContainer');
-    resultsContainer.innerHTML = ''; // Clear previous results
+    resultsContainer.innerHTML = '';
 
     results.forEach(result => {
         var chapterElement = document.createElement('div');
-        chapterElement.innerHTML = '<h3>Chapter ' + result.chapter + '</h3><p>' + result.content + '</p>';
+        chapterElement.innerHTML = `<h3>Chapter ${result.chapter}</h3>`;
+        result.content.forEach(sentence => {
+            var sentenceElement = document.createElement('p');
+            sentenceElement.textContent = sentence;
+            chapterElement.appendChild(sentenceElement);
+        });
         resultsContainer.appendChild(chapterElement);
     });
 }
+
