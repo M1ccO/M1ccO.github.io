@@ -18,6 +18,43 @@ searchBar.addEventListener('blur', function() {
     }
 });
 
+
+// Event listener for keyup to detect comma press and filter chapters
+searchBar.addEventListener("keyup", function(event) {
+    if (event.key === ',') {
+        const searchQuery = this.value;
+        filterChapters(searchQuery);
+    }
+});
+
+// Function to filter chapters based on search input
+function filterChapters(query) {
+    const keywords = query.split(',').map(k => k.trim().toLowerCase());
+    const chapterLinks = document.querySelectorAll('.h3 a'); // Select all chapter links
+
+    chapterLinks.forEach(link => {
+        const chapterTitle = link.textContent.toLowerCase();
+        const isMatch = keywords.some(keyword => chapterTitle.includes(keyword));
+
+        if (isMatch || query.trim() === '') {
+            link.closest('.h3').style.display = 'block'; // Show the chapter if it matches
+        } else {
+            link.closest('.h3').style.display = 'none'; // Hide the chapter if it does not match
+        }
+    });
+
+
+// Event listener for ENTER key to execute search
+searchBar.addEventListener("keydown", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); // Prevent default form submission
+        const searchQuery = this.value;
+        if (searchQuery) {
+            performSearch(searchQuery); // Execute search based on current input
+        }
+    }
+});
+
 // Event listener for the search button click
 searchButton.addEventListener('click', function() {
     const searchQuery = searchBar.value;
@@ -38,21 +75,10 @@ function redirectToSearchResults(query, type) {
     window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
 }
 
-// Event listener for ENTER key to execute search
-searchBar.addEventListener("keydown", function(event) {
-    if (event.key === "Enter") {
-        event.preventDefault(); // Prevent default form submission
-        performSearch(this.value); // Execute search based on current input
-    }
-});
 
-// IndexFunctions.js
+let escPressCount = 0;  // Counter for the number of ESC key presses
 
-// ... [previous code remains the same]
-
-let escPressCount = 0;  // Counter to keep track of the number of ESC key presses
-
-// Event listener for ESC key with multifunctionality
+// Event listener for ESC key with adjusted functionality
 document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
         escPressCount++;
@@ -61,24 +87,14 @@ document.addEventListener("keydown", function(event) {
 });
 
 function handleEscPress(pressCount) {
-    switch(pressCount) {
-        case 1:
-            // First press: Clear the search input
-            searchBar.value = '';
-            break;
-        case 2:
-            // Second press: Close the search bar and hide search results
-            searchContainer.classList.add('closed');
-            searchButton.disabled = true;
-            hideSearchResults();  // Assuming this function hides the search results
-            break;
-        case 3:
-            // Third press: Reset the counter and remove focus (for mobile devices)
-            if (window.innerWidth < 768) {
-                searchBar.blur();
-            }
-            escPressCount = 0;  // Reset the counter
-            break;
+    if (pressCount === 1) {
+        // First press: Clear the search input
+        searchBar.value = '';
+    } else if (pressCount === 2) {
+        // Second press: Close the search bar
+        searchContainer.classList.add('closed');
+        searchButton.disabled = true;
+        escPressCount = 0;  // Reset the counter
     }
 }
 
