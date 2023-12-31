@@ -20,7 +20,7 @@ searchBar.addEventListener('blur', function() {
 
 // Event listener for the search button click
 searchButton.addEventListener('click', function() {
-    var searchQuery = searchBar.value;
+    const searchQuery = searchBar.value;
     if (searchQuery) {
         performSearch(searchQuery);
     }
@@ -28,8 +28,8 @@ searchButton.addEventListener('click', function() {
 
 // Perform the search and redirect to results page
 function performSearch(query) {
-    var isKeywordSearch = query.includes(',');
-    var searchType = isKeywordSearch ? 'keywords' : 'sentence';
+    const isKeywordSearch = query.includes(',');
+    const searchType = isKeywordSearch ? 'keywords' : 'sentence';
     redirectToSearchResults(query, searchType);
 }
 
@@ -38,30 +38,48 @@ function redirectToSearchResults(query, type) {
     window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
 }
 
-// Function to filter chapters based on search input (same as before)
-// ...
-
-// Modify the event listener for the search input for comma press
-document.getElementById("search-input").addEventListener("keyup", function(event) {
-    if (event.key === ',') {
-        const searchQuery = this.value;
-        filterChapters(searchQuery);
-    }
-});
-
 // Event listener for ENTER key to execute search
-searchBar.addEventListener("keyup", function(event) {
+searchBar.addEventListener("keydown", function(event) {
     if (event.key === "Enter") {
         event.preventDefault(); // Prevent default form submission
         performSearch(this.value); // Execute search based on current input
     }
 });
 
-// Event listener for ESC key to close and clear the search bar
+// IndexFunctions.js
+
+// ... [previous code remains the same]
+
+let escPressCount = 0;  // Counter to keep track of the number of ESC key presses
+
+// Event listener for ESC key with multifunctionality
 document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
-        searchBar.value = ''; // Clear the search input
-        searchContainer.classList.add('closed'); // Close the search bar
-        searchButton.disabled = true; // Disable the search button
+        escPressCount++;
+        handleEscPress(escPressCount);
     }
 });
+
+function handleEscPress(pressCount) {
+    switch(pressCount) {
+        case 1:
+            // First press: Clear the search input
+            searchBar.value = '';
+            break;
+        case 2:
+            // Second press: Close the search bar and hide search results
+            searchContainer.classList.add('closed');
+            searchButton.disabled = true;
+            hideSearchResults();  // Assuming this function hides the search results
+            break;
+        case 3:
+            // Third press: Reset the counter and remove focus (for mobile devices)
+            if (window.innerWidth < 768) {
+                searchBar.blur();
+            }
+            escPressCount = 0;  // Reset the counter
+            break;
+    }
+}
+
+
