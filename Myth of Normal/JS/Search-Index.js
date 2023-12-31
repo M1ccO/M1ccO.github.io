@@ -39,6 +39,31 @@ searchBar.addEventListener("keydown", function(event) {
     }
 });
 
+
+
+
+// Counter for the number of ESC key presses
+let escPressCount = 0;
+
+// Event listener for ESC key
+document.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") {
+        escPressCount++;
+
+        // Check the press count to determine the action
+        if (escPressCount === 1) {
+            // First press: Clear the search input
+            searchBar.value = '';
+        } else if (escPressCount === 2) {
+            // Second press: Close the search bar
+            searchContainer.classList.add('closed');
+            searchButton.disabled = true;
+            escPressCount = 0;  // Reset the counter
+        }
+    }
+});
+
+
 // Event listener for the search button click
 searchButton.addEventListener('click', function() {
     const searchQuery = searchBar.value;
