@@ -11,22 +11,32 @@ window.onload = function() {
 };
 
 function searchChapters(searchTerms, isKeywordSearch) {
-    var results = [];
-    var chaptersToSearch = 1; // Assuming you have 1 chapters
-    for (var i = 1; i <= chaptersToSearch; i++) {
-        fetch('../Content/chapter-' + i + '.html') // Adjust the path if necessary
+    const chaptersToSearch = 1; // Adjust the number of chapters
+    let promises = [];
+
+    for (let i = 1; i <= chaptersToSearch; i++) {
+        let promise = fetch('../Content/chapter-' + i + '.html')
             .then(response => response.text())
             .then(content => {
                 if (isContentMatching(content, searchTerms, isKeywordSearch)) {
-                    results.push({ chapter: i, content: content });
+                    return { chapter: i, content: content };
                 }
-                if (i === chaptersToSearch) {
-                    displayResults(results);
-                }
+                return null;
             })
-            .catch(error => console.error('Error fetching chapter:', error));
+            .catch(error => {
+                console.error('Error fetching chapter:', error);
+                return null;
+            });
+
+        promises.push(promise);
     }
+
+    Promise.all(promises).then(results => {
+        results = results.filter(result => result !== null);
+        displayResults(results);
+    });
 }
+
 
 function isContentMatching(content, searchTerms, isKeywordSearch) {
     // Create a temporary DOM element to parse the HTML content
