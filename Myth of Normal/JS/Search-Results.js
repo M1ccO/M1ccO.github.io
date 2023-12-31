@@ -11,31 +11,24 @@ window.onload = function() {
 };
 
 function searchChapters(searchTerms, isKeywordSearch) {
-    const chaptersToSearch = 1; // Adjust the number of chapters
-    let promises = [];
-
-    for (let i = 1; i <= chaptersToSearch; i++) {
-        let promise = fetch('../Content/chapter-' + i + '.html')
-            .then(response => response.text())
-            .then(content => {
-                if (isContentMatching(content, searchTerms, isKeywordSearch)) {
-                    return { chapter: i, content: content };
-                }
-                return null;
-            })
-            .catch(error => {
-                console.error('Error fetching chapter:', error);
-                return null;
-            });
-
-        promises.push(promise);
-    }
-
-    Promise.all(promises).then(results => {
-        results = results.filter(result => result !== null);
-        displayResults(results);
-    });
+    // Fetch the content of chapter-1.html directly
+    fetch('../Content/chapter-1.html')
+        .then(response => response.text())
+        .then(content => {
+            if (isContentMatching(content, searchTerms, isKeywordSearch)) {
+                // If content matches, display the result
+                displayResults([{ chapter: 1, content: content }]);
+            } else {
+                // If no match, clear the results
+                displayResults([]);
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching chapter:', error);
+            displayResults([]); // Display no results in case of error
+        });
 }
+
 
 
 function isContentMatching(content, searchTerms, isKeywordSearch) {
