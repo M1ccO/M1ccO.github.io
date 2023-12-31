@@ -41,8 +41,6 @@ searchBar.addEventListener("keydown", function(event) {
 
 
 
-
-// Counter for the number of ESC key presses
 let escPressCount = 0;
 
 // Event listener for ESC key
@@ -50,18 +48,20 @@ document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
         escPressCount++;
 
-        // Check the press count to determine the action
+        // First press: Clear the search input
         if (escPressCount === 1) {
-            // First press: Clear the search input
             searchBar.value = '';
-        } else if (escPressCount === 2) {
-            // Second press: Close the search bar
+        }
+
+        // Second press: Close the search bar and disable the button, similar to the blur event
+        if (escPressCount === 2 || !searchBar.value.trim()) {
             searchContainer.classList.add('closed');
             searchButton.disabled = true;
             escPressCount = 0;  // Reset the counter
         }
     }
 });
+
 
 
 // Event listener for the search button click
