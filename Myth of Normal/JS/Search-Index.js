@@ -27,22 +27,6 @@ searchBar.addEventListener("keyup", function(event) {
     }
 });
 
-// Function to filter chapters based on search input
-function filterChapters(query) {
-    const keywords = query.split(',').map(k => k.trim().toLowerCase());
-    const chapterLinks = document.querySelectorAll('.h3 a'); // Select all chapter links
-
-    chapterLinks.forEach(link => {
-        const chapterTitle = link.textContent.toLowerCase();
-        const isMatch = keywords.some(keyword => chapterTitle.includes(keyword));
-
-        if (isMatch || query.trim() === '') {
-            link.closest('.h3').style.display = 'block'; // Show the chapter if it matches
-        } else {
-            link.closest('.h3').style.display = 'none'; // Hide the chapter if it does not match
-        }
-    });
-
 
 // Event listener for ENTER key to execute search
 searchBar.addEventListener("keydown", function(event) {
