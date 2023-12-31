@@ -76,26 +76,3 @@ function redirectToSearchResults(query, type) {
 }
 
 
-let escPressCount = 0;  // Counter for the number of ESC key presses
-
-// Event listener for ESC key with adjusted functionality
-document.addEventListener("keydown", function(event) {
-    if (event.key === "Escape") {
-        escPressCount++;
-        handleEscPress(escPressCount);
-    }
-});
-
-function handleEscPress(pressCount) {
-    if (pressCount === 1) {
-        // First press: Clear the search input
-        searchBar.value = '';
-    } else if (pressCount === 2) {
-        // Second press: Close the search bar
-        searchContainer.classList.add('closed');
-        searchButton.disabled = true;
-        escPressCount = 0;  // Reset the counter
-    }
-}
-
-
