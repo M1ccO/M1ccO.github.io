@@ -1,8 +1,16 @@
 // Search-Index.js
+
 function initializeSearchIndex() {
     const searchBar = document.querySelector('#searchContainer input');
     const searchContainer = document.querySelector('#searchContainer');
     const searchButton = document.querySelector('#searchContainer .search-btn');
+
+    if (searchBar && searchContainer && searchButton) {
+
+        searchBar.addEventListener('focus', function() {
+            searchContainer.classList.remove('closed');
+            searchButton.removeAttribute('disabled');
+        });
 
 
 searchBar.addEventListener('focus', function() {
