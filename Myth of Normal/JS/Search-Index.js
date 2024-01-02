@@ -89,3 +89,6 @@ function redirectToSearchResults(query, type) {
 }
 
 
+    
+}
+
