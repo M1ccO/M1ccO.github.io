@@ -1,4 +1,4 @@
-// IndexFunctions.js
+// Search-Index.js
 
 const searchBar = document.querySelector('#searchContainer input');
 const searchContainer = document.querySelector('#searchContainer');
