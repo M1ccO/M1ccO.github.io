@@ -6,14 +6,6 @@ const swup = new Swup({
 });
 
 
-swup.on('contentReplaced', function() {
-    if (typeof initializeSearch === 'function') {
-        initializeSearch();
-    }
-});
-
-// Also call it on initial page load
-initializeSearch();
 
 
 
