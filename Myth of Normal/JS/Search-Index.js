@@ -1,4 +1,6 @@
 // IndexFunctions.js
+window.onload = function() {
+    // Initialize all your search-related functions here
 
 const searchBar = document.querySelector('#searchContainer input');
 const searchContainer = document.querySelector('#searchContainer');
