@@ -47,20 +47,23 @@ document.addEventListener("keydown", function(event) {
     if (event.key === "Escape") {
         escPressCount++;
 
-        // First press: Clear the search input
         if (escPressCount === 1) {
+            // First press: Clear the search input
             searchBar.value = '';
-        }
-
-        // Second press: Close the search bar and disable the button, similar to the blur event
-        if (escPressCount === 2 || !searchBar.value.trim()) {
-            searchContainer.classList.add('closed');
-            searchButton.disabled = true;
+        } else if (escPressCount === 2) {
+            // Second press: Remove focus from the search bar and revert to default form
+            searchBar.blur();
+            searchContainer.classList.add('closed'); // Assuming this class change handles reverting to default form
+            searchButton.disabled = true; // Optionally disable the search button
             escPressCount = 0;  // Reset the counter
         }
     }
 });
 
+// Reset the ESC press counter when input is changed
+searchBar.addEventListener('input', function() {
+    escPressCount = 0;
+});
 
 
 // Event listener for the search button click
