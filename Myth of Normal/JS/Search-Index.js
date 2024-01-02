@@ -41,19 +41,21 @@ searchBar.addEventListener("keydown", function(event) {
 document.addEventListener('click', function(event) {
     const searchContainer = document.getElementById("searchContainer");
     const searchInput = document.getElementById("search-input");
-    const searchButton = document.getElementById("searchContainer .search-btn");
+    const searchButton = document.querySelector('#searchContainer .search-btn');
 
     // Check if the click was outside the searchContainer
     if (!searchContainer.contains(event.target)) {
-        // Mimic the first ESC press: Clear the search input
+        // First action: Clear the search bar
         searchInput.value = '';
 
-        // Mimic the second ESC press: Remove focus from the search bar and revert to default form
-        searchBar.blur();
+        // Second action: Remove focus from the search bar and revert to default form
+        searchInput.blur();
         searchContainer.classList.add('closed');
         searchButton.disabled = true;
     }
 });
+
+
 
 
 let escPressCount = 0;
