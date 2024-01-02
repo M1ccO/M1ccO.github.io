@@ -1,5 +1,7 @@
 // IndexFunctions.js
-
+window.onload = function() {
+    // Initialize all your search-related functions here
+    
 const searchBar = document.querySelector('#searchContainer input');
 const searchContainer = document.querySelector('#searchContainer');
 const searchButton = document.querySelector('#searchContainer .search-btn');
@@ -85,3 +87,4 @@ function performSearch(query) {
 function redirectToSearchResults(query, type) {
     window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
 }
+};
