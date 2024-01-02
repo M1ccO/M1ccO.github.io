@@ -1,8 +1,9 @@
-// Functions.js
+// swup.js
 
-const swup = new Swup({
-  linkSelector: 'a:not([href^="#"])' // Handles all links except in-page anchors
-});
+// Temporarily disable swup.js initialization
+// const swup = new Swup({
+//   linkSelector: 'a:not([href^="#"])' // Handles all links except in-page anchors
+// });
 
 
 
