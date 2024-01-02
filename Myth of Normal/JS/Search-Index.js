@@ -39,21 +39,25 @@ searchBar.addEventListener("keydown", function(event) {
 });
 
 document.addEventListener('click', function(event) {
-    const searchContainer = document.getElementById("searchContainer");
-    const searchInput = document.getElementById("search-input");
+    const searchContainer = document.querySelector('#searchContainer');
+    const searchBar = document.querySelector('#searchContainer input');
     const searchButton = document.querySelector('#searchContainer .search-btn');
 
-    // Check if the click was outside the searchContainer
-    if (!searchContainer.contains(event.target)) {
-        // First action: Clear the search bar
-        searchInput.value = '';
+    // Check if the searchContainer and searchBar exist on the page
+    if (searchContainer && searchBar && searchButton) {
+        // Check if the click was outside the searchContainer
+        if (!searchContainer.contains(event.target)) {
+            // First action: Clear the search bar
+            searchBar.value = '';
 
-        // Second action: Remove focus from the search bar and revert to default form
-        searchInput.blur();
-        searchContainer.classList.add('closed');
-        searchButton.disabled = true;
+            // Second action: Remove focus from the search bar and revert to default form
+            searchBar.blur();
+            searchContainer.classList.add('closed');
+            searchButton.disabled = true;
+        }
     }
 });
+
 
 
 
