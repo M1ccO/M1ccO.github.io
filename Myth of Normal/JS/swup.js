@@ -1,10 +1,15 @@
 // swup.js
 
-// In swup.js
 const swup = new Swup({
-  linkSelector: 'a:not([href^="#"])' // Handles all links except in-page anchors
+    linkSelector: 'a:not([href^="#"])'
 });
 
+swup.on('contentReplaced', () => {
+    initializeSearchIndex();  // Reinitialize search functionalities
+});
+
+// Also call it on initial page load
+initializeSearchIndex();
 
 
 
