@@ -6,13 +6,20 @@ const swup = new Swup({
 
 swup.on('contentReplaced', () => {
     initializeSearchIndex();  // Reinitialize search functionalities
+    initializeButton();       // Reinitialize button functionalities
 });
 
-// Also call it on initial page load
+// Also call them on initial page load
 initializeSearchIndex();
+initializeButton();
 
+// Function definitions
 
+function initializeButton() {
+    // Your button initialization code here
+}
 
-
-
+function initializeSearchIndex() {
+    // Your search initialization code here
+}
 
