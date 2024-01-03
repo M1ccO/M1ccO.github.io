@@ -90,10 +90,18 @@ function setupEventListeners(searchBar, searchContainer, searchButton) {
         redirectToSearchResults(query, searchType);
     }
 
-    function redirectToSearchResults(query, type) {
-        const searchResultsUrl = `Content/search-results.html?query=${encodeURIComponent(query)}&type=${type}`;
-        swup.loadPage({ url: searchResultsUrl, method: 'GET' });
-    }
+// Redirect to search-results.html with query and type as URL parameters
+function redirectToSearchResults(query, type) {
+    const searchResultsUrl = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
+
+    // Create a temporary link and click it to trigger Swup
+    let tempLink = document.createElement('a');
+    tempLink.href = searchResultsUrl;
+    tempLink.style.display = 'none'; // hide the link
+    document.body.appendChild(tempLink); // add it to the document
+    tempLink.click(); // simulate the click
+    document.body.removeChild(tempLink); // remove the link from the document
+}
 }
 
 // Fetch and display search results
