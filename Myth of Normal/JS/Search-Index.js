@@ -1,6 +1,5 @@
 // Search-Index.js
 
-function initializeSearchIndex() {
     const searchBar = document.querySelector('#searchContainer input');
     const searchContainer = document.querySelector('#searchContainer');
     const searchButton = document.querySelector('#searchContainer .search-btn');
@@ -88,4 +87,3 @@ function initializeSearchIndex() {
             window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
         }
     }
-}
