@@ -13,13 +13,8 @@ setInterval(function() {
 }, 100);
 
 backToTopBtn.onclick = function() {
-    var headingElement = document.querySelector(".heading");
+    var headingElement = document.querySelector(".heading"); // Adjust the selector as needed
     if (headingElement) {
-        headingElement.scrollIntoView({
-            behavior: 'smooth'
-        });
+        headingElement.scrollIntoView();
     }
 };
-
-
-
