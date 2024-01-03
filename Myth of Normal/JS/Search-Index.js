@@ -85,10 +85,12 @@ function initializeSearchIndex() {
 
         // Redirect to search-results.html with query and type as URL parameters
         function redirectToSearchResults(query, type) {
+            const searchResultsUrl = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
             swup.loadPage({
-            url: 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type,
+            url: searchResultsUrl,
             method: 'GET'
-        });
-       }
+            });
+            }
+        }
     }
   }
