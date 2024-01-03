@@ -83,17 +83,9 @@ function initializeSearchIndex() {
             redirectToSearchResults(query, searchType);
         }
 
-// Redirect to search-results.html with query and type as URL parameters
-function redirectToSearchResults(query, type) {
-    const searchResultsUrl = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
-
-    // Create a temporary link and click it to trigger Swup
-    let tempLink = document.createElement('a');
-    tempLink.href = searchResultsUrl;
-    tempLink.style.display = 'none'; // hide the link
-    document.body.appendChild(tempLink); // add it to the document
-    tempLink.click(); // simulate the click
-    document.body.removeChild(tempLink); // remove the link from the document
-}
+        // Redirect to search-results.html with query and type as URL parameters
+        function redirectToSearchResults(query, type) {
+            window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
         }
     }
+}
