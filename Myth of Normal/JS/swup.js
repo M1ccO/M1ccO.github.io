@@ -13,13 +13,3 @@ swup.on('contentReplaced', () => {
 initializeSearchIndex();
 initializeButton();
 
-// Function definitions
-
-function initializeButton() {
-    // Your button initialization code here
-}
-
-function initializeSearchIndex() {
-    // Your search initialization code here
-}
-
