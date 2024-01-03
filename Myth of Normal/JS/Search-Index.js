@@ -89,5 +89,6 @@ function initializeSearchIndex() {
             url: 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type,
             method: 'GET'
         });
+       }
     }
-}
+  }
