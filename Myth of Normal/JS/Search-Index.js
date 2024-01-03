@@ -85,7 +85,9 @@ function initializeSearchIndex() {
 
         // Redirect to search-results.html with query and type as URL parameters
         function redirectToSearchResults(query, type) {
-            window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
-        }
+            swup.loadPage({
+            url: 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type,
+            method: 'GET'
+        });
     }
 }
