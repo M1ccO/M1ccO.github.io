@@ -1,5 +1,7 @@
-// SearchResultsFunctions.js
+// Search-Results.js
 
+
+function displaySearchResults(results) {
 window.onload = function() {
     var urlParams = new URLSearchParams(window.location.search);
     var query = urlParams.get('query');
@@ -67,5 +69,7 @@ function displayResults(results) {
         });
         resultsContainer.appendChild(chapterElement);
     });
+  }
 }
 
+export { displaySearchResults };
