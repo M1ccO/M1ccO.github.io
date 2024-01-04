@@ -1,24 +1,6 @@
 // Functions.js
 
-document.addEventListener('DOMContentLoaded', (event) => {
-    var backToTopBtn = document.getElementById("button");
+import { scrollToTop } from './Scroll-To-Top.js';
+import { initializeSearch } from './Search-Index.js';
+import { displaySearchResults } from './Search-Results.js';
 
-    setInterval(function() {
-        if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-            backToTopBtn.style.opacity = 1;
-            backToTopBtn.style.transform = 'translateY(0)'; // Slide into view
-        } else {
-            backToTopBtn.style.opacity = 0;
-            backToTopBtn.style.transform = 'translateY(100%)'; // Slide out of view
-        }
-    }, 100);
-
-    backToTopBtn.onclick = function() {
-        var headingElement = document.querySelector(".heading");
-        if (headingElement) {
-            headingElement.scrollIntoView({
-                behavior: 'smooth'
-            });
-        }
-    };
-});
