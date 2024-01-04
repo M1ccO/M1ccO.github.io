@@ -6,17 +6,14 @@ function scrollToTop() {
 
         setInterval(function() {
             if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
-                backToTopBtn.style.opacity = 1;
-                backToTopBtn.style.transform = 'translateY(0)'; // Slide into view
+                backToTopBtn.classList.add('show');
             } else {
-                backToTopBtn.style.opacity = 0;
-                backToTopBtn.style.transform = 'translateY(100%)'; // Slide out of view
+                backToTopBtn.classList.remove('show');
             }
         }, 100);
 
         backToTopBtn.onclick = function() {
-            // Scroll the page to the top immediately
-            window.scrollTo(0, 0);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         };
     });
 }
