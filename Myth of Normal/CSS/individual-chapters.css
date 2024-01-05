@@ -29,28 +29,6 @@
 
 
 
-/* ==================================================
-   Chapter Transitions
-   ================================================== */
-div[id^="chapter-"] {
-    transform: translateX(0%); /* Start off-screen */
-    transition: transform 0.5s ease;
-}
-
-div[id^="chapter-"].slide-in {
-    transform: translateX(-300%); /* Slide into view */
-}
-
-div[id^="chapter-"].slide-out {
-    transform: translateX(100%); /* Slide out of view */
-}
-
-
-
-
-
-
-
 
 
 /* ==================================================
