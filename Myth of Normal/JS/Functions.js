@@ -1,12 +1,12 @@
 // Functions.js
 
 // Importing functions from other modules
-import { scrollToTop } from './Scroll-To-Top.js';
+import { scrollToChapter } from './Scroll-To-Top.js';
 import { initializeSearch } from './Search-Index.js';
 import { displaySearchResults } from './Search-Results.js';
 
 // Initialize 'Back to Top' button functionality
-scrollToTop();
+scrollToChapter();
 
 // Set up the search functionality on the index page
 initializeSearch();
