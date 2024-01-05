@@ -14,12 +14,10 @@ body {
     /* overflow-y: auto; */  /* to allow scrolling if the content is longer than the viewport */
 }
 body, html {
-    overflow-x: hidden;
     scroll-behavior: smooth;
 }
 body {
     font-family: 'Comic Sans MS', serif;
     line-height: 1.6;
-    /* overflow-x: scroll; */
 }
 
