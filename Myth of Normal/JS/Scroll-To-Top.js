@@ -1,20 +1,21 @@
 // Scroll-To-Top.js
 
-function scrollToTop() {
-    // Function to scroll to the top of the page
-    function smoothScrollToTop() {
-        if (document.body.scrollTop !== 0 || document.documentElement.scrollTop !== 0) {
-            window.scrollBy(0, -50);
-            setTimeout(smoothScrollToTop, 10);
-        }
-    }
-
-    // Add event listener once the DOM is fully loaded
+function scrollToChapter() {
     document.addEventListener('DOMContentLoaded', (event) => {
         var backToTopBtn = document.getElementById("button");
 
+        // Find the first h3 element on the page
+        var firstH3 = document.querySelector('h3');
+
+        // Function to scroll to the first h3 element
+        function smoothScrollToChapter() {
+            if (firstH3) {
+                firstH3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
         // Set the click event for the button
-        backToTopBtn.onclick = smoothScrollToTop;
+        backToTopBtn.onclick = smoothScrollToChapter;
 
         // Check the scroll position at regular intervals
         setInterval(function() {
@@ -27,7 +28,5 @@ function scrollToTop() {
     });
 }
 
-// Export the scrollToTop function
-export { scrollToTop };
-
-
+// Export the scrollToChapter function
+export { scrollToChapter };
