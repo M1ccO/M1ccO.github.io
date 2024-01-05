@@ -16,7 +16,7 @@ body {
 }
 body, html {
     overflow-x: hidden;
-    /* scroll-behavior: smooth; */
+    scroll-behavior: smooth;
 }
 body {
     font-family: 'Comic Sans MS', serif;
