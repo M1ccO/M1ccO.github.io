@@ -4,19 +4,17 @@
 .scrollable-area {
     display: flex;
     position: relative;
-    height: 65vh;
     width: 52%;
     position: relative;
     margin-top: 6vh;
+    margin-bottom: 2.1vh;
     margin-left: auto;
     margin-right: auto;
     text-decoration: none;
     border-style: solid;
     border-width: 2px;
     color: inherit;
-    overflow-y: auto;
     background: #ffffff;
-    padding-bottom: 30px !important;
     box-shadow: 9px 9px 16px rgba(0, 0, 0, 0.5);
     flex-direction: column;
     align-content: flex-start;
@@ -135,6 +133,6 @@
     max-width: 95%;
     min-width: 84vw;
     margin-top: 8vh;
-    max-height: 64vh;
+    min-height: 100vh;
   }
 
