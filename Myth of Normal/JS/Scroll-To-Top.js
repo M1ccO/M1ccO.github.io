@@ -16,6 +16,8 @@ function scrollToChapter() {
 
         // Set the click event for the button
         backToTopBtn.onclick = smoothScrollToChapter;
+        // Add touchend event listener for mobile devices
+        backToTopBtn.addEventListener('touchend', smoothScrollToChapter);
 
         // Check the scroll position at regular intervals
         setInterval(function() {
@@ -30,3 +32,4 @@ function scrollToChapter() {
 
 // Export the scrollToChapter function
 export { scrollToChapter };
+
