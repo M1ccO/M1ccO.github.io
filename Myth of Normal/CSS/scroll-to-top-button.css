@@ -16,7 +16,7 @@
   left: 47%; /* Center horizontally */
   transform: translate(-50%, -50%); /* Adjust to center the button itself */
   opacity: 0;
-  /* visibility: hidden; */ /* Uncomment this if needed */
+  visibility: hidden; /* Uncomment this if needed */
   z-index: 1000;
   justify-content: center;
   align-content: center;
