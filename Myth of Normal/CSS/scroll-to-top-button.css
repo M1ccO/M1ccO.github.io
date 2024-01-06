@@ -1,32 +1,32 @@
 /* ==================================================
    Scroll To the Top of the Page Button
    ================================================== */
-
 #button {
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-  display: flex;
-  background-color: #f50404;
-  width: 50px;
-  height: 50px;
-  text-align: center;
-  border-radius: 4px;
-  border-color: black;
-  border-style: inset;
-  position: fixed;
-  top: 91%; /* Center vertically */
-  left: 47%; /* Center horizontally */
-  transform: translate(-50%, -50%); /* Adjust to center the button itself */
-  opacity: 0;
-  /* visibility: hidden; */ /* Uncomment this if needed */
-  z-index: 1000;
-  justify-content: center;
-  align-content: center;
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    display: flex;
+    background-color: #f50404;
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    border-radius: 4px;
+    border-color: black;
+    border-style: inset;
+    box-shadow: 2px 2px 6px 1px black;
+    position: fixed;
+    top: 94%;
+    left: 47%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    /* visibility: hidden; */
+    z-index: 1000;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
 }
 
 #button i {
     color: white;        /* Color of the icon */
-    font-size: 24px;     /* Size of the icon */
-    /* Add other styles as needed */
+    font-size: 30px;     /* Size of the icon */
 }
 #button:hover {
   cursor: pointer;
