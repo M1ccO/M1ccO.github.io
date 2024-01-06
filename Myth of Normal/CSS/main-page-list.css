@@ -113,8 +113,8 @@
    ================================================== */
 @media (max-width: 991.98px) {
 .scrollable-area {
-    min-width: 76vw;
-    max-width: 106vw;
+    /* min-width: 76vw; */
+    /* max-width: 106vw; */
   }
 }
 
@@ -127,8 +127,8 @@
    ================================================== */
 @media (max-width: 767.98px) {
 .scrollable-area {
-    max-width: 95%;
-    min-width: 84vw;
+    /* max-width: 95%; */
+    /* min-width: 84vw; */
     margin-top: 8vh;
     min-height: 100vh;
   }
