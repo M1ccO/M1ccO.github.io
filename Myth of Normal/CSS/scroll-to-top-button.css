@@ -23,15 +23,10 @@
   align-content: center;
 }
 
-
-#button::after {
-  content: "\f077";
-  font-family: FontAwesome;
-  font-weight: normal;
-  font-style: normal;
-  font-size: 2em;
-  line-height: 50px;
-  color: #fff;
+#button i {
+    color: white;        /* Color of the icon */
+    font-size: 24px;     /* Size of the icon */
+    /* Add other styles as needed */
 }
 #button:hover {
   cursor: pointer;
@@ -43,8 +38,4 @@
 #button.show {
   opacity: 1;
   visibility: visible;
-}
-
-#myBtn:hover {
-  background-color: #555; /* Add a dark-grey background on hover */
 }
