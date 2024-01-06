@@ -1,6 +1,7 @@
 // Scroll-Top-Top.js
 
 
+
 function scrollToChapter() {
     document.addEventListener('DOMContentLoaded', (event) => {
         var backToTopBtn = document.getElementById("button");
@@ -9,6 +10,9 @@ function scrollToChapter() {
         function smoothScrollToChapter() {
             if (firstH3) {
                 firstH3.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Hide the button after scrolling
+                backToTopBtn.style.opacity = 0;
+                backToTopBtn.style.transform = 'translateY(100%)';
             }
         }
 
