@@ -1,95 +1,107 @@
-// Search-Index.js
+// Search-Results.js
 
-function initializeSearch() {
-    const searchBar = document.querySelector('#searchContainer input');
-    const searchContainer = document.querySelector('#searchContainer');
-    const searchButton = document.querySelector('#searchContainer .search-btn');
+function displaySearchResults() {
+    window.onload = function() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var query = urlParams.get('query');
+        var type = urlParams.get('type');
+        if (query && type) {
+            var searchTerms = type === 'keywords' ? query.split(',').map(term => term.trim()) : [query];
+            var totalChapters = 12; // Update this to the total number of chapters
+            searchChapters(searchTerms, type === 'keywords', totalChapters);
+        }
+    };
 
-    if (searchBar && searchContainer && searchButton) {
-        searchBar.addEventListener('focus', function() {
-            searchContainer.classList.remove('closed');
-            searchButton.removeAttribute('disabled');  // Enable the button
-        });
+    function searchChapters(searchTerms, isKeywordSearch, totalChapters) {
+        let fetchPromises = [];
 
-        searchBar.addEventListener('blur', function() {
-            if (!searchBar.value.trim()) {
-                searchContainer.classList.add('closed');
-                searchButton.setAttribute('disabled', '');  // Disable the button
-            }
-        });
+        for (let chapterNumber = 1; chapterNumber <= totalChapters; chapterNumber++) {
+            let chapterFile = `../Content/chapter-${chapterNumber}.html`;
+            let fetchPromise = fetch(chapterFile)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Chapter ${chapterNumber} not found`);
+                    }
+                    return response.text();
+                })
+                .then(content => {
+                    return {
+                        chapter: chapterNumber,
+                        content: extractSentences(content, searchTerms, isKeywordSearch)
+                    };
+                })
+                .catch(error => {
+                    console.error(`Error fetching chapter ${chapterNumber}:`, error);
+                    return null;
+                });
 
-        // Event listener for keyup to detect comma press and filter chapters
-        searchBar.addEventListener("keyup", function(event) {
-            if (event.key === ',') {
-                const searchQuery = this.value;
-                filterChapters(searchQuery);
-            }
-        });
-
-        // Event listener for ENTER key to execute search
-        searchBar.addEventListener("keydown", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault(); // Prevent default form submission
-                const searchQuery = this.value;
-                if (searchQuery) {
-                    performSearch(searchQuery); // Execute search based on current input
-                }
-            }
-        });
-
-        document.addEventListener('click', function(event) {
-            if (!searchContainer.contains(event.target)) {
-                searchBar.value = '';
-                searchBar.blur();
-                searchContainer.classList.add('closed');
-                searchButton.disabled = true;
-            }
-        });
-
-        let escPressCount = 0;
-        // Event listener for ESC key
-        document.addEventListener("keydown", function(event) {
-            if (event.key === "Escape") {
-                escPressCount++;
-
-                if (escPressCount === 1) {
-                    searchBar.value = '';
-                } else if (escPressCount === 2) {
-                    searchBar.blur();
-                    searchContainer.classList.add('closed');
-                    searchButton.disabled = true;
-                    escPressCount = 0;
-                }
-            }
-        });
-
-        // Reset the ESC press counter when input is changed
-        searchBar.addEventListener('input', function() {
-            escPressCount = 0;
-        });
-
-        // Event listener for the search button click
-        searchButton.addEventListener('click', function() {
-            const searchQuery = searchBar.value;
-            if (searchQuery) {
-                performSearch(searchQuery);
-            }
-        });
-
-        // Perform the search and redirect to results page
-        function performSearch(query) {
-            const isKeywordSearch = query.includes(',');
-            const searchType = isKeywordSearch ? 'keywords' : 'sentence';
-            redirectToSearchResults(query, searchType);
+            fetchPromises.push(fetchPromise);
         }
 
-        // Redirect to search-results.html with query and type as URL parameters
-        function redirectToSearchResults(query, type) {
-            window.location.href = 'Content/search-results.html?query=' + encodeURIComponent(query) + '&type=' + type;
+        Promise.all(fetchPromises).then(results => {
+            let filteredResults = results.filter(result => result !== null);
+            let combinedResults = filteredResults.reduce((acc, result) => {
+                if (result.content.sentences.length > 0) {
+                    acc.push({ chapter: result.chapter, title: result.content.title, content: result.content.sentences });
+                }
+                return acc;
+            }, []);
+
+            displayResults(combinedResults, searchTerms);
+        });
+    }
+
+    function extractSentences(content, searchTerms, isKeywordSearch) {
+        let uniqueSentences = new Set();
+        var tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        const chapterTitle = tempDiv.querySelector('h2')?.innerText || "Chapter Title Not Found";
+
+        if (isKeywordSearch) {
+            const allText = tempDiv.innerText || "";
+            let allTermsPresent = searchTerms.every(term => new RegExp(term, 'i').test(allText));
+            if (!allTermsPresent) {
+                return { sentences: [], title: chapterTitle };
+            }
         }
+
+        const relevantNodes = Array.from(tempDiv.querySelectorAll('p, ul, td, ol'));
+        searchTerms.forEach(term => {
+            relevantNodes.forEach(node => {
+                const nodeText = node.innerText || "";
+                const regex = new RegExp(`([^\.!?]*${term}[^\.!?]*[\.!?])`, 'ig');
+                const matches = nodeText.match(regex);
+                if (matches) {
+                    matches.forEach(sentence => uniqueSentences.add(sentence));
+                }
+            });
+        });
+
+        return { sentences: [...uniqueSentences], title: chapterTitle };
+    }
+
+    function displayResults(results, searchTerms) {
+        var resultsContainer = document.getElementById('resultsContainer');
+        resultsContainer.innerHTML = '';
+
+        results.forEach(result => {
+            var chapterElement = document.createElement('div');
+            chapterElement.innerHTML = `<h3>${result.title}</h3>`;
+
+            result.content.forEach(sentence => {
+                var sentenceElement = document.createElement('p');
+                let highlightedSentence = sentence;
+                searchTerms.forEach(term => {
+                    const highlightSpan = `<span class="highlight">${term}</span>`;
+                    highlightedSentence = highlightedSentence.replace(new RegExp(term, 'gi'), highlightSpan);
+                });
+                sentenceElement.innerHTML = highlightedSentence;
+                chapterElement.appendChild(sentenceElement);
+            });
+
+            resultsContainer.appendChild(chapterElement);
+        });
     }
 }
 
-
-export { initializeSearch };
-
+export { displaySearchResults };
