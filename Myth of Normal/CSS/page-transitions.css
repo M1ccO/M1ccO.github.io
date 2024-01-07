@@ -1,0 +1,20 @@
+/* ==================================================
+   Page Transition Animations
+   ================================================== */
+
+
+body {
+    opacity: 0;
+    transition: opacity 0.5s ease-out;
+}
+
+.fade-in {
+    opacity: 1;
+}
+
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.5s ease-in;
+}
+
+
