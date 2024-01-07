@@ -55,16 +55,21 @@ function displaySearchResults() {
         let uniqueSentences = new Set();
         var tempDiv = document.createElement('div');
         tempDiv.innerHTML = content;
-
         const chapterTitle = tempDiv.querySelector('h2')?.innerText || "Chapter Title Not Found";
+
+        if (isKeywordSearch) {
+            const allText = tempDiv.innerText || "";
+            let allTermsPresent = searchTerms.every(term => new RegExp(term, 'i').test(allText));
+            if (!allTermsPresent) {
+                return { sentences: [], title: chapterTitle };
+            }
+        }
 
         const relevantNodes = Array.from(tempDiv.querySelectorAll('p, ul, td, ol'));
         searchTerms.forEach(term => {
             relevantNodes.forEach(node => {
                 const nodeText = node.innerText || "";
-                const regex = isKeywordSearch ? 
-                    new RegExp(`([^\.!?]*${term}[^\.!?]*[\.!?])`, 'ig') :
-                    new RegExp(`([^\.!?]*${searchTerms[0]}[^\.!?]*[\.!?])`, 'ig');
+                const regex = new RegExp(`([^\.!?]*${term}[^\.!?]*[\.!?])`, 'ig');
                 const matches = nodeText.match(regex);
                 if (matches) {
                     matches.forEach(sentence => uniqueSentences.add(sentence));
