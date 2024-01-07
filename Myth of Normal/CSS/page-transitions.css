@@ -5,7 +5,7 @@
 
 body {
     opacity: 0;
-    transition: opacity 0.3s ease-out;
+    transition: opacity 0.15s ease-out;
 }
 
 .fade-in {
@@ -14,7 +14,7 @@ body {
 
 .fade-out {
     opacity: 0;
-    transition: opacity 0.3s ease-in;
+    transition: opacity 0.15s ease-in;
 }
 
 
