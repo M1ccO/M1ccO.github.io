@@ -62,14 +62,25 @@ function displayResults(results) {
     results.forEach(result => {
         var chapterElement = document.createElement('div');
         chapterElement.innerHTML = `<h3>Chapter ${result.chapter}</h3>`;
+
         result.content.forEach(sentence => {
             var sentenceElement = document.createElement('p');
-            sentenceElement.textContent = sentence;
+            // Highlight the search terms in the sentence
+            let highlightedSentence = sentence;
+            searchTerms.forEach(term => {
+                const highlightSpan = `<span class="highlight">${term}</span>`;
+                highlightedSentence = highlightedSentence.replace(new RegExp(term, 'gi'), highlightSpan);
+            });
+            sentenceElement.innerHTML = highlightedSentence;
             chapterElement.appendChild(sentenceElement);
         });
+
         resultsContainer.appendChild(chapterElement);
     });
   }
 }
+
+export { displaySearchResults };
+
 
 export { displaySearchResults };
