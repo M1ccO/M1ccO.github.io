@@ -1,6 +1,5 @@
 // Search-Functions.js
 
-
 function displaySearchResults() {
     window.onload = function() {
         var urlParams = new URLSearchParams(window.location.search);
@@ -8,25 +7,32 @@ function displaySearchResults() {
         var type = urlParams.get('type');
         if (query && type) {
             var searchTerms = type === 'keywords' ? query.split(',').map(term => term.trim()) : [query];
-            searchChapters(searchTerms, type === 'keywords');
+            var totalChapters = 12; // Update this to the total number of chapters
+            searchChapters(searchTerms, type === 'keywords', totalChapters);
         }
     };
 
-    function searchChapters(searchTerms, isKeywordSearch) {
-        fetch('../Content/chapter-1.html')
-            .then(response => response.text())
-            .then(content => {
-                let result = extractSentences(content, searchTerms, isKeywordSearch);
-                if (result.sentences.length > 0) {
-                    displayResults([{ chapter: 1, title: result.title, content: result.sentences }], searchTerms);
-                } else {
-                    displayResults([], searchTerms);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching chapter:', error);
-                displayResults([], searchTerms);
-            });
+    function searchChapters(searchTerms, isKeywordSearch, totalChapters) {
+        for (let chapterNumber = 1; chapterNumber <= totalChapters; chapterNumber++) {
+            let chapterFile = `../Content/chapter-${chapterNumber}.html`;
+
+            fetch(chapterFile)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Chapter ${chapterNumber} not found`);
+                    }
+                    return response.text();
+                })
+                .then(content => {
+                    let result = extractSentences(content, searchTerms, isKeywordSearch);
+                    if (result.sentences.length > 0) {
+                        displayResults([{ chapter: chapterNumber, title: result.title, content: result.sentences }], searchTerms);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error fetching chapter ${chapterNumber}:`, error);
+                });
+        }
     }
 
     function extractSentences(content, searchTerms, isKeywordSearch) {
@@ -34,7 +40,6 @@ function displaySearchResults() {
         var tempDiv = document.createElement('div');
         tempDiv.innerHTML = content;
 
-        // Extracting the chapter title
         const chapterTitle = tempDiv.querySelector('h2')?.innerText || "Chapter Title Not Found";
 
         const relevantNodes = Array.from(tempDiv.querySelectorAll('p, ul, td, ol'));
