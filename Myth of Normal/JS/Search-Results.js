@@ -1,4 +1,4 @@
-// Search-Functions.js
+// Search-Results.js
 
 function displaySearchResults() {
     window.onload = function() {
@@ -7,16 +7,17 @@ function displaySearchResults() {
         var type = urlParams.get('type');
         if (query && type) {
             var searchTerms = type === 'keywords' ? query.split(',').map(term => term.trim()) : [query];
-            var totalChapters = 2; // Update this to the total number of chapters
+            var totalChapters = 12; // Update this to the total number of chapters
             searchChapters(searchTerms, type === 'keywords', totalChapters);
         }
     };
 
     function searchChapters(searchTerms, isKeywordSearch, totalChapters) {
+        let fetchPromises = [];
+
         for (let chapterNumber = 1; chapterNumber <= totalChapters; chapterNumber++) {
             let chapterFile = `../Content/chapter-${chapterNumber}.html`;
-
-            fetch(chapterFile)
+            let fetchPromise = fetch(chapterFile)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error(`Chapter ${chapterNumber} not found`);
@@ -24,15 +25,30 @@ function displaySearchResults() {
                     return response.text();
                 })
                 .then(content => {
-                    let result = extractSentences(content, searchTerms, isKeywordSearch);
-                    if (result.sentences.length > 0) {
-                        displayResults([{ chapter: chapterNumber, title: result.title, content: result.sentences }], searchTerms);
-                    }
+                    return {
+                        chapter: chapterNumber,
+                        content: extractSentences(content, searchTerms, isKeywordSearch)
+                    };
                 })
                 .catch(error => {
                     console.error(`Error fetching chapter ${chapterNumber}:`, error);
+                    return null;
                 });
+
+            fetchPromises.push(fetchPromise);
         }
+
+        Promise.all(fetchPromises).then(results => {
+            let filteredResults = results.filter(result => result !== null);
+            let combinedResults = filteredResults.reduce((acc, result) => {
+                if (result.content.sentences.length > 0) {
+                    acc.push({ chapter: result.chapter, title: result.content.title, content: result.content.sentences });
+                }
+                return acc;
+            }, []);
+
+            displayResults(combinedResults, searchTerms);
+        });
     }
 
     function extractSentences(content, searchTerms, isKeywordSearch) {
