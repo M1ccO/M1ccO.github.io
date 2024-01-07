@@ -15,12 +15,11 @@ function initializePageTransitions() {
 
                     setTimeout(() => {
                         window.location.href = href;
-                    }, 500);
+                    }, 300); // Duration adjusted to match 0.3s CSS transition
                 }
             });
         });
     });
 }
-
 
 export { initializePageTransitions };
