@@ -4,7 +4,7 @@
 import { scrollToChapter } from './Scroll-To-Top.js';
 import { initializeSearch } from './Search-Index.js';
 import { displaySearchResults } from './Search-Results.js';
-import { initializePageTransitions } from './PageTransitions.js';
+import { initializePageTransitions } from './Page-Transitions.js';
 
 // Initialize 'Back to Top' button functionality
 scrollToChapter();
