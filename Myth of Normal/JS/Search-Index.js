@@ -1,6 +1,6 @@
 // Search-Results.js
 
-function displaySearchResults() {
+function initializeSearch() {
     window.onload = function() {
         var urlParams = new URLSearchParams(window.location.search);
         var query = urlParams.get('query');
@@ -104,4 +104,4 @@ function displaySearchResults() {
     }
 }
 
-export { displaySearchResults };
+export { initializeSearch };
