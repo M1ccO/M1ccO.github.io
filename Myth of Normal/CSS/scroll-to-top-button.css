@@ -15,7 +15,7 @@
     position: fixed;
     bottom: 15px;
     left: 50%;
-    transform: translateX(-50%); /* Shift the button to the left by half its width */
+    transform: translateX(-50%) !important;
     opacity: 0;
     z-index: 100;
     justify-content: center;
