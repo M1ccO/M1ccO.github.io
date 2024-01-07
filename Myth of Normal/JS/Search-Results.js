@@ -18,16 +18,17 @@ function searchChapters(searchTerms, isKeywordSearch) {
         .then(content => {
             let matchingSentences = extractSentences(content, searchTerms, isKeywordSearch);
             if (matchingSentences.length > 0) {
-                displayResults([{ chapter: 1, content: matchingSentences }]);
+                displayResults([{ chapter: 1, content: matchingSentences }], searchTerms);
             } else {
-                displayResults([]);
+                displayResults([], searchTerms);
             }
         })
         .catch(error => {
             console.error('Error fetching chapter:', error);
-            displayResults([]);
+            displayResults([], searchTerms);
         });
 }
+
 
 
 function extractSentences(content, searchTerms, isKeywordSearch) {
@@ -55,7 +56,7 @@ function extractSentences(content, searchTerms, isKeywordSearch) {
 
 
 
-function displayResults(results) {
+function displayResults(results, searchTerms) {
     var resultsContainer = document.getElementById('resultsContainer');
     resultsContainer.innerHTML = '';
 
@@ -65,7 +66,6 @@ function displayResults(results) {
 
         result.content.forEach(sentence => {
             var sentenceElement = document.createElement('p');
-            // Highlight the search terms in the sentence
             let highlightedSentence = sentence;
             searchTerms.forEach(term => {
                 const highlightSpan = `<span class="highlight">${term}</span>`;
