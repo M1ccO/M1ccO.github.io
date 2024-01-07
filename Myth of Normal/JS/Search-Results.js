@@ -80,7 +80,5 @@ function displayResults(results) {
   }
 }
 
-export { displaySearchResults };
-
 
 export { displaySearchResults };
