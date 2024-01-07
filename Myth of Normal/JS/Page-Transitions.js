@@ -15,7 +15,7 @@ function initializePageTransitions() {
 
                     setTimeout(() => {
                         window.location.href = href;
-                    }, 300); // Duration adjusted to match 0.3s CSS transition
+                    }, 150); // Duration adjusted to match 0.15s CSS transition
                 }
             });
         });
