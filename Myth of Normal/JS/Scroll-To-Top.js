@@ -1,5 +1,4 @@
-// Scroll-Top-Top.js
-
+// Scroll-To-Top.js
 
 function scrollToChapter() {
     document.addEventListener('DOMContentLoaded', () => {
@@ -9,6 +8,14 @@ function scrollToChapter() {
         backToTopBtn.onclick = () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
             hideButton();
+
+            // Change the button's background color on click
+            backToTopBtn.style.backgroundColor = '#555';
+
+            // Revert the color back after a short delay
+            setTimeout(() => {
+                backToTopBtn.style.backgroundColor = '#f50404'; // Original color
+            }, 300);
         };
 
         function hideButton() {
