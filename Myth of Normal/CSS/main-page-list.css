@@ -63,18 +63,8 @@
 .scrollable-area a {
     transform-origin: top left; /* This sets the scaling origin to the top left */
 }
-.scrollable-area li:hover a {
-    color: #FF0000;  /* Bright red color */
-    transform: scale(1.03); /* Enlarges the text on hover */
-}
 .scrollable-area .h3{
     transform-origin: top left; /* This sets the scaling origin to the top left */
-}
-.scrollable-area .h3 a:hover {
-    color: #FF0000;  /* Bright red color */
-}
-.scrollable-area .h3:hover {
-    transform: scale(1.03);
 }
 .scrollable-area::-webkit-scrollbar {
     width: 10px;
@@ -108,6 +98,7 @@
 
 
 
+
 /* ==================================================
    Media Queries - 991.98px - Desktop
    ================================================== */
@@ -117,9 +108,18 @@
     /* max-width: 106vw; */
   }
 }
-
-
-
+@media (hover: hover) {
+    .scrollable-area li:hover a {
+        color: #FF0000;  /* Bright red color */
+        transform: scale(1.03); /* Enlarges the text on hover */
+    }
+   .scrollable-area .h3 a:hover {
+       color: #FF0000;  /* Bright red color */
+}
+   .scrollable-area .h3:hover {
+       transform: scale(1.03);
+  }
+}
 
 
 /* ==================================================
