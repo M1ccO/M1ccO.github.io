@@ -2,17 +2,18 @@
    Back To Main List Button
    ================================================== */
 .back-to-main-button {
-    display: inline-block;
-    padding: 4px 8px;
-    background-color: #8400003d;
+    display: block;
+    width: 20vw;
+    margin-left: auto;
+    margin-right: auto;
+    padding: -6px 4px;
+    background-color: #cfcfcf;
     color: black;
     text-align: center;
     -webkit-text-stroke: medium;
-    letter-spacing: 0.5px;
-    text-decoration: none;
     border: 2px black;
     border-style: outset;
-    border-radius: 8px;
+    border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
 }
@@ -20,7 +21,8 @@
     background-color: #a83232; /* Lighter dark red on hover */
 }
 .back-to-main-button .fas {
-    font-size: 24px; /* Adjust the size */
+    font-size: 30px; /* Adjust the size */
     color: #000; /* Adjust the color */
 }
+
 
