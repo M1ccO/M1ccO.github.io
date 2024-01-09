@@ -110,7 +110,7 @@
 }
 @media (hover: hover) {
     .scrollable-area li:hover a {
-        color: #FF0000;  /* Bright red color */
+        color: #0c48db;  /* Bright Blue color */
         transform: scale(1.03); /* Enlarges the text on hover */
     }
    .scrollable-area .h3 a:hover {
