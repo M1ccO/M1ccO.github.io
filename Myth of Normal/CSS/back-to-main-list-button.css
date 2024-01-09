@@ -18,7 +18,7 @@
     transition: background-color 0.3s ease;
 }
 .back-to-main-button:hover {
-    background-color: #a83232; /* Lighter dark red on hover */
+    background-color: #f50404;
 }
 .back-to-main-button .fas {
     font-size: 30px; /* Adjust the size */
