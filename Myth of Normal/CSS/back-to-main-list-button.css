@@ -14,10 +14,13 @@
     border-style: outset;
     border-radius: 8px;
     cursor: pointer;
-    font-size: 16px;
     transition: background-color 0.3s ease;
 }
 .back-to-main-button:hover {
     background-color: #a83232; /* Lighter dark red on hover */
+}
+.back-to-main-button .fas {
+    font-size: 24px; /* Adjust the size */
+    color: #000; /* Adjust the color */
 }
 
