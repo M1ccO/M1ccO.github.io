@@ -1,0 +1,23 @@
+/* ==================================================
+   Back To Main List Button
+   ================================================== */
+.back-to-main-button {
+    display: inline-block;
+    padding: 4px 8px;
+    background-color: #8400003d;
+    color: black;
+    text-align: center;
+    -webkit-text-stroke: medium;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    border: 2px black;
+    border-style: outset;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+.back-to-main-button:hover {
+    background-color: #a83232; /* Lighter dark red on hover */
+}
+

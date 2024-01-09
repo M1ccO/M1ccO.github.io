@@ -1,0 +1,117 @@
+/* ==================================================
+   Headings
+   ================================================== */
+.heading h1 {
+    text-align: center;
+    margin-left: 6vw;
+    font-size: 50px;
+    text-transform: uppercase;
+    color: #fffdfd;
+    letter-spacing: 6px;
+    font-family: "Playfair Display", serif;
+    font-weight: 400;
+    width: 86%;
+    position: relative;
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -17px;
+    margin-left: 0vw;
+    font-size: 15px;
+    color: #fff;
+    word-spacing: 6px;
+    font-weight: normal;
+    letter-spacing: 13px;
+    text-transform: uppercase;
+    font-family: "Raleway", sans-serif;
+    font-weight: 500;
+    display: flex;
+    position: relative;
+    /* left: 94px; */
+    align-items: center;
+    justify-content: center;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+.heading h1 span:after, h1 span:before {
+    content: " ";
+    display: block;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    height: 1px;
+    background-color: #f8f8f8;
+}
+h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+}
+
+h1 {
+    text-shadow: 5px 5px 8px black;
+}
+
+h2 {
+   color: black;
+}
+
+
+
+
+
+
+
+/* ==================================================
+   Media Queries - 767.98px - Tablet
+   ================================================== *
+@media (max-width: 767.98px) {
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+   }
+}
+
+
+
+
+
+
+
+/* ==================================================
+   Media Queries - 244px - M-Phones
+   ================================================== *
+@media (max-width: 244px) {
+.heading h1 {
+    font-size: calc(30px + (50 - 30) * ((100vw - 300px) / (1600 - 300)));
+    letter-spacing: calc(2px + (6 - 2) * ((100vw - 300px) / (1600 - 300)));
+    margin-left: 6vw;
+    width: 86%
+    top: 20px;
+}
+.heading h1 span {
+    margin-top: -10px;
+    margin-left: 0vw;
+    font-size: 12px;
+    word-spacing: 5px;
+    letter-spacing: 6px;
+    }
+}
+
+
