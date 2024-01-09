@@ -7,7 +7,7 @@
     margin-left: auto;
     margin-right: auto;
     padding: -6px 4px;
-    background-color: #cfcfcf;
+    background-color: #0c48db; /* Darkish Blue */
     color: black;
     text-align: center;
     -webkit-text-stroke: medium;
@@ -18,7 +18,7 @@
     transition: background-color 0.3s ease;
 }
 .back-to-main-button:hover {
-    background-color: #0c48db; /* Darkish Blue on hover */
+    background-color: #555; /* Black on hover */
 }
 .back-to-main-button .fas {
     font-size: 30px; /* Adjust the size */
