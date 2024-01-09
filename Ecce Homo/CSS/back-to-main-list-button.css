@@ -18,6 +18,6 @@
     transition: background-color 0.3s ease;
 }
 .back-to-main-button:hover {
-    background-color: #a83232; /* Lighter dark red on hover */
+    background-color: #0c48db; /* Darkish Blue on hover */
 }
 
