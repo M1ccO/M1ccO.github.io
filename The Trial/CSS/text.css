@@ -15,20 +15,18 @@ p, li {
   font-weight: bold;
   color: black !important;
   font-size: 23px;  /* Was 23px */
-  text-decoration: none;
+  text-decoration: underline;
   font-family: 'Concert One', sans-serif;
   letter-spacing: 1.7px;
     margin-top: 5px;
     margin-bottom: 5px;
 }
 .highlighted-text {
-  font-weight: bold;
-  color: black !important;
-  font-size: 21px;  /* Was 21px */
-  text-decoration: underline;
-  font-family: 'Concert One', sans-serif;
-  letter-spacing: 1.7px;
-}
+    font-weight: normal;
+    color: black !important;
+    font-size: 21px;
+    text-decoration: none;
+    font-family: 'Concert One', sans-serif;
 table {
     font-size: 18px;
     color: black;
