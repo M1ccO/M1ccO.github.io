@@ -11,6 +11,9 @@ p, li {
     line-height: 1.6;
     margin-bottom: 10px;
 }
+a {
+    text-decoration: none !important;
+}
 .subheading-text {
   font-weight: bold;
   color: black !important;
