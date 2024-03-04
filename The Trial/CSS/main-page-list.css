@@ -25,6 +25,7 @@
 }
 .scrollable-area li a {
     text-decoration: none;
+    font-weight: bold;
     color: inherit;
     left: 31px;
     position: relative;
