@@ -124,7 +124,7 @@
    .scrollable-area .h3 a:hover {
        color: #0c48db;  /* Bright Blue color */
 }
-   .scrollable-area .h3:hover {
+   .scrollable-area .h3 a:hover {
        transform: scale(1.03);
   }
 }
