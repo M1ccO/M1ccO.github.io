@@ -18,7 +18,7 @@
     transition: background-color 0.3s ease;
 }
 .back-to-main-button:hover {
-    background-color: #0c48db; /* Darkish Blue */
+   color: #ffa200; /* Bright Orange Color */
 }
 .back-to-main-button .fas {
     font-size: 30px; /* Adjust the size */
