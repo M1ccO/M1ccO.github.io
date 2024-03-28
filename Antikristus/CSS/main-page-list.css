@@ -31,8 +31,7 @@
     transition: color 0.3s ease, transform 0.3s ease;
     display: inline-block;
 }
-.scrollable-area .h3 {
-    margin-top: 3vh;
+.scrollable-area .h3 a {
     font-size: 25px;
     position: relative;
     margin-left: 5px;
@@ -42,16 +41,9 @@
     font-family: fangsong;
     font-weight: bold;
 }
-.scrollable-area .h3 a {
+.scrollable-area .h3 {
+    margin-top: 3vh;
     transition: color 0.3s ease, transform 0.3s ease;
-    font-size: 25px;
-    position: relative;
-    margin-left: 5px;
-    margin-right: 5px;
-    text-decoration: none;
-    color: black;
-    font-family: fangsong;
-    font-weight: bold;
 }
 .scrollable-area ul {
     padding-left: 0;
