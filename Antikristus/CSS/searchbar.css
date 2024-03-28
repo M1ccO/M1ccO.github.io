@@ -1,0 +1,192 @@
+/* ==================================================
+   Search Bar - Results Container
+   ================================================== */
+#resultsContainer > div {
+    margin-bottom: 20px;
+}
+#resultsContainer h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 24px;
+    color: black;
+    text-shadow: 2px 2px 3px gray;
+}
+#resultsContainer ul {
+    list-style-type: disc;
+    padding-left: 20px;
+}
+#resultsContainer .highlight {
+    background-color: yellow;
+}
+
+
+
+
+
+/* ==================================================
+   Search Bar - Search Container
+   ================================================== */
+#searchContainer, #searchContainer.search-bar {
+    display: flex;
+    position: relative;
+}
+#searchContainer input,
+#searchContainer .search-btn, 
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    transition: all 0.25s ease-out;
+}
+#searchContainer input,
+#searchContainer .search-btn {
+    width: 3em;
+    height: 3em;
+}
+#searchContainer input:invalid:not(:focus),
+#searchContainer .search-btn {
+    cursor: pointer;
+}
+#searchContainer,
+#searchContainer input:focus,
+#searchContainer input:valid  {
+    width: 100%;
+}
+#searchContainer input:focus,
+#searchContainer input:not(:focus) + .search-btn:focus {
+    outline: transparent;
+}
+#searchContainer {
+    margin-top: -3.7vh;
+    margin-bottom: -8vh;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.5em;
+    justify-content: center;
+    max-width: 42vw;
+    min-width: fit-content;
+    order: 0;
+}
+#searchContainer input {
+    background: #81818100;
+    border-radius: 1.5em;
+    box-shadow: 0 0 0 0.4em #ffffff inset;
+    padding: 0.75em;
+    transform: translate(0.5em,0.5em) scale(0.5);
+    transform-origin: 100% 0;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+}
+#searchContainer input::-webkit-search-decoration {
+    -webkit-appearance: none;
+}
+#searchContainer input:focus,
+#searchContainer input:valid {
+    background: #fff;
+    border-radius: 0.375em 0 0 0.375em;
+    box-shadow: 0 0 0 0.1em #d9d9d9 inset;
+    transform: scale(1);
+}
+#searchContainer .search-btn {
+    background: #ffffff;
+    border-radius: 0 0.75em 0.75em 0 / 0 1.5em 1.5em 0;
+    padding: 0.75em;
+    position: relative;
+    transform: translate(0.25em,0.25em) rotate(45deg) scale(0.25,0.125);
+    transform-origin: 0 50%;
+}
+#searchContainer input:not(:focus):hover {
+    transform: translate(0.5em,0.5em) scale(0.6);  /* scale the glass */
+}
+#searchContainer input:not(:focus):hover + .search-btn {
+    transform: translate(0.08em,0.32em) rotate(45deg) scale(0.3,0.15); /* scale the handle */
+}
+#searchContainer.active input:not(:focus):hover,
+#searchContainer.active input:not(:focus):hover + .search-btn {
+    transform: none;
+}
+#searchContainer .search-btn:hover {
+    /*box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.6);*/  /* Glow effect */
+}
+#searchContainer .search-btn:before, 
+#searchContainer .search-btn:after {
+    content: "";
+    display: block;
+    opacity: 0;
+    position: absolute;
+}
+#searchContainer .search-btn:before {
+    border-radius: 50%;
+    box-shadow: 0 0 0 0.2em #f1f1f1 inset;
+    top: 0.75em;
+    left: 0.75em;
+    width: 1.2em;
+    height: 1.2em;
+}
+#searchContainer .search-btn:after {
+    background: #f1f1f1;
+    border-radius: 0 0.25em 0.25em 0;
+    top: 51%;
+    left: 51%;
+    width: 0.75em;
+    height: 0.25em;
+    transform: translate(0.2em,0) rotate(45deg);
+    transform-origin: 0 50%;
+}
+#searchContainer .search-btn span {
+    display: inline-block;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+}
+
+
+
+
+
+/* ==================================================
+   Search Bar - Active State
+   ================================================== */
+#searchContainer input:focus + .search-btn,
+#searchContainer input:valid + .search-btn {
+    background: #2762f3;
+    border-radius: 0 0.375em 0.375em 0;
+    transform: scale(1);
+}
+#searchContainer input:focus + .search-btn:before, 
+#searchContainer input:focus + .search-btn:after,
+#searchContainer input:valid + .search-btn:before, 
+#searchContainer input:valid + .search-btn:after {
+    opacity: 1;
+}
+#searchContainer input:focus + .search-btn:hover,
+#searchContainer input:valid + .search-btn:hover,
+#searchContainer input:valid:not(:focus) + .search-btn:focus {
+    background: #0c48db;
+}
+#searchContainer input:focus + .search-btn:active,
+#searchContainer input:valid + .search-btn:active {
+    transform: translateY(1px);
+}
+
+
+
+
+
+
+
+/* ==================================================
+   Media Queries
+   ================================================== */
+@media screen and (prefers-color-scheme: dark) {
+    #searchContainer input {
+        box-shadow: 0 0 0 0.4em #f1f1f1 inset;
+    }
+    #searchContainer input:focus,
+    #searchContainer input:valid {
+        background: #3d3d3d;
+        box-shadow: 0 0 0 0.1em #3d3d3d inset;
+    }
+    #searchContainer .search-btn {
+        background: #f1f1f1;
+    }
+}
