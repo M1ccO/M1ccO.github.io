@@ -5,7 +5,7 @@
 
     transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
     display: flex;
-    background-color: #ffa200 !important;
+    color: #ffa200;  /* Bright Orange color */
     width: 50px;
     height: 50px;
     text-align: center;
