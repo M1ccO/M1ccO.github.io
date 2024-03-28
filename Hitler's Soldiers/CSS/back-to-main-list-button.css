@@ -18,7 +18,7 @@
     transition: background-color 0.3s ease;
 }
 .back-to-main-button:hover {
-   color: #ffa200; /* Bright Orange Color */
+    background-color: #ffa200; /* Bright Orange Color */
 }
 .back-to-main-button .fas {
     font-size: 30px; /* Adjust the size */
