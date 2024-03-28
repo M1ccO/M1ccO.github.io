@@ -116,7 +116,7 @@
    .scrollable-area .h3 a:hover {
         color: #cd0000;  /* Dark Red color */
 }
-   .scrollable-area .h3 a:hover {
+   .scrollable-area .h3:hover {
        transform: scale(1.03);
   }
 }
