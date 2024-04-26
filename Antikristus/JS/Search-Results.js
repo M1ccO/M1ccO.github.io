@@ -7,7 +7,7 @@ function displaySearchResults() {
         var type = urlParams.get('type');
         if (query && type) {
             var searchTerms = type === 'keywords' ? query.split(',').map(term => term.trim()) : [query];
-            var totalChapters = 27; // Update this to the total number of chapters
+            var totalChapters = 4; // Update this to the total number of chapters
             searchChapters(searchTerms, type === 'keywords', totalChapters);
         }
     };
