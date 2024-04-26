@@ -14,7 +14,7 @@ function scrollToChapter() {
 
             // Revert the color back after a short delay
             setTimeout(() => {
-                backToTopBtn.style.backgroundColor = '#ffa200'; // Original color
+                backToTopBtn.style.backgroundColor = '#00e8ff'; // Original color
             }, 300);
         };
 
