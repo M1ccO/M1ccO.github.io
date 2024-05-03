@@ -1,0 +1,143 @@
+/* ==================================================
+   Main Page List Styles
+   ================================================== */
+.scrollable-area {
+    position: relative;
+    max-width: 80vw;
+    position: relative;
+    margin-top: 6vh;
+    margin-bottom: 2.1vh;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 15px;
+    text-decoration: none;
+    border-style: solid;
+    border-width: 2px;
+    color: inherit;
+    background: #ffffff;
+    box-shadow: 9px 9px 16px rgba(0, 0, 0, 0.5);
+}
+.scrollable-area li {
+    position: relative;
+    left: 24px;
+    margin-right: 13vw;
+    margin-bottom: 1em;
+}
+.scrollable-area li a {
+    text-decoration: none;
+    color: inherit;
+    left: 31px;
+    position: relative;
+    transition: color 0.3s ease, transform 0.3s ease;
+    display: inline-block;
+}
+.scrollable-area .h3 {
+    margin-top: 3vh;
+    font-size: 25px;
+    position: relative;
+    margin-left: 5px;
+    margin-right: 5px;
+    text-decoration: none;
+    color: black;
+    font-family: fangsong;
+    font-weight: bold;
+}
+.scrollable-area .h3 a {
+    transition: color 0.3s ease, transform 0.3s ease;
+    font-size: 25px;
+    position: relative;
+    margin-left: 5px;
+    margin-right: 5px;
+    text-decoration: none;
+    color: black;
+    font-family: fangsong;
+    font-weight: bold;
+}
+.scrollable-area ul {
+    padding-left: 0;
+    list-style-type: none; /* Remove default bullet points */
+}
+.scrollable-area li::before {
+    content: '\2022';
+    margin-right: 0px;
+    display: inline-block;
+    transition: transform 0.3s ease;
+}
+.scrollable-area li::before {
+    content: "\2022"; /* Use Unicode character for a bullet (•) */
+    position: absolute;
+    left: 1em;
+}
+.scrollable-area a {
+    transform-origin: top left; /* This sets the scaling origin to the top left */
+}
+.scrollable-area .h3{
+    transform-origin: top left; /* This sets the scaling origin to the top left */
+}
+.scrollable-area::-webkit-scrollbar {
+    width: 10px;
+}
+.scrollable-area::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;
+}
+.scrollable-area::-webkit-scrollbar-track {
+    background: transparent;
+}
+.scrollable-area::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.scrollable-area > * {
+    direction: ltr;
+}
+.scrollable-area .chapter-heading {
+    font-size: 20px; /* Adjust as needed */
+    color: #333;    /* Adjust color as needed */
+    font-weight: bold;
+    margin: 10px 0;  /* Add some spacing above and below the heading */
+    padding-left: 1em; /* To align with your chapter list */
+    text-decoration: none;
+    color: inherit;
+}
+
+
+
+
+
+
+
+
+/* ==================================================
+   Media Queries - 991.98px - Desktop
+   ================================================== */
+@media (max-width: 991.98px) {
+.scrollable-area {
+    /* min-width: 76vw; */
+    /* max-width: 106vw; */
+  }
+}
+@media (hover: hover) {
+    .scrollable-area li:hover a {
+        color: #00e8ff;  /* Bright Blue color */
+        transform: scale(1.03); /* Enlarges the text on hover */
+    }
+   .scrollable-area .h3 a:hover {
+        color: #00e8ff;  /* Bright Blue color */
+}
+   .scrollable-area .h3 a:hover {
+       transform: scale(1.03);
+  }
+}
+
+
+/* ==================================================
+   Media Queries - 767.98px - Tablet
+   ================================================== */
+@media (max-width: 767.98px) {
+.scrollable-area {
+    /* max-width: 95%; */
+    /* min-width: 84vw; */
+    margin-top: 8vh;
+    min-height: 100vh;
+  }
+
