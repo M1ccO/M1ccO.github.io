@@ -1,0 +1,41 @@
+/* ==================================================
+   Scroll To the Top of the Page Button
+   ================================================== */
+#button {
+
+    transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+    display: flex;
+    background-color: #ff0099 !important;  /* Pink color */
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    border-radius: 4px;
+    border-color: black;
+    border-style: inset;
+    box-shadow: 2px 2px 6px 1px black;
+    position: fixed;
+    bottom: 15px;
+    left: 50%;
+    transform: translateX(-50%) !important;
+    opacity: 0;
+    z-index: 100;
+    justify-content: center;
+    align-content: center;
+    align-items: center;
+}
+
+#button i {
+    color: white;        /* Color of the icon */
+    font-size: 30px;     /* Size of the icon */
+}
+#button:hover {
+  cursor: pointer;
+  background-color: #555 !important;
+}
+#button:active {
+  background-color: #555;
+}
+#button.show {
+  opacity: 1;
+  visibility: visible;
+}
