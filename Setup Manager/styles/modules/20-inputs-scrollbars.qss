@@ -1,0 +1,190 @@
+/*
+    Module: 20-inputs-scrollbars.qss
+    Purpose:
+    - Text entry baseline and focus ring.
+    - Uniform minimal scrollbar visuals.
+    - Scroll-area chrome reset.
+    Owns:
+    - QLineEdit, QTextEdit, QComboBox, QSpinBox, QDateEdit defaults
+    - QScrollBar (vertical and horizontal)
+    - QScrollArea border reset
+*/
+
+/* ── Text / value entry fields ──────────────────────────────────────────── */
+QLineEdit,
+QTextEdit,
+QComboBox,
+QSpinBox,
+QDateEdit {
+    background: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    padding: 6px;
+}
+
+QLineEdit:focus,
+QTextEdit:focus {
+    border: 1px solid #1e88e5;
+}
+
+/* Tool Library-like dropdown style for selected modern combos */
+QComboBox[modernDropdown="true"] {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
+    border: 1px solid #c0c4c8;
+    border-radius: 6px;
+    min-height: 30px;
+    font-size: 10.5pt;
+    font-weight: 600;
+    min-width: 76px;
+    padding: 4px 10px;
+}
+
+QComboBox[modernDropdown="true"]:focus {
+    border: 1px solid #4a90e2;
+}
+
+QComboBox[modernDropdown="true"][hovered="true"] {
+    background-color: #edf5fc;
+}
+
+QComboBox[modernDropdown="true"][hovered="true"]::drop-down {
+    background-color: #edf5fc;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+QComboBox[modernDropdown="true"]::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 24px;
+    border: none;
+    background: transparent;
+}
+
+QComboBox[modernDropdown="true"]::down-arrow {
+    image: url("assets/icons/tools/menu_open.svg");
+    width: 20px;
+    height: 20px;
+}
+
+QComboBox[modernDropdown="true"] QAbstractItemView {
+    background-color: #FCFCFC;
+    color: #111111;
+    border: 1px solid #00C8FF;
+    border-radius: 6px;
+    outline: none;
+    padding: 2px 0;
+    font-size: 10.5pt;
+    font-weight: 600;
+    selection-background-color: #FCFCFC;
+    selection-color: #000000;
+}
+
+QComboBox[modernDropdown="true"] QAbstractItemView::item {
+    padding: 10px 14px;
+    background-color: #FCFCFC;
+    border: none;
+}
+
+QComboBox[modernDropdown="true"] QAbstractItemView::item:hover,
+QComboBox[modernDropdown="true"] QAbstractItemView::item:selected,
+QComboBox[modernDropdown="true"] QAbstractItemView::item:selected:active,
+QComboBox[modernDropdown="true"] QAbstractItemView::item:selected:!active,
+QComboBox[modernDropdown="true"] QAbstractItemView::item:selected:hover {
+    background-color: #F0F0F0;
+    color: #000000;
+    border: none;
+}
+
+QComboBox[zeroCoordCombo="true"] {
+    background: #e8f0fa;
+    border: 1px solid #b8c9db;
+    border-radius: 6px;
+    padding: 5px 8px;
+    color: #1f3448;
+    font-weight: 600;
+}
+
+QComboBox[zeroCoordCombo="true"]:focus {
+    border: 1px solid #7aa3c9;
+}
+
+QComboBox[zeroCoordCombo="true"]::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 18px;
+    border: none;
+    background: transparent;
+}
+
+QComboBox[zeroCoordCombo="true"] QAbstractItemView {
+    background: #ffffff;
+    border: 1px solid #b8c9db;
+    selection-background-color: #d9e8f7;
+    selection-color: #1b2f43;
+    padding: 2px;
+}
+
+QComboBox[modernDropdown="true"]#topTypeFilter {
+    min-height: 30px;
+    font-size: 9.5pt;
+    min-width: 68px;
+    padding: 3px 8px;
+}
+
+/* ── Vertical scrollbar ─────────────────────────────────────────────────── */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical {
+    background: #b8c3cd;
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #9eabb7;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: transparent;
+    height: 0px;
+}
+
+/* ── Horizontal scrollbar ───────────────────────────────────────────────── */
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #b8c3cd;
+    border-radius: 5px;
+    min-width: 24px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #9eabb7;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal,
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: transparent;
+    width: 0px;
+}
+
+/* ── Scroll area chrome reset ───────────────────────────────────────────── */
+QScrollArea {
+    border: none;
+    background: transparent;
+}

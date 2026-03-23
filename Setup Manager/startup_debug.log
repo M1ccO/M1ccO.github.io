@@ -1,0 +1,20 @@
+[2026-03-23 12:28:36] main(): start
+[2026-03-23 12:28:36] main(): after venv relaunch check
+[2026-03-23 12:28:36] main(): QApplication created
+[2026-03-23 12:28:36] main(): step 1 start
+[2026-03-23 12:28:36] main(): tool library preload enabled
+[2026-03-23 12:28:36] main(): step 2 imports
+[2026-03-23 12:28:37] main(): step 10 create MainWindow
+[2026-03-23 12:28:38] main(): win.show() called
+[2026-03-23 12:28:38] main(): entering app.exec()
+[2026-03-23 12:31:48] main(): start
+[2026-03-23 12:31:48] main(): after venv relaunch check
+[2026-03-23 12:31:48] main(): QApplication created
+[2026-03-23 12:31:48] main(): step 1 start
+[2026-03-23 12:31:48] main(): tool library preload enabled
+[2026-03-23 12:31:48] main(): step 2 imports
+[2026-03-23 12:31:50] main(): step 10 create MainWindow
+[2026-03-23 12:31:51] main(): win.show() called
+[2026-03-23 12:31:51] main(): entering app.exec()
+[2026-03-23 12:31:56] main(): app.exec() returned code=0
+[2026-03-23 13:11:34] main(): app.exec() returned code=0

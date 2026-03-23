@@ -1,0 +1,652 @@
+﻿import ctypes
+import json
+from pathlib import Path
+import shutil
+import sys
+
+from PySide6.QtCore import QEasingCurve, QProcess, QPropertyAnimation, QTimer, QSize, Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtNetwork import QLocalSocket
+from PySide6.QtWidgets import (
+    QApplication,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QMainWindow,
+    QMessageBox,
+    QPushButton,
+    QStackedWidget,
+    QStatusBar,
+    QToolButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from config import (
+    APP_TITLE,
+    NAV_ITEMS,
+    STYLE_PATH,
+    SHARED_UI_PREFERENCES_PATH,
+    I18N_DIR,
+    TOOL_ICONS_DIR,
+    TOOL_LIBRARY_EXE_CANDIDATES,
+    TOOL_LIBRARY_MAIN_PATH,
+    TOOL_LIBRARY_PROJECT_DIR,
+    TOOL_LIBRARY_SERVER_NAME,
+)
+
+
+def _allow_set_foreground():
+    """Grant any process permission to call SetForegroundWindow (Windows)."""
+    try:
+        ctypes.windll.user32.AllowSetForegroundWindow(ctypes.wintypes.DWORD(-1))
+    except Exception:
+        pass
+from ui.drawing_page import DrawingPage
+from ui.logbook_page import LogbookPage
+from ui.preferences_dialog import PreferencesDialog
+from ui.setup_page import SetupPage
+from services.localization_service import LocalizationService
+from services.ui_preferences_service import UiPreferencesService
+
+
+THEME_PALETTES = {
+    "classic": {
+        "surface_bg": "rgba(205, 212, 238, 0.97)",
+        "detail_box_bg": "rgba(232, 240, 250, 0.98)",
+    },
+    "graphite": {
+        "surface_bg": "rgba(168, 179, 198, 0.98)",
+        "detail_box_bg": "rgba(207, 217, 233, 0.98)",
+    },
+}
+
+
+class MainWindow(QMainWindow):
+    def __init__(self, work_service, logbook_service, draw_service, print_service):
+        super().__init__()
+        self.work_service = work_service
+        self.logbook_service = logbook_service
+        self.draw_service = draw_service
+        self.print_service = print_service
+        self.ui_preferences_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH)
+        self.ui_preferences = self.ui_preferences_service.load()
+        self.localization = LocalizationService(I18N_DIR)
+        self.localization.set_language(self.ui_preferences.get("language", "en"))
+        if hasattr(self.print_service, "set_translator"):
+            self.print_service.set_translator(self._t)
+
+        self.setWindowTitle(self._t("setup_manager.window_title", APP_TITLE))
+        self.resize(1360, 840)
+
+        self._build_ui()
+        self._apply_style()
+
+    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
+        return self.localization.t(key, default, **kwargs)
+
+    def _build_ui(self):
+        central = QWidget()
+        central.setObjectName("appRoot")
+        self.setCentralWidget(central)
+        root = QHBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        self.nav_rail = QFrame()
+        self.nav_rail.setProperty("navRail", True)
+        self.nav_rail.setFixedWidth(210)
+        nav_layout = QVBoxLayout(self.nav_rail)
+        nav_layout.setContentsMargins(12, 14, 12, 14)
+        nav_layout.setSpacing(8)
+
+        self.rail_title_label = QLabel(self._t("setup_manager.rail_title", "Setup Manager"))
+        self.rail_title_label.setStyleSheet("color: #000000; font-size: 16pt; font-weight: 700;")
+        nav_layout.addWidget(self.rail_title_label)
+
+        self.nav_buttons = []
+        for idx, item_name in enumerate(NAV_ITEMS):
+            key = (
+                "setup_manager.nav.setups"
+                if idx == 0
+                else "setup_manager.nav.drawings"
+                if idx == 1
+                else "setup_manager.nav.logbook"
+            )
+            button = QPushButton(self._t(key, item_name))
+            button.setProperty("navButton", True)
+            button.clicked.connect(lambda checked=False, i=idx: self._set_page(i))
+            nav_layout.addWidget(button)
+            self.nav_buttons.append(button)
+
+        nav_layout.addStretch(1)
+
+        launch_card = QFrame()
+        launch_card.setProperty("launchCard", True)
+        launch_layout = QVBoxLayout(launch_card)
+        launch_layout.setContentsMargins(12, 12, 12, 12)
+        launch_layout.setSpacing(8)
+        self.launch_title = QLabel(self._t("setup_manager.launch.title", "Master Data"))
+        self.launch_title.setProperty("sectionTitle", True)
+        self.launch_body = QLabel(
+            self._t(
+                "setup_manager.launch.default_body",
+                "Open Tool Library or Jaws Library. Select a work in Setup to open filtered data.",
+            )
+        )
+        self.launch_body.setWordWrap(True)
+        self.launch_body.setProperty("navHint", True)
+        self.open_tools_btn = QPushButton(self._t("setup_manager.open_tool_library", "Open Tool Library"))
+        self.open_tools_btn.setProperty("panelActionButton", True)
+        self.open_tools_btn.clicked.connect(self._open_tool_library_action)
+        self.open_jaws_btn = QPushButton(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
+        self.open_jaws_btn.setProperty("panelActionButton", True)
+        self.open_jaws_btn.clicked.connect(self._open_jaws_library_action)
+        self.preferences_btn = QToolButton()
+        self.preferences_btn.setProperty("topBarIconButton", True)
+        self.preferences_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / "menu_icon.svg")))
+        self.preferences_btn.setIconSize(QSize(30, 30))
+        self.preferences_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.preferences_btn.setFixedSize(38, 38)
+        self.preferences_btn.setAutoRaise(True)
+        self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
+        self.preferences_btn.clicked.connect(self._open_preferences)
+        launch_layout.addWidget(self.launch_title)
+        launch_layout.addWidget(self.launch_body)
+        launch_layout.addWidget(self.open_tools_btn)
+        launch_layout.addWidget(self.open_jaws_btn)
+        launch_layout.addWidget(self.preferences_btn, 0, Qt.AlignHCenter)
+        nav_layout.addWidget(launch_card)
+
+        root.addWidget(self.nav_rail)
+
+        self.stack = QStackedWidget()
+        self.setup_page = SetupPage(
+            self.work_service,
+            self.logbook_service,
+            self.draw_service,
+            self.print_service,
+            translate=self._t,
+        )
+        self.drawing_page = DrawingPage(self.draw_service, translate=self._t)
+        self.logbook_page = LogbookPage(self.logbook_service, self.work_service, translate=self._t)
+
+        self.setup_page.logbookChanged.connect(self.logbook_page.refresh_entries)
+        self.logbook_page.logbookChanged.connect(self.setup_page.refresh_works)
+        self.setup_page.openLibraryMasterFilterRequested.connect(self._open_tool_library_with_master_filter)
+        self.setup_page.libraryLaunchContextChanged.connect(self._on_setup_launch_context_changed)
+
+        self._launch_context = {
+            "selected": False,
+            "work_id": "",
+            "tool_ids": [],
+            "jaw_ids": [],
+            "has_tools": False,
+            "has_jaws": False,
+            "has_data": False,
+        }
+        self._update_launch_actions()
+
+        self.stack.addWidget(self.setup_page)
+        self.stack.addWidget(self.drawing_page)
+        self.stack.addWidget(self.logbook_page)
+        root.addWidget(self.stack, 1)
+
+        status_bar = QStatusBar()
+        self.setStatusBar(status_bar)
+        self._status_bar = status_bar
+        db_name = Path(self.work_service.db.path).name
+        source_status = self.draw_service.get_reference_source_status()
+        tool_state = (
+            Path(source_status["tool_db_path"]).name
+            if source_status["tool_db_exists"]
+            else self._t("setup_manager.status.missing", "missing")
+        )
+        jaw_state = (
+            Path(source_status["jaw_db_path"]).name
+            if source_status["jaw_db_exists"]
+            else self._t("setup_manager.status.missing", "missing")
+        )
+        self._status_data = {
+            "setup_db": db_name,
+            "tool_db": tool_state,
+            "jaw_db": jaw_state,
+        }
+        self._update_status_message()
+
+        self._set_page(0)
+
+    # ------------------------------------------------------------------
+    # Tool Library launcher helpers
+    # ------------------------------------------------------------------
+
+    def _send_to_tool_library(self, payload: dict) -> bool:
+        """Send an IPC message to a running Tool Library instance. Returns True on success."""
+        sock = QLocalSocket()
+        sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
+        if not sock.waitForConnected(300):
+            return False
+        try:
+            sock.write(json.dumps(payload).encode("utf-8"))
+            sock.flush()
+            sock.waitForBytesWritten(300)
+        except Exception:
+            return False
+        finally:
+            sock.disconnectFromServer()
+        return True
+
+    def _launch_tool_library(self, extra_args: list = None) -> bool:
+        """Start the Tool Library process. Returns True on success."""
+        args = list(extra_args or [])
+
+        def _is_safe_exe_target(exe_path: Path) -> bool:
+            try:
+                resolved = exe_path.resolve()
+                current = Path(sys.executable).resolve()
+            except Exception:
+                return False
+            if not resolved.exists() or resolved == current:
+                return False
+            return "tool library" in resolved.name.lower()
+
+        if TOOL_LIBRARY_MAIN_PATH.exists() and not getattr(sys, "frozen", False):
+            candidates = []
+            candidates.append(str(Path(sys.executable)))
+            py_cmd = shutil.which("python")
+            if py_cmd:
+                candidates.append(py_cmd)
+            py_launcher = shutil.which("py")
+            if py_launcher:
+                candidates.append(py_launcher)
+
+            for candidate in candidates:
+                cmd_args = [str(TOOL_LIBRARY_MAIN_PATH)] + args
+                if Path(candidate).name.lower() == "py.exe" or Path(candidate).name.lower() == "py":
+                    cmd_args = ["-3", str(TOOL_LIBRARY_MAIN_PATH)] + args
+                if QProcess.startDetached(candidate, cmd_args, str(TOOL_LIBRARY_PROJECT_DIR)):
+                    return True
+
+        for exe_path in TOOL_LIBRARY_EXE_CANDIDATES:
+            if _is_safe_exe_target(exe_path):
+                if QProcess.startDetached(str(exe_path), args, str(exe_path.parent)):
+                    return True
+        return False
+
+    def _fade_out_and(self, callback):
+        """Animate window opacity 1→0 then call *callback*."""
+        anim = QPropertyAnimation(self, b"windowOpacity", self)
+        anim.setDuration(180)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.0)
+        anim.setEasingCurve(QEasingCurve.InQuad)
+        anim.finished.connect(callback)
+        self._fade_anim = anim          # prevent GC
+        anim.start()
+
+    def fade_in(self):
+        """Animate window opacity 0→1 (called after being shown by IPC)."""
+        self.setWindowOpacity(0.0)
+        anim = QPropertyAnimation(self, b"windowOpacity", self)
+        anim.setDuration(220)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.OutQuad)
+        self._fade_anim = anim
+        anim.start()
+
+    def _current_window_rect(self) -> tuple[int, int, int, int]:
+        """Return the actual on-screen window rectangle, including snap placement."""
+        try:
+            rect = ctypes.wintypes.RECT()
+            hwnd = int(self.winId())
+            if ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                return rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top
+        except Exception:
+            pass
+        geom = self.frameGeometry()
+        return geom.x(), geom.y(), geom.width(), geom.height()
+
+    def _open_tool_library_together(self):
+        """Backward-compatible helper that opens Tool Library tools module without filters."""
+        self._open_tool_library_module("tools")
+
+    def _open_tool_library_module(self, module: str):
+        """Open Tool Library with no master filter and focus the requested module."""
+        x, y, width, height = self._current_window_rect()
+
+        # Grant the Tool Library process permission to take foreground focus.
+        _allow_set_foreground()
+
+        # Preferred path: IPC to the already-running (hidden) Tool Library.
+        payload = {
+            "geometry": f"{x},{y},{width},{height}",
+            "show": True,
+            "clear_master_filter": True,
+            "module": "jaws" if module == "jaws" else "tools",
+        }
+        if self._send_to_tool_library(payload):
+            def _finish_handoff():
+                self.hide()
+                self.setWindowOpacity(1.0)
+            self._fade_out_and(_finish_handoff)
+            return
+
+        # Fallback: launch a new Tool Library process.
+        args = ["--geometry", f"{x},{y},{width},{height}"]
+        if self._launch_tool_library(args):
+            self._send_request_with_retry(payload)
+            def _finish_launch():
+                self.hide()
+                self.setWindowOpacity(1.0)
+            self._fade_out_and(_finish_launch)
+            return
+
+        QMessageBox.warning(
+            self,
+            self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+            self._t(
+                "setup_manager.library_unavailable.body",
+                "Could not find a launchable Tool Library executable or source entry point.",
+            ),
+        )
+
+    def _open_tool_library_separate(self):
+        """Backward-compatible helper that now opens Jaws module without filters."""
+        self._open_tool_library_module("jaws")
+
+    def _open_tool_library_deep_link(self, kind: str, item_id: str):
+        """Open Tool Library and navigate directly to a specific jaw or tool."""
+        x, y, width, height = self._current_window_rect()
+        if kind == "jaw":
+            args = ["--geometry", f"{x},{y},{width},{height}", "--open-jaw", item_id] if item_id else []
+        else:
+            args = ["--geometry", f"{x},{y},{width},{height}", "--open-tool", item_id] if item_id else []
+        if not self._launch_tool_library(args):
+            QMessageBox.warning(
+                self,
+                self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+                self._t(
+                    "setup_manager.library_unavailable.body",
+                    "Could not find a launchable Tool Library executable or source entry point.",
+                ),
+            )
+
+    def _open_tool_library_with_master_filter(self, tool_ids, jaw_ids, module: str = "tools"):
+        """Open Tool Library in launch-scoped master filter mode."""
+        safe_tools = [str(t).strip() for t in (tool_ids or []) if str(t).strip()]
+        safe_jaws = [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]
+        if not safe_tools and not safe_jaws:
+            QMessageBox.information(
+                self,
+                self._t("setup_manager.viewer.title", "Viewer"),
+                self._t("setup_manager.viewer.no_links", "No jaw/tool links were found for this setup."),
+            )
+            return
+
+        x, y, width, height = self._current_window_rect()
+        _allow_set_foreground()
+
+        # Preferred path: IPC to the already-running Tool Library.
+        payload = {
+            "geometry": f"{x},{y},{width},{height}",
+            "show": True,
+            "master_filter_tools": safe_tools,
+            "master_filter_jaws": safe_jaws,
+            "master_filter_active": True,
+            "module": "jaws" if module == "jaws" else "tools",
+        }
+        if self._send_to_tool_library(payload):
+            def _finish_handoff():
+                self.hide()
+                self.setWindowOpacity(1.0)
+            self._fade_out_and(_finish_handoff)
+            return
+
+        # Fallback: launch a new Tool Library process.
+        args = [
+            "--geometry", f"{x},{y},{width},{height}",
+            "--master-filter-tools", ",".join(safe_tools),
+            "--master-filter-jaws", ",".join(safe_jaws),
+            "--master-filter-active", "1",
+        ]
+        if self._launch_tool_library(args):
+            self._send_request_with_retry(payload)
+            def _finish_launch():
+                self.hide()
+                self.setWindowOpacity(1.0)
+            self._fade_out_and(_finish_launch)
+            return
+
+        QMessageBox.warning(
+            self,
+            self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+            self._t(
+                "setup_manager.library_unavailable.body",
+                "Could not find a launchable Tool Library executable or source entry point.",
+            ),
+        )
+
+    def _send_request_with_retry(self, payload: dict, attempts: int = 12, delay_ms: int = 200):
+        """Retry IPC shortly after launching Tool Library so module/filter payload is applied."""
+        if self._send_to_tool_library(payload):
+            return
+        if attempts <= 1:
+            return
+        QTimer.singleShot(delay_ms, lambda: self._send_request_with_retry(payload, attempts - 1, delay_ms))
+
+    def _set_launch_button_variant(self, button: QPushButton, primary: bool):
+        button.setProperty("primaryAction", bool(primary))
+        button.setProperty("secondaryAction", not bool(primary))
+        button.style().unpolish(button)
+        button.style().polish(button)
+
+    def _on_setup_launch_context_changed(self, context):
+        self._launch_context = dict(context or {})
+        self._update_launch_actions()
+
+    def _update_launch_actions(self):
+        selected = bool(self._launch_context.get("selected"))
+        if selected:
+            work_id = str(self._launch_context.get("work_id") or "").strip()
+            self.launch_body.setText(
+                self._t(
+                    "setup_manager.launch.selected_body",
+                    "Selected work {work_id}: open filtered Tool Library and Jaws Library views.",
+                    work_id=work_id,
+                )
+                if work_id
+                else self._t(
+                    "setup_manager.launch.selected_body_no_id",
+                    "Selected work: open filtered Tool Library and Jaws Library views.",
+                )
+            )
+            self._set_launch_button_variant(self.open_tools_btn, True)
+            self._set_launch_button_variant(self.open_jaws_btn, True)
+        else:
+            self.launch_body.setText(
+                self._t(
+                    "setup_manager.launch.default_body",
+                    "Open Tool Library or Jaws Library. Select a work in Setup to open filtered data.",
+                )
+            )
+            self._set_launch_button_variant(self.open_tools_btn, False)
+            self._set_launch_button_variant(self.open_jaws_btn, False)
+
+    def _open_tool_library_action(self):
+        if self._launch_context.get("selected"):
+            if not self._launch_context.get("has_data"):
+                QMessageBox.information(
+                    self,
+                    self._t("setup_manager.viewer.title", "Viewer"),
+                    self._t("setup_manager.viewer.no_links", "No jaw/tool links were found for this setup."),
+                )
+                return
+            self._open_tool_library_with_master_filter(
+                self._launch_context.get("tool_ids") or [],
+                self._launch_context.get("jaw_ids") or [],
+                module="tools",
+            )
+            return
+        self._open_tool_library_module("tools")
+
+    def _open_jaws_library_action(self):
+        if self._launch_context.get("selected"):
+            jaw_ids = self._launch_context.get("jaw_ids") or []
+            if not jaw_ids:
+                QMessageBox.information(
+                    self,
+                    self._t("setup_manager.viewer.title", "Viewer"),
+                    self._t("setup_manager.viewer.no_jaw_links", "Selected work has no jaw links."),
+                )
+                return
+            self._open_tool_library_with_master_filter([], jaw_ids, module="jaws")
+            return
+        self._open_tool_library_module("jaws")
+
+    def _open_preferences(self):
+        dialog = PreferencesDialog(self.ui_preferences, self._t, parent=self)
+        if dialog.exec() != PreferencesDialog.Accepted:
+            return
+
+        previous_language = self.ui_preferences.get("language", "en")
+        self.ui_preferences = self.ui_preferences_service.save(dialog.preferences_payload())
+        self.localization.set_language(self.ui_preferences.get("language", "en"))
+        if hasattr(self.print_service, "set_translator"):
+            self.print_service.set_translator(self._t)
+        self._apply_style()
+        self._refresh_localized_labels()
+
+        QMessageBox.information(
+            self,
+            self._t("preferences.saved_title", "Preferences"),
+            self._t("preferences.saved_body", "Preferences saved."),
+        )
+        if self.ui_preferences.get("language", "en") != previous_language:
+            QMessageBox.information(
+                self,
+                self._t("preferences.restart_title", "Restart Required"),
+                self._t("preferences.restart_body", "Language changes will be applied after restarting the app."),
+            )
+
+    def _refresh_localized_labels(self):
+        self.setWindowTitle(self._t("setup_manager.window_title", APP_TITLE))
+        if hasattr(self, "rail_title_label"):
+            self.rail_title_label.setText(self._t("setup_manager.rail_title", "Setup Manager"))
+        if hasattr(self, "launch_title"):
+            self.launch_title.setText(self._t("setup_manager.launch.title", "Master Data"))
+        if hasattr(self, "open_tools_btn"):
+            self.open_tools_btn.setText(self._t("setup_manager.open_tool_library", "Open Tool Library"))
+        if hasattr(self, "open_jaws_btn"):
+            self.open_jaws_btn.setText(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
+        if hasattr(self, "preferences_btn"):
+            self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
+        for idx, button in enumerate(getattr(self, "nav_buttons", [])):
+            key = (
+                "setup_manager.nav.setups"
+                if idx == 0
+                else "setup_manager.nav.drawings"
+                if idx == 1
+                else "setup_manager.nav.logbook"
+            )
+            button.setText(self._t(key, button.text()))
+        if hasattr(self, "setup_page") and hasattr(self.setup_page, "apply_localization"):
+            self.setup_page.apply_localization(self._t)
+        if hasattr(self, "drawing_page") and hasattr(self.drawing_page, "apply_localization"):
+            self.drawing_page.apply_localization(self._t)
+        if hasattr(self, "logbook_page") and hasattr(self.logbook_page, "refresh_entries"):
+            self.logbook_page.title.setText(self._t("setup_manager.nav.logbook", "Logbook"))
+            self.logbook_page.search_toggle_btn.setToolTip(self._t("logbook_page.search_toggle_tip", "Show/hide filters"))
+            self.logbook_page.refresh_btn.setText(self._t("drawing_page.action.refresh", "Refresh"))
+            self.logbook_page.delete_btn.setText(self._t("logbook_page.action.delete", "Delete"))
+            self.logbook_page.export_btn.setText(self._t("logbook_page.action.export_excel", "Export Excel"))
+            self.logbook_page.table.setHorizontalHeaderLabels(
+                [
+                    self._t("logbook_page.col.date", "Date"),
+                    self._t("logbook_page.col.serial", "Serial"),
+                    self._t("setup_page.field.work_id", "Work ID"),
+                    self._t("logbook_page.col.order", "Order"),
+                    self._t("logbook_page.col.qty", "Qty"),
+                    self._t("setup_page.field.notes", "Notes"),
+                ]
+            )
+            self.logbook_page._detail_hint_text = self._t(
+                "logbook_page.detail_hint",
+                "Select a logbook row to view details.",
+            )
+            self.logbook_page._update_search_placeholder()
+            self.logbook_page.refresh_entries()
+        self._update_status_message()
+        self._update_launch_actions()
+
+    def _update_status_message(self):
+        if not hasattr(self, "_status_bar") or not hasattr(self, "_status_data"):
+            return
+        self._status_bar.showMessage(
+            self._t(
+                "setup_manager.status.message",
+                "Setup DB: {setup_db} | Tool DB: {tool_db} | Jaw DB: {jaw_db}",
+                setup_db=self._status_data.get("setup_db", ""),
+                tool_db=self._status_data.get("tool_db", ""),
+                jaw_db=self._status_data.get("jaw_db", ""),
+            )
+        )
+
+    def _build_ui_preference_overrides(self) -> str:
+        theme_name = self.ui_preferences.get("color_theme", "classic")
+        palette = THEME_PALETTES.get(theme_name, THEME_PALETTES["classic"])
+        font_family = self.ui_preferences.get("font_family", "Segoe UI").replace("'", "\\'")
+        return (
+            "/* Runtime UI preference overrides */\n"
+            f"* {{ font-family: '{font_family}'; }}\n"
+            "QFrame#setupWorkShell,\n"
+            "QListWidget#toolCatalog,\n"
+            "QListWidget#toolCatalog::viewport,\n"
+            "QListWidget#setupWorkList,\n"
+            "QListWidget#setupWorkList::viewport {\n"
+            f"    background-color: {palette['surface_bg']};\n"
+            "}\n"
+            "QFrame[detailField=\"true\"],\n"
+            "QFrame[detailField=\"true\"][detailHeroField=\"true\"] {\n"
+            f"    background-color: {palette['detail_box_bg']};\n"
+            "}\n"
+        )
+
+    def _set_page(self, index):
+        self.stack.setCurrentIndex(index)
+        for idx, button in enumerate(self.nav_buttons):
+            button.setProperty("active", idx == index)
+            button.style().unpolish(button)
+            button.style().polish(button)
+
+    def closeEvent(self, event):
+        """Save window geometry when closing for restoration on next launch."""
+        x, y, width, height = self._current_window_rect()
+        geom_file = Path(self.work_service.db.path).parent / ".window_geometry"
+        try:
+            geom_file.write_text(f"{x},{y},{width},{height}")
+        except Exception:
+            pass
+        super().closeEvent(event)
+        app = QApplication.instance()
+        if app is not None:
+            app.quit()
+
+    def _apply_style(self):
+        try:
+            style_dir = Path(STYLE_PATH).parent
+            modules_dir = style_dir / "modules"
+            merged = []
+            if modules_dir.is_dir():
+                for module_path in sorted(modules_dir.glob("*.qss")):
+                    try:
+                        merged.append(module_path.read_text(encoding="utf-8"))
+                    except Exception:
+                        pass
+            if merged:
+                self.setStyleSheet("\n".join(merged) + "\n\n" + self._build_ui_preference_overrides())
+            else:
+                qss = Path(STYLE_PATH).read_text(encoding="utf-8")
+                self.setStyleSheet(qss + "\n\n" + self._build_ui_preference_overrides())
+        except Exception:
+            pass

@@ -1,0 +1,318 @@
+/*
+    Module: 60-catalog.qss
+    Purpose:
+    - Controls catalog surfaces and row-card appearance.
+    Owns:
+    - Catalog shell/list background
+    - Row card normal/hover/selected states
+    - Row header/value typography
+*/
+
+/* Outer shell around list region */
+QFrame[catalogShell="true"] {
+    background-color: transparent;
+    border: 1px solid #2f3942;
+    border-radius: 6px;
+}
+
+QFrame[catalogHeaderRow="true"] {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel[catalogTopHeader="true"] {
+    font-size: 13pt;
+    font-weight: 600;
+    color: #1b1f22;
+}
+
+/* List viewport background */
+QListWidget#toolCatalog,
+QListWidget#setupWorkList {
+    background-color: rgba(205, 212, 238, 0.97);
+    border: none;
+    outline: none;
+    padding: 2px;
+}
+
+QListWidget#toolCatalog::item,
+QListWidget#setupWorkList::item {
+    background: transparent;
+    border: none;
+}
+
+/* Row card baseline */
+QFrame[toolListCard="true"],
+QFrame[workCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #3e4a56;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+QFrame[workRowCard="true"] {
+    min-height: 84px;
+    max-height: 84px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"] {
+    min-height: 86px;
+    max-height: 86px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"][descriptionWrapped="true"] {
+    min-height: 86px;
+    max-height: 86px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"][singleColumnMode="true"] {
+    min-height: 86px;
+    max-height: 86px;
+}
+
+QFrame[detailToolCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #2f3942;
+}
+
+QFrame[toolListCard="true"]:hover,
+QFrame[workCard="true"]:hover {
+    background-color: #f7fbff;
+}
+
+/* Selected state emphasis */
+QFrame[toolListCard="true"][selected="true"],
+QFrame[toolListCard="true"][selected="true"]:hover,
+QFrame[workCard="true"][selected="true"],
+QFrame[workCard="true"][selected="true"]:hover {
+    background-color: #ffffff;
+    border: 3px solid #42a5f5;
+    padding: 0px;
+}
+
+QFrame[toolListCard="true"][selected="true"] QLabel,
+QFrame[toolListCard="true"] QLabel,
+QFrame[workCard="true"][selected="true"] QLabel,
+QFrame[workCard="true"] QLabel {
+    background-color: transparent;
+}
+
+QFrame[toolListCard="true"][selected="true"] QLabel,
+QFrame[workCard="true"][selected="true"] QLabel {
+    color: #24303c;
+}
+
+/* Row text typography */
+QLabel[toolCardHeader="true"] {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #2b3136;
+}
+
+QLabel[catalogRowHeader="true"] {
+    min-height: 16px;
+    max-height: 16px;
+}
+
+QLabel[toolCardValue="true"] {
+    font-size: 16pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+
+QFrame[workRowCard="true"] QLabel[catalogRowValue="true"] {
+    min-height: 30px;
+    max-height: 30px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"] QLabel[catalogRowDescription="true"] {
+    min-height: 30px;
+    max-height: 30px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"][descriptionWrapped="true"] QLabel[catalogRowDescription="true"] {
+    min-height: 38px;
+    max-height: 38px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"] QLabel[catalogRowLead="true"] {
+    min-height: 30px;
+    max-height: 30px;
+}
+
+QFrame[workRowCard="true"][compactMode="true"][singleColumnMode="true"] QLabel[catalogRowLead="true"] {
+    min-height: 30px;
+    max-height: 30px;
+}
+
+QLabel[toolCardValue="true"][detailToolText="true"] {
+    font-size: 14pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+
+/* Select Tools dialog list panel */
+QFrame[toolPickerPanel="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+}
+
+QListWidget#toolPickerList {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 2px;
+}
+
+QListWidget#toolPickerList::item {
+    padding: 7px 10px;
+    margin: 0px 2px;
+    border: none;
+    border-bottom: 1px solid #d8e0e8;
+    background-color: transparent;
+}
+
+QListWidget#toolPickerList::item:hover {
+    background-color: #edf5fc;
+    border-bottom: 1px solid #c9d9ea;
+}
+
+QListWidget#toolPickerList::item:selected,
+QListWidget#toolPickerList::item:selected:active,
+QListWidget#toolPickerList::item:selected:!active {
+    background-color: #cfe4f8;
+    border: 1px solid #8db9df;
+    border-radius: 4px;
+    color: #16334e;
+}
+
+QListWidget#toolPickerList::indicator:unchecked {
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border: 1px solid #8fa7bf;
+    border-radius: 2px;
+}
+
+QListWidget#toolPickerList::indicator:unchecked:selected,
+QListWidget#toolPickerList::indicator:unchecked:hover {
+    background: #ffffff;
+    border: 1px solid #7fa2c7;
+}
+
+QFrame[toolIdsPanel="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+}
+
+QListWidget#toolIdsOrderList {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 2px;
+}
+
+QListWidget#toolIdsOrderList::item {
+    padding: 7px 10px;
+    margin: 0px 2px;
+    border: none;
+    border-bottom: 1px solid #d8e0e8;
+    background-color: transparent;
+}
+
+QListWidget#toolIdsOrderList::item:hover {
+    background-color: #edf5fc;
+    border-bottom: 1px solid #c9d9ea;
+}
+
+QListWidget#toolIdsOrderList::item:selected,
+QListWidget#toolIdsOrderList::item:selected:active,
+QListWidget#toolIdsOrderList::item:selected:!active {
+    background-color: #cfe4f8;
+    border: 1px solid #8db9df;
+    border-radius: 4px;
+    color: #16334e;
+}
+
+QListWidget#drawingList {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    outline: none;
+    padding: 8px 2px 2px 2px;
+    font-size: 12pt;
+}
+
+QListWidget#drawingList::viewport {
+    background-color: #ffffff;
+    border: none;
+    border-radius: 6px;
+}
+
+QListWidget#drawingList::item {
+    padding: 10px 10px;
+    margin: 0px 2px;
+    border: none;
+    border-bottom: 1px solid #d8dfe7;
+    background-color: transparent;
+    color: #24303c;
+}
+
+QListWidget#drawingList::item:hover {
+    background-color: #edf5fc;
+    border-bottom: 1px solid #c9d9ea;
+}
+
+QListWidget#drawingList::item:selected,
+QListWidget#drawingList::item:selected:active,
+QListWidget#drawingList::item:selected:!active {
+    background-color: #ffffff;
+    border: 2px solid #1e88e5;
+    border-radius: 4px;
+    color: #16334e;
+}
+
+QListWidget#logbookDetailList {
+    background-color: #ffffff;
+    border: none;
+    outline: none;
+    border-radius: 5px;
+    padding: 2px;
+    font-size: 14pt;
+}
+
+QListWidget#logbookDetailList QLabel[logbookDetailLabel="true"] {
+    font-size: 13.5pt;
+    font-weight: 500;
+    color: #16334e;
+}
+
+QListWidget#logbookDetailList QLabel[logbookDetailValue="true"] {
+    font-size: 13.5pt;
+    font-weight: 700;
+    color: #0f2740;
+}
+
+QListWidget#logbookDetailList::viewport {
+    background-color: #ffffff;
+    border: none;
+    border-radius: 5px;
+}
+
+QListWidget#logbookDetailList::item {
+    padding: 13px 10px 15px 10px;
+    margin: 0 6px;
+    border: none;
+    border-bottom: 1px solid #d8dfe7;
+    background-color: transparent;
+    color: #24303c;
+}
+
+QListWidget#logbookDetailList::item:selected,
+QListWidget#logbookDetailList::item:selected:active,
+QListWidget#logbookDetailList::item:selected:!active {
+    background-color: transparent;
+    color: #24303c;
+}

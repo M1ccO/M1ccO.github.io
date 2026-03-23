@@ -1,0 +1,168 @@
+/*
+    Module: 60-catalog.qss
+    Purpose:
+    - Controls catalog surfaces and row-card appearance.
+    Owns:
+    - Catalog shell/list background
+    - Row card normal/hover/selected states
+    - Row header/value typography
+*/
+
+/* Outer shell around list region */
+QFrame[catalogShell="true"] {
+    background-color: transparent;
+    border: 1px solid #2f3942;
+    border-radius: 6px;
+}
+
+QFrame[catalogHeaderRow="true"] {
+    background-color: transparent;
+    border: none;
+}
+
+QLabel[catalogTopHeader="true"] {
+    font-size: 13pt;
+    font-weight: 600;
+    color: #1b1f22;
+}
+
+/* List viewport background */
+QListWidget#toolCatalog {
+    /* List viewport uses a muted blue-gray so cards sit on a calm, low-saturation field */
+    background-color: rgba(205, 212, 238, 0.97);
+    border: none;
+    outline: none;
+    padding: 8px;
+}
+
+QListWidget#toolCatalog::item {
+    background: transparent;
+    border: none;
+}
+
+/* Row card baseline */
+
+QFrame[toolListCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #3e4a56;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+QFrame[catalogRowCard="true"] {
+    min-height: 74px;
+    max-height: 74px;
+}
+
+QFrame[catalogRowCard="true"][rowNarrow="true"] {
+    min-height: 76px;
+    max-height: 76px;
+}
+
+QFrame[catalogRowCard="true"][rowTight="true"] {
+    min-height: 78px;
+    max-height: 78px;
+}
+
+QFrame[toolListCard="true"]:hover {
+    background-color: #f7fbff;
+}
+
+/* Selected state emphasis */
+QFrame[toolListCard="true"][selected="true"],
+QFrame[toolListCard="true"][selected="true"]:hover {
+    background-color: #ffffff;
+    border: 3px solid #42a5f5;
+    padding: 0px;
+}
+
+QFrame[toolListCard="true"][selected="true"] QLabel,
+QFrame[toolListCard="true"] QLabel {
+    background-color: transparent;
+}
+
+QFrame[toolListCard="true"][selected="true"] QLabel {
+    color: #24303c;
+}
+
+/* Row text typography */
+QLabel[toolCardHeader="true"] {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #2b3136;
+}
+
+QLabel[catalogRowHeader="true"] {
+    min-height: 16px;
+    max-height: 16px;
+}
+
+QLabel[catalogRowHeader="true"][catalogRowHeaderWrap="true"] {
+    min-height: 18px;
+    max-height: 32px;
+}
+
+QLabel[toolCardValue="true"] {
+    font-size: 16pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+
+QFrame[catalogRowCard="true"][detailOpen="true"] QLabel[toolCardValue="true"] {
+    font-size: 15.2pt;
+}
+
+QFrame[catalogRowCard="true"][rowNarrow="true"] QLabel[toolCardValue="true"] {
+    font-size: 14.6pt;
+}
+
+QFrame[catalogRowCard="true"][rowTight="true"] QLabel[toolCardValue="true"] {
+    font-size: 13.6pt;
+}
+
+QFrame[catalogRowCard="true"][rowTiny="true"] QLabel[toolCardValue="true"] {
+    font-size: 12.8pt;
+}
+
+QFrame[catalogRowCard="true"] QLabel[catalogRowValue="true"] {
+    min-height: 28px;
+    max-height: 28px;
+}
+
+QFrame[catalogRowCard="true"] QLabel[catalogRowPrimaryValue="true"] {
+    min-height: 28px;
+    max-height: 44px;
+    margin-top: 1px;
+    margin-bottom: 1px;
+}
+
+QFrame[catalogRowCard="true"][detailOpen="true"] {
+    min-height: 78px;
+    max-height: 78px;
+}
+
+QFrame[catalogRowCard="true"][detailOpen="true"] QLabel[catalogRowPrimaryValue="true"] {
+    min-height: 40px;
+    max-height: 50px;
+}
+
+QFrame[catalogRowCard="true"] QLabel[catalogRowValue="true"][nameWrap="true"] {
+    min-height: 40px;
+    max-height: 48px;
+}
+
+QFrame[catalogRowCard="true"][rowTight="true"] QLabel[catalogRowValue="true"][nameWrap="true"] {
+    min-height: 38px;
+    max-height: 46px;
+}
+
+QFrame[catalogRowCard="true"] QLabel[catalogRowValue="true"][nameTiny="true"] {
+    font-size: 12.2pt;
+}
+
+QLabel[catalogRowIcon="true"] {
+    min-width: 48px;
+    max-width: 48px;
+    min-height: 48px;
+    max-height: 48px;
+}

@@ -1,0 +1,141 @@
+/*
+    Module: 40-buttons.qss
+    Purpose:
+    - Action button hierarchy and interaction states.
+    Owns:
+    - Default QPushButton (primary blue)
+    - Secondary / ghost button variant
+    - Navigation rail buttons (transparent, left-aligned)
+    - Disabled state
+*/
+
+/* ── Default action button (primary blue) ──────────────────────────────── */
+QPushButton {
+    background: #1e88e5;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 14px;
+    font-weight: 600;
+    min-height: 30px;
+    text-transform: uppercase;
+}
+
+QPushButton:hover {
+    background: #1976d2;
+}
+
+QPushButton:pressed {
+    background: #1565c0;
+}
+
+QPushButton:disabled {
+    background: #c8d4e0;
+    color: #8a9aaa;
+}
+
+/* ── Secondary (less emphasis) ──────────────────────────────────────────── */
+QPushButton[secondaryAction="true"] {
+    background: #d9e6f4;
+    color: #000000;
+    border: 1px solid #b8cfe8;
+}
+
+QPushButton[secondaryAction="true"]:hover {
+    background: #c7daee;
+}
+
+QPushButton[secondaryAction="true"]:pressed {
+    background: #b5cde7;
+}
+
+QPushButton[secondaryAction="true"]:disabled {
+    background: #eef4fb;
+    color: #9aaabb;
+}
+
+/* ── Navigation rail buttons ────────────────────────────────────────────── */
+QPushButton[navButton="true"] {
+    color: #000000;
+    background: transparent;
+    text-align: left;
+    border: none;
+    padding: 10px 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    min-height: 0;
+}
+
+QPushButton[navButton="true"]:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+QPushButton[navButton="true"][active="true"] {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #54c5ff, stop:1 #2397e6);
+    color: #ffffff;
+    border: 1px solid #1680de;
+}
+
+/* ── Compact action buttons (Tool Library style) ───────────────────────── */
+QPushButton[panelActionButton="true"] {
+    min-height: 26px;
+    padding: 2px 10px;
+    border: 1px solid #c0c4c8;
+    border-radius: 5px;
+    color: #2b3640;
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
+    text-transform: uppercase;
+}
+
+QPushButton[panelActionButton="true"]:hover {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #eaf1f6, stop:1 #ffffff);
+}
+
+QPushButton[panelActionButton="true"]:pressed {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #d6dee5, stop:1 #f2f5f8);
+}
+
+QPushButton[panelActionButton="true"][primaryAction="true"] {
+    color: #ffffff;
+    border: 1px solid #1680de;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #54c5ff, stop:1 #2397e6);
+}
+
+QPushButton[panelActionButton="true"][primaryAction="true"]:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #72d0ff, stop:1 #2fa1ee);
+}
+
+QPushButton[panelActionButton="true"][dangerAction="true"] {
+    color: #7d1f22;
+    border: 1px solid #d7b4b7;
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #fff7f7, stop:1 #f3e3e4);
+}
+
+QPushButton[panelActionButton="true"][dangerAction="true"]:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #fffdfd, stop:1 #f5e8e8);
+}
+
+/* Top bar icon buttons are borderless with hover tint */
+QToolButton[topBarIconButton="true"] {
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    padding: 0px;
+    min-height: 0px;
+}
+
+QToolButton[topBarIconButton="true"]:hover {
+    background-color: #dcecfb;
+}
+
+QToolButton[topBarIconButton="true"]:pressed {
+    background-color: #c7e0f7;
+}

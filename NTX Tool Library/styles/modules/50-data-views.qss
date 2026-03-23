@@ -1,0 +1,116 @@
+/*
+    Module: 50-data-views.qss
+    Purpose:
+    - Shared styling for dense data containers.
+    Owns:
+    - QTableWidget visuals
+    - Header sections
+    - Tabs and group boxes
+    - Diagram/value helper panels
+*/
+
+/* Table surfaces and selection colors */
+QTableWidget, #toolTable {
+    background-color: #ffffff;
+    border: 1px solid #c9d1d9;
+    gridline-color: #e2e7ec;
+    alternate-background-color: #f8fbfd;
+    selection-background-color: #00C8FF;
+    selection-color: #16232e;
+    outline: none;
+}
+
+QTableWidget::item, #toolTable::item {
+    padding: 4px 6px;
+    border-bottom: 1px solid #eef2f5;
+    background: transparent;
+}
+
+QTableWidget::item:selected, #toolTable::item:selected {
+    background-color: #00C8FF;
+    color: #16232e;
+}
+
+/* Header bar for tables */
+QHeaderView::section {
+    background-color: #f3f6f8;
+    border: 1px solid #d9e0e6;
+    padding: 7px 8px;
+    font-weight: 700;
+    color: #25313b;
+}
+
+/* Tab container and selected tab treatment */
+QTabWidget::pane {
+    border: 1px solid #d8e0e6;
+    background: #ffffff;
+}
+
+QTabBar::tab {
+    background: #e8edf2;
+    border: 1px solid #cfd6dd;
+    padding: 8px 14px;
+    min-width: 110px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background: #ffffff;
+    border-bottom-color: #ffffff;
+    font-weight: 700;
+}
+
+/* Group box cards */
+QGroupBox {
+    border: 1px solid #dbe2e8;
+    margin-top: 10px;
+    background-color: #ffffff;
+    padding-top: 8px;
+    font-weight: 700;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 6px;
+    color: #22303c;
+}
+
+/* Diagram / preview helper panel */
+QFrame[diagramPanel="true"] {
+    background-color: #f3f6f8;
+    border: 1px dashed #cbd5de;
+    min-height: 180px;
+}
+
+/* Generic boxed value label */
+QLabel[valueLabel="true"] {
+    color: #23313c;
+    background-color: #f7f9fb;
+    border: 1px solid #e0e6eb;
+    padding: 4px 6px;
+}
+
+QFrame[profileRow="true"] {
+    background-color: #fbfcfd;
+    border: 1px solid #dde4ea;
+}
+
+QDialog {
+    font-size: 10.5pt;
+}
+
+QDialog QLabel {
+    font-size: 10.5pt;
+}
+
+QDialog QLineEdit,
+QDialog QTextEdit,
+QDialog QListWidget {
+    font-size: 10.5pt;
+}
+
+QMessageBox,
+QDialog {
+    background: #f4f7fb;
+}

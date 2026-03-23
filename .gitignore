@@ -1,0 +1,31 @@
+# Virtual environments
+.venv/
+.buildvenv/
+
+# Runtime state markers
+.ntx_ready
+.runtime/
+
+# PyInstaller outputs
+build/
+dist/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Databases (user data, not source)
+databases/*.db
+
+# Drawings (user files, not source)
+drawings/
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Editor
+.vscode/
+*.swp

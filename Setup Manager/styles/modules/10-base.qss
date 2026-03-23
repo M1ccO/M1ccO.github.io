@@ -1,0 +1,240 @@
+/*
+    Module: 10-base.qss
+    Purpose:
+    - Core app-wide visual foundation.
+    - Typography defaults, navigation shell, surfaces, label tokens.
+    Owns:
+    - Global font and color baseline
+    - Main window / widget background
+    - Navigation rail (dark panel)
+    - Launch card in rail footer
+    - Detail / info card surfaces
+    - All semantic QLabel property tokens
+*/
+
+/* ── Global typography and surface baseline ─────────────────────────────── */
+* {
+    font-family: 'Segoe UI';
+    font-size: 10pt;
+    color: #24303c;
+}
+
+QMainWindow,
+QWidget#appRoot {
+    background: #eceff2;
+}
+
+QToolTip {
+    background-color: #ffffff;
+    color: #22303c;
+    border: 1px solid #cfd7df;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 10pt;
+}
+
+/*
+    Keep labels transparent so host/card colors remain visible.
+*/
+QLabel {
+    background-color: transparent;
+}
+
+/* ── Navigation rail ──────────────────────────────────────────────────────── */
+QFrame[navRail="true"] {
+    background: #eceff2;
+}
+
+/* All labels inside the dark rail must be transparent so rail color shows */
+QFrame[navRail="true"] QLabel {
+    background: transparent;
+}
+
+/* ── Master Data launch card (rail footer) ───────────────────────────────── */
+QFrame[launchCard="true"] {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+}
+
+QFrame[launchCard="true"] QLabel {
+    background: transparent;
+    color: #3d4f61;
+}
+
+/* Bottom action bar host (Setup page) */
+QFrame[bottomBar="true"] {
+    background-color: #eceff2;
+    border: none;
+}
+
+/* Top toolbar host (Setup page) */
+QFrame[topBarContainer="true"] {
+    background-color: #eceff2;
+    border: none;
+}
+
+/* ── Detail / info card surfaces ─────────────────────────────────────────── */
+/*
+    Match Tool Library detail-field card language:
+    neutral gray panel with subtle border and smaller corner radius.
+*/
+QFrame[detailCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 4px;
+}
+
+QFrame[card="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+}
+
+QFrame[editorFieldCard="true"] {
+    background: transparent;
+    border: none;
+}
+
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"] {
+    color: #2b3136;
+    font-size: 11pt;
+}
+
+QFrame[detailCard="true"] QLabel {
+    background: transparent;
+}
+
+/* ── Semantic label tokens ──────────────────────────────────────────────── */
+
+QLabel[pageTitle="true"] {
+    font-size: 16pt;
+    font-weight: 700;
+    color: #15314f;
+    padding: 2px 0;
+    background: transparent;
+}
+
+QLabel[sectionTitle="true"] {
+    font-size: 10pt;
+    font-weight: 600;
+    color: #2b3136;
+    background: transparent;
+}
+
+QLabel[detailSectionTitle="true"] {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #22303c;
+    background: transparent;
+}
+
+QLabel[detailHint="true"] {
+    color: #5a6977;
+    background: transparent;
+}
+
+QLabel#preferencesHintLabel {
+    color: #5a6977;
+    font-size: 10.5pt;
+    font-weight: 500;
+}
+
+QLabel[sectionSummary="true"] {
+    color: #54667a;
+    background: transparent;
+}
+
+/* Pill badge for last-run info */
+QLabel[statusPill="true"] {
+    background: #e3f2fd;
+    color: #0d47a1;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-weight: 600;
+}
+
+QLabel[detailValue="true"] {
+    color: #24303c;
+    background-color: #ffffff;
+    border: 1px solid #d8dfe7;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 10.5pt;
+}
+
+QLabel[detailFieldValue="true"] {
+    background-color: #ffffff;
+    border: 1px solid #d8dfe7;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 14pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+
+QLabel[detailFieldKey="true"] {
+    color: #495866;
+    background: transparent;
+    font-size: 10pt;
+}
+
+QLabel[jawGroupTitle="true"] {
+    color: #000000;
+    background: transparent;
+    font-size: 10.5pt;
+    font-weight: 600;
+}
+
+QWidget[adaptiveColumnsHost="true"],
+QFrame[jawGroupHost="true"] {
+    background: transparent;
+    border: none;
+}
+
+QWidget[detailContentHost="true"],
+QWidget[detailPaneHost="true"] {
+    background-color: #ffffff;
+}
+
+QLabel[detailHeroTitle="true"] {
+    color: #0f2a43;
+    background: transparent;
+    font-size: 17pt;
+    font-weight: 700;
+}
+
+QLabel[detailHeroSubtitle="true"] {
+    color: #36506b;
+    background: transparent;
+    font-size: 12pt;
+    font-weight: 500;
+}
+
+QFrame[detailHeader="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 2px;
+}
+
+QFrame[detailField="true"] {
+    background-color: #e8f0fa;
+    border: 1px solid #c8d4e0;
+    border-radius: 2px;
+}
+
+QFrame[detailField="true"][detailHeroField="true"] {
+    background-color: #ffffff;
+}
+
+QFrame[subCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 2px;
+}
+
+QLabel[navHint="true"] {
+    color: #cfe3f7;
+    background: transparent;
+}

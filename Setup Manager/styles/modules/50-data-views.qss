@@ -1,0 +1,147 @@
+/*
+    Module: 50-data-views.qss
+    Purpose:
+    - Dense tabular and structured data containers.
+    Owns:
+    - QTableWidget surfaces and selection
+    - QHeaderView section appearance
+    - QTabWidget / QTabBar tabs
+    - QGroupBox section containers
+    - QMessageBox / QDialog base background
+*/
+
+/* ── Tables ──────────────────────────────────────────────────────────────── */
+QTableWidget {
+    background: #ffffff;
+    border: 1px solid #c8d4e0;
+    gridline-color: #e2e7ec;
+    alternate-background-color: #f8fbfd;
+    selection-background-color: #1e88e5;
+    selection-color: #ffffff;
+    outline: none;
+}
+
+QTableWidget::item {
+    padding: 8px 10px;
+    border-bottom: 1px solid #eef2f5;
+    background: transparent;
+    font-size: 11.5pt;
+}
+
+QTableWidget::item:selected {
+    background: #1e88e5;
+    color: #ffffff;
+}
+
+QHeaderView::section {
+    background: #f3f6f8;
+    border: 1px solid #d9e0e6;
+    padding: 9px 10px;
+    font-weight: 700;
+    font-size: 11pt;
+    color: #25313b;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+QTabWidget::pane {
+    border: 1px solid #d8e0e6;
+    background: #ffffff;
+}
+
+QTabBar::tab {
+    background: #e8edf2;
+    border: 1px solid #cfd6dd;
+    padding: 10px 18px;
+    min-width: 100px;
+    margin-right: 2px;
+    font-size: 10.5pt;
+}
+
+QTabBar::tab:selected {
+    background: #ffffff;
+    border-bottom-color: #ffffff;
+    font-weight: 700;
+}
+
+/* ── Group boxes ─────────────────────────────────────────────────────────── */
+QGroupBox {
+    font-weight: 600;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    margin-top: 10px;
+    padding-top: 4px;
+    background: #ffffff;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 4px;
+    color: #0f2a43;
+}
+
+/* ── List widgets ────────────────────────────────────────────────────────── */
+QListWidget {
+    font-size: 11pt;
+}
+
+QListWidget::item {
+    padding: 6px 8px;
+}
+
+/* ── Dialog / message box surfaces ──────────────────────────────────────── */
+QDialog {
+    font-size: 10.5pt;
+}
+
+QDialog QLabel {
+    font-size: 10.5pt;
+}
+
+QDialog QLineEdit,
+QDialog QTextEdit,
+QDialog QListWidget {
+    font-size: 10.5pt;
+}
+QMessageBox, QDialog {
+    background: #f4f7fb;
+}
+
+QDialogButtonBox QPushButton {
+    min-width: 80px;
+}
+
+QMessageBox QPushButton {
+    min-height: 26px;
+    padding: 2px 10px;
+    border: 1px solid #c0c4c8;
+    border-radius: 5px;
+    color: #2b3640;
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
+    text-transform: uppercase;
+}
+
+QMessageBox QPushButton:hover {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #eaf1f6, stop:1 #ffffff);
+}
+
+QMessageBox QPushButton:pressed {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #d6dee5, stop:1 #f2f5f8);
+}
+
+QMessageBox QPushButton:disabled {
+    background: #eef4fb;
+    color: #9aaabb;
+}
+
+QDialog[toolPickerDialog="true"],
+QDialog[workEditorDialog="true"] {
+    background: #ffffff;
+}
+
+QWidget[zeroPointsSurface="true"] {
+    background: #ffffff;
+}

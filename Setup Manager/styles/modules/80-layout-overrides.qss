@@ -1,0 +1,20 @@
+/*
+    Module: 80-layout-overrides.qss
+    Purpose:
+    - Last-resort compatibility overrides.
+    - Keep minimal; use domain modules first.
+    Owns:
+    - Splitter handle so it is subtly visible
+    - QFormLayout label alignment helper
+*/
+
+/* Subtle splitter handle — visible but not distracting */
+QSplitter::handle:horizontal {
+    background: #c8d4e0;
+    width: 2px;
+}
+
+QSplitter::handle:vertical {
+    background: #c8d4e0;
+    height: 2px;
+}

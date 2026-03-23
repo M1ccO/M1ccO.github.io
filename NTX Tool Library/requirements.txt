@@ -1,0 +1,9 @@
+# Extracted from the existing .venv in this workspace on 2026-03-14.
+# Keep this as the runtime dependency baseline for recreating the app env.
+et_xmlfile==2.0.0
+numpy==2.2.6
+openpyxl==3.1.5
+PySide6==6.10.2
+PySide6_Addons==6.10.2
+PySide6_Essentials==6.10.2
+shiboken6==6.10.2
