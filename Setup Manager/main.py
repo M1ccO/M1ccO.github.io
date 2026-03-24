@@ -79,6 +79,7 @@ def main():
     _maybe_relaunch_with_project_venv()
 
     from PySide6.QtCore import QProcess
+    from config import I18N_DIR, SHARED_UI_PREFERENCES_PATH
 
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--geometry", default="", dest="geometry")
@@ -93,6 +94,8 @@ def main():
             return False
         x, y, width, height = parts
         if width <= 0 or height <= 0:
+            return False
+        if x == -32000 and y == -32000:
             return False
         try:
             hwnd = int(widget.winId())
@@ -130,13 +133,38 @@ def main():
         name = resolved.name.lower()
         return "tool library" in name
 
+    def _load_loading_texts() -> dict:
+        lang = "en"
+        try:
+            prefs = json.loads(Path(SHARED_UI_PREFERENCES_PATH).read_text(encoding="utf-8"))
+            lang = str(prefs.get("language") or "en").strip().lower()
+        except Exception:
+            lang = "en"
+        if lang not in {"en", "fi"}:
+            lang = "en"
+        try:
+            return json.loads((Path(I18N_DIR) / f"{lang}.json").read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    _texts = _load_loading_texts()
+
+    def _lt(key: str, default: str) -> str:
+        return str(_texts.get(key, default))
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     app.setStyle(FastTooltipStyle(app.style()))
     app.setQuitOnLastWindowClosed(False)
 
-    splash = QProgressDialog("INITIALIZE\n\nLoading Tool Library and Setup Manager...", "", 0, 10)
-    splash.setWindowTitle("Loading")
+    loading_header = _lt("setup_manager.loading.header", "INITIALIZE")
+    splash = QProgressDialog(
+        f"{loading_header}\n\n{_lt('setup_manager.loading.initial', 'Loading Tool Library and Setup Manager...')}",
+        "",
+        0,
+        10,
+    )
+    splash.setWindowTitle(_lt("setup_manager.loading.window_title", "Loading"))
     splash.setWindowModality(Qt.ApplicationModal)
     splash.setCancelButton(None)
     splash.setMinimumDuration(0)
@@ -151,7 +179,7 @@ def main():
         app.processEvents()
 
     # Step 0: Pre-load Tool Library in background
-    step(1, "INITIALIZE\n\nStarting Tool Library (hidden)...")
+    step(1, f"{loading_header}\n\n{_lt('setup_manager.loading.start_tool_library', 'Starting Tool Library (hidden)...')}")
     from config import (
         APP_TITLE,
         DB_PATH,
@@ -176,7 +204,7 @@ def main():
             launch_geometry = ""
 
     if launch_geometry:
-        tool_lib_args.extend(["--geometry", launch_geometry])
+        tool_lib_args.append(f"--geometry={launch_geometry}")
 
     # Launch Tool Library immediately only when explicitly enabled.
     if ENABLE_TOOL_LIBRARY_PRELOAD:
@@ -196,7 +224,7 @@ def main():
                 tool_lib_process.startDetached(str(exe_path), tool_lib_args, str(exe_path.parent))
                 break
 
-    step(2, "INITIALIZE\n\nLoading modules...")
+    step(2, f"{loading_header}\n\n{_lt('setup_manager.loading.load_modules', 'Loading modules...')}")
     from data.database import Database
     from services.draw_service import DrawService
     from services.logbook_service import LogbookService
@@ -204,27 +232,27 @@ def main():
     from services.work_service import WorkService
     from ui.main_window import MainWindow
 
-    step(3, "INITIALIZE\n\nConnecting setup database...")
+    step(3, f"{loading_header}\n\n{_lt('setup_manager.loading.connect_db', 'Connecting setup database...')}")
     db = Database(DB_PATH)
 
-    step(4, "INITIALIZE\n\nLoading work service...")
+    step(4, f"{loading_header}\n\n{_lt('setup_manager.loading.load_work_service', 'Loading work service...')}")
     work_service = WorkService(db)
 
-    step(5, "INITIALIZE\n\nLoading logbook service...")
+    step(5, f"{loading_header}\n\n{_lt('setup_manager.loading.load_logbook_service', 'Loading logbook service...')}")
     logbook_service = LogbookService(db)
 
-    step(6, "INITIALIZE\n\nLoading drawing service...")
+    step(6, f"{loading_header}\n\n{_lt('setup_manager.loading.load_drawing_service', 'Loading drawing service...')}")
     draw_service = DrawService(
         drawing_dir=DRAWINGS_DIR,
         tool_db_path=TOOL_LIBRARY_DB_PATH,
         jaw_db_path=JAW_LIBRARY_DB_PATH,
     )
 
-    step(7, "INITIALIZE\n\nLoading print service...")
+    step(7, f"{loading_header}\n\n{_lt('setup_manager.loading.load_print_service', 'Loading print service...')}")
     print_service = PrintService(APP_TITLE)
     print_service.set_reference_service(draw_service)
 
-    step(8, "INITIALIZE\n\nWarming up 3D preview...")
+    step(8, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_preview', 'Warming up 3D preview...')}")
     try:
         from ui.stl_preview import StlPreviewWidget
 
@@ -234,7 +262,7 @@ def main():
         app._preview_warmup_widget = None
 
     if ENABLE_TOOL_LIBRARY_PRELOAD:
-        step(9, "INITIALIZE\n\nTool Library warming up...")
+        step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_tool_library', 'Tool Library warming up...')}")
         ready_deadline = time.time() + 12.0
         while time.time() < ready_deadline:
             if tool_library_server_ready(TOOL_LIBRARY_SERVER_NAME):
@@ -242,9 +270,9 @@ def main():
             app.processEvents()
             time.sleep(0.1)
     else:
-        step(9, "INITIALIZE\n\nSkipping Tool Library preload...")
+        step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.skip_preload', 'Skipping Tool Library preload...')}")
 
-    step(10, "INITIALIZE\n\nOpening Setup Manager...")
+    step(10, f"{loading_header}\n\n{_lt('setup_manager.loading.open_main', 'Opening Setup Manager...')}")
     win = MainWindow(work_service, logbook_service, draw_service, print_service)
     if launch_geometry:
         apply_frame_geometry_string(win, launch_geometry)
@@ -256,7 +284,7 @@ def main():
 
     def show_setup_manager(request: dict | None = None):
         geometry_text = str((request or {}).get("geometry", "")).strip()
-        win.setWindowOpacity(0.0)
+        win.setWindowOpacity(1.0)
         if win.isMinimized():
             win.showNormal()
         else:

@@ -191,6 +191,7 @@ class ResponsiveJawRowWidget(QFrame):
         self._icon_only_breakpoint = 220
         self._icon_label = None
         self._icon_wrap = None
+        self._details_open_context = False
         self._build_ui()
 
     def _card_columns(self):
@@ -290,8 +291,6 @@ class ResponsiveJawRowWidget(QFrame):
     def _apply_column_visibility(self, width: int):
         if width <= 1:
             visible_keys = {'jaw_id', 'jaw_type', 'diameter', 'length'}
-        elif width < self._icon_only_breakpoint:
-            visible_keys = set()
         elif width < self._single_column_breakpoint:
             visible_keys = {'jaw_id'}
         elif width < self._reduced_breakpoint:
@@ -384,6 +383,10 @@ class ResponsiveJawRowWidget(QFrame):
             else:
                 self._icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
                 self._icon_wrap.setFixedWidth(56 if single_column_mode else 60)
+
+    def set_detail_context(self, details_hidden: bool):
+        self._details_open_context = not bool(details_hidden)
+        self._apply_responsive_layout(max(1, self.width()))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -523,7 +526,7 @@ class JawPage(QWidget):
         if self.show_sidebar:
             self.sidebar = QFrame()
             self.sidebar.setProperty('card', True)
-            self.sidebar.setFixedWidth(220)
+            self.sidebar.setFixedWidth(188)
             side_layout = QVBoxLayout(self.sidebar)
             side_layout.setContentsMargins(10, 12, 10, 12)
             side_layout.setSpacing(6)
@@ -565,7 +568,7 @@ class JawPage(QWidget):
         self.splitter.addWidget(list_card)
 
         self.detail_container = QWidget()
-        self.detail_container.setMinimumWidth(390)
+        self.detail_container.setMinimumWidth(280)
         detail_layout = QVBoxLayout(self.detail_container)
         detail_layout.setContentsMargins(0, 0, 0, 0)
         detail_layout.setSpacing(0)
@@ -1027,6 +1030,7 @@ class JawPage(QWidget):
             item = QListWidgetItem()
             item.setData(Qt.UserRole, jaw.get('jaw_id', ''))
             widget = ResponsiveJawRowWidget(jaw, translate=self._t)
+            widget.set_detail_context(self._details_hidden)
             self.jaw_list.addItem(item)
             self.jaw_list.setItemWidget(item, widget)
             item.setSizeHint(QSize(0, styled_list_item_height(widget, self.jaw_list.spacing())))
@@ -1061,6 +1065,7 @@ class JawPage(QWidget):
             total = max(600, self.splitter.width())
             self._last_splitter_sizes = [int(total * 0.62), int(total * 0.38)]
         self.splitter.setSizes(self._last_splitter_sizes)
+        self.refresh_list()
 
     def hide_details(self):
         self._details_hidden = True
@@ -1069,6 +1074,7 @@ class JawPage(QWidget):
         self.detail_container.hide()
         self.detail_header_container.hide()
         self.splitter.setSizes([1, 0])
+        self.refresh_list()
 
     def on_current_item_changed(self, current, previous):
         if previous is not None:

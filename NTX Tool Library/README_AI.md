@@ -224,7 +224,34 @@ The largest and most behavior-heavy file. Reused for all four TOOLS views with d
 
 **View modes:** `home`, `assemblies`, `holders`, `inserts` — filtered in `_view_match()`.
 
-**Tool list:** `QListWidget` with custom `ToolRowWidget` items. Each row shows: icon (by tool type), description, tool ID, holder code, cutting code, type.
+**Tool list:** `QListView` with `QStandardItemModel` and custom `ToolCatalogDelegate`. No nested widgets — all row painting is done by the delegate using QPainter.
+
+- **ToolCatalogDelegate** (`ui/tool_catalog_delegate.py`) — responsible for rendering all rows
+  - `paint()` — draws card background, border (1px normal / 3px selected), icon at fixed coordinates, text columns with responsive wrapping
+  - `sizeHint()` — returns fixed `74px` height + vertical margins
+  - Responsive stages computed from card width:
+    - **Full** (≥620px): all columns displayed (Tool ID, Tool name, Geom X, Geom Z, Radius, Nose/Corner R)
+    - **Reduced** (≥390px): Tool ID and Tool name only
+    - **Name-only** (≥240px): Tool name only
+    - **Icon-only** (<240px): icon only
+  - Multi-line headers: "Nose / Corner R" renders as two lines when width allows
+  - Vertical centering: text block centered between icon and card edge
+  - Constant border inset (3px) — selection border change does not shift content
+  - `_paint_description()` — word-wrap and two-line fitting for tool names in reduced/name-only stages
+  - `_cached_pixmap()` — icon pixmap cache by tool_type
+
+- Data roles stored in model:
+  - `ROLE_TOOL_ID = Qt.UserRole` — tool id string
+  - `ROLE_TOOL_DATA = Qt.UserRole + 1` — full tool dict
+  - `ROLE_TOOL_ICON = Qt.UserRole + 2` — tool icon QIcon
+
+- Key methods:
+  - `refresh_list()` — clears model, populates from `tool_service.list_tools()`, restores previous selection
+  - `_on_current_changed(current, previous)` — handles selection change; updates detail pane if visible
+  - `_on_double_clicked(index)` — handles double-click (expand details or edit with Ctrl)
+  - `select_tool_by_id(tool_id)` — programmatically select a tool
+  - `_clear_selection()` — clear selection and close details
+  - `eventFilter()` — detect empty-area clicks to clear selection
 
 **Detail panel layout** (built in `populate_details()`):
 1. Header: description, tool ID, type badge
@@ -246,6 +273,8 @@ Note: **Tool type is NOT shown as a separate field box** — it appears as the b
 - Detached preview window tracks current selection
 
 ### `ui/jaw_page.py`
+
+**STATUS:** Still uses the legacy `QListWidget` + embedded row widgets. Needs rebuild matching the TOOLS delegate architecture (see FUTURE IMPLEMENTATIONS below).
 
 Mirrors `home_page.py` in structure but for jaws.
 
@@ -1079,3 +1108,61 @@ Also note:
 - Persist UI settings such as active database, window geometry, selected page, and filter preferences
 - Add automated link validation and missing-file detection for STL paths
 - Add tests around migrations and import/export because those are the most data-sensitive paths
+
+---
+
+## FUTURE IMPLEMENTATIONS
+
+### JAWS Library Catalog Rebuild (March 2026+)
+
+**Status:** `ui/jaw_page.py` still uses the legacy `QListWidget` + embedded `JawRowWidget` approach. Needs the same delegate-based rebuild that was completed for the TOOLS module in March 2026.
+
+**Motivation:** The TOOLS rebuild eliminated responsive layout instability by replacing nested widgets with delegate-based painting. This same architecture should be applied to JAWS for consistency and robustness.
+
+**Scope:**
+
+1. **New file:** `ui/jaw_catalog_delegate.py`
+   - `JawCatalogDelegate(QStyledItemDelegate)` — renders jaw rows via QPainter
+   - Layout constants: `ROW_HEIGHT`, `ICON_SIZE`, `ICON_SLOT_W`, responsive breakpoints (`BP_FULL`, `BP_REDUCED`, `BP_NAME_ONLY`)
+   - Data roles: `ROLE_JAW_ID`, `ROLE_JAW_DATA`, `ROLE_JAW_ICON`
+   - `paint()` method:
+     - Card background, border (1px normal / 3px selected), constant inset
+     - Icon at fixed coordinates
+     - Responsive stages: full (4 columns: Jaw ID, Jaw type, Clamping diameter, Clamping length) → reduced (2 columns) → icon-only
+     - Vertically centered text block
+     - Multi-line header support (if needed for wider labels)
+   - `sizeHint()` method: fixed row height + vertical margins
+   - `_paint_description()` — word-wrap fitting for jaw type/diameter columns if needed
+   - `_cached_pixmap()` — icon pixmap cache by jaw_type
+
+2. **Refactor:** `ui/jaw_page.py`
+   - Remove `JawRowWidget` class (~250 lines)
+   - Remove `ResponsiveJawRowWidget` class (~180 lines)
+   - Update imports: add `QListView`, `QStandardItemModel`, `JawCatalogDelegate`, etc.
+   - Replace `self.jaw_list = QListWidget()` with `QListView + QStandardItemModel + JawCatalogDelegate`
+   - Rewrite `refresh_list()` to populate `QStandardItemModel` instead of `QListWidget`
+   - Create/rename signal handlers:
+     - `_on_current_changed(current: QModelIndex, previous: QModelIndex)` — update selection, populate detail pane
+     - `_on_double_clicked(index: QModelIndex)` — handle double-click (expand/collapse details)
+   - Update `select_jaw_by_id()` to use `QStandardItemModel` API
+   - Update `_clear_selection()` to use `selectionModel().clearSelection()`
+   - Update `eventFilter()` to use `indexAt()` instead of `itemAt()`
+   - Update `_update_row_type_visibility()` to call `viewport().update()` if needed
+   - Detail panel, preview, editor, and export logic remain unchanged
+
+3. **Testing points:**
+   - List refresh and filter behavior
+   - Row selection (single click, double click, keyboard, Escape)
+   - Detail pane open/close on selection change
+   - Responsive width transitions (full → reduced → icon-only)
+   - Inline and detached 3D preview
+   - Excel export/import
+   - Database switching
+
+**Estimated effort:**
+- ~310 lines new delegate code
+- ~430 lines deleted from jaw_page.py (old row widget classes)
+- ~150 lines modified in jaw_page.py (refresh, selection, event handlers)
+- ~3–4 hours of work including testing
+
+**Timeline:** Post-TOOLS stabilization. Can be done independently after TOOLS rebuild approval.

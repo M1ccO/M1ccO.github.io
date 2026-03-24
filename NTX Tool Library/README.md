@@ -133,6 +133,22 @@ Both modules use a shared self-contained 3D viewer built on [Three.js](https://t
 
 ---
 
+## Tool Catalog Rendering
+
+The TOOLS module uses a high-performance **QListView + custom delegate** architecture for the catalog list:
+
+- **QListView** with `QStandardItemModel` provides efficient row virtualization
+- **ToolCatalogDelegate** uses Qt's native `QPainter` to render each row deterministically
+- **No nested widgets** — all layout computed from paint coordinates; eliminates timing bugs and layout thrashing
+- **Responsive stages** — rows adapt to viewport width in real-time (full → reduced → name-only → icon-only)
+- **Multi-line headers** — field labels like "Nose / Corner R" render on two lines when the card is wide enough
+- **Hover + selection states** — card background and border change interactively; selection border (3px) has constant inset so rows don't shift
+- **Vertical centering** — text blocks are automatically centered between icon and card edge
+
+This replaces the previous widget-based approach, fixing responsive layout stability and eliminating icon/margin drift.
+
+---
+
 ## Excel Export and Import
 
 ### Export
@@ -637,3 +653,34 @@ config.py     paths, constants, tool types, and icon mappings
 - Use the settings file for persistent UI preferences, recent databases, and window state
 - Add validation rules for duplicate component codes and broken links
 - Add packaging for easier deployment without a manual Python setup
+
+---
+
+## FUTURE IMPLEMENTATIONS
+
+### JAWS Library Catalog Rebuild
+
+The **JAWS module** (`ui/jaw_page.py`) currently uses the legacy `QListWidget` + embedded `JawRowWidget` approach that was used in TOOLS before the March 2026 refactor. It needs the same delegate-based rebuild:
+
+**Planned changes:**
+1. Create `ui/jaw_catalog_delegate.py` with `JawCatalogDelegate` class
+   - Responsive row painting: full (4-column: Jaw ID, Jaw type, Clamping diameter, Clamping length) → reduced (2-column) → icon-only
+   - Fixed content inset to prevent selection shift
+   - Vertically centered text blocks
+   - Icon painting at fixed coordinates
+   - QFontMetrics-based text measurement and elision
+
+2. Refactor `jaw_page.py` to use `QListView + QStandardItemModel + JawCatalogDelegate`
+   - Remove `JawRowWidget` class (~250 lines)
+   - Remove `ResponsiveJawRowWidget` class (~180 lines)
+   - Update `refresh_list()` to populate `QStandardItemModel`
+   - Update selection handlers to use `QModelIndex` instead of `QListWidgetItem`
+   - Keep detail panel and preview logic unchanged
+
+**Benefits:**
+- Consistent UI architecture across TOOLS and JAWS modules
+- Stable responsive layout without timing bugs
+- Better maintainability (all row rendering in one delegate file)
+- Reusable delegate pattern for future catalog pages
+
+**Estimated scope:** ~400 lines new code, ~430 lines deleted, no schema changes

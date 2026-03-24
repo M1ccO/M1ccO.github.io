@@ -55,13 +55,13 @@ QFrame[catalogRowCard="true"] {
 }
 
 QFrame[catalogRowCard="true"][rowNarrow="true"] {
-    min-height: 76px;
-    max-height: 76px;
+    min-height: 74px;
+    max-height: 74px;
 }
 
 QFrame[catalogRowCard="true"][rowTight="true"] {
-    min-height: 78px;
-    max-height: 78px;
+    min-height: 74px;
+    max-height: 74px;
 }
 
 QFrame[toolListCard="true"]:hover {
@@ -131,7 +131,7 @@ QFrame[catalogRowCard="true"] QLabel[catalogRowValue="true"] {
 
 QFrame[catalogRowCard="true"] QLabel[catalogRowPrimaryValue="true"] {
     min-height: 28px;
-    max-height: 44px;
+    max-height: 38px;
     margin-top: 1px;
     margin-bottom: 1px;
 }
@@ -147,13 +147,13 @@ QFrame[catalogRowCard="true"][detailOpen="true"] QLabel[catalogRowPrimaryValue="
 }
 
 QFrame[catalogRowCard="true"] QLabel[catalogRowValue="true"][nameWrap="true"] {
-    min-height: 40px;
-    max-height: 48px;
+    min-height: 30px;
+    max-height: 38px;
 }
 
 QFrame[catalogRowCard="true"][rowTight="true"] QLabel[catalogRowValue="true"][nameWrap="true"] {
-    min-height: 38px;
-    max-height: 46px;
+    min-height: 28px;
+    max-height: 34px;
 }
 
 QFrame[catalogRowCard="true"] QLabel[catalogRowValue="true"][nameTiny="true"] {

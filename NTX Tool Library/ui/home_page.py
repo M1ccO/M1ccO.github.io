@@ -1,12 +1,12 @@
 
 import json
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer
-from PySide6.QtGui import QIcon, QDesktopServices, QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QItemSelectionModel
+from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
-    QInputDialog, QLabel, QLineEdit, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
+    QInputDialog, QLabel, QLineEdit, QListView, QMessageBox, QPushButton,
     QScrollArea, QSplitter, QVBoxLayout, QWidget, QSizePolicy, QToolButton
 )
 from config import (
@@ -17,7 +17,11 @@ from config import (
     DEFAULT_TOOL_ICON,
 )
 from ui.tool_editor_dialog import AddEditToolDialog
-from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget, styled_list_item_height
+from ui.tool_catalog_delegate import (
+    ToolCatalogDelegate, tool_icon_for_type,
+    ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON,
+)
+from ui.widgets.common import add_shadow, apply_shared_dropdown_style, repolish_widget
 
 # the STL preview widget may live in a separate module; import lazily so the
 # rest of the application still runs if the real implementation is missing.
@@ -25,290 +29,6 @@ try:
     from ui.stl_preview import StlPreviewWidget
 except ImportError:  # pragma: no cover - safe fallback
     StlPreviewWidget = None
-
-
-# ==============================
-# Home Catalog Row Widget
-# ==============================
-class ToolRowWidget(QFrame):
-    def __init__(self, tool: dict, icon: QIcon, view_mode: str = 'home', parent=None, translate=None):
-        super().__init__(parent)
-        self.tool = tool
-        self.view_mode = (view_mode or 'home').lower()
-        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
-        self.setProperty('toolListCard', True)
-        self.setProperty('catalogRowCard', True)
-        self.setProperty('selected', False)
-        self.setProperty('detailOpen', False)
-        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        # container for the tool name column; stays visible in both full and compact modes
-        self.type_wrap = None
-        # all non-name column wrappers - hidden only in responsive compact mode
-        self._other_wraps: list = []
-        # value and header labels collected for responsive font scaling in resizeEvent
-        self._val_labels: list = []
-        self._head_labels: list = []
-        self._name_labels: list = []
-        self._col_layouts: list = []
-        self._wrappable_head_labels: list = []
-        self._compact_breakpoint = 560
-        self._icon_only_breakpoint = 185
-        self._name_wrap_breakpoint = 560
-        self._is_compact = False
-        self._is_icon_only = False
-        self._details_open_context = False
-        self._build_ui(icon)
-
-    @staticmethod
-    def _safe_float_text(value) -> str:
-        try:
-            return f"{float(value or 0):.3f}"
-        except Exception:
-            return '0.000'
-
-    @staticmethod
-    def _parse_json_list(value):
-        if isinstance(value, list):
-            return value
-        if not isinstance(value, str) or not value.strip():
-            return []
-        try:
-            parsed = json.loads(value)
-            return parsed if isinstance(parsed, list) else []
-        except Exception:
-            return []
-
-    def _card_columns(self):
-        tool_name = (self.tool.get('description', '') or '').strip() or self._t('tool_library.common.no_description', 'No description')
-
-        if self.view_mode == 'holders':
-            return [
-                ('tool_id', self._t('tool_library.row.tool_id', 'Tool ID'), self.tool.get('id', ''), 100),
-                ('holder_name', self._t('tool_library.row.holder_name', 'Holder name'), (self.tool.get('holder_code', '') or '').strip() or '-', 220),
-                ('tool_name', self._t('tool_library.row.tool_name', 'Tool name'), tool_name, 320),
-            ]
-
-        if self.view_mode == 'inserts':
-            return [
-                ('tool_id', self._t('tool_library.row.tool_id', 'Tool ID'), self.tool.get('id', ''), 100),
-                ('insert_name', self._t('tool_library.row.insert_name', 'Insert name'), (self.tool.get('cutting_code', '') or '').strip() or '-', 250),
-                ('tool_name', self._t('tool_library.row.tool_name', 'Tool name'), tool_name, 320),
-            ]
-
-        if self.view_mode == 'assemblies':
-            support_parts = self._parse_json_list(self.tool.get('support_parts'))
-            stl_parts = self._parse_json_list(self.tool.get('stl_path'))
-            return [
-                ('tool_id', self._t('tool_library.row.tool_id', 'Tool ID'), self.tool.get('id', ''), 100),
-                ('tool_name', self._t('tool_library.row.assembly_name', 'Assembly name'), tool_name, 260),
-                ('support_parts', self._t('tool_library.row.support_parts', 'Support parts'), str(len(support_parts)), 130),
-                ('model_parts', self._t('tool_library.row.model_parts', '3D parts'), str(len(stl_parts) if stl_parts else 0), 120),
-            ]
-
-        return [
-            ('tool_id', self._t('tool_library.row.tool_id', 'Tool ID'), self.tool.get('id', ''), 100),
-            ('tool_name', self._t('tool_library.row.tool_name', 'Tool name'), tool_name, 270),
-            ('geom_x', self._t('tool_library.field.geom_x', 'Geom X'), self._safe_float_text(self.tool.get('geom_x', 0)), 110),
-            ('geom_z', self._t('tool_library.field.geom_z', 'Geom Z'), self._safe_float_text(self.tool.get('geom_z', 0)), 110),
-            ('radius', self._t('tool_library.field.radius', 'Radius'), self._safe_float_text(self.tool.get('radius', 0)), 95),
-            ('nose_corner_radius', self._t('tool_library.field.nose_corner_radius_multiline', 'Nose /\nCorner R'), self._safe_float_text(self.tool.get('nose_corner_radius', 0)), 145),
-        ]
-
-    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
-        return self._translate(key, default, **kwargs)
-
-    def _value(self, text: str) -> QLabel:
-        lbl = AutoShrinkLabel(text)
-        lbl.setProperty('toolCardValue', True)
-        lbl.setProperty('catalogRowValue', True)
-        lbl.setAlignment(Qt.AlignCenter)
-        return lbl
-
-    def _name_value(self, text: str) -> QLabel:
-        lbl = QLabel(text)
-        lbl.setProperty('toolCardValue', True)
-        lbl.setProperty('catalogRowValue', True)
-        lbl.setProperty('catalogRowPrimaryValue', True)
-        lbl.setProperty('fullText', text)
-        lbl.setAlignment(Qt.AlignCenter)
-        lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        lbl.setWordWrap(True)
-        lbl.setMargin(0)
-        return lbl
-
-    def _build_ui(self, icon: QIcon):
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 2, 10, 2)
-        layout.setSpacing(10)
-
-        icon_label = QLabel()
-        icon_label.setProperty("catalogRowIcon", True)
-        # make the label background transparent so the card colour shows through
-        icon_label.setStyleSheet("background-color: transparent;")
-        pm = icon.pixmap(QSize(40, 40))
-        icon_label.setPixmap(pm)
-        icon_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(icon_label, 0, Qt.AlignVCenter)
-
-        # column definitions include a "weight" value used solely for stretch
-        cols = self._card_columns()
-        for key, title, value, weight in cols:
-            col = QVBoxLayout()
-            col.setContentsMargins(0, 0, 0, 0)
-            col.setSpacing(0)
-            self._col_layouts.append(col)
-
-            head = QLabel(title)
-            head.setProperty('toolCardHeader', True)
-            head.setProperty('catalogRowHeader', True)
-            head.setAlignment(Qt.AlignCenter)
-            head.setWordWrap(True)
-            if key in {'tool_name', 'nose_corner_radius'}:
-                head.setProperty('catalogRowHeaderWrap', True)
-                self._wrappable_head_labels.append(head)
-
-            val = self._name_value(value) if key == 'tool_name' else self._value(value)
-
-            wrap = QWidget()
-            wrap.setProperty("toolCardColumn", True)
-            wrap.setStyleSheet("background: transparent;")
-            wrap.setLayout(col)
-            # give every column an expanding policy; the "weight" determines its stretch factor
-            wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-
-            # name column stays visible always; other columns are hidden in compact (detail-open) mode
-            if key == 'tool_name':
-                self.type_wrap = wrap
-            else:
-                self._other_wraps.append(wrap)
-
-            # track labels so resizeEvent can scale fonts responsively
-            self._val_labels.append(val)
-            self._head_labels.append(head)
-            if key == 'tool_name':
-                self._name_labels.append(val)
-
-            col.addWidget(head)
-            col.addWidget(val)
-            layout.addWidget(wrap, weight, Qt.AlignVCenter)
-
-        layout.addStretch(1)
-
-    def set_type_visible(self, visible: bool):
-        """Track detail-pane state and re-run responsive layout."""
-        self._details_open_context = not bool(visible)
-        self.setProperty('detailOpen', self._details_open_context)
-        repolish_widget(self)
-        for lbl in self._val_labels + self._head_labels:
-            repolish_widget(lbl)
-        self._apply_compact_mode(self.width())
-        self._apply_responsive_layout(max(1, self.width()))
-
-    def _apply_compact_mode(self, row_width: int):
-        # Avoid entering compact mode during initial size negotiation when width is 0.
-        if row_width <= 1:
-            compact = False
-            icon_only = False
-        else:
-            compact = row_width < self._compact_breakpoint
-            icon_only = row_width < self._icon_only_breakpoint
-        if compact == self._is_compact and icon_only == self._is_icon_only:
-            return
-        self._is_compact = compact
-        self._is_icon_only = icon_only
-        for w in self._other_wraps:
-            w.setVisible(not compact)
-        if self.type_wrap is not None:
-            self.type_wrap.setVisible(not icon_only)
-
-    def _set_row_responsive_properties(self, narrow: bool, tight: bool, tiny: bool):
-        changed = False
-        for key, value in (('rowNarrow', narrow), ('rowTight', tight), ('rowTiny', tiny)):
-            if bool(self.property(key)) != bool(value):
-                self.setProperty(key, bool(value))
-                changed = True
-        if changed:
-            repolish_widget(self)
-            for lbl in self._val_labels + self._head_labels:
-                repolish_widget(lbl)
-
-    @staticmethod
-    def _to_max_two_lines(text: str) -> str:
-        raw = (text or '').strip()
-        if not raw:
-            return raw
-        parts = raw.split(' - ', 1)
-        if len(parts) == 2 and parts[0].strip() and parts[1].strip():
-            return f"{parts[0].strip()}\n- {parts[1].strip()}"
-        if '-' in raw:
-            i = raw.find('-')
-            left = raw[:i].strip()
-            right = raw[i + 1:].strip()
-            if left and right:
-                return f"{left}\n- {right}"
-        pivot = max(4, len(raw) // 2)
-        return f"{raw[:pivot].rstrip()}\n{raw[pivot:].lstrip()}"
-
-    def _apply_responsive_layout(self, width: int):
-        lay = self.layout()
-        if lay is None:
-            return
-
-        if width < 380:
-            margins = (4, 2, 4, 2)
-            spacing = 6
-            v_size, name_size, h_size, col_spacing = 10.5, 10.0, 8.0, 0
-        elif width < 560:
-            margins = (7, 2, 7, 2)
-            spacing = 7
-            v_size, name_size, h_size, col_spacing = 11.5, 10.5, 8.6, 0
-        else:
-            margins = (10, 2, 10, 2)
-            spacing = 10
-            v_size, name_size, h_size, col_spacing = 12.8, 11.5, 9.4, 0
-
-        if self._details_open_context:
-            margins = (max(4, margins[0] - 1), margins[1], max(4, margins[2] - 1), margins[3])
-            spacing = max(6, spacing - 1)
-
-        lay.setContentsMargins(*margins)
-        lay.setSpacing(spacing)
-        for col in self._col_layouts:
-            col.setSpacing(col_spacing)
-
-        narrow_threshold = 560 + (40 if self._details_open_context else 0)
-        tight_threshold = 430 + (40 if self._details_open_context else 0)
-        tiny_threshold = 330 + (30 if self._details_open_context else 0)
-        row_narrow = width < narrow_threshold
-        row_tight = width < tight_threshold
-        row_tiny = width < tiny_threshold
-        self._set_row_responsive_properties(row_narrow, row_tight, row_tiny)
-
-        wrap_breakpoint = self._name_wrap_breakpoint + (220 if self._details_open_context else 0)
-        wrap_name = self._is_compact or width < wrap_breakpoint
-        very_narrow_name = wrap_name and width < 340
-        if self.type_wrap is not None:
-            self.type_wrap.setMaximumWidth(215 if self._details_open_context and not self._is_compact else 16777215)
-        for lbl in self._name_labels:
-            full_text = str(lbl.property('fullText') or lbl.text() or '')
-            display_text = self._to_max_two_lines(full_text) if wrap_name else full_text
-            lbl.setText(display_text)
-            lbl.setWordWrap(False)
-            wrap_changed = bool(lbl.property('nameWrap')) != bool(wrap_name)
-            tiny_changed = bool(lbl.property('nameTiny')) != bool(very_narrow_name)
-            if wrap_changed:
-                lbl.setProperty('nameWrap', bool(wrap_name))
-            if tiny_changed:
-                lbl.setProperty('nameTiny', bool(very_narrow_name))
-            if wrap_changed or tiny_changed:
-                repolish_widget(lbl)
-
-    def resizeEvent(self, event):
-        """Tighten margins and reduce font slightly when the row becomes narrow."""
-        super().resizeEvent(event)
-        w = event.size().width()
-        self._apply_compact_mode(w)
-        self._apply_responsive_layout(w)
 
 
 # ==============================
@@ -368,26 +88,14 @@ class HomePage(QWidget):
         QTimer.singleShot(10000, _drop_warmup)
 
     def _update_row_type_visibility(self, show: bool):
-        """Called when the detail panel opens/closes to show or hide the secondary row column.
+        """Called when the detail panel opens/closes.
+        With the delegate-based list, we just need to trigger a repaint.
         """
-        for idx in range(self.tool_list.count()):
-            itm = self.tool_list.item(idx)
-            w = self.tool_list.itemWidget(itm)
-            if isinstance(w, ToolRowWidget):
-                w.set_type_visible(show)
+        self.tool_list.viewport().update()
 
     def _refresh_row_style(self, widget):
-        """Force row and child labels to recompute stylesheet on state changes."""
-        if widget is None:
-            return
-        style = widget.style()
-        style.unpolish(widget)
-        style.polish(widget)
-        for lbl in widget.findChildren(QLabel):
-            s = lbl.style()
-            s.unpolish(lbl)
-            s.polish(lbl)
-        widget.update()
+        """No-op — delegate rows don't have child widgets to repolish."""
+        pass
 
     # ==============================
     # Home Page Layout
@@ -524,14 +232,28 @@ class HomePage(QWidget):
         left_layout.setContentsMargins(6, 0, 10, 10)
         left_layout.setSpacing(10)
 
-        self.tool_list = QListWidget()
+        self.tool_list = QListView()
         self.tool_list.setObjectName('toolCatalog')
-        self.tool_list.setVerticalScrollMode(QListWidget.ScrollPerPixel)
+        self.tool_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.tool_list.setStyleSheet("QListWidget { outline: none; }")
+        self.tool_list.setSelectionMode(QListView.SingleSelection)
+        self.tool_list.setMouseTracking(True)   # needed for hover in delegate
+        self.tool_list.setStyleSheet(
+            "QListView#toolCatalog { background-color: rgba(205, 212, 238, 0.97);"
+            " border: none; outline: none; padding: 8px; }"
+            " QListView#toolCatalog::item { background: transparent; border: none; }"
+        )
         self.tool_list.setSpacing(4)
-        self.tool_list.currentItemChanged.connect(self.on_current_item_changed)
-        self.tool_list.itemDoubleClicked.connect(self.on_item_double_clicked)
+        self._tool_model = QStandardItemModel(self)
+        self.tool_list.setModel(self._tool_model)
+        self._tool_delegate = ToolCatalogDelegate(
+            parent=self.tool_list,
+            view_mode=self.view_mode,
+            translate=self._t,
+        )
+        self.tool_list.setItemDelegate(self._tool_delegate)
+        self.tool_list.selectionModel().currentChanged.connect(self._on_current_changed)
+        self.tool_list.doubleClicked.connect(self._on_double_clicked)
         self.tool_list.installEventFilter(self)
         self.tool_list.viewport().installEventFilter(self)
         left_layout.addWidget(self.tool_list, 1)
@@ -539,7 +261,8 @@ class HomePage(QWidget):
 
         self.detail_container = QWidget()
         self.detail_container.setContentsMargins(0, 0, 0, 0)
-        self.detail_container.setMinimumWidth(400)
+        self.detail_container.setMinimumWidth(220)
+        self.detail_container.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         dc_layout = QVBoxLayout(self.detail_container)
         dc_layout.setContentsMargins(0, 0, 0, 0)
         dc_layout.setSpacing(2)
@@ -557,6 +280,8 @@ class HomePage(QWidget):
         self.detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.detail_panel = QWidget()
         self.detail_panel.setObjectName('detailPanel')
+        self.detail_panel.setMinimumWidth(0)
+        self.detail_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.detail_layout = QVBoxLayout(self.detail_panel)
         self.detail_layout.setContentsMargins(0, 0, 0, 0)
         self.detail_layout.setSpacing(10)
@@ -809,11 +534,11 @@ class HomePage(QWidget):
         """Navigate the list to the tool with the given id."""
         self.current_tool_id = tool_id.strip()
         self.refresh_list()
-        for i in range(self.tool_list.count()):
-            item = self.tool_list.item(i)
-            if item.data(Qt.UserRole) == self.current_tool_id:
-                self.tool_list.setCurrentItem(item)
-                self.tool_list.scrollToItem(item)
+        for row in range(self._tool_model.rowCount()):
+            idx = self._tool_model.index(row, 0)
+            if idx.data(ROLE_TOOL_ID) == self.current_tool_id:
+                self.tool_list.setCurrentIndex(idx)
+                self.tool_list.scrollTo(idx)
                 break
 
     def refresh_list(self):
@@ -828,28 +553,24 @@ class HomePage(QWidget):
         if self._master_filter_active:
             tools = [tool for tool in tools if str(tool.get('id', '')).strip() in self._master_filter_ids]
         tools = [tool for tool in tools if self._view_match(tool)]
-        self.tool_list.clear()
+        self._tool_model.blockSignals(True)
+        self._tool_model.clear()
         for tool in tools:
-            item = QListWidgetItem()
-            item.setData(Qt.UserRole, tool.get('id', ''))
-            row_widget = ToolRowWidget(
-                tool,
-                self._tool_icon(tool.get('tool_type', '')),
-                view_mode=self.view_mode,
-                translate=self._t,
-            )
-            # ensure the row reflects current detail pane state (older versions may lack the method)
-            if hasattr(row_widget, 'set_type_visible'):
-                row_widget.set_type_visible(self._details_hidden)
-            self.tool_list.addItem(item)
-            self.tool_list.setItemWidget(item, row_widget)
-            # size the list item to the actual widget so stylesheet min-height applies
-            item.setSizeHint(QSize(0, styled_list_item_height(row_widget, self.tool_list.spacing())))
+            item = QStandardItem()
+            tool_id = tool.get('id', '')
+            item.setData(tool_id, ROLE_TOOL_ID)
+            item.setData(tool, ROLE_TOOL_DATA)
+            item.setData(tool_icon_for_type(tool.get('tool_type', '')), ROLE_TOOL_ICON)
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self._tool_model.appendRow(item)
+        self._tool_model.blockSignals(False)
+        # restore selection
         if self.current_tool_id:
-            for idx in range(self.tool_list.count()):
-                item = self.tool_list.item(idx)
-                if item.data(Qt.UserRole) == self.current_tool_id:
-                    self.tool_list.setCurrentItem(item)
+            for row in range(self._tool_model.rowCount()):
+                idx = self._tool_model.index(row, 0)
+                if idx.data(ROLE_TOOL_ID) == self.current_tool_id:
+                    self.tool_list.setCurrentIndex(idx)
+                    self.tool_list.scrollTo(idx)
                     break
 
     def _view_match(self, tool: dict) -> bool:
@@ -925,22 +646,15 @@ class HomePage(QWidget):
                    getattr(self, 'tool_list', None) and self.tool_list.viewport()):
             if event.type() == QEvent.MouseButtonPress:
                 # coordinate is in viewport space either way
-                if self.tool_list.itemAt(event.pos()) is None:
+                if not self.tool_list.indexAt(event.pos()).isValid():
                     self._clear_selection()
         return super().eventFilter(obj, event)
 
     def _clear_selection(self):
         """Internal helper to clear row selection and reset details."""
-        # un-highlight the previously selected widget if any
-        current = getattr(self, 'tool_list', None) and self.tool_list.currentItem()
-        if current:
-            prev_widget = self.tool_list.itemWidget(current)
-            if prev_widget is not None:
-                prev_widget.setProperty('selected', False)
-                self._refresh_row_style(prev_widget)
         if hasattr(self, 'tool_list'):
-            self.tool_list.setCurrentRow(-1)
-            self.tool_list.clearSelection()
+            self.tool_list.selectionModel().clearSelection()
+            self.tool_list.setCurrentIndex(QModelIndex())
         self.current_tool_id = None
         self.populate_details(None)
         if hasattr(self, 'preview_window_btn') and self.preview_window_btn.isChecked():
@@ -971,6 +685,9 @@ class HomePage(QWidget):
 
     def _selected_head_filter(self) -> str:
         if self._external_head_filter is not None:
+            raw = self._external_head_filter.currentData()
+            if raw is not None:
+                return str(raw)
             return self._external_head_filter.currentText()
         return self._head_filter_value
 
@@ -1018,25 +735,14 @@ class HomePage(QWidget):
                 self.type_filter.setCurrentIndex(idx)
                 break
 
-    def on_current_item_changed(self, current, previous):
-        # adjust visual highlight on widgets
-        if previous is not None:
-            prev_widget = self.tool_list.itemWidget(previous)
-            if prev_widget is not None:
-                prev_widget.setProperty('selected', False)
-                self._refresh_row_style(prev_widget)
-        if not current:
+    def _on_current_changed(self, current: QModelIndex, previous: QModelIndex):
+        if not current.isValid():
             self.current_tool_id = None
             self.populate_details(None)
             if self.preview_window_btn.isChecked():
                 self._close_detached_preview()
             return
-        self.current_tool_id = current.data(Qt.UserRole)
-        # highlight new widget
-        new_widget = self.tool_list.itemWidget(current)
-        if new_widget is not None:
-            new_widget.setProperty('selected', True)
-            self._refresh_row_style(new_widget)
+        self.current_tool_id = current.data(ROLE_TOOL_ID)
         # if details pane is already visible, refresh its contents
         if not self._details_hidden:
             tool = self.tool_service.get_tool(self.current_tool_id)
@@ -1044,8 +750,8 @@ class HomePage(QWidget):
         if self.preview_window_btn.isChecked():
             self._sync_detached_preview(show_errors=False)
 
-    def on_item_double_clicked(self, item):
-        self.current_tool_id = item.data(Qt.UserRole)
+    def _on_double_clicked(self, index: QModelIndex):
+        self.current_tool_id = index.data(ROLE_TOOL_ID)
         if QApplication.keyboardModifiers() & Qt.ControlModifier:
             self.edit_tool()
             return
@@ -1139,12 +845,13 @@ class HomePage(QWidget):
         def build_field(label_text: str, value_text: str) -> QWidget:
             field_frame = QFrame()
             field_frame.setProperty('detailField', True)
-            field_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+            field_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+            field_frame.setMinimumWidth(0)
             flayout = QVBoxLayout(field_frame)
             flayout.setContentsMargins(6, 4, 6, 4)
             flayout.setSpacing(4)
             key_lbl = self._detail_key_label(label_text)
-            key_lbl.setWordWrap(False)
+            key_lbl.setWordWrap(True)
             value_lbl = self._value_label(value_text)
             value_lbl.setProperty('detailFieldValue', True)
             flayout.addWidget(key_lbl)
@@ -1163,6 +870,10 @@ class HomePage(QWidget):
         info = QGridLayout()
         info.setHorizontalSpacing(14)
         info.setVerticalSpacing(8)
+        info.setColumnStretch(0, 1)
+        info.setColumnStretch(1, 1)
+        info.setColumnStretch(2, 1)
+        info.setColumnStretch(3, 1)
 
         info.addWidget(build_field(self._t('tool_library.field.geom_x', 'Geom X'), str(tool.get('geom_x', ''))), 0, 0, 1, 2, Qt.AlignTop)
         info.addWidget(build_field(self._t('tool_library.field.geom_z', 'Geom Z'), str(tool.get('geom_z', ''))), 0, 2, 1, 2, Qt.AlignTop)
@@ -1214,12 +925,16 @@ class HomePage(QWidget):
         lbl.setWordWrap(True)
         lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
         lbl.setProperty('detailValue', True)
+        lbl.setMinimumWidth(0)
+        lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         return lbl
     
     def _detail_key_label(self, text):
         lbl = QLabel(text)
         lbl.setProperty('detailFieldKey', True)
-        lbl.setWordWrap(False)
+        lbl.setWordWrap(True)
+        lbl.setMinimumWidth(0)
+        lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         return lbl
 
     # ==============================
@@ -1237,6 +952,8 @@ class HomePage(QWidget):
         grid = QGridLayout()
         grid.setHorizontalSpacing(10)
         grid.setVerticalSpacing(8)
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
         row = 0
         raw_cutting_name = tool.get('cutting_type', '')
         cutting_name = self._localized_cutting_type(raw_cutting_name) if raw_cutting_name else self._t('tool_library.field.cutting_part', 'Cutting part')
@@ -1249,6 +966,8 @@ class HomePage(QWidget):
         btn = QPushButton(holder_part['name'])
         btn.setProperty('assemblyPart', True)
         btn.setProperty('panelActionButton', True)
+        btn.setMinimumWidth(0)
+        btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         btn.clicked.connect(lambda _=False, p=holder_part: self.part_clicked(p))
         grid.addWidget(btn, row, 0)
         grid.addWidget(self._value_label(holder_part['code']), row, 1)
@@ -1264,6 +983,8 @@ class HomePage(QWidget):
             btn = QPushButton(holder_extra['name'])
             btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)
+            btn.setMinimumWidth(0)
+            btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
             btn.clicked.connect(lambda _=False, p=holder_extra: self.part_clicked(p))
             grid.addWidget(btn, row, 0)
             grid.addWidget(self._value_label(holder_extra['code']), row, 1)
@@ -1277,6 +998,8 @@ class HomePage(QWidget):
         btn = QPushButton(cutting_part['name'])
         btn.setProperty('assemblyPart', True)
         btn.setProperty('panelActionButton', True)
+        btn.setMinimumWidth(0)
+        btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         btn.clicked.connect(lambda _=False, p=cutting_part: self.part_clicked(p))
         grid.addWidget(btn, row, 0)
         grid.addWidget(self._value_label(cutting_part['code']), row, 1)
@@ -1292,6 +1015,8 @@ class HomePage(QWidget):
             btn = QPushButton(cutting_extra['name'])
             btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)
+            btn.setMinimumWidth(0)
+            btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
             btn.clicked.connect(lambda _=False, p=cutting_extra: self.part_clicked(p))
             grid.addWidget(btn, row, 0)
             grid.addWidget(self._value_label(cutting_extra['code']), row, 1)
@@ -1308,6 +1033,8 @@ class HomePage(QWidget):
             btn = QPushButton(part.get('name', self._t('tool_library.field.part', 'Part')))
             btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)
+            btn.setMinimumWidth(0)
+            btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
             btn.clicked.connect(lambda _=False, p=part: self.part_clicked(p))
             grid.addWidget(btn, row, 0)
             grid.addWidget(self._value_label(part.get('code', '')), row, 1)

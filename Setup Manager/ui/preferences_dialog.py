@@ -24,7 +24,7 @@ class PreferencesDialog(QDialog):
         self.setObjectName("appRoot")
         self.setWindowTitle(self._t("preferences.title", "Preferences"))
         self.setModal(True)
-        self.resize(500, 320)
+        self.resize(500, 280)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 12, 12, 12)
@@ -49,14 +49,6 @@ class PreferencesDialog(QDialog):
         apply_shared_dropdown_style(self.language_combo)
         add_shadow(self.language_combo)
         card_layout.addWidget(self._row(self._t("preferences.language", "Language"), self.language_combo))
-
-        self.font_combo = QComboBox()
-        self.font_combo.addItem("Segoe UI", "Segoe UI")
-        self.font_combo.addItem("Tahoma", "Tahoma")
-        self.font_combo.addItem("Verdana", "Verdana")
-        apply_shared_dropdown_style(self.font_combo)
-        add_shadow(self.font_combo)
-        card_layout.addWidget(self._row(self._t("preferences.font_family", "Font Family"), self.font_combo))
 
         self.theme_combo = QComboBox()
         self.theme_combo.addItem(self._t("theme.classic", "Classic"), "classic")
@@ -88,13 +80,11 @@ class PreferencesDialog(QDialog):
     def preferences_payload(self) -> dict:
         return {
             "language": self.language_combo.currentData() or "en",
-            "font_family": self.font_combo.currentData() or "Segoe UI",
             "color_theme": self.theme_combo.currentData() or "classic",
         }
 
     def _load_current_values(self):
         self._set_combo_by_data(self.language_combo, self._current.get("language", "en"))
-        self._set_combo_by_data(self.font_combo, self._current.get("font_family", "Segoe UI"))
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
 
     @staticmethod
