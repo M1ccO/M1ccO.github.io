@@ -27,7 +27,8 @@ QLabel[catalogTopHeader="true"] {
 }
 
 /* List viewport background */
-QListWidget#toolCatalog {
+QListWidget#toolCatalog,
+QListView#toolCatalog {
     /* List viewport uses a muted blue-gray so cards sit on a calm, low-saturation field */
     background-color: rgba(205, 212, 238, 0.97);
     border: none;
@@ -35,7 +36,8 @@ QListWidget#toolCatalog {
     padding: 8px;
 }
 
-QListWidget#toolCatalog::item {
+QListWidget#toolCatalog::item,
+QListView#toolCatalog::item {
     background: transparent;
     border: none;
 }

@@ -44,6 +44,7 @@ class HomePage(QWidget):
         page_title: str = 'Tool Library',
         view_mode: str = 'home',
         translate=None,
+        warmup_preview: bool = True,
     ):
         super().__init__(parent)
         self.tool_service = tool_service
@@ -65,12 +66,18 @@ class HomePage(QWidget):
         self._head_filter_value = 'HEAD1/2'
         self._master_filter_ids: set[str] = set()
         self._master_filter_active = False
+        self._preview_warm_requested = False
         self._build_ui()
-        self._warmup_preview_engine()
+        if warmup_preview:
+            self.ensure_preview_engine_warmed()
         self.refresh_list()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
+
+    @staticmethod
+    def _norm_id(value) -> str:
+        return str(value or '').strip().lower()
 
     def _warmup_preview_engine(self):
         """Pre-create a hidden preview widget so first detail-open doesn't flash."""
@@ -86,6 +93,12 @@ class HomePage(QWidget):
 
         # Keep warmup alive long enough for first user interactions.
         QTimer.singleShot(10000, _drop_warmup)
+
+    def ensure_preview_engine_warmed(self):
+        if self._preview_warm_requested:
+            return
+        self._preview_warm_requested = True
+        self._warmup_preview_engine()
 
     def _update_row_type_visibility(self, show: bool):
         """Called when the detail panel opens/closes.
@@ -238,6 +251,7 @@ class HomePage(QWidget):
         self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.tool_list.setSelectionMode(QListView.SingleSelection)
         self.tool_list.setMouseTracking(True)   # needed for hover in delegate
+        self.tool_list.setUniformItemSizes(True)
         self.tool_list.setStyleSheet(
             "QListView#toolCatalog { background-color: rgba(205, 212, 238, 0.97);"
             " border: none; outline: none; padding: 8px; }"
@@ -351,10 +365,11 @@ class HomePage(QWidget):
         self.module_toggle_btn.setText(display)
         self.module_toggle_btn.setToolTip(self._t('tool_library.module.switch_to_target', 'Switch to {target} module', target=display))
 
-    def set_master_filter(self, tool_ids, active: bool):
-        self._master_filter_ids = {str(t).strip() for t in (tool_ids or []) if str(t).strip()}
+    def set_master_filter(self, tool_ids, active: bool, refresh: bool = True):
+        self._master_filter_ids = {self._norm_id(t) for t in (tool_ids or []) if str(t).strip()}
         self._master_filter_active = bool(active) and bool(self._master_filter_ids)
-        self.refresh_list()
+        if refresh:
+            self.refresh_list()
 
     def _rebuild_filter_row(self):
         while self.filter_layout.count():
@@ -551,10 +566,11 @@ class HomePage(QWidget):
             self._selected_head_filter(),
         )
         if self._master_filter_active:
-            tools = [tool for tool in tools if str(tool.get('id', '')).strip() in self._master_filter_ids]
+            tools = [tool for tool in tools if self._norm_id(tool.get('id', '')) in self._master_filter_ids]
         tools = [tool for tool in tools if self._view_match(tool)]
-        self._tool_model.blockSignals(True)
+        self.tool_list.setUpdatesEnabled(False)
         self._tool_model.clear()
+        items = []
         for tool in tools:
             item = QStandardItem()
             tool_id = tool.get('id', '')
@@ -562,16 +578,28 @@ class HomePage(QWidget):
             item.setData(tool, ROLE_TOOL_DATA)
             item.setData(tool_icon_for_type(tool.get('tool_type', '')), ROLE_TOOL_ICON)
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            self._tool_model.appendRow(item)
-        self._tool_model.blockSignals(False)
+            items.append(item)
+        if items:
+            self._tool_model.invisibleRootItem().appendRows(items)
+        self.tool_list.setUpdatesEnabled(True)
         # restore selection
+        found = False
         if self.current_tool_id:
             for row in range(self._tool_model.rowCount()):
                 idx = self._tool_model.index(row, 0)
                 if idx.data(ROLE_TOOL_ID) == self.current_tool_id:
                     self.tool_list.setCurrentIndex(idx)
                     self.tool_list.scrollTo(idx)
+                    found = True
                     break
+        if self.current_tool_id and not found:
+            self.current_tool_id = None
+            self.tool_list.setCurrentIndex(QModelIndex())
+            self.populate_details(None)
+            if self.preview_window_btn.isChecked():
+                self._close_detached_preview()
+        self.tool_list.doItemsLayout()
+        self.tool_list.viewport().update()
 
     def _view_match(self, tool: dict) -> bool:
         if self.view_mode == 'holders':
@@ -734,6 +762,7 @@ class HomePage(QWidget):
             if self.type_filter.itemData(idx) == 'All':
                 self.type_filter.setCurrentIndex(idx)
                 break
+        self._on_type_changed(self.type_filter.currentIndex())
 
     def _on_current_changed(self, current: QModelIndex, previous: QModelIndex):
         if not current.isValid():

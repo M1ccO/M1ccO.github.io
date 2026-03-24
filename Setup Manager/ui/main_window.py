@@ -224,12 +224,12 @@ class MainWindow(QMainWindow):
         """Send an IPC message to a running Tool Library instance. Returns True on success."""
         sock = QLocalSocket()
         sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
-        if not sock.waitForConnected(75):
+        if not sock.waitForConnected(300):
             return False
         try:
             sock.write(json.dumps(payload).encode("utf-8"))
             sock.flush()
-            sock.waitForBytesWritten(75)
+            sock.waitForBytesWritten(300)
         except Exception:
             return False
         finally:
@@ -274,15 +274,26 @@ class MainWindow(QMainWindow):
         return False
 
     def _fade_out_and(self, callback):
-        """Immediately run *callback* without animation."""
-        self._fade_anim = None
-        self.setWindowOpacity(1.0)
-        callback()
+        """Animate window opacity 1→0 then call *callback*."""
+        anim = QPropertyAnimation(self, b"windowOpacity", self)
+        anim.setDuration(180)
+        anim.setStartValue(1.0)
+        anim.setEndValue(0.0)
+        anim.setEasingCurve(QEasingCurve.InQuad)
+        anim.finished.connect(callback)
+        self._fade_anim = anim          # prevent GC
+        anim.start()
 
     def fade_in(self):
-        """Show fully visible without animation."""
-        self._fade_anim = None
-        self.setWindowOpacity(1.0)
+        """Animate window opacity 0→1 (called after being shown by IPC)."""
+        self.setWindowOpacity(0.0)
+        anim = QPropertyAnimation(self, b"windowOpacity", self)
+        anim.setDuration(220)
+        anim.setStartValue(0.0)
+        anim.setEndValue(1.0)
+        anim.setEasingCurve(QEasingCurve.OutQuad)
+        self._fade_anim = anim
+        anim.start()
 
     def _current_window_rect(self) -> tuple[int, int, int, int]:
         """Return the actual on-screen window rectangle, including snap placement."""
@@ -318,7 +329,7 @@ class MainWindow(QMainWindow):
             def _finish_handoff():
                 self.hide()
                 self.setWindowOpacity(1.0)
-            QTimer.singleShot(55, lambda: self._fade_out_and(_finish_handoff))
+            self._fade_out_and(_finish_handoff)
             return
 
         # Fallback: launch a new Tool Library process.
@@ -328,7 +339,7 @@ class MainWindow(QMainWindow):
             def _finish_launch():
                 self.hide()
                 self.setWindowOpacity(1.0)
-            QTimer.singleShot(180, lambda: self._fade_out_and(_finish_launch))
+            self._fade_out_and(_finish_launch)
             return
 
         QMessageBox.warning(
@@ -389,7 +400,7 @@ class MainWindow(QMainWindow):
             def _finish_handoff():
                 self.hide()
                 self.setWindowOpacity(1.0)
-            QTimer.singleShot(55, lambda: self._fade_out_and(_finish_handoff))
+            self._fade_out_and(_finish_handoff)
             return
 
         # Fallback: launch a new Tool Library process.
@@ -404,7 +415,7 @@ class MainWindow(QMainWindow):
             def _finish_launch():
                 self.hide()
                 self.setWindowOpacity(1.0)
-            QTimer.singleShot(180, lambda: self._fade_out_and(_finish_launch))
+            self._fade_out_and(_finish_launch)
             return
 
         QMessageBox.warning(
@@ -584,8 +595,10 @@ class MainWindow(QMainWindow):
     def _build_ui_preference_overrides(self) -> str:
         theme_name = self.ui_preferences.get("color_theme", "classic")
         palette = THEME_PALETTES.get(theme_name, THEME_PALETTES["classic"])
+        font_family = self.ui_preferences.get("font_family", "Segoe UI").replace("'", "\\'")
         return (
             "/* Runtime UI preference overrides */\n"
+            f"* {{ font-family: '{font_family}'; }}\n"
             "QFrame#setupWorkShell,\n"
             "QListWidget#toolCatalog,\n"
             "QListWidget#toolCatalog::viewport,\n"
@@ -608,15 +621,10 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Save window geometry when closing for restoration on next launch."""
-        if self.isMinimized():
-            geom = self.normalGeometry()
-            x, y, width, height = geom.x(), geom.y(), geom.width(), geom.height()
-        else:
-            x, y, width, height = self._current_window_rect()
+        x, y, width, height = self._current_window_rect()
         geom_file = Path(self.work_service.db.path).parent / ".window_geometry"
         try:
-            if x != -32000 or y != -32000:
-                geom_file.write_text(f"{x},{y},{width},{height}")
+            geom_file.write_text(f"{x},{y},{width},{height}")
         except Exception:
             pass
         super().closeEvent(event)

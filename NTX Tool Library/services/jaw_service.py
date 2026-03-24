@@ -5,28 +5,84 @@ class JawService:
     def __init__(self, db):
         self.db = db
 
+    @staticmethod
+    def _norm(value: str) -> str:
+        return str(value or '').strip().lower().replace(' ', '_').replace('/', '_')
+
     def list_jaws(self, search_text: str = '', view_mode: str = 'all', jaw_type_filter: str = 'All'):
         query = 'SELECT * FROM jaws WHERE 1=1'
         params = []
 
         mode = (view_mode or 'all').lower()
         if mode == 'main':
-            query += " AND spindle_side IN ('Main spindle', 'Both')"
+            query += (
+                " AND ("
+                " lower(spindle_side) IN ('main spindle', 'both')"
+                " OR lower(spindle_side) LIKE '%main%'"
+                " OR lower(spindle_side) LIKE '%paa%'"
+                " OR lower(spindle_side) LIKE '%molem%'"
+                " OR lower(spindle_side) LIKE '%both%'"
+                " )"
+            )
         elif mode == 'sub':
-            query += " AND spindle_side IN ('Sub spindle', 'Both')"
+            query += (
+                " AND ("
+                " lower(spindle_side) IN ('sub spindle', 'both')"
+                " OR lower(spindle_side) LIKE '%sub%'"
+                " OR lower(spindle_side) LIKE '%vasta%'"
+                " OR lower(spindle_side) LIKE '%molem%'"
+                " OR lower(spindle_side) LIKE '%both%'"
+                " )"
+            )
         elif mode == 'soft':
-            query += " AND jaw_type = 'Soft jaws'"
+            query += (
+                " AND ("
+                " lower(jaw_type) = 'soft jaws'"
+                " OR lower(jaw_type) LIKE '%soft%'"
+                " OR lower(jaw_type) LIKE '%pehme%'"
+                " )"
+            )
         elif mode == 'hard_group':
-            query += " AND jaw_type IN ('Hard jaws', 'Spiked jaws', 'Special jaws')"
+            query += (
+                " AND ("
+                " lower(jaw_type) IN ('hard jaws', 'spiked jaws', 'special jaws')"
+                " OR lower(jaw_type) LIKE '%hard%'"
+                " OR lower(jaw_type) LIKE '%kova%'"
+                " OR lower(jaw_type) LIKE '%spiked%'"
+                " OR lower(jaw_type) LIKE '%piikki%'"
+                " OR lower(jaw_type) LIKE '%special%'"
+                " OR lower(jaw_type) LIKE '%eriko%'"
+                " )"
+            )
 
-        normalized_filter = (jaw_type_filter or '').strip().lower().replace(' ', '_').replace('/', '_')
+        normalized_filter = self._norm(jaw_type_filter)
         if normalized_filter and normalized_filter not in {'all'}:
             if normalized_filter in {'spike_hard_jaws', 'hard_group'}:
-                query += " AND jaw_type IN ('Hard jaws', 'Spiked jaws')"
+                query += (
+                    " AND ("
+                    " lower(jaw_type) IN ('hard jaws', 'spiked jaws')"
+                    " OR lower(jaw_type) LIKE '%hard%'"
+                    " OR lower(jaw_type) LIKE '%kova%'"
+                    " OR lower(jaw_type) LIKE '%spiked%'"
+                    " OR lower(jaw_type) LIKE '%piikki%'"
+                    " )"
+                )
             elif normalized_filter in {'soft_jaws', 'soft'}:
-                query += " AND jaw_type = 'Soft jaws'"
+                query += (
+                    " AND ("
+                    " lower(jaw_type) = 'soft jaws'"
+                    " OR lower(jaw_type) LIKE '%soft%'"
+                    " OR lower(jaw_type) LIKE '%pehme%'"
+                    " )"
+                )
             elif normalized_filter in {'special_jaws', 'special'}:
-                query += " AND jaw_type = 'Special jaws'"
+                query += (
+                    " AND ("
+                    " lower(jaw_type) = 'special jaws'"
+                    " OR lower(jaw_type) LIKE '%special%'"
+                    " OR lower(jaw_type) LIKE '%eriko%'"
+                    " )"
+                )
 
         if search_text:
             token = f"%{search_text.lower()}%"

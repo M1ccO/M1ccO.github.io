@@ -49,11 +49,12 @@ CARD_PADDING_V = 2          # inner vertical padding inside the card
 COL_SPACING = 10            # gap between text columns
 HEADER_VALUE_GAP = 1        # vertical gap between header and value text
 BORDER_INSET = 3            # always reserve space for thickest border so selection doesn't shift
+WRAPPED_LINE_STEP_FACTOR = 0.82
 
 # ── Responsive stage breakpoints ────────────────────────────────────────
 BP_FULL = 620               # card_width >= this → full (all columns)
 BP_REDUCED = 390            # card_width >= this → reduced (id + name)
-BP_NAME_ONLY = 240          # card_width >= this → name only
+BP_NAME_ONLY = 180          # card_width >= this → name only
 # below BP_NAME_ONLY → icon only
 
 # ── Colours ─────────────────────────────────────────────────────────────
@@ -191,6 +192,19 @@ class ToolCatalogDelegate(QStyledItemDelegate):
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
 
+    def _description_line_count(self, fm: QFontMetrics, text: str, width: int, stage: str) -> int:
+        raw = (text or '').strip()
+        if not raw or stage == 'icon-only' or width < 16:
+            return 1
+        breakable = ' ' in raw or '-' in raw or '/' in raw
+        if stage == 'name-only' and breakable:
+            return 2
+        if fm.horizontalAdvance(raw) <= width:
+            return 1
+        if not breakable:
+            return 1
+        return 2
+
     # ── sizing ──────────────────────────────────────────────────────────
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
@@ -275,8 +289,13 @@ class ToolCatalogDelegate(QStyledItemDelegate):
             cols = all_cols
 
         # ── choose value font based on stage ────────────────────────────
-        if card_w < 380:
-            vfont = self._value_font_tiny
+        if stage == 'name-only':
+            if card_w < 300:
+                vfont = self._value_font_tight
+            else:
+                vfont = self._value_font_narrow
+        elif stage == 'reduced':
+            vfont = self._value_font_full
         elif card_w < 500:
             vfont = self._value_font_tight
         elif card_w < 620:
@@ -318,7 +337,13 @@ class ToolCatalogDelegate(QStyledItemDelegate):
             header_h = single_header_h * len(header_lines) + 2
 
             # compute block height and vertical offset to center it
-            value_h = value_line_h  # single value line height
+            line_count = (
+                self._description_line_count(vfm, value, rect.width(), stage)
+                if key == 'tool_name' else 1
+            )
+            wrapped = line_count == 2 and key == 'tool_name'
+            effective_value_h = int(round(value_line_h * WRAPPED_LINE_STEP_FACTOR)) if wrapped else value_line_h
+            value_h = value_line_h + effective_value_h if wrapped else value_line_h * line_count
             block_h = header_h + HEADER_VALUE_GAP + value_h
             y_off = max(0, (rect.height() - block_h) // 2)
 
@@ -343,7 +368,7 @@ class ToolCatalogDelegate(QStyledItemDelegate):
             painter.setPen(CLR_VALUE_TEXT)
 
             if key == 'tool_name':
-                self._paint_description(painter, vfm, value, value_rect, stage)
+                self._paint_description(painter, value, value_rect, stage)
             else:
                 elided = vfm.elidedText(value, Qt.ElideRight, value_rect.width())
                 painter.drawText(value_rect, Qt.AlignHCenter | Qt.AlignTop, elided)
@@ -352,16 +377,17 @@ class ToolCatalogDelegate(QStyledItemDelegate):
 
     # ── description painting (two-line fitting) ─────────────────────────
 
-    def _paint_description(self, painter: QPainter, fm: QFontMetrics,
-                           text: str, rect: QRect, stage: str):
-        """Paint the tool description, splitting into two lines when in reduced/name-only stage."""
+    def _paint_description(self, painter: QPainter, text: str, rect: QRect, stage: str):
+        """Paint the tool description, splitting into two lines when it no longer fits."""
+        fm = QFontMetrics(painter.font())
         raw = (text or '').strip()
         if not raw:
             return
 
         w = rect.width()
-        two_lines = stage in ('reduced', 'name-only')
+        two_lines = self._description_line_count(fm, raw, w, stage) == 2
         line_h = fm.height()
+        line_step = max(1, int(round(line_h * WRAPPED_LINE_STEP_FACTOR))) if two_lines else line_h
 
         if not two_lines or fm.horizontalAdvance(raw) <= w:
             elided = fm.elidedText(raw, Qt.ElideRight, w)
@@ -377,7 +403,7 @@ class ToolCatalogDelegate(QStyledItemDelegate):
                 painter.drawText(QRect(rect.x(), rect.y(), w, line_h),
                                  Qt.AlignHCenter | Qt.AlignTop, left)
                 elided2 = fm.elidedText(right, Qt.ElideRight, w)
-                painter.drawText(QRect(rect.x(), rect.y() + line_h, w, line_h),
+                painter.drawText(QRect(rect.x(), rect.y() + line_step, w, line_h),
                                  Qt.AlignHCenter | Qt.AlignTop, elided2)
                 return
 
@@ -394,13 +420,14 @@ class ToolCatalogDelegate(QStyledItemDelegate):
 
         line1 = ' '.join(first_tokens)
         if not rest:
-            painter.drawText(rect, Qt.AlignHCenter | Qt.AlignTop, line1)
+            elided1 = fm.elidedText(line1, Qt.ElideRight, w)
+            painter.drawText(rect, Qt.AlignHCenter | Qt.AlignTop, elided1)
             return
 
         painter.drawText(QRect(rect.x(), rect.y(), w, line_h),
-                         Qt.AlignHCenter | Qt.AlignTop, line1)
+                         Qt.AlignHCenter | Qt.AlignTop, fm.elidedText(line1, Qt.ElideRight, w))
         line2 = fm.elidedText(' '.join(rest), Qt.ElideRight, w)
-        painter.drawText(QRect(rect.x(), rect.y() + line_h, w, line_h),
+        painter.drawText(QRect(rect.x(), rect.y() + line_step, w, line_h),
                          Qt.AlignHCenter | Qt.AlignTop, line2)
 
     # ── icon cache ──────────────────────────────────────────────────────

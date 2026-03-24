@@ -85,26 +85,7 @@ def main():
     parser.add_argument("--master-filter-active", default="0", dest="master_filter_active")
     _known_args, _remaining = parser.parse_known_args()
 
-    from config import I18N_DIR, SHARED_UI_PREFERENCES_PATH, TOOL_LIBRARY_SERVER_NAME
-
-    def _load_loading_texts() -> dict:
-        lang = "en"
-        try:
-            prefs = json.loads(Path(SHARED_UI_PREFERENCES_PATH).read_text(encoding="utf-8"))
-            lang = str(prefs.get("language") or "en").strip().lower()
-        except Exception:
-            lang = "en"
-        if lang not in {"en", "fi"}:
-            lang = "en"
-        try:
-            return json.loads((Path(I18N_DIR) / f"{lang}.json").read_text(encoding="utf-8"))
-        except Exception:
-            return {}
-
-    _texts = _load_loading_texts()
-
-    def _lt(key: str, default: str) -> str:
-        return str(_texts.get(key, default))
+    from config import TOOL_LIBRARY_SERVER_NAME
 
     launch_payload = _build_launch_payload(_known_args)
     if _send_to_existing_instance(TOOL_LIBRARY_SERVER_NAME, launch_payload):
@@ -116,8 +97,8 @@ def main():
 
     splash = None
     if not _known_args.hidden:
-        splash = QProgressDialog(_lt('tool_library.loading.initial', 'Starting NTX Tool Library...'), '', 0, 8)
-        splash.setWindowTitle(_lt('tool_library.loading.window_title', 'Loading'))
+        splash = QProgressDialog('Starting NTX Tool Library...', '', 0, 8)
+        splash.setWindowTitle('Loading')
         splash.setWindowModality(Qt.ApplicationModal)
         splash.setCancelButton(None)
         splash.setMinimumDuration(0)
@@ -154,7 +135,7 @@ def main():
             splash.setValue(progress)
         app.processEvents()
 
-    step(1, _lt('tool_library.loading.load_modules', 'Loading modules...'))
+    step(1, 'Loading modules...')
     from config import DB_PATH, JAWS_DB_PATH, SETTINGS_PATH, TOOL_LIBRARY_READY_PATH, TOOL_LIBRARY_SERVER_NAME
     from data.database import Database
     from services.export_service import ExportService
@@ -163,24 +144,24 @@ def main():
     from services.tool_service import ToolService
     from ui.main_window import MainWindow
 
-    step(2, _lt('tool_library.loading.connect_db', 'Connecting database...'))
+    step(2, 'Connecting database...')
     db = Database(DB_PATH)
     from data.jaw_database import JawDatabase
     jaws_db = JawDatabase(JAWS_DB_PATH)
 
-    step(3, _lt('tool_library.loading.load_tool_service', 'Loading tool service...'))
+    step(3, 'Loading tool service...')
     tool_service = ToolService(db)
 
-    step(4, _lt('tool_library.loading.load_export_service', 'Loading export service...'))
+    step(4, 'Loading export service...')
     export_service = ExportService()
 
-    step(5, _lt('tool_library.loading.load_jaw_service', 'Loading jaw service...'))
+    step(5, 'Loading jaw service...')
     jaw_service = JawService(jaws_db)
 
-    step(6, _lt('tool_library.loading.load_settings', 'Loading settings...'))
+    step(6, 'Loading settings...')
     settings_service = SettingsService(SETTINGS_PATH)
 
-    step(7, _lt('tool_library.loading.warm_preview', 'Warming up 3D preview...'))
+    step(7, 'Warming up 3D preview...')
     try:
         from ui.stl_preview import StlPreviewWidget
         app._preview_warmup_widget = StlPreviewWidget()
@@ -188,7 +169,7 @@ def main():
     except Exception:
         app._preview_warmup_widget = None
 
-    step(8, _lt('tool_library.loading.open_main', 'Opening main window...'))
+    step(8, 'Opening main window...')
 
     launch_master_filter = {
         "enabled": bool(_split_csv(_known_args.master_filter_tools) or _split_csv(_known_args.master_filter_jaws)),
@@ -202,7 +183,7 @@ def main():
     if not _known_args.hidden:
         win.show()
     else:
-        # Preload the native window off-screen so the first real handoff does not
+        # Pre-create the native window off-screen so the first real open does not
         # pay the one-time window creation / first-paint cost.
         win.setAttribute(Qt.WA_DontShowOnScreen, True)
         win.show()
@@ -228,8 +209,8 @@ def main():
         QLocalServer.removeServer(TOOL_LIBRARY_SERVER_NAME)
 
     def process_external_request(payload: dict):
+        win.apply_external_request(payload)
         geometry_text = str(payload.get('geometry', '')).strip()
-        overlap_delay_ms = 0
 
         if bool(payload.get('show', True)):
             app.setQuitOnLastWindowClosed(True)
@@ -238,37 +219,24 @@ def main():
             except Exception:
                 pass
 
-            def _show_and_fade():
-                win.setWindowOpacity(0.0)
-                if win.isMinimized():
-                    win.showNormal()
-                else:
-                    win.show()
-                if geometry_text:
-                    _apply_frame_geometry_string(win, geometry_text)
-                    QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
-                    QTimer.singleShot(120, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
-                win.raise_()
-                win.activateWindow()
-                try:
-                    import ctypes
-                    hwnd = int(win.winId())
-                    ctypes.windll.user32.SetForegroundWindow(hwnd)
-                except Exception:
-                    pass
-                win.fade_in()
-
-            QTimer.singleShot(overlap_delay_ms, _show_and_fade)
-            # Defer module/filter/nav work to after the window is showing.
-            # Allow the crossfade to start before heavier page work runs.
-            def _apply_deferred():
-                win.apply_external_request(payload, reload_preferences=False)
-            QTimer.singleShot(overlap_delay_ms + 60, _apply_deferred)
-            # Reload preferences after the fade completes.
-            QTimer.singleShot(250, win._reload_shared_preferences)
-        else:
-            # Hidden-mode request (e.g. pre-warm); apply synchronously.
-            win.apply_external_request(payload, reload_preferences=True)
+            win.setWindowOpacity(0.0)
+            if win.isMinimized():
+                win.showNormal()
+            win.show()
+            if geometry_text:
+                _apply_frame_geometry_string(win, geometry_text)
+                QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
+                QTimer.singleShot(120, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
+            win.raise_()
+            win.activateWindow()
+            # Belt-and-suspenders: use Win32 API for reliable foreground activation.
+            try:
+                import ctypes
+                hwnd = int(win.winId())
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
+            win.fade_in()
 
     def handle_new_connection():
         while server.hasPendingConnections():
@@ -285,13 +253,9 @@ def main():
                     sock.disconnectFromServer()
                     sock.deleteLater()
 
+            socket.readyRead.connect(consume_socket)
             if socket.bytesAvailable() > 0:
                 consume_socket()
-                continue
-            if socket.waitForReadyRead(50):
-                consume_socket()
-                continue
-            socket.readyRead.connect(consume_socket)
 
     server.newConnection.connect(handle_new_connection)
 
