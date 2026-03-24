@@ -319,22 +319,37 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
-        root = QHBoxLayout(central)
-        root.setContentsMargins(4, 8, 12, 12)
-        root.setSpacing(4)
+        outer = QVBoxLayout(central)
+        outer.setContentsMargins(4, 22, 12, 12)
+        outer.setSpacing(8)
 
-        self.toggle_rail = QWidget()
-        self.toggle_rail.setFixedWidth(168)
-        toggle_layout = QVBoxLayout(self.toggle_rail)
-        toggle_layout.setContentsMargins(8, 10, 8, 10)
-        toggle_layout.setSpacing(0)
+        self.rail_header_host = QWidget()
+        rail_header_layout = QHBoxLayout(self.rail_header_host)
+        rail_header_layout.setContentsMargins(6, 0, 0, 0)
+        rail_header_layout.setSpacing(0)
 
         self.rail_title = QLabel(self._t("tool_library.rail_title.tools", "Tool Library"))
         self.rail_title.setStyleSheet('color: #000000; font-size: 16pt; font-weight: 700;')
-        self.rail_title.setWordWrap(True)
+        self.rail_title.setWordWrap(False)
         self.rail_title.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        toggle_layout.addWidget(self.rail_title, 0, Qt.AlignLeft | Qt.AlignTop)
-        toggle_layout.addSpacing(14)
+        rail_header_layout.addWidget(self.rail_title, 0, Qt.AlignLeft | Qt.AlignTop)
+        rail_header_layout.addStretch(1)
+        # Keep the object for existing localization hooks, but never render this strip:
+        # title is shown in each page's top toolbar row.
+        self.rail_header_host.setFixedHeight(0)
+        self.rail_header_host.setVisible(False)
+        outer.addWidget(self.rail_header_host, 0)
+
+        root = QHBoxLayout()
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(4)
+        outer.addLayout(root, 1)
+
+        self.toggle_rail = QWidget()
+        self.toggle_rail.setFixedWidth(132)
+        toggle_layout = QVBoxLayout(self.toggle_rail)
+        toggle_layout.setContentsMargins(6, 10, 6, 10)
+        toggle_layout.setSpacing(0)
 
         self.nav_frame = QFrame()
         self.nav_frame.setObjectName('navFrame')
@@ -817,6 +832,9 @@ class MainWindow(QMainWindow):
             "}\n"
             "QFrame[detailField=\"true\"] {\n"
             f"    background-color: {palette['detail_box_bg']};\n"
+            "}\n"
+            "QFrame[detailField=\"true\"][detailHeroField=\"true\"] {\n"
+            "    background-color: transparent;\n"
             "}\n"
         )
 

@@ -51,6 +51,10 @@ QFrame[detailField="true"] {
     border-radius: 4px;
 }
 
+QFrame[detailField="true"][detailHeroField="true"] {
+    background-color: transparent;
+}
+
 QFrame[editorFieldCard="true"] {
     background-color: transparent;
     border: none;

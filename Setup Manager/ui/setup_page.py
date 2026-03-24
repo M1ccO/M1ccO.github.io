@@ -4,8 +4,8 @@ import tempfile
 from datetime import date
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QSignalBlocker, Qt, Signal, QSize, QTimer
-from PySide6.QtGui import QIcon, QPainter, QPixmap
+from PySide6.QtCore import QEvent, QSignalBlocker, Qt, Signal, QSize, QTimer, QModelIndex
+from PySide6.QtGui import QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QBoxLayout,
@@ -16,8 +16,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QListWidget,
-    QListWidgetItem,
+    QListView,
     QMessageBox,
     QPushButton,
     QSizePolicy,
@@ -39,6 +38,7 @@ from config import (
     DEFAULT_TOOL_ICON,
 )
 from ui.widgets.common import AutoShrinkLabel, repolish_widget, styled_list_item_height
+from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID, SetupCatalogDelegate
 from ui.work_editor_dialog import WorkEditorDialog
 
 
@@ -562,7 +562,6 @@ class SetupPage(QWidget):
 
         self.current_work_id = None
         self.latest_entries_by_work = {}
-        self._row_widgets: dict = {}
         self._details_open = False
         self._search_visible = False
         self._last_detail_sizes: list = []  # remembers splitter sizes when detail was last visible
@@ -678,12 +677,24 @@ class SetupPage(QWidget):
         root.addWidget(controls_frame)
 
         splitter = QSplitter(Qt.Horizontal)
-        self.work_list = QListWidget()
+        self.work_list = QListView()
         self.work_list.setObjectName("toolCatalog")
-        self.work_list.setVerticalScrollMode(QListWidget.ScrollPerPixel)
+        self.work_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.work_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.work_list.setSpacing(4)
-        self.work_list.currentItemChanged.connect(self._on_selection_changed)
+        self.work_list.setSpacing(0)
+        self.work_list.setSelectionMode(QListView.SingleSelection)
+        self.work_list.setMouseTracking(True)
+        self.work_list.setUniformItemSizes(True)
+        self._work_model = QStandardItemModel(self)
+        self._work_delegate = SetupCatalogDelegate(
+            self.work_list,
+            headers=self._row_headers,
+            compact_mode=False,
+        )
+        self.work_list.setModel(self._work_model)
+        self.work_list.setItemDelegate(self._work_delegate)
+        self.work_list.selectionModel().currentChanged.connect(self._on_selection_changed)
+        self.work_list.doubleClicked.connect(self._on_item_double_clicked)
         self.work_list.installEventFilter(self)
         self.work_list.viewport().installEventFilter(self)
 
@@ -827,6 +838,8 @@ class SetupPage(QWidget):
             key: self._t(translation_key, default)
             for key, (translation_key, default) in self._section_title_keys.items()
         }
+        if hasattr(self, "_work_delegate"):
+            self._work_delegate.set_headers(self._row_headers)
         if hasattr(self, "detail_heading_key"):
             self.detail_heading_key.setText(self._t("setup_page.field.drawing_id", "Drawing ID"))
         for key, label in self._detail_section_title_labels.items():
@@ -875,9 +888,9 @@ class SetupPage(QWidget):
         restored = False
         details_were_open = self._details_open
 
-        blocker = QSignalBlocker(self.work_list)
-        self.work_list.clear()
-        self._row_widgets = {}
+        blocker = QSignalBlocker(self.work_list.selectionModel())
+        self._work_model.clear()
+        restored_index = QModelIndex()
         for work in works:
             work_id = work.get("work_id", "")
             drawing_id = work.get("drawing_id", "")
@@ -888,32 +901,26 @@ class SetupPage(QWidget):
                 latest_text = (
                     f"{latest_entry.get('date', '')}  |  {latest_entry.get('batch_serial', '')}"
                 )
-            item = QListWidgetItem()
-            item.setData(Qt.UserRole, work_id)
-            self.work_list.addItem(item)
-            widget = WorkRowWidget(
-                work_id,
-                drawing_id,
-                description,
-                latest_text,
-                headers=self._row_headers,
-                no_runs_text=self._t("setup_page.row.no_runs", "No runs yet"),
-            )
-            widget.set_compact_mode(details_were_open)
-            widget.clicked.connect(lambda wid=work_id: self._on_row_clicked(wid))
-            widget.doubleClicked.connect(lambda wid=work_id: self._on_row_double_clicked(wid))
-            self.work_list.setItemWidget(item, widget)
-            self._row_widgets[work_id] = widget
-            item.setSizeHint(QSize(0, styled_list_item_height(widget, self.work_list.spacing())))
+            row_data = {
+                "work_id": work_id,
+                "drawing_id": drawing_id,
+                "description": description,
+                "latest_text": latest_text or self._t("setup_page.row.no_runs", "No runs yet"),
+            }
+            item = QStandardItem()
+            item.setData(work_id, ROLE_WORK_ID)
+            item.setData(row_data, ROLE_WORK_DATA)
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self._work_model.appendRow(item)
 
             if previous_id and work_id == previous_id:
-                self.work_list.setCurrentItem(item)
+                restored_index = self._work_model.index(self._work_model.rowCount() - 1, 0)
                 restored = True
 
         if not restored:
             self.current_work_id = None
-            self.work_list.clearSelection()
-            self.work_list.setCurrentItem(None)
+            self.work_list.selectionModel().clearSelection()
+            self.work_list.setCurrentIndex(QModelIndex())
 
         del blocker
 
@@ -922,6 +929,8 @@ class SetupPage(QWidget):
 
         if restored:
             self.current_work_id = previous_id
+            self.work_list.setCurrentIndex(restored_index)
+            self.work_list.scrollTo(restored_index)
             self._set_selected_card(self.current_work_id)
             if details_were_open:
                 self.show_details()
@@ -935,8 +944,8 @@ class SetupPage(QWidget):
             self._emit_library_launch_context(None)
 
     def _selected_work_id(self):
-        item = self.work_list.currentItem()
-        return item.data(Qt.UserRole) if item else None
+        index = self.work_list.currentIndex()
+        return index.data(ROLE_WORK_ID) if index.isValid() else None
 
     def _toggle_search(self):
         show = self.search_toggle_btn.isChecked()
@@ -951,20 +960,13 @@ class SetupPage(QWidget):
         self.refresh_works()
 
     def _set_current_item_by_work_id(self, work_id):
-        for i in range(self.work_list.count()):
-            item = self.work_list.item(i)
-            if item.data(Qt.UserRole) == work_id:
-                self.work_list.setCurrentItem(item)
-                return item
-        return None
-
-    def _on_row_clicked(self, work_id):
-        self._set_current_item_by_work_id(work_id)
-
-    def _on_row_double_clicked(self, work_id):
-        item = self._set_current_item_by_work_id(work_id)
-        if item is not None:
-            self._on_item_double_clicked(item)
+        for row in range(self._work_model.rowCount()):
+            index = self._work_model.index(row, 0)
+            if index.data(ROLE_WORK_ID) == work_id:
+                self.work_list.setCurrentIndex(index)
+                self.work_list.scrollTo(index)
+                return index
+        return QModelIndex()
 
     def eventFilter(self, obj, event):
         if hasattr(self, "detail_scroll") and obj is self.detail_scroll.viewport() and event.type() == QEvent.Resize:
@@ -974,7 +976,7 @@ class SetupPage(QWidget):
             QTimer.singleShot(0, self._sync_work_row_widths)
         if obj in (self.work_list, self.work_list.viewport()):
             if event.type() == QEvent.MouseButtonPress:
-                if self.work_list.itemAt(event.pos()) is None:
+                if not self.work_list.indexAt(event.pos()).isValid():
                     self._clear_selection()
         return super().eventFilter(obj, event)
 
@@ -986,8 +988,8 @@ class SetupPage(QWidget):
         self.detail_scroll_content.setFixedWidth(max(0, viewport_width - right_margin))
 
     def _clear_selection(self):
-        self.work_list.setCurrentRow(-1)
-        self.work_list.clearSelection()
+        self.work_list.selectionModel().clearSelection()
+        self.work_list.setCurrentIndex(QModelIndex())
         self.current_work_id = None
         self._set_selected_card(None)
         self._update_open_library_viewer_visibility(None)
@@ -995,7 +997,7 @@ class SetupPage(QWidget):
         self.hide_details()
 
     def _on_selection_changed(self, current, _previous):
-        work_id = current.data(Qt.UserRole) if current else None
+        work_id = current.data(ROLE_WORK_ID) if current and current.isValid() else None
         self.current_work_id = work_id
         self._set_selected_card(work_id)
         selected_work = self.work_service.get_work(work_id) if work_id else None
@@ -1005,7 +1007,7 @@ class SetupPage(QWidget):
             self._refresh_details()
 
     def _on_item_double_clicked(self, item):
-        work_id = item.data(Qt.UserRole) if item else None
+        work_id = item.data(ROLE_WORK_ID) if item and item.isValid() else None
         if not work_id:
             return
         # Double-click selected row toggles details open/closed.
@@ -1095,43 +1097,20 @@ class SetupPage(QWidget):
             self._last_detail_sizes = sizes
 
     def _set_selected_card(self, work_id):
-        """Update the visual selected state on all WorkRowWidget cards."""
-        for wid, widget in self._row_widgets.items():
-            selected = (wid == work_id)
-            widget.setProperty("selected", selected)
-            widget.style().unpolish(widget)
-            widget.style().polish(widget)
-            for child in widget.findChildren(QLabel):
-                child.style().unpolish(child)
-                child.style().polish(child)
+        _ = work_id
+        self.work_list.viewport().update()
 
     def _sync_work_row_modes(self):
         compact = bool(self._details_open)
-        for index in range(self.work_list.count()):
-            item = self.work_list.item(index)
-            widget = self.work_list.itemWidget(item)
-            if widget is None or not hasattr(widget, "set_compact_mode"):
-                continue
-            widget.set_compact_mode(compact)
-            item.setSizeHint(QSize(0, styled_list_item_height(widget, self.work_list.spacing())))
+        self._work_delegate.set_compact_mode(compact)
         self._sync_work_row_widths()
         QTimer.singleShot(0, self._sync_work_row_widths)
 
     def _sync_work_row_widths(self):
-        viewport = self.work_list.viewport()
-        if viewport is None:
+        if not hasattr(self, "work_list"):
             return
-        viewport_rect = viewport.contentsRect()
-        # Leave a small safety inset so card borders and rounded corners never
-        # push into the viewport edge and trigger horizontal overflow.
-        row_width = max(0, viewport_rect.width() - 24)
-        for index in range(self.work_list.count()):
-            item = self.work_list.item(index)
-            widget = self.work_list.itemWidget(item)
-            if item is None or widget is None:
-                continue
-            widget.setFixedWidth(row_width)
-            item.setSizeHint(QSize(0, styled_list_item_height(widget, self.work_list.spacing())))
+        self.work_list.doItemsLayout()
+        self.work_list.viewport().update()
 
     def _set_section_fields(self, key: str, fields: list):
         """Rebuild a detail section with (label, value) field pairs.

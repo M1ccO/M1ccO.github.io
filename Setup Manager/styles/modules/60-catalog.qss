@@ -27,6 +27,8 @@ QLabel[catalogTopHeader="true"] {
 }
 
 /* List viewport background */
+QListView#toolCatalog,
+QListView#setupWorkList,
 QListWidget#toolCatalog,
 QListWidget#setupWorkList {
     background-color: rgba(205, 212, 238, 0.97);
@@ -35,6 +37,8 @@ QListWidget#setupWorkList {
     padding: 2px;
 }
 
+QListView#toolCatalog::item,
+QListView#setupWorkList::item,
 QListWidget#toolCatalog::item,
 QListWidget#setupWorkList::item {
     background: transparent;

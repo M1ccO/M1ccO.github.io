@@ -18,6 +18,7 @@ from PySide6.QtGui import (
     QFont,
     QFontMetrics,
     QIcon,
+    QImage,
     QPainter,
     QPen,
     QPixmap,
@@ -41,6 +42,7 @@ ROLE_TOOL_ICON = Qt.UserRole + 2
 ROW_HEIGHT = 74
 ICON_SIZE = 40
 ICON_SLOT_W = 48
+ICON_VISUAL_OFFSET_Y = 3
 CARD_RADIUS = 8
 CARD_MARGIN_H = 6          # horizontal gap between cards and list edge
 CARD_MARGIN_V = 2           # vertical gap between cards
@@ -264,7 +266,7 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         )
 
         # ── icon ────────────────────────────────────────────────────────
-        icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2,
+        icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2 + ICON_VISUAL_OFFSET_Y,
                           ICON_SLOT_W, ICON_SIZE)
         if icon is not None:
             pm = self._cached_pixmap(icon, tool.get('tool_type', ''))
@@ -436,5 +438,34 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         key = tool_type or '__default__'
         if key not in self._icon_cache:
             pm = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE))
+            pm = self._normalized_icon_pixmap(pm)
             self._icon_cache[key] = pm
         return self._icon_cache.get(key)
+
+    @staticmethod
+    def _normalized_icon_pixmap(pixmap: QPixmap) -> QPixmap:
+        if pixmap.isNull():
+            return pixmap
+
+        image = pixmap.toImage().convertToFormat(QImage.Format_ARGB32)
+        left = image.width()
+        top = image.height()
+        right = -1
+        bottom = -1
+
+        for y in range(image.height()):
+            for x in range(image.width()):
+                if image.pixelColor(x, y).alpha() > 6:
+                    left = min(left, x)
+                    top = min(top, y)
+                    right = max(right, x)
+                    bottom = max(bottom, y)
+
+        if right < left or bottom < top:
+            return pixmap
+
+        cropped = image.copy(left, top, right - left + 1, bottom - top + 1)
+        normalized = QPixmap.fromImage(
+            cropped.scaled(QSize(ICON_SIZE, ICON_SIZE), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        )
+        return normalized if not normalized.isNull() else pixmap

@@ -92,9 +92,16 @@ class JawPage(QWidget):
         self.filter_layout.setContentsMargins(0, 6, 0, 6)
         self.filter_layout.setSpacing(4)
 
-        self.toolbar_title_label = QLabel(self._t('tool_library.module.jaws', 'JAWS'))
+        self.toolbar_title_label = QLabel(self._t('tool_library.rail_title.jaws', 'Jaws Library'))
         self.toolbar_title_label.setProperty('pageTitle', True)
         self.toolbar_title_label.setStyleSheet('padding-right: 8px;')
+        self.toolbar_title_label.setMinimumWidth(0)
+        self.toolbar_title_host = QWidget()
+        self.toolbar_title_host.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.toolbar_title_layout = QHBoxLayout(self.toolbar_title_host)
+        self.toolbar_title_layout.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_title_layout.setSpacing(0)
+        self.toolbar_title_layout.addWidget(self.toolbar_title_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
 
         self.search_toggle = QToolButton()
         self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
@@ -388,6 +395,7 @@ class JawPage(QWidget):
             widget = item.widget()
             if widget is not None:
                 widget.setParent(None)
+        self.filter_layout.addWidget(self.toolbar_title_host, 0, Qt.AlignLeft | Qt.AlignVCenter)
         self.filter_layout.addWidget(self.search_toggle)
         self.filter_layout.addWidget(self.toggle_details_btn)
         if self.search.isVisible():
@@ -481,6 +489,14 @@ class JawPage(QWidget):
         h_layout = QVBoxLayout(header)
         h_layout.setContentsMargins(14, 14, 14, 12)
         h_layout.setSpacing(4)
+
+        heading_field = QFrame()
+        heading_field.setProperty('detailField', True)
+        heading_field.setProperty('detailHeroField', True)
+        heading_layout = QVBoxLayout(heading_field)
+        heading_layout.setContentsMargins(10, 8, 10, 8)
+        heading_layout.setSpacing(4)
+
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(10)
@@ -503,8 +519,9 @@ class JawPage(QWidget):
         badge.setProperty('toolBadge', True)
         badge_row.addWidget(badge, 0, Qt.AlignLeft)
         badge_row.addStretch(1)
-        h_layout.addLayout(title_row)
-        h_layout.addLayout(badge_row)
+        heading_layout.addLayout(title_row)
+        heading_layout.addLayout(badge_row)
+        h_layout.addWidget(heading_field)
         layout.addWidget(header)
 
         # detailField grid â€” same card-box style as Tool Library
@@ -847,7 +864,7 @@ class JawPage(QWidget):
             self._jaw_delegate.set_translate(self._t)
             self.jaw_list.viewport().update()
         if hasattr(self, 'toolbar_title_label'):
-            self.toolbar_title_label.setText(self._t('tool_library.module.jaws', 'JAWS'))
+            self.toolbar_title_label.setText(self._t('tool_library.rail_title.jaws', 'Jaws Library'))
         if hasattr(self, 'search'):
             self.search.setPlaceholderText(
                 self._t('jaw_library.search.placeholder', 'Search jaw ID, type, spindle, diameter, work, washer or notes')

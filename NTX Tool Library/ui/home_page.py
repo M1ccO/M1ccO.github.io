@@ -131,6 +131,13 @@ class HomePage(QWidget):
         self.toolbar_title_label = QLabel(self.page_title)
         self.toolbar_title_label.setProperty('pageTitle', True)
         self.toolbar_title_label.setStyleSheet('padding-right: 8px;')
+        self.toolbar_title_label.setMinimumWidth(0)
+        self.toolbar_title_host = QWidget()
+        self.toolbar_title_host.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self.toolbar_title_layout = QHBoxLayout(self.toolbar_title_host)
+        self.toolbar_title_layout.setContentsMargins(0, 0, 0, 0)
+        self.toolbar_title_layout.setSpacing(0)
+        self.toolbar_title_layout.addWidget(self.toolbar_title_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
 
         # search toggle button - use image assets instead of a unicode glyph
         self.search_toggle = QToolButton()
@@ -168,7 +175,6 @@ class HomePage(QWidget):
         self.search.textChanged.connect(self.refresh_list)
         self.search.setVisible(False)
         # restrict search width so it doesn't force layout centering
-        from PySide6.QtWidgets import QSizePolicy
         self.search.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.search.setMaximumWidth(300)
 
@@ -192,7 +198,6 @@ class HomePage(QWidget):
         type_popup_view.window().setMinimumHeight(0)
         type_popup_view.window().setMaximumHeight(8 * 32 + 8)
         # make the combo just wide enough for its content, don't stretch
-        from PySide6.QtWidgets import QSizePolicy
         self.type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
         self.type_filter.setMinimumWidth(60)  # kept narrow from stylesheet
         self.type_filter.currentIndexChanged.connect(self._on_type_changed)
@@ -378,6 +383,7 @@ class HomePage(QWidget):
             if widget is not None:
                 widget.setParent(None)
 
+        self.filter_layout.addWidget(self.toolbar_title_host, 0, Qt.AlignLeft | Qt.AlignVCenter)
         self.filter_layout.addWidget(self.search_toggle)
         self.filter_layout.addWidget(self.toggle_details_btn)
         if self.search.isVisible():
@@ -842,6 +848,13 @@ class HomePage(QWidget):
         header_layout.setContentsMargins(14, 14, 14, 12)
         header_layout.setSpacing(4)
 
+        heading_field = QFrame()
+        heading_field.setProperty('detailField', True)
+        heading_field.setProperty('detailHeroField', True)
+        heading_layout = QVBoxLayout(heading_field)
+        heading_layout.setContentsMargins(10, 8, 10, 8)
+        heading_layout.setSpacing(4)
+
         name_label = QLabel(tool.get('description', '').strip() or self._t('tool_library.common.no_description', 'No description'))
         name_label.setProperty('detailHeroTitle', True)
         name_label.setWordWrap(True)
@@ -866,8 +879,9 @@ class HomePage(QWidget):
         head_badge.setProperty('toolBadge', True)
         meta_row.addStretch(1)
         meta_row.addWidget(head_badge, 0, Qt.AlignRight)
-        header_layout.addLayout(title_row)
-        header_layout.addLayout(meta_row)
+        heading_layout.addLayout(title_row)
+        heading_layout.addLayout(meta_row)
+        header_layout.addWidget(heading_field)
         layout.addWidget(header)
 
         # helper to create a field widget with key and value
