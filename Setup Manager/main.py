@@ -10,7 +10,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QFont, QGuiApplication, QPalette
 from PySide6.QtWidgets import QApplication, QProgressDialog, QProxyStyle, QStyle
 
 
@@ -98,6 +98,11 @@ def _build_fixed_light_palette() -> QPalette:
 def main():
     _maybe_relaunch_with_project_venv()
 
+    # Avoid fractional-scale half-pixel painting artifacts on Windows.
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor
+    )
+
     from PySide6.QtCore import QProcess
     from config import I18N_DIR, SHARED_UI_PREFERENCES_PATH
 
@@ -176,6 +181,9 @@ def main():
     app.setStyle("Fusion")
     app.setPalette(_build_fixed_light_palette())
     app.setStyle(FastTooltipStyle(app.style()))
+    default_font = app.font()
+    default_font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
+    app.setFont(default_font)
     app.setQuitOnLastWindowClosed(False)
 
     loading_header = _lt("setup_manager.loading.header", "INITIALIZE")

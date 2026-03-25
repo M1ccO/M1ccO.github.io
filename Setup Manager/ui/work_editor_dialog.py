@@ -1,10 +1,11 @@
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QSize, Qt, Signal
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QBoxLayout,
     QComboBox,
     QDialog,
@@ -31,7 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from config import ICONS_DIR
-from ui.widgets.common import apply_shared_dropdown_style
+from ui.widgets.common import apply_shared_dropdown_style, clear_focused_dropdown_on_outside_click
 
 
 WORK_COORDINATES = ["G54", "G55", "G56", "G57", "G58", "G59"]
@@ -59,18 +60,63 @@ def _toolbar_icon(name: str) -> QIcon:
     return QIcon()
 
 
+def _apply_tool_library_combo_style(combo: QComboBox):
+    combo.setProperty("modernDropdown", False)
+    combo.setProperty("toolLibraryCombo", True)
+    arrow_icon_path = (Path(ICONS_DIR) / "tools" / "menu_open.svg").as_posix()
+    if Path(arrow_icon_path).exists():
+        # Fallback icon rule to guarantee visible arrows even if parent-scoped
+        # stylesheet selectors do not match at runtime.
+        combo.setStyleSheet(
+            "QComboBox::drop-down { width: 28px; border: none; background: transparent; }"
+            f"QComboBox::down-arrow {{ image: url('{arrow_icon_path}'); width: 20px; height: 20px; }}"
+        )
+    apply_shared_dropdown_style(combo)
+
+
 class _ResponsiveColumnsHost(QWidget):
     """Lay out child panels in two columns when wide, stack vertically when narrow."""
 
-    def __init__(self, switch_width: int = 980, parent=None):
+    def __init__(
+        self,
+        switch_width: int = 980,
+        parent=None,
+        separator_property: str | None = None,
+    ):
         super().__init__(parent)
         self._switch_width = switch_width
+        self._separator_property = separator_property
+        self._added_widgets = 0
+        self._separators: list[QFrame] = []
         self._layout = QBoxLayout(QBoxLayout.LeftToRight, self)
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(16)
 
     def add_widget(self, widget: QWidget, stretch: int = 1):
+        if self._separator_property and self._added_widgets > 0:
+            separator = QFrame()
+            separator.setProperty(self._separator_property, True)
+            separator.setFrameShadow(QFrame.Plain)
+            separator.setLineWidth(1)
+            self._separators.append(separator)
+            self._layout.addWidget(separator, 0)
         self._layout.addWidget(widget, stretch)
+        self._added_widgets += 1
+        self._update_separator_shapes()
+
+    def _update_separator_shapes(self):
+        if not self._separators:
+            return
+        is_vertical = self._layout.direction() == QBoxLayout.LeftToRight
+        for separator in self._separators:
+            if is_vertical:
+                separator.setFrameShape(QFrame.VLine)
+                separator.setFixedWidth(1)
+                separator.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+            else:
+                separator.setFrameShape(QFrame.HLine)
+                separator.setFixedHeight(1)
+                separator.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -81,6 +127,7 @@ class _ResponsiveColumnsHost(QWidget):
         )
         if self._layout.direction() != direction:
             self._layout.setDirection(direction)
+        self._update_separator_shapes()
 
 
 class _JawSelectorPanel(QWidget):
@@ -102,22 +149,38 @@ class _JawSelectorPanel(QWidget):
         self._translate = translate or _noop_translate
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(6)
-        layout.addWidget(_section_label(title))
+        layout.setSpacing(8)
+
+        # Search + stop screws — their own bordered section
+        search_frame = QFrame()
+        search_frame.setProperty("jawSearchPanel", True)
+        search_layout = QVBoxLayout(search_frame)
+        search_layout.setContentsMargins(10, 8, 10, 10)
+        search_layout.setSpacing(6)
 
         self.search = QLineEdit()
         self.search.setPlaceholderText(self._t("work_editor.jaw.filter_placeholder", "Filter jaws..."))
         self.search.textChanged.connect(self._filter)
-        layout.addWidget(self.search)
+        search_layout.addWidget(self.search)
 
         self.stop_screws_label = QLabel(self._t("setup_page.field.stop_screws", "Stop Screws"))
         self.stop_screws_input = QLineEdit()
         self.stop_screws_input.setPlaceholderText(self._t("work_editor.jaw.stop_screws_placeholder", "e.g. 10mm"))
-        layout.addWidget(self.stop_screws_label)
-        layout.addWidget(self.stop_screws_input)
+        search_layout.addWidget(self.stop_screws_label)
+        search_layout.addWidget(self.stop_screws_input)
+        layout.addWidget(search_frame)
+
+        selection_group = QGroupBox(title)
+        selection_layout = QVBoxLayout(selection_group)
+        selection_layout.setContentsMargins(8, 10, 8, 8)
+        selection_layout.setSpacing(0)
 
         self.jaw_list = QListWidget()
-        layout.addWidget(self.jaw_list, 1)
+        self.jaw_list.setProperty("jawListWidget", True)
+        self.jaw_list.setFrameShape(QFrame.NoFrame)
+        self.jaw_list.setLineWidth(0)
+        selection_layout.addWidget(self.jaw_list, 1)
+        layout.addWidget(selection_group, 1)
 
         self._all_jaws: list = []
         self._updating = False
@@ -319,7 +382,7 @@ class _ToolPickerDialog(QDialog):
         return self._translate(key, default, **kwargs)
 
     def _style_combo_popup(self, combo: QComboBox):
-        apply_shared_dropdown_style(combo)
+        _apply_tool_library_combo_style(combo)
 
     def _tool_types(self) -> list:
         values = {
@@ -413,7 +476,7 @@ class _OrderedToolList(QWidget):
             super().__init__(parent)
             self.setAttribute(Qt.WA_StyledBackground, False)
             layout = QHBoxLayout(self)
-            layout.setContentsMargins(6, 2, 6, 2)
+            layout.setContentsMargins(6, 3, 6, 3)
             layout.setSpacing(8)
 
             text_label = QLabel(text)
@@ -431,6 +494,20 @@ class _OrderedToolList(QWidget):
             comment_badge.setStyleSheet("background: transparent;")
             layout.addWidget(comment_badge, 0, Qt.AlignRight | Qt.AlignVCenter)
 
+    @staticmethod
+    def _configure_icon_action(btn: QPushButton, icon_name: str, tooltip: str, *, danger: bool = False):
+        btn.setText("")
+        btn.setToolTip(tooltip)
+        icon = _toolbar_icon(icon_name)
+        if not icon.isNull():
+            btn.setIcon(icon)
+            btn.setIconSize(QSize(18, 18))
+        btn.setFixedSize(52, 32)
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        btn.setProperty("panelActionButton", True)
+        if danger:
+            btn.setProperty("dangerAction", True)
+
     def __init__(
         self,
         head_label: str,
@@ -446,23 +523,22 @@ class _OrderedToolList(QWidget):
         header_row = QHBoxLayout()
         header_row.setContentsMargins(0, 0, 0, 0)
         header_row.setSpacing(8)
-        header_row.addWidget(_section_label(head_label))
 
         self.spindle_selector = QComboBox()
         self.spindle_selector.setProperty("modernDropdown", True)
         self.spindle_selector.setMinimumWidth(116)
         self.spindle_selector.setMaximumWidth(150)
-        apply_shared_dropdown_style(self.spindle_selector)
+        _apply_tool_library_combo_style(self.spindle_selector)
         for label, value in self._SPINDLE_OPTIONS:
             self.spindle_selector.addItem(label, value)
         header_row.addStretch(1)
         header_row.addWidget(self.spindle_selector)
         layout.addLayout(header_row)
 
-        list_panel = QFrame()
+        list_panel = QGroupBox(head_label)
         list_panel.setProperty("toolIdsPanel", True)
         list_panel_layout = QVBoxLayout(list_panel)
-        list_panel_layout.setContentsMargins(6, 6, 6, 6)
+        list_panel_layout.setContentsMargins(8, 10, 8, 8)
         list_panel_layout.setSpacing(0)
 
         self.tool_list = QListWidget()
@@ -499,8 +575,6 @@ class _OrderedToolList(QWidget):
         btn_row.addWidget(self.move_up_btn)
         btn_row.addWidget(self.move_down_btn)
         btn_row.addWidget(self.remove_btn)
-        btn_row.addStretch(1)
-        layout.addLayout(btn_row)
 
         self.comment_btn = QPushButton(self._t("work_editor.tools.add_comment", "Add Comment"))
         self.delete_comment_btn = QPushButton(self._t("work_editor.tools.delete_comment", "Delete Comment"))
@@ -508,12 +582,34 @@ class _OrderedToolList(QWidget):
         self.comment_btn.setMaximumWidth(150)
         self.delete_comment_btn.setMinimumWidth(112)
         self.delete_comment_btn.setMaximumWidth(150)
-        select_row = QHBoxLayout()
-        select_row.setContentsMargins(0, 0, 0, 0)
-        select_row.addWidget(self.comment_btn)
-        select_row.addWidget(self.delete_comment_btn)
-        select_row.addStretch(1)
-        layout.addLayout(select_row)
+
+        self._configure_icon_action(
+            self.select_btn,
+            "select",
+            self._t("work_editor.tools.select_tools", "Select Tools"),
+        )
+        self._configure_icon_action(
+            self.comment_btn,
+            "comment",
+            self._t("work_editor.tools.add_comment", "Add Comment"),
+        )
+        self._configure_icon_action(
+            self.delete_comment_btn,
+            "comment_delete",
+            self._t("work_editor.tools.delete_comment", "Delete Comment"),
+        )
+        self._configure_icon_action(
+            self.remove_btn,
+            "delete",
+            self._t("work_editor.tools.remove", "Remove Tool"),
+            danger=True,
+        )
+
+        btn_row.addWidget(self.comment_btn)
+        btn_row.addWidget(self.delete_comment_btn)
+
+        btn_row.addStretch(1)
+        layout.addLayout(btn_row)
 
         self.move_up_btn.clicked.connect(self._move_up)
         self.move_down_btn.clicked.connect(self._move_down)
@@ -569,7 +665,7 @@ class _OrderedToolList(QWidget):
         for index, assignment in enumerate(self._current_assignments()):
             item = QListWidgetItem()
             item.setData(Qt.UserRole, dict(assignment))
-            item.setSizeHint(QSize(0, 34))
+            item.setSizeHint(QSize(0, 36))
             self.tool_list.addItem(item)
             self._render_assignment_row(item, index, assignment)
         if self.tool_list.count() > 0:
@@ -788,6 +884,24 @@ class WorkEditorDialog(QDialog):
         self._load_external_refs()
         self._load_work()
 
+        # Force re-polish now that all combos are in the full widget hierarchy so
+        # parent selectors like QDialog[workEditorDialog="true"] resolve correctly.
+        for _combo in self.findChildren(QComboBox):
+            if _combo.property("toolLibraryCombo"):
+                _combo.style().unpolish(_combo)
+                _combo.style().polish(_combo)
+
+        QApplication.instance().installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            clear_focused_dropdown_on_outside_click(obj, self)
+        return super().eventFilter(obj, event)
+
+    def hideEvent(self, event):
+        QApplication.instance().removeEventFilter(self)
+        super().hideEvent(event)
+
     # ------------------------------------------------------------------
     # Tab builders
     # ------------------------------------------------------------------
@@ -819,7 +933,7 @@ class WorkEditorDialog(QDialog):
             btn.style().polish(btn)
 
     def _apply_coord_combo_popup_style(self, combo: QComboBox):
-        apply_shared_dropdown_style(combo)
+        _apply_tool_library_combo_style(combo)
 
     def _make_axis_input(self, value_attr_name: str, axis: str) -> QLineEdit:
         value_input = QLineEdit()
@@ -920,7 +1034,7 @@ class WorkEditorDialog(QDialog):
         self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        host = _ResponsiveColumnsHost(switch_width=860)
+        host = _ResponsiveColumnsHost(switch_width=860, separator_property="jawColumnSeparator")
         host.add_widget(self.main_jaw_selector, 1)
         host.add_widget(self.sub_jaw_selector, 1)
         layout.addWidget(host, 1)
@@ -1013,7 +1127,14 @@ class WorkEditorDialog(QDialog):
         host = _ResponsiveColumnsHost(switch_width=820)
         host.add_widget(self.head1_ordered, 1)
         host.add_widget(self.head2_ordered, 1)
-        layout.addWidget(host, 1)
+
+        host_surface = QFrame()
+        host_surface.setProperty("toolIdsHostSurface", True)
+        host_surface_layout = QVBoxLayout(host_surface)
+        host_surface_layout.setContentsMargins(8, 8, 8, 8)
+        host_surface_layout.setSpacing(0)
+        host_surface_layout.addWidget(host, 1)
+        layout.addWidget(host_surface, 1)
 
     def _sync_tool_spindle_view(self):
         spindle = (self.tools_spindle_switch.currentData() or "main").strip().lower()
@@ -1024,14 +1145,22 @@ class WorkEditorDialog(QDialog):
         layout = QVBoxLayout(self.notes_tab)
         layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(8)
-        self.robot_info_input = QTextEdit()
         self.notes_input = QTextEdit()
+        self.robot_info_input = QTextEdit()
         self.notes_input.setMinimumHeight(150)
         self.robot_info_input.setMaximumHeight(96)
-        layout.addWidget(QLabel(self._t("setup_page.field.notes", "Notes")))
-        layout.addWidget(self.notes_input, 1)
-        layout.addWidget(QLabel(self._t("setup_page.field.robot_info", "Robot info")))
-        layout.addWidget(self.robot_info_input, 0)
+
+        notes_group = QGroupBox(self._t("setup_page.field.notes", "Notes"))
+        notes_group_layout = QVBoxLayout(notes_group)
+        notes_group_layout.setContentsMargins(10, 8, 10, 10)
+        notes_group_layout.addWidget(self.notes_input, 1)
+        layout.addWidget(notes_group, 1)
+
+        robot_group = QGroupBox(self._t("setup_page.field.robot_info", "Robot info"))
+        robot_group_layout = QVBoxLayout(robot_group)
+        robot_group_layout.setContentsMargins(10, 8, 10, 10)
+        robot_group_layout.addWidget(self.robot_info_input, 0)
+        layout.addWidget(robot_group, 0)
 
     # ------------------------------------------------------------------
     # IO helpers

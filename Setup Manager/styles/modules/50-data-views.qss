@@ -142,6 +142,207 @@ QDialog[workEditorDialog="true"] {
     background: #ffffff;
 }
 
+/* Work Editor: subtle section-panel tint while keeping controls crisp. */
+QDialog[workEditorDialog="true"] QGroupBox {
+    background: #f6f9fc;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    margin-top: 14px;
+    padding-top: 6px;
+}
+
+QDialog[workEditorDialog="true"] QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 10px;
+    top: 2px;
+    padding: 0 4px;
+    background: transparent;
+}
+
+QDialog[workEditorDialog="true"] QFrame[toolIdsHostSurface="true"] {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+}
+
+QDialog[workEditorDialog="true"] QGroupBox[toolIdsPanel="true"] {
+    background: #f6f9fc;
+}
+
+QDialog[workEditorDialog="true"] QListWidget#toolIdsOrderList {
+    background: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    outline: none;
+    padding: 2px;
+}
+
+QDialog[workEditorDialog="true"] QListWidget#toolIdsOrderList::item {
+    padding: 2px 10px;
+}
+
+QDialog[workEditorDialog="true"] QListWidget#toolIdsOrderList::viewport {
+    background: #ffffff;
+    border: none;
+    border-radius: 6px;
+}
+
+/* Work Editor comboboxes: match Tool Editor input look (white shell + lighter weight). */
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] {
+    background-color: #ffffff;
+    border: 1px solid #a0b4c8;
+    border-radius: 6px;
+    min-height: 0px;
+    font-size: 10.5pt;
+    font-weight: 400;
+    min-width: 76px;
+    padding: 6px 10px;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"]:focus {
+    border: 1px solid #4a90e2;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"] {
+    background-color: #edf5fc;
+    border: 1px solid #c0c4c8;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"]::drop-down {
+    background-color: #edf5fc;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"]::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: center right;
+    width: 28px;
+    border: none;
+    background: transparent;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"]::down-arrow {
+    image: url("assets/icons/tools/menu_open.svg");
+    width: 24px;
+    height: 24px;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView {
+    background-color: #FCFCFC;
+    color: #111111;
+    border: 1px solid #00C8FF;
+    border-radius: 6px;
+    outline: none;
+    padding: 2px 0;
+    font-size: 10.5pt;
+    font-weight: 600;
+    selection-background-color: #FCFCFC;
+    selection-color: #000000;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item {
+    padding: 10px 14px;
+    background-color: #FCFCFC;
+    border: none;
+}
+
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:hover,
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected,
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:active,
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:!active,
+QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:hover {
+    background-color: #F0F0F0;
+    color: #000000;
+    border: none;
+}
+
+/* Work Editor: bold field labels, unified size and colour */
+QDialog[workEditorDialog="true"] QLabel {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #1e2d3d;
+}
+/* Column headers (WCS / Z / X / Y / C) — same size/weight, keep subtle colour */
+QDialog[workEditorDialog="true"] QLabel[detailFieldKey="true"] {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #4a5a6a;
+}
+/* Tool assignment rows — normal weight so list items stay readable */
+QDialog[workEditorDialog="true"] QFrame[toolIdsPanel="true"] QLabel {
+    font-size: 10.5pt;
+    font-weight: 400;
+    color: #1e2d3d;
+}
+
+/* Work Editor: visible but not harsh input borders */
+QDialog[workEditorDialog="true"] QLineEdit,
+QDialog[workEditorDialog="true"] QTextEdit {
+    background: #ffffff;
+    border: 1px solid #a0b4c8;
+}
+QDialog[workEditorDialog="true"] QLineEdit:focus,
+QDialog[workEditorDialog="true"] QTextEdit:focus {
+    border: 1px solid #1e88e5;
+}
+QDialog[workEditorDialog="true"] QLineEdit:disabled {
+    border: 1px solid #c4cfd8;
+}
+
+/* Jaw panels: search/filter section and list section */
+QDialog[workEditorDialog="true"] QFrame[jawSearchPanel="true"] {
+    background: #f6f9fc;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+}
+
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"] {
+    background: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    outline: none;
+    padding: 2px;
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #1e2d3d;
+}
+
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"]::viewport {
+    background: #ffffff;
+    border: none;
+    border-radius: 6px;
+}
+
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"]::item {
+    padding: 5px 10px;
+    margin: 0px 2px;
+    border: none;
+    border-bottom: 1px solid #d8e0e8;
+    background-color: transparent;
+}
+
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"]::item:hover {
+    background-color: #edf5fc;
+    border-bottom: 1px solid #c9d9ea;
+}
+
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"]::item:selected,
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"]::item:selected:active,
+QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"]::item:selected:!active {
+    background-color: #cfe4f8;
+    border: 1px solid #8db9df;
+    border-radius: 4px;
+    color: #16334e;
+}
+
+QDialog[workEditorDialog="true"] QFrame[jawColumnSeparator="true"] {
+    color: #c8d4e0;
+    background: #c8d4e0;
+    border: none;
+}
+
 QWidget[zeroPointsSurface="true"] {
     background: #ffffff;
 }

@@ -33,11 +33,11 @@ QComboBox[modernDropdown="true"] {
                                       stop:0 #E2E2E2, stop:1 #FAFAFA);
     border: 1px solid #c0c4c8;
     border-radius: 6px;
-    min-height: 30px;
+    min-height: 36px;
     font-size: 10.5pt;
     font-weight: 600;
     min-width: 76px;
-    padding: 4px 10px;
+    padding: 5px 10px;
 }
 
 QComboBox[modernDropdown="true"]:focus {
@@ -57,15 +57,15 @@ QComboBox[modernDropdown="true"][hovered="true"]::drop-down {
 QComboBox[modernDropdown="true"]::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: center right;
-    width: 24px;
+    width: 26px;
     border: none;
     background: transparent;
 }
 
 QComboBox[modernDropdown="true"]::down-arrow {
     image: url("assets/icons/tools/menu_open.svg");
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
 }
 
 QComboBox[modernDropdown="true"] QAbstractItemView {
