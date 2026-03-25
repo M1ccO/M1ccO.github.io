@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QProgressDialog, QProxyStyle, QStyle
 
 
@@ -73,6 +74,25 @@ class FastTooltipStyle(QProxyStyle):
         if hint == QStyle.SH_ToolTip_FallAsleepDelay:
             return 20000
         return super().styleHint(hint, option, widget, returnData)
+
+
+def _build_fixed_light_palette() -> QPalette:
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor('#eef3f8'))
+    palette.setColor(QPalette.WindowText, QColor('#1f252b'))
+    palette.setColor(QPalette.Base, QColor('#ffffff'))
+    palette.setColor(QPalette.AlternateBase, QColor('#f6f9fc'))
+    palette.setColor(QPalette.ToolTipBase, QColor('#ffffff'))
+    palette.setColor(QPalette.ToolTipText, QColor('#1f252b'))
+    palette.setColor(QPalette.Text, QColor('#1f252b'))
+    palette.setColor(QPalette.Button, QColor('#f7fafc'))
+    palette.setColor(QPalette.ButtonText, QColor('#1f252b'))
+    palette.setColor(QPalette.BrightText, QColor('#ffffff'))
+    palette.setColor(QPalette.Highlight, QColor('#2fa1ee'))
+    palette.setColor(QPalette.HighlightedText, QColor('#ffffff'))
+    palette.setColor(QPalette.Link, QColor('#2fa1ee'))
+    palette.setColor(QPalette.PlaceholderText, QColor('#6c7a88'))
+    return palette
 
 
 def main():
@@ -154,6 +174,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    app.setPalette(_build_fixed_light_palette())
     app.setStyle(FastTooltipStyle(app.style()))
     app.setQuitOnLastWindowClosed(False)
 
@@ -171,6 +192,34 @@ def main():
     splash.setAutoClose(False)
     splash.setAutoReset(False)
     splash.resize(460, 150)
+    splash.setStyleSheet(
+        "QProgressDialog {"
+        " background-color: #eef3f8;"
+        " border: 1px solid #c8d4e0;"
+        " border-radius: 8px;"
+        " font-family: 'Segoe UI';"
+        " font-size: 10pt;"
+        " color: #2b3136;"
+        "}"
+        "QProgressDialog QLabel {"
+        " background: transparent;"
+        " font-family: 'Segoe UI';"
+        " font-size: 9.5pt;"
+        " font-weight: 600;"
+        " color: #2b3136;"
+        "}"
+        "QProgressBar {"
+        " border: 1px solid #c8cfd6;"
+        " background: #ffffff;"
+        " border-radius: 4px;"
+        " color: #2b3136;"
+        " text-align: center;"
+        "}"
+        "QProgressBar::chunk {"
+        " background: #2fa1ee;"
+        " border-radius: 3px;"
+        "}"
+    )
     splash.show()
 
     def step(progress, text):
