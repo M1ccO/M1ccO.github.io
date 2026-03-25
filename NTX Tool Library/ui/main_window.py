@@ -18,11 +18,15 @@ from PySide6.QtCore import (
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtGui import QColor, QCursor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
+    QAbstractButton,
+    QAbstractItemView,
+    QAbstractScrollArea,
     QButtonGroup,
     QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -151,6 +155,35 @@ class MainWindow(QMainWindow):
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            page = getattr(self, 'stack', None) and self.stack.currentWidget()
+            if page is not None and not self._is_interactive_click(event):
+                self._clear_page_selection(page)
+        super().mousePressEvent(event)
+
+    def _is_interactive_click(self, event) -> bool:
+        target = self.childAt(event.position().toPoint())
+        if target is None:
+            return False
+        widget = target
+        while widget is not None:
+            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView, QAbstractScrollArea)):
+                return True
+            widget = widget.parentWidget()
+        return False
+
+    def _clear_page_selection(self, page: QWidget):
+        clear_fn = getattr(page, '_clear_selection', None) or getattr(page, 'clear_selection', None)
+        if callable(clear_fn):
+            clear_fn()
+            return
+        for view in page.findChildren(QAbstractItemView):
+            try:
+                view.clearSelection()
+            except Exception:
+                pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
