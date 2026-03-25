@@ -246,7 +246,7 @@ def main():
             except Exception:
                 pass
 
-            win.setWindowOpacity(0.0)
+            win.setWindowOpacity(1.0)
             if win.isMinimized():
                 win.showNormal()
             win.show()

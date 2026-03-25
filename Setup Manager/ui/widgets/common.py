@@ -1,6 +1,6 @@
 from PySide6.QtCore import QEvent, QObject, QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPalette, QPen
-from PySide6.QtWidgets import QWidget, QToolButton, QVBoxLayout, QLabel, QSizePolicy, QStyledItemDelegate, QStyle
+from PySide6.QtWidgets import QApplication, QComboBox, QWidget, QToolButton, QVBoxLayout, QLabel, QSizePolicy, QStyledItemDelegate, QStyle
 
 
 _COMBO_SURFACE = QColor('#FCFCFC')
@@ -158,6 +158,35 @@ def _reset_popup_visual_state(combo):
         selection_model.clearSelection()
     view.clearSelection()
     view.viewport().update()
+
+
+def _is_widget_in_tree(source: QWidget, target: QWidget) -> bool:
+    widget = source
+    while widget is not None:
+        if widget is target:
+            return True
+        widget = widget.parentWidget()
+    return False
+
+
+def clear_focused_dropdown_on_outside_click(event_source: QWidget, top_window: QWidget) -> bool:
+    """Clear focused combobox when a click occurs outside the combo and its popup."""
+    if not isinstance(event_source, QWidget) or event_source.window() is not top_window:
+        return False
+
+    focused = QApplication.focusWidget()
+    if not isinstance(focused, QComboBox) or focused.window() is not top_window:
+        return False
+
+    if _is_widget_in_tree(event_source, focused):
+        return False
+
+    popup = focused.view().window() if focused.view() is not None else None
+    if popup is not None and popup.isVisible() and _is_widget_in_tree(event_source, popup):
+        return False
+
+    focused.clearFocus()
+    return True
 
 
 def apply_shared_dropdown_style(combo):

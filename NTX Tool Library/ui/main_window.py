@@ -4,12 +4,7 @@ from pathlib import Path
 
 from PySide6.QtCore import (
     QEvent,
-    QEasingCurve,
-    QParallelAnimationGroup,
-    QPauseAnimation,
     QPoint,
-    QPropertyAnimation,
-    QSequentialAnimationGroup,
     QSize,
     Qt,
     QTimer,
@@ -20,7 +15,6 @@ from PySide6.QtGui import QColor, QCursor, QGuiApplication, QIcon, QImage, QPixm
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
-    QAbstractScrollArea,
     QApplication,
     QButtonGroup,
     QComboBox,
@@ -65,7 +59,7 @@ from ui.export_page import ExportPage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style
+from ui.widgets.common import add_shadow, apply_shared_dropdown_style, clear_focused_dropdown_on_outside_click
 
 
 THEME_PALETTES = {
@@ -157,35 +151,6 @@ class MainWindow(QMainWindow):
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            page = getattr(self, 'stack', None) and self.stack.currentWidget()
-            if page is not None and not self._is_interactive_click(event):
-                self._clear_page_selection(page)
-        super().mousePressEvent(event)
-
-    def _is_interactive_click(self, event) -> bool:
-        target = self.childAt(event.position().toPoint())
-        if target is None:
-            return False
-        widget = target
-        while widget is not None:
-            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView, QAbstractScrollArea)):
-                return True
-            widget = widget.parentWidget()
-        return False
-
-    def _clear_page_selection(self, page: QWidget):
-        clear_fn = getattr(page, '_clear_selection', None) or getattr(page, 'clear_selection', None)
-        if callable(clear_fn):
-            clear_fn()
-            return
-        for view in page.findChildren(QAbstractItemView):
-            try:
-                view.clearSelection()
-            except Exception:
-                pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -542,7 +507,7 @@ class MainWindow(QMainWindow):
         self.master_filter_toggle.setChecked(self._master_filter_active)
         self._update_master_filter_toggle_visual()
 
-        # Animate nav icon reveal on rail hover: hidden by default, slide+fade in.
+        # Nav stays always visible; hover logic remains for compatibility.
         self._setup_nav_hover_animation()
         self._apply_module_mode('tools')
         current_db_name = Path(getattr(self.tool_service.db, 'path', '')).name
@@ -582,6 +547,7 @@ class MainWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
+            clear_focused_dropdown_on_outside_click(obj, self)
             self._clear_active_page_selection_on_background_click(obj)
         if hasattr(self, '_nav_hover_widgets') and obj in self._nav_hover_widgets:
             if event.type() == QEvent.Enter:

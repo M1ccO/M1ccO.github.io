@@ -4,13 +4,12 @@ from pathlib import Path
 import shutil
 import sys
 
-from PySide6.QtCore import QEasingCurve, QProcess, QPropertyAnimation, QTimer, QSize, Qt
+from PySide6.QtCore import QEvent, QProcess, QTimer, QSize, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
-    QAbstractScrollArea,
     QApplication,
     QComboBox,
     QFrame,
@@ -53,6 +52,7 @@ from ui.preferences_dialog import PreferencesDialog
 from ui.setup_page import SetupPage
 from services.localization_service import LocalizationService
 from services.ui_preferences_service import UiPreferencesService
+from ui.widgets.common import clear_focused_dropdown_on_outside_click
 
 
 THEME_PALETTES = {
@@ -86,27 +86,30 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._apply_style()
+        QApplication.instance().installEventFilter(self)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            page = getattr(self, 'stack', None) and self.stack.currentWidget()
-            if page is not None and not self._is_interactive_click(event):
-                self._clear_page_selection(page)
-        super().mousePressEvent(event)
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            clear_focused_dropdown_on_outside_click(obj, self)
+            self._clear_active_page_selection_on_background_click(obj)
+        return super().eventFilter(obj, event)
 
-    def _is_interactive_click(self, event) -> bool:
-        target = self.childAt(event.position().toPoint())
-        if target is None:
-            return False
-        widget = target
+    def _clear_active_page_selection_on_background_click(self, obj):
+        if not isinstance(obj, QWidget) or obj.window() is not self:
+            return
+
+        widget = obj
         while widget is not None:
-            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView, QAbstractScrollArea)):
-                return True
+            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView)):
+                return
             widget = widget.parentWidget()
-        return False
+
+        page = self.stack.currentWidget() if hasattr(self, 'stack') else None
+        if page is not None:
+            self._clear_page_selection(page)
 
     def _clear_page_selection(self, page: QWidget):
         clear_fn = getattr(page, '_clear_selection', None) or getattr(page, 'clear_selection', None)
@@ -308,26 +311,19 @@ class MainWindow(QMainWindow):
         return False
 
     def _fade_out_and(self, callback):
-        """Animate window opacity 1→0 then call *callback*."""
-        anim = QPropertyAnimation(self, b"windowOpacity", self)
-        anim.setDuration(180)
-        anim.setStartValue(1.0)
-        anim.setEndValue(0.0)
-        anim.setEasingCurve(QEasingCurve.InQuad)
-        anim.finished.connect(callback)
-        self._fade_anim = anim          # prevent GC
-        anim.start()
+        """Immediately run *callback* without transition animation."""
+        if getattr(self, '_fade_anim', None) is not None:
+            self._fade_anim.stop()
+        self._fade_anim = None
+        self.setWindowOpacity(1.0)
+        callback()
 
     def fade_in(self):
-        """Animate window opacity 0→1 (called after being shown by IPC)."""
-        self.setWindowOpacity(0.0)
-        anim = QPropertyAnimation(self, b"windowOpacity", self)
-        anim.setDuration(220)
-        anim.setStartValue(0.0)
-        anim.setEndValue(1.0)
-        anim.setEasingCurve(QEasingCurve.OutQuad)
-        self._fade_anim = anim
-        anim.start()
+        """Show fully visible without transition animation."""
+        if getattr(self, '_fade_anim', None) is not None:
+            self._fade_anim.stop()
+        self._fade_anim = None
+        self.setWindowOpacity(1.0)
 
     def _current_window_rect(self) -> tuple[int, int, int, int]:
         """Return the actual on-screen window rectangle, including snap placement."""
