@@ -1,6 +1,13 @@
-from PySide6.QtCore import QEvent, QObject, QSize, Qt
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPen
+from PySide6.QtCore import QEvent, QObject, QSize, Qt, QTimer
+from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPalette, QPen
 from PySide6.QtWidgets import QWidget, QToolButton, QVBoxLayout, QLabel, QSizePolicy, QStyledItemDelegate, QStyle
+
+
+_COMBO_SURFACE = QColor('#FCFCFC')
+_COMBO_TEXT = QColor('#111111')
+_COMBO_BORDER = QColor('#00C8FF')
+_COMBO_HOVER = QColor('#F0F0F0')
+_SHADOW_COLOR = QColor(121, 138, 156, 72)
 
 
 class AutoShrinkLabel(QLabel):
@@ -60,8 +67,7 @@ class BorderOnlyComboItemDelegate(QStyledItemDelegate):
     def paint(self, painter: QPainter, option, index):
         painter.save()
 
-        base_color = QColor('#FCFCFC')
-        painter.fillRect(option.rect, base_color)
+        painter.fillRect(option.rect, _COMBO_SURFACE)
 
         model = index.model()
         row_count = model.rowCount(index.parent()) if model is not None else 0
@@ -74,14 +80,14 @@ class BorderOnlyComboItemDelegate(QStyledItemDelegate):
             painter.setPen(sep_pen)
             painter.drawLine(option.rect.left() + 10, option.rect.bottom(), option.rect.right() - 10, option.rect.bottom())
 
-        active = bool(option.state & QStyle.State_Selected or option.state & QStyle.State_MouseOver)
+        active = bool(option.state & QStyle.State_MouseOver)
         if active:
             fill_rect = option.rect.adjusted(1, 1, -1, -1)
-            painter.fillRect(fill_rect, QColor('#F0F0F0'))
+            painter.fillRect(fill_rect, _COMBO_HOVER)
 
         text = str(index.data(Qt.DisplayRole) or '')
         text_rect = option.rect.adjusted(12, 0, -12, 0)
-        painter.setPen(QColor('#000000'))
+        painter.setPen(_COMBO_TEXT)
         painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
 
         painter.restore()
@@ -99,7 +105,7 @@ def add_shadow(widget, blur_radius=6, x_offset=0, y_offset=1):
     effect = QGraphicsDropShadowEffect(widget)
     effect.setBlurRadius(blur_radius)
     effect.setOffset(x_offset, y_offset)
-    effect.setColor(widget.palette().color(widget.backgroundRole()).darker(110))
+    effect.setColor(_SHADOW_COLOR)
     widget.setGraphicsEffect(effect)
 
 
@@ -132,15 +138,66 @@ class _ComboWheelGuardFilter(QObject):
         return False
 
 
+class _ComboPopupResetFilter(QObject):
+    def __init__(self, combo):
+        super().__init__(combo)
+        self.combo = combo
+
+    def eventFilter(self, obj, event):
+        if event.type() in (QEvent.Hide, QEvent.HideToParent):
+            _reset_popup_visual_state(self.combo)
+        return False
+
+
+def _reset_popup_visual_state(combo):
+    view = combo.view()
+    if view is None:
+        return
+    selection_model = view.selectionModel()
+    if selection_model is not None:
+        selection_model.clearSelection()
+    view.clearSelection()
+    view.viewport().update()
+
+
 def apply_shared_dropdown_style(combo):
     """Apply unified popup and hover behavior for comboboxes across the app."""
     combo.setProperty('hovered', False)
     combo.setAttribute(Qt.WA_Hover, True)
+    combo.setAttribute(Qt.WA_StyledBackground, True)
+
+    combo_palette = QPalette(combo.palette())
+    combo_palette.setColor(QPalette.Button, QColor('#FAFAFA'))
+    combo_palette.setColor(QPalette.Base, _COMBO_SURFACE)
+    combo_palette.setColor(QPalette.Window, _COMBO_SURFACE)
+    combo_palette.setColor(QPalette.Text, _COMBO_TEXT)
+    combo_palette.setColor(QPalette.ButtonText, _COMBO_TEXT)
+    combo_palette.setColor(QPalette.WindowText, _COMBO_TEXT)
+    combo_palette.setColor(QPalette.Highlight, _COMBO_HOVER)
+    combo_palette.setColor(QPalette.HighlightedText, _COMBO_TEXT)
+    combo.setPalette(combo_palette)
 
     view = combo.view()
     view.setMouseTracking(True)
     view.viewport().setMouseTracking(True)
+    view.setAutoFillBackground(True)
+    view.viewport().setAutoFillBackground(True)
     view.setItemDelegate(BorderOnlyComboItemDelegate(view))
+
+    view_palette = QPalette(view.palette())
+    view_palette.setColor(QPalette.Base, _COMBO_SURFACE)
+    view_palette.setColor(QPalette.Window, _COMBO_SURFACE)
+    view_palette.setColor(QPalette.Text, _COMBO_TEXT)
+    view_palette.setColor(QPalette.WindowText, _COMBO_TEXT)
+    view_palette.setColor(QPalette.Highlight, _COMBO_HOVER)
+    view_palette.setColor(QPalette.HighlightedText, _COMBO_TEXT)
+    view.setPalette(view_palette)
+    view.viewport().setPalette(view_palette)
+
+    popup_window = view.window()
+    popup_window.setAttribute(Qt.WA_StyledBackground, True)
+    popup_window.setPalette(view_palette)
+    popup_window.setStyleSheet('background-color: #FCFCFC; border: 1px solid #00C8FF;')
 
     hover_filter = _ComboHoverFilter(combo)
     combo.installEventFilter(hover_filter)
@@ -150,9 +207,18 @@ def apply_shared_dropdown_style(combo):
     wheel_guard = _ComboWheelGuardFilter(combo)
     combo.installEventFilter(wheel_guard)
 
+    popup_reset_filter = _ComboPopupResetFilter(combo)
+    view.installEventFilter(popup_reset_filter)
+    view.viewport().installEventFilter(popup_reset_filter)
+    view.window().installEventFilter(popup_reset_filter)
+
+    # After selecting an item, clear popup row visuals once the popup closes.
+    combo.activated.connect(lambda _idx: QTimer.singleShot(0, lambda: _reset_popup_visual_state(combo)))
+
     # Keep an owning reference so the filter stays alive.
     combo._shared_dropdown_hover_filter = hover_filter
     combo._shared_dropdown_wheel_guard = wheel_guard
+    combo._shared_dropdown_popup_reset_filter = popup_reset_filter
 
 
 class CollapsibleGroup(QWidget):

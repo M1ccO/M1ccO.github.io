@@ -2,9 +2,11 @@ import numpy as np
 
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QSize, Qt
-from PySide6.QtGui import QIcon, QImage, QPixmap, QTransform
+from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt
+from PySide6.QtGui import QIcon, QImage, QPixmap, QStandardItem, QStandardItemModel, QTransform
 from PySide6.QtWidgets import (
+    QAbstractButton,
+    QAbstractItemView,
     QApplication,
     QComboBox,
     QDialog,
@@ -14,8 +16,7 @@ from PySide6.QtWidgets import (
     QInputDialog,
     QLabel,
     QLineEdit,
-    QListWidget,
-    QListWidgetItem,
+    QListView,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -27,6 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
+from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_ICON, ROLE_JAW_ID, jaw_icon_for_row
 from ui.jaw_editor_dialog import AddEditJawDialog
 
 
@@ -58,7 +60,11 @@ def _jaw_icon_pixmap(jaw: dict, icon_target_size: QSize) -> QPixmap:
         return pixmap.scaled(icon_target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
     return QIcon(str(TOOL_ICONS_DIR / 'jaw_icon.png')).pixmap(icon_target_size)
 from ui.stl_preview import StlPreviewWidget
-from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget, styled_list_item_height
+from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget
+
+
+CATALOG_CARD_HEIGHT = 74
+CATALOG_ITEM_HEIGHT = 78
 
 
 class JawRowWidget(QFrame):
@@ -370,10 +376,8 @@ class ResponsiveJawRowWidget(QFrame):
         if self._icon_label is not None:
             if icon_only_mode:
                 self._icon_label.setFixedSize(36, 36)
-            elif single_column_mode:
-                self._icon_label.setFixedSize(40, 40)
             else:
-                self._icon_label.setFixedSize(48, 48)
+                self._icon_label.setFixedSize(40, 40)
 
         if self._icon_wrap is not None:
             if icon_only_mode:
@@ -382,7 +386,7 @@ class ResponsiveJawRowWidget(QFrame):
                 self._icon_wrap.setMaximumWidth(16777215)
             else:
                 self._icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-                self._icon_wrap.setFixedWidth(56 if single_column_mode else 60)
+                self._icon_wrap.setFixedWidth(48)
 
     def set_detail_context(self, details_hidden: bool):
         self._details_open_context = not bool(details_hidden)
@@ -555,14 +559,25 @@ class JawPage(QWidget):
         list_layout.setContentsMargins(0, 0, 0, 0)
         list_layout.setSpacing(10)
 
-        self.jaw_list = QListWidget()
+        self.jaw_list = QListView()
         self.jaw_list.setObjectName('toolCatalog')
-        self.jaw_list.setVerticalScrollMode(QListWidget.ScrollPerPixel)
+        self.jaw_list.setVerticalScrollMode(QListView.ScrollPerPixel)
+        self.jaw_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.jaw_list.setSelectionMode(QListView.SingleSelection)
+        self.jaw_list.setMouseTracking(True)
+        self.jaw_list.setStyleSheet(
+            "QListView#toolCatalog { border: none; outline: none; padding: 8px; }"
+            " QListView#toolCatalog::item { background: transparent; border: none; }"
+        )
         self.jaw_list.setSpacing(4)
+        self._jaw_model = QStandardItemModel(self)
+        self.jaw_list.setModel(self._jaw_model)
+        self._jaw_delegate = JawCatalogDelegate(parent=self.jaw_list, translate=self._t)
+        self.jaw_list.setItemDelegate(self._jaw_delegate)
         self.jaw_list.installEventFilter(self)
         self.jaw_list.viewport().installEventFilter(self)
-        self.jaw_list.currentItemChanged.connect(self.on_current_item_changed)
-        self.jaw_list.itemDoubleClicked.connect(self.on_item_double_clicked)
+        self.jaw_list.selectionModel().currentChanged.connect(self.on_current_item_changed)
+        self.jaw_list.doubleClicked.connect(self.on_item_double_clicked)
         list_layout.addWidget(self.jaw_list, 1)
 
         self.splitter.addWidget(list_card)
@@ -612,7 +627,8 @@ class JawPage(QWidget):
         self.edit_btn = QPushButton(self._t('jaw_library.action.edit_jaw_button', 'EDIT JAW'))
         self.delete_btn = QPushButton(self._t('jaw_library.action.delete_jaw_button', 'DELETE JAW'))
         self.add_btn = QPushButton(self._t('jaw_library.action.add_jaw_button', 'ADD JAW'))
-        for btn in [self.edit_btn, self.delete_btn, self.add_btn]:
+        self.copy_btn = QPushButton(self._t('jaw_library.action.copy_jaw_button', 'COPY JAW'))
+        for btn in [self.edit_btn, self.delete_btn, self.add_btn, self.copy_btn]:
             btn.setProperty('panelActionButton', True)
         self.delete_btn.setProperty('dangerAction', True)
         self.add_btn.setProperty('primaryAction', True)
@@ -620,6 +636,7 @@ class JawPage(QWidget):
         self.edit_btn.clicked.connect(self.edit_jaw)
         self.delete_btn.clicked.connect(self.delete_jaw)
         self.add_btn.clicked.connect(self.add_jaw)
+        self.copy_btn.clicked.connect(self.copy_jaw)
 
         self.module_switch_label = QLabel(self._t('tool_library.module.switch_to', 'Switch to'))
         self.module_switch_label.setProperty('pageSubtitle', True)
@@ -631,9 +648,10 @@ class JawPage(QWidget):
         actions.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
         actions.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
         actions.addStretch(1)
+        actions.addWidget(self.add_btn)
         actions.addWidget(self.edit_btn)
         actions.addWidget(self.delete_btn)
-        actions.addWidget(self.add_btn)
+        actions.addWidget(self.copy_btn)
         root.addWidget(bar_bottom)
 
         self._set_view_mode('all', refresh=False)
@@ -752,20 +770,15 @@ class JawPage(QWidget):
                 return True
         if obj in (getattr(self, 'jaw_list', None),
                    getattr(self, 'jaw_list', None) and self.jaw_list.viewport()):
-            if event.type() == QEvent.MouseButtonPress and self.jaw_list.itemAt(event.pos()) is None:
-                self._clear_selection()
+            if event.type() == QEvent.MouseButtonPress:
+                if not self.jaw_list.indexAt(event.pos()).isValid():
+                    self._clear_selection()
         return super().eventFilter(obj, event)
 
     def _clear_selection(self):
-        current = getattr(self, 'jaw_list', None) and self.jaw_list.currentItem()
-        if current:
-            prev_widget = self.jaw_list.itemWidget(current)
-            if prev_widget is not None:
-                prev_widget.setProperty('selected', False)
-                self._refresh_row_style(prev_widget)
         if hasattr(self, 'jaw_list'):
-            self.jaw_list.setCurrentRow(-1)
-            self.jaw_list.clearSelection()
+            self.jaw_list.selectionModel().clearSelection()
+            self.jaw_list.setCurrentIndex(QModelIndex())
         self.current_jaw_id = None
         self.populate_details(None)
 
@@ -1011,12 +1024,11 @@ class JawPage(QWidget):
         """Navigate the list to the jaw with the given jaw_id."""
         self.current_jaw_id = jaw_id.strip()
         self.refresh_list()
-        # Scroll to and select the matching item.
-        for i in range(self.jaw_list.count()):
-            item = self.jaw_list.item(i)
-            if item.data(Qt.UserRole) == self.current_jaw_id:
-                self.jaw_list.setCurrentItem(item)
-                self.jaw_list.scrollToItem(item)
+        for row in range(self._jaw_model.rowCount()):
+            idx = self._jaw_model.index(row, 0)
+            if idx.data(ROLE_JAW_ID) == self.current_jaw_id:
+                self.jaw_list.setCurrentIndex(idx)
+                self.jaw_list.scrollTo(idx)
                 break
 
     def refresh_list(self):
@@ -1024,23 +1036,29 @@ class JawPage(QWidget):
         jaws = self.jaw_service.list_jaws(self.search.text(), self.current_view_mode, type_filter)
         if self._master_filter_active:
             jaws = [jaw for jaw in jaws if str(jaw.get('jaw_id', '')).strip() in self._master_filter_ids]
-        self.jaw_list.clear()
-
+        self._jaw_model.blockSignals(True)
+        self._jaw_model.clear()
         for jaw in jaws:
-            item = QListWidgetItem()
-            item.setData(Qt.UserRole, jaw.get('jaw_id', ''))
-            widget = ResponsiveJawRowWidget(jaw, translate=self._t)
-            widget.set_detail_context(self._details_hidden)
-            self.jaw_list.addItem(item)
-            self.jaw_list.setItemWidget(item, widget)
-            item.setSizeHint(QSize(0, styled_list_item_height(widget, self.jaw_list.spacing())))
+            item = QStandardItem()
+            jaw_id = jaw.get('jaw_id', '')
+            item.setData(jaw_id, ROLE_JAW_ID)
+            item.setData(jaw, ROLE_JAW_DATA)
+            item.setData(jaw_icon_for_row(jaw), ROLE_JAW_ICON)
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self._jaw_model.appendRow(item)
+        self._jaw_model.blockSignals(False)
 
         if self.current_jaw_id:
-            for idx in range(self.jaw_list.count()):
-                item = self.jaw_list.item(idx)
-                if item.data(Qt.UserRole) == self.current_jaw_id:
-                    self.jaw_list.setCurrentItem(item)
+            for row in range(self._jaw_model.rowCount()):
+                idx = self._jaw_model.index(row, 0)
+                if idx.data(ROLE_JAW_ID) == self.current_jaw_id:
+                    self.jaw_list.setCurrentIndex(idx)
+                    self.jaw_list.scrollTo(idx)
                     break
+
+        self.jaw_list.doItemsLayout()
+        self.jaw_list.viewport().update()
+        self.jaw_list.viewport().repaint()
 
     def toggle_details(self):
         if self._details_hidden:
@@ -1076,30 +1094,20 @@ class JawPage(QWidget):
         self.splitter.setSizes([1, 0])
         self.refresh_list()
 
-    def on_current_item_changed(self, current, previous):
-        if previous is not None:
-            prev_widget = self.jaw_list.itemWidget(previous)
-            if prev_widget is not None:
-                prev_widget.setProperty('selected', False)
-                self._refresh_row_style(prev_widget)
-
-        if current is None:
+    def on_current_item_changed(self, current: QModelIndex, previous: QModelIndex):
+        if not current.isValid():
             self.current_jaw_id = None
             self.populate_details(None)
             return
 
-        self.current_jaw_id = current.data(Qt.UserRole)
-        current_widget = self.jaw_list.itemWidget(current)
-        if current_widget is not None:
-            current_widget.setProperty('selected', True)
-            self._refresh_row_style(current_widget)
+        self.current_jaw_id = current.data(ROLE_JAW_ID)
 
         if not self._details_hidden:
             jaw = self.jaw_service.get_jaw(self.current_jaw_id)
             self.populate_details(jaw)
 
-    def on_item_double_clicked(self, item):
-        self.current_jaw_id = item.data(Qt.UserRole)
+    def on_item_double_clicked(self, index: QModelIndex):
+        self.current_jaw_id = index.data(ROLE_JAW_ID)
         if QApplication.keyboardModifiers() & Qt.ControlModifier:
             self.edit_jaw()
             return
@@ -1157,6 +1165,52 @@ class JawPage(QWidget):
         self.refresh_list()
         self.populate_details(None)
 
+    def copy_jaw(self):
+        if not self.current_jaw_id:
+            QMessageBox.information(
+                self,
+                self._t('jaw_library.action.copy_jaw', 'Copy jaw'),
+                self._t('jaw_library.message.select_jaw_first', 'Select a jaw first.'),
+            )
+            return
+
+        jaw = self.jaw_service.get_jaw(self.current_jaw_id)
+        if not jaw:
+            return
+
+        new_id, ok = self._prompt_text(
+            self._t('jaw_library.action.copy_jaw', 'Copy jaw'),
+            self._t('jaw_library.prompt.new_jaw_id', 'New Jaw ID:'),
+        )
+        if not ok or not new_id.strip():
+            return
+
+        copied = dict(jaw)
+        copied['jaw_id'] = new_id.strip()
+        try:
+            self.jaw_service.save_jaw(copied)
+            self.current_jaw_id = copied['jaw_id']
+            self.refresh_list()
+            self.populate_details(self.jaw_service.get_jaw(self.current_jaw_id))
+        except ValueError as exc:
+            QMessageBox.warning(self, self._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
+
+    def _prompt_text(self, title: str, label: str, initial: str = '') -> tuple[str, bool]:
+        dlg = QInputDialog(self)
+        dlg.setWindowTitle(title)
+        dlg.setLabelText(label)
+        dlg.setTextValue(initial)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setOkButtonText(self._t('common.ok', 'OK'))
+        dlg.setCancelButtonText(self._t('common.cancel', 'Cancel'))
+
+        # Ensure copy dialogs match panel button styling.
+        for btn in dlg.findChildren(QPushButton):
+            btn.setProperty('panelActionButton', True)
+
+        accepted = dlg.exec() == QDialog.Accepted
+        return dlg.textValue(), accepted
+
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None):
         if translate is not None:
             self._translate = translate
@@ -1174,6 +1228,8 @@ class JawPage(QWidget):
             self.delete_btn.setText(self._t('jaw_library.action.delete_jaw_button', 'DELETE JAW'))
         if hasattr(self, 'add_btn'):
             self.add_btn.setText(self._t('jaw_library.action.add_jaw_button', 'ADD JAW'))
+        if hasattr(self, 'copy_btn'):
+            self.copy_btn.setText(self._t('jaw_library.action.copy_jaw_button', 'COPY JAW'))
         if hasattr(self, 'module_switch_label'):
             self.module_switch_label.setText(self._t('tool_library.module.switch_to', 'Switch to'))
         if hasattr(self, 'module_toggle_btn'):

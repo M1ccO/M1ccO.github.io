@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
     QAbstractScrollArea,
+    QApplication,
     QButtonGroup,
     QComboBox,
     QFrame,
@@ -152,6 +153,7 @@ class MainWindow(QMainWindow):
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.export_service, self.settings_service)
         self._apply_style()
+        QApplication.instance().installEventFilter(self)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
@@ -579,12 +581,45 @@ class MainWindow(QMainWindow):
         return self.toggle_rail.rect().adjusted(-2, -2, 2, 2).contains(local_pos)
 
     def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            self._clear_active_page_selection_on_background_click(obj)
         if hasattr(self, '_nav_hover_widgets') and obj in self._nav_hover_widgets:
             if event.type() == QEvent.Enter:
                 self._show_nav()
             elif event.type() == QEvent.Leave:
                 self._nav_hide_timer.start()
         return super().eventFilter(obj, event)
+
+    def _clear_active_page_selection_on_background_click(self, obj):
+        if not isinstance(obj, QWidget):
+            return
+        # Skip events that belong to a different top-level window (e.g. a
+        # combo-box dropdown popup which is its own Qt.Popup window).
+        if obj.window() is not self:
+            return
+        # Skip directly interactive widgets — their own handlers manage state.
+        if isinstance(obj, (QAbstractButton, QLineEdit, QComboBox)):
+            return
+
+        page = self.stack.currentWidget() if hasattr(self, 'stack') else None
+        if page is None:
+            return
+
+        # Identify the catalog list for the active page.
+        catalog_view = getattr(page, 'tool_list', None) or getattr(page, 'jaw_list', None)
+
+        # If the click is anywhere inside the catalog list widget tree, let
+        # the list handle its own selection — do NOT clear here.
+        if catalog_view is not None:
+            w = obj
+            while w is not None:
+                if w is catalog_view:
+                    return
+                w = w.parentWidget()
+
+        # All other clicks: clear the active catalog selection.
+        if hasattr(page, '_clear_selection'):
+            page._clear_selection()
 
     def _refresh_catalog_pages(self):
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:

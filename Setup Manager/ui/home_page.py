@@ -739,14 +739,11 @@ class HomePage(QWidget):
             # ensure the row reflects current detail pane state (older versions may lack the method)
             if hasattr(row_widget, 'set_type_visible'):
                 row_widget.set_type_visible(self._details_hidden)
+            row_widget.setMinimumHeight(74)
+            row_widget.setMaximumHeight(74)
             self.tool_list.addItem(item)
             self.tool_list.setItemWidget(item, row_widget)
-            row_widget.adjustSize()
-            widget_size = row_widget.sizeHint()
-            spacing = max(0, self.tool_list.spacing())
-            min_h = 72
-            final_h = max(widget_size.height(), min_h) + spacing
-            item.setSizeHint(QSize(widget_size.width() or 0, final_h))
+            item.setSizeHint(QSize(0, 78))
         if self.current_tool_id:
             for idx in range(self.tool_list.count()):
                 item = self.tool_list.item(idx)

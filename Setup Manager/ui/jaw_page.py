@@ -741,14 +741,11 @@ class JawPage(QWidget):
             item = QListWidgetItem()
             item.setData(Qt.UserRole, jaw.get('jaw_id', ''))
             widget = JawRowWidget(jaw)
+            widget.setMinimumHeight(74)
+            widget.setMaximumHeight(74)
             self.jaw_list.addItem(item)
             self.jaw_list.setItemWidget(item, widget)
-            widget.adjustSize()
-            widget_size = widget.sizeHint()
-            spacing = max(0, self.jaw_list.spacing())
-            min_h = 72
-            final_h = max(widget_size.height(), min_h) + spacing
-            item.setSizeHint(QSize(widget_size.width() or 0, final_h))
+            item.setSizeHint(QSize(0, 78))
 
         if self.current_jaw_id:
             for idx in range(self.jaw_list.count()):

@@ -5,7 +5,7 @@ from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, Q
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
-    QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
+    QAbstractButton, QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
     QInputDialog, QLabel, QLineEdit, QListView, QMessageBox, QPushButton,
     QScrollArea, QSplitter, QVBoxLayout, QWidget, QSizePolicy, QToolButton
 )
@@ -326,10 +326,10 @@ class HomePage(QWidget):
         button_layout.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
         button_layout.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
         button_layout.addStretch(1)
-        button_layout.addWidget(self.copy_btn)
+        button_layout.addWidget(self.add_btn)
         button_layout.addWidget(self.edit_btn)
         button_layout.addWidget(self.delete_btn)
-        button_layout.addWidget(self.add_btn)
+        button_layout.addWidget(self.copy_btn)
         root.addWidget(button_bar)
 
     def _on_module_switch_clicked(self):
@@ -1206,15 +1206,13 @@ class HomePage(QWidget):
                 self._t('tool_library.message.select_tool_first', 'Select a tool first.'),
             )
             return
-        new_id, ok = QInputDialog.getText(
-            self,
+        new_id, ok = self._prompt_text(
             self._t('tool_library.action.copy_tool_title', 'Copy tool'),
             self._t('tool_library.prompt.new_tool_id', 'New Tool ID:'),
         )
         if not ok or not new_id.strip():
             return
-        new_desc, _ = QInputDialog.getText(
-            self,
+        new_desc, _ = self._prompt_text(
             self._t('tool_library.action.copy_tool_title', 'Copy tool'),
             self._t('tool_library.prompt.new_description_optional', 'New description (optional):'),
         )
@@ -1225,6 +1223,22 @@ class HomePage(QWidget):
             self.populate_details(self.tool_service.get_tool(self.current_tool_id))
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.action.copy_tool_title', 'Copy tool'), str(exc))
+
+    def _prompt_text(self, title: str, label: str, initial: str = '') -> tuple[str, bool]:
+        dlg = QInputDialog(self)
+        dlg.setWindowTitle(title)
+        dlg.setLabelText(label)
+        dlg.setTextValue(initial)
+        dlg.setInputMode(QInputDialog.TextInput)
+        dlg.setOkButtonText(self._t('common.ok', 'OK'))
+        dlg.setCancelButtonText(self._t('common.cancel', 'Cancel'))
+
+        # Ensure copy dialogs match panel button styling.
+        for btn in dlg.findChildren(QPushButton):
+            btn.setProperty('panelActionButton', True)
+
+        accepted = dlg.exec() == QDialog.Accepted
+        return dlg.textValue(), accepted
 
     def delete_tool(self):
         if not self.current_tool_id:
