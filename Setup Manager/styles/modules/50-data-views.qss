@@ -292,10 +292,8 @@ QDialog[workEditorDialog="true"] QLineEdit:disabled {
 }
 
 /* Jaw panels: search/filter section and list section */
-QDialog[workEditorDialog="true"] QFrame[jawSearchPanel="true"] {
+QDialog[workEditorDialog="true"] QGroupBox[jawInputGroup="true"] {
     background: #f6f9fc;
-    border: 1px solid #c8d4e0;
-    border-radius: 6px;
 }
 
 QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"] {

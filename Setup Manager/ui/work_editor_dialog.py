@@ -144,31 +144,31 @@ class _JawSelectorPanel(QWidget):
         title: str,
         parent=None,
         translate: Callable[[str, str | None], str] | None = None,
+        filter_placeholder_key: str = "work_editor.jaw.filter_placeholder",
+        filter_placeholder_default: str = "Filter jaws...",
     ):
         super().__init__(parent)
         self._translate = translate or _noop_translate
+        self._filter_placeholder_key = filter_placeholder_key
+        self._filter_placeholder_default = filter_placeholder_default
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
 
-        # Search + stop screws — their own bordered section
-        search_frame = QFrame()
-        search_frame.setProperty("jawSearchPanel", True)
-        search_layout = QVBoxLayout(search_frame)
-        search_layout.setContentsMargins(10, 8, 10, 10)
-        search_layout.setSpacing(6)
+        # Dynamic input section: border/title always present to avoid layout jump.
+        self.dynamic_input_group = QGroupBox(
+            " "
+        )
+        self.dynamic_input_group.setProperty("jawInputGroup", True)
+        search_layout = QVBoxLayout(self.dynamic_input_group)
+        search_layout.setContentsMargins(10, 8, 10, 8)
+        search_layout.setSpacing(0)
 
         self.search = QLineEdit()
-        self.search.setPlaceholderText(self._t("work_editor.jaw.filter_placeholder", "Filter jaws..."))
-        self.search.textChanged.connect(self._filter)
+        self.search.setPlaceholderText(self._t(self._filter_placeholder_key, self._filter_placeholder_default))
+        self.search.textChanged.connect(self._on_dynamic_input_changed)
         search_layout.addWidget(self.search)
-
-        self.stop_screws_label = QLabel(self._t("setup_page.field.stop_screws", "Stop Screws"))
-        self.stop_screws_input = QLineEdit()
-        self.stop_screws_input.setPlaceholderText(self._t("work_editor.jaw.stop_screws_placeholder", "e.g. 10mm"))
-        search_layout.addWidget(self.stop_screws_label)
-        search_layout.addWidget(self.stop_screws_input)
-        layout.addWidget(search_frame)
+        layout.addWidget(self.dynamic_input_group)
 
         selection_group = QGroupBox(title)
         selection_layout = QVBoxLayout(selection_group)
@@ -184,6 +184,9 @@ class _JawSelectorPanel(QWidget):
 
         self._all_jaws: list = []
         self._updating = False
+        self._filter_text = ""
+        self._stop_screws_value = ""
+        self._is_stop_screws_mode = False
         self.jaw_list.itemChanged.connect(self._on_item_changed)
         self._update_stop_screws_visibility()
 
@@ -210,9 +213,33 @@ class _JawSelectorPanel(QWidget):
         return None
 
     def _update_stop_screws_visibility(self):
-        visible = self._is_spiked_jaw(self._selected_jaw())
-        self.stop_screws_label.setVisible(visible)
-        self.stop_screws_input.setVisible(visible)
+        stop_screws_mode = self._is_spiked_jaw(self._selected_jaw())
+        if self._is_stop_screws_mode == stop_screws_mode:
+            return
+        self._is_stop_screws_mode = stop_screws_mode
+        self.search.blockSignals(True)
+        if stop_screws_mode:
+            helper = self._t(
+                "work_editor.jaw.deselect_to_filter_hint",
+                "(deselect jaws to filter)",
+            )
+            self.dynamic_input_group.setTitle(
+                f"{self._t('setup_page.field.stop_screws', 'Stop Screws')} {helper}"
+            )
+            self.search.setPlaceholderText(
+                self._t("work_editor.jaw.stop_screws_placeholder", "e.g. 10mm")
+            )
+            self.search.setText(self._stop_screws_value)
+        else:
+            self.dynamic_input_group.setTitle(
+                " "
+            )
+            self.search.setPlaceholderText(
+                self._t(self._filter_placeholder_key, self._filter_placeholder_default)
+            )
+            self.search.setText(self._filter_text)
+            self._rebuild(self._filter_text)
+        self.search.blockSignals(False)
 
     def _on_item_changed(self, changed_item):
         if self._updating:
@@ -230,7 +257,7 @@ class _JawSelectorPanel(QWidget):
 
     def populate(self, jaws: list):
         self._all_jaws = jaws
-        self._rebuild(self.search.text())
+        self._rebuild(self._filter_text)
         self._update_stop_screws_visibility()
 
     def _rebuild(self, filter_text: str):
@@ -253,8 +280,12 @@ class _JawSelectorPanel(QWidget):
             self.jaw_list.addItem(item)
         self._updating = False
 
-    def _filter(self, text: str):
-        self._rebuild(text)
+    def _on_dynamic_input_changed(self, text: str):
+        if self._is_stop_screws_mode:
+            self._stop_screws_value = text.strip()
+            return
+        self._filter_text = text
+        self._rebuild(self._filter_text)
 
     def get_value(self) -> str:
         for i in range(self.jaw_list.count()):
@@ -274,12 +305,16 @@ class _JawSelectorPanel(QWidget):
         self.selectionChanged.emit(self.get_value())
 
     def set_stop_screws(self, value: str):
-        self.stop_screws_input.setText((value or "").strip())
+        self._stop_screws_value = (value or "").strip()
+        if self._is_stop_screws_mode:
+            self.search.blockSignals(True)
+            self.search.setText(self._stop_screws_value)
+            self.search.blockSignals(False)
 
     def get_stop_screws(self) -> str:
         if not self._is_spiked_jaw(self._selected_jaw()):
             return ""
-        return self.stop_screws_input.text().strip()
+        return self._stop_screws_value
 
 
 class _ToolPickerDialog(QDialog):
@@ -1026,10 +1061,14 @@ class WorkEditorDialog(QDialog):
         self.main_jaw_selector = _JawSelectorPanel(
             self._t("work_editor.spindles.sp1_jaw", "SP1 Jaw"),
             translate=self._t,
+            filter_placeholder_key="work_editor.jaw.filter_sp1_placeholder",
+            filter_placeholder_default="Filter SP1 jaws...",
         )
         self.sub_jaw_selector = _JawSelectorPanel(
             self._t("work_editor.spindles.sp2_jaw", "SP2 Jaw"),
             translate=self._t,
+            filter_placeholder_key="work_editor.jaw.filter_sp2_placeholder",
+            filter_placeholder_default="Filter SP2 jaws...",
         )
         self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
