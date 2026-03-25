@@ -1,7 +1,9 @@
+import numpy as np
+
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt
-from PySide6.QtGui import QIcon, QStandardItem, QStandardItemModel
+from PySide6.QtCore import QEvent, QSize, Qt
+from PySide6.QtGui import QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -9,9 +11,11 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
-    QListView,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -23,16 +27,371 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
-from ui.jaw_catalog_delegate import (
-    JawCatalogDelegate,
-    ROLE_JAW_DATA,
-    ROLE_JAW_ICON,
-    ROLE_JAW_ID,
-    jaw_icon_for_row,
-)
 from ui.jaw_editor_dialog import AddEditJawDialog
+
+
+def _load_transparent_icon(path, threshold: int = 220) -> QPixmap:
+    """Load a PNG and replace near-white pixels with transparency using numpy."""
+    img = QImage(str(path))
+    if img.isNull():
+        return QPixmap()
+    img = img.convertToFormat(QImage.Format_ARGB32)
+    w, h = img.width(), img.height()
+    arr = np.frombuffer(img.constBits(), dtype=np.uint8).copy().reshape((h, w, 4))
+    # Format_ARGB32 memory layout on little-endian: [B, G, R, A]
+    near_white = (arr[:, :, 2] >= threshold) & (arr[:, :, 1] >= threshold) & (arr[:, :, 0] >= threshold)
+    arr[near_white, 3] = 0
+    out = QImage(arr.tobytes(), w, h, w * 4, QImage.Format_ARGB32)
+    return QPixmap.fromImage(out)
+
+
+_DEFAULT_JAW_ICON = 'hard_jaw.png'
+
+
+def _jaw_icon_pixmap(jaw: dict, icon_target_size: QSize) -> QPixmap:
+    icon_path = TOOL_ICONS_DIR / _DEFAULT_JAW_ICON
+    spindle_side = (jaw.get('spindle_side') or '').strip()
+    if icon_path.exists():
+        pixmap = _load_transparent_icon(icon_path)
+        if spindle_side == 'Sub spindle':
+            pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+        return pixmap.scaled(icon_target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    return QIcon(str(TOOL_ICONS_DIR / 'jaw_icon.png')).pixmap(icon_target_size)
 from ui.stl_preview import StlPreviewWidget
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style
+from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget, styled_list_item_height
+
+
+class JawRowWidget(QFrame):
+    def __init__(self, jaw: dict, parent=None, translate=None):
+        super().__init__(parent)
+        self.jaw = jaw
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self.setProperty('toolListCard', True)
+        self.setProperty('catalogRowCard', True)
+        self.setProperty('selected', False)
+        self._val_labels: list[QLabel] = []
+        self._head_labels: list[QLabel] = []
+        self._col_layouts: list[QVBoxLayout] = []
+        self._build_ui()
+
+    def _card_columns(self):
+        dash = '-'
+        return [
+            ('jaw_id', self._t('jaw_library.row.jaw_id', 'Jaw ID'), self.jaw.get('jaw_id', ''), 180),
+            (
+                'jaw_type',
+                self._t('jaw_library.row.jaw_type', 'Jaw type'),
+                self._t(
+                    f"jaw_library.jaw_type.{(self.jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
+                    self.jaw.get('jaw_type', ''),
+                ),
+                210,
+            ),
+            ('diameter', self._t('jaw_library.row.clamping_diameter', 'Clamping diameter'), self.jaw.get('clamping_diameter_text', '') or dash, 190),
+            ('length', self._t('jaw_library.row.clamping_length', 'Clamping length'), self.jaw.get('clamping_length', '') or dash, 180),
+        ]
+
+    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
+        return self._translate(key, default, **kwargs)
+
+    def _value(self, text: str) -> QLabel:
+        lbl = AutoShrinkLabel(text)
+        lbl.setProperty('toolCardValue', True)
+        lbl.setProperty('catalogRowValue', True)
+        lbl.setAlignment(Qt.AlignCenter)
+        return lbl
+
+    def _build_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 2, 10, 2)
+        layout.setSpacing(10)
+
+        icon_label = QLabel()
+        icon_label.setProperty("catalogRowIcon", True)
+        icon_target_size = QSize(40, 40)
+        pixmap = _jaw_icon_pixmap(self.jaw, icon_target_size)
+        icon_label.setPixmap(pixmap)
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setStyleSheet('background-color: transparent;')
+        layout.addWidget(icon_label, 0, Qt.AlignVCenter)
+
+        for _key, title, value, weight in self._card_columns():
+            col = QVBoxLayout()
+            col.setContentsMargins(0, 0, 0, 0)
+            col.setSpacing(0)
+            self._col_layouts.append(col)
+
+            head = QLabel(title)
+            head.setProperty('toolCardHeader', True)
+            head.setProperty('catalogRowHeader', True)
+            head.setAlignment(Qt.AlignCenter)
+            head.setWordWrap(True)
+
+            val = self._value(value)
+
+            wrap = QWidget()
+            wrap.setProperty('toolCardColumn', True)
+            wrap.setStyleSheet('background: transparent;')
+            wrap.setLayout(col)
+            wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+            col.addWidget(head)
+            col.addWidget(val)
+            layout.addWidget(wrap, weight, Qt.AlignVCenter)
+
+            self._head_labels.append(head)
+            self._val_labels.append(val)
+
+        layout.addStretch(1)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        w = event.size().width()
+        lay = self.layout()
+        if lay is None:
+            return
+        if w < 560:
+            lay.setContentsMargins(7, 2, 7, 2)
+            lay.setSpacing(7)
+            v_size, h_size, col_spacing = 11.5, 8.6, 0
+        else:
+            lay.setContentsMargins(10, 2, 10, 2)
+            lay.setSpacing(10)
+            v_size, h_size, col_spacing = 12.8, 9.4, 0
+        for col in self._col_layouts:
+            col.setSpacing(col_spacing)
+        for lbl in self._val_labels:
+            f = lbl.font()
+            f.setPointSizeF(v_size)
+            lbl.setFont(f)
+        for lbl in self._head_labels:
+            f = lbl.font()
+            f.setPointSizeF(h_size)
+            lbl.setFont(f)
+
+
+class ResponsiveJawRowWidget(QFrame):
+    def __init__(self, jaw: dict, parent=None, translate=None):
+        super().__init__(parent)
+        self.jaw = jaw
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self.setProperty('toolListCard', True)
+        self.setProperty('catalogRowCard', True)
+        self.setProperty('selected', False)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self._val_labels: list[QLabel] = []
+        self._head_labels: list[QLabel] = []
+        self._col_layouts: list[QVBoxLayout] = []
+        self._column_wraps: dict[str, QWidget] = {}
+        self._column_values: dict[str, QLabel] = {}
+        self._column_texts: dict[str, str] = {}
+        self._compact_breakpoint = 620
+        self._reduced_breakpoint = 560
+        self._single_column_breakpoint = 345
+        self._icon_only_breakpoint = 220
+        self._icon_label = None
+        self._icon_wrap = None
+        self._details_open_context = False
+        self._build_ui()
+
+    def _card_columns(self):
+        dash = '-'
+        jaw_type_text = self._t(
+            f"jaw_library.jaw_type.{(self.jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
+            self.jaw.get('jaw_type', ''),
+        )
+        return [
+            ('jaw_id', self._t('jaw_library.row.jaw_id', 'Jaw ID'), self.jaw.get('jaw_id', ''), 180),
+            ('jaw_type', self._t('jaw_library.row.jaw_type', 'Jaw type'), jaw_type_text, 210),
+            ('diameter', self._t('jaw_library.row.clamping_diameter_multiline', 'Clamping\ndiameter'), self.jaw.get('clamping_diameter_text', '') or dash, 190),
+            ('length', self._t('jaw_library.row.clamping_length_multiline', 'Clamping\nlength'), self.jaw.get('clamping_length', '') or dash, 180),
+        ]
+
+    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
+        return self._translate(key, default, **kwargs)
+
+    def _value(self, text: str) -> QLabel:
+        lbl = AutoShrinkLabel(text)
+        lbl.setProperty('toolCardValue', True)
+        lbl.setProperty('catalogRowValue', True)
+        lbl.setAlignment(Qt.AlignCenter)
+        return lbl
+
+    @staticmethod
+    def _split_responsive_token(text: str) -> str:
+        value = (text or '').strip()
+        if not value or len(value) <= 8:
+            return value
+        if '-' in value:
+            pivot = value.find('-') + 1
+            if 1 < pivot < len(value):
+                return f"{value[:pivot]}\n{value[pivot:]}"
+        pivot = max(4, len(value) // 2)
+        return f"{value[:pivot]}\n{value[pivot:]}"
+
+    def _build_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 2, 10, 2)
+        layout.setSpacing(10)
+
+        icon_label = QLabel()
+        icon_label.setProperty("catalogRowIcon", True)
+        icon_target_size = QSize(40, 40)
+        pixmap = _jaw_icon_pixmap(self.jaw, icon_target_size)
+        icon_label.setPixmap(pixmap)
+        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setStyleSheet('background-color: transparent;')
+        self._icon_label = icon_label
+        icon_wrap = QWidget()
+        icon_wrap.setStyleSheet('background-color: transparent;')
+        icon_wrap_layout = QHBoxLayout(icon_wrap)
+        icon_wrap_layout.setContentsMargins(0, 0, 0, 0)
+        icon_wrap_layout.setSpacing(0)
+        icon_wrap_layout.addStretch(1)
+        icon_wrap_layout.addWidget(icon_label, 0, Qt.AlignVCenter)
+        icon_wrap_layout.addStretch(1)
+        icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        self._icon_wrap = icon_wrap
+        layout.addWidget(icon_wrap, 0, Qt.AlignVCenter)
+
+        for key, title, value, weight in self._card_columns():
+            col = QVBoxLayout()
+            col.setContentsMargins(0, 0, 0, 0)
+            col.setSpacing(0)
+            self._col_layouts.append(col)
+
+            head = QLabel(title)
+            head.setProperty('toolCardHeader', True)
+            head.setProperty('catalogRowHeader', True)
+            head.setAlignment(Qt.AlignCenter)
+            head.setWordWrap(True)
+            if key in {'diameter', 'length'}:
+                head.setProperty('catalogRowHeaderWrap', True)
+
+            val = self._value(value)
+
+            wrap = QWidget()
+            wrap.setProperty('toolCardColumn', True)
+            wrap.setStyleSheet('background: transparent;')
+            wrap.setLayout(col)
+            wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            self._column_wraps[key] = wrap
+            self._column_values[key] = val
+            self._column_texts[key] = value
+
+            col.addWidget(head)
+            col.addWidget(val)
+            layout.addWidget(wrap, weight, Qt.AlignVCenter)
+
+            self._head_labels.append(head)
+            self._val_labels.append(val)
+
+        layout.addStretch(1)
+
+    def _apply_column_visibility(self, width: int):
+        if width <= 1:
+            visible_keys = {'jaw_id', 'jaw_type', 'diameter', 'length'}
+        elif width < self._single_column_breakpoint:
+            visible_keys = {'jaw_id'}
+        elif width < self._reduced_breakpoint:
+            visible_keys = {'jaw_id', 'jaw_type', 'diameter'}
+        else:
+            visible_keys = {'jaw_id', 'jaw_type', 'diameter', 'length'}
+
+        for key, wrap in self._column_wraps.items():
+            wrap.setVisible(key in visible_keys)
+
+    def _set_row_responsive_properties(self, narrow: bool, tight: bool, tiny: bool):
+        changed = False
+        for key, value in (('rowNarrow', narrow), ('rowTight', tight), ('rowTiny', tiny)):
+            if bool(self.property(key)) != bool(value):
+                self.setProperty(key, bool(value))
+                changed = True
+        if changed:
+            repolish_widget(self)
+            for lbl in self._val_labels + self._head_labels:
+                repolish_widget(lbl)
+
+    def _apply_responsive_layout(self, width: int):
+        lay = self.layout()
+        if lay is None:
+            return
+
+        single_column_mode = width < self._single_column_breakpoint
+        icon_only_mode = width < self._icon_only_breakpoint
+        jaw_id_wrap_mode = (width < 260) and not icon_only_mode
+        row_narrow = width < 560
+        row_tight = width < 430
+        row_tiny = width < 330
+        self._set_row_responsive_properties(row_narrow, row_tight, row_tiny)
+
+        if single_column_mode:
+            lay.setContentsMargins(8, 2, 8, 2)
+            lay.setSpacing(4)
+            col_spacing = 0
+        elif width < 520:
+            lay.setContentsMargins(7, 2, 7, 2)
+            lay.setSpacing(7)
+            col_spacing = 0
+        else:
+            lay.setContentsMargins(10, 2, 10, 2)
+            lay.setSpacing(10)
+            col_spacing = 0
+
+        self._apply_column_visibility(width)
+
+        jaw_id = self._column_values.get('jaw_id')
+        jaw_id_wrap = self._column_wraps.get('jaw_id')
+        jaw_id_visible = bool(jaw_id_wrap.isVisible()) if jaw_id_wrap is not None else False
+        if jaw_id is not None and jaw_id_visible:
+            jaw_id.setText(self._split_responsive_token(self._column_texts.get('jaw_id', '')) if jaw_id_wrap_mode else self._column_texts.get('jaw_id', ''))
+            jaw_id.setWordWrap(jaw_id_wrap_mode)
+            jaw_id.setMinimumHeight(36 if jaw_id_wrap_mode else 28)
+            jaw_id.setMaximumHeight(36 if jaw_id_wrap_mode else 28)
+            wrap_changed = bool(jaw_id.property('nameWrap')) != bool(jaw_id_wrap_mode)
+            tiny_changed = bool(jaw_id.property('nameTiny')) != bool(jaw_id_wrap_mode)
+            if wrap_changed:
+                jaw_id.setProperty('nameWrap', bool(jaw_id_wrap_mode))
+            if tiny_changed:
+                jaw_id.setProperty('nameTiny', bool(jaw_id_wrap_mode))
+            if wrap_changed or tiny_changed:
+                repolish_widget(jaw_id)
+        elif jaw_id is not None:
+            jaw_id.setText(self._column_texts.get('jaw_id', ''))
+            jaw_id.setWordWrap(False)
+            if bool(jaw_id.property('nameWrap')) or bool(jaw_id.property('nameTiny')):
+                jaw_id.setProperty('nameWrap', False)
+                jaw_id.setProperty('nameTiny', False)
+                repolish_widget(jaw_id)
+
+        for col in self._col_layouts:
+            col.setSpacing(col_spacing)
+
+        if self._icon_label is not None:
+            if icon_only_mode:
+                self._icon_label.setFixedSize(36, 36)
+            elif single_column_mode:
+                self._icon_label.setFixedSize(40, 40)
+            else:
+                self._icon_label.setFixedSize(48, 48)
+
+        if self._icon_wrap is not None:
+            if icon_only_mode:
+                self._icon_wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+                self._icon_wrap.setMinimumWidth(0)
+                self._icon_wrap.setMaximumWidth(16777215)
+            else:
+                self._icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+                self._icon_wrap.setFixedWidth(56 if single_column_mode else 60)
+
+    def set_detail_context(self, details_hidden: bool):
+        self._details_open_context = not bool(details_hidden)
+        self._apply_responsive_layout(max(1, self.width()))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_responsive_layout(event.size().width())
+
 
 class JawPage(QWidget):
     NAV_MODES = [
@@ -68,10 +427,6 @@ class JawPage(QWidget):
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
 
-    @staticmethod
-    def _norm_id(value) -> str:
-        return str(value or '').strip().lower()
-
     def _localized_jaw_type(self, raw_type: str) -> str:
         normalized = (raw_type or '').strip().lower().replace(' ', '_')
         return self._t(f'jaw_library.jaw_type.{normalized}', raw_type)
@@ -89,19 +444,12 @@ class JawPage(QWidget):
         filter_frame.setObjectName('filterFrame')
         filter_frame.setProperty('card', True)
         self.filter_layout = QHBoxLayout(filter_frame)
-        self.filter_layout.setContentsMargins(0, 6, 0, 6)
+        self.filter_layout.setContentsMargins(56, 6, 0, 6)
         self.filter_layout.setSpacing(4)
 
         self.toolbar_title_label = QLabel(self._t('tool_library.rail_title.jaws', 'Jaws Library'))
         self.toolbar_title_label.setProperty('pageTitle', True)
-        self.toolbar_title_label.setStyleSheet('padding-right: 8px;')
-        self.toolbar_title_label.setMinimumWidth(0)
-        self.toolbar_title_host = QWidget()
-        self.toolbar_title_host.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.toolbar_title_layout = QHBoxLayout(self.toolbar_title_host)
-        self.toolbar_title_layout.setContentsMargins(0, 0, 0, 0)
-        self.toolbar_title_layout.setSpacing(0)
-        self.toolbar_title_layout.addWidget(self.toolbar_title_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        self.toolbar_title_label.setStyleSheet('padding-left: 0px; padding-right: 20px;')
 
         self.search_toggle = QToolButton()
         self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
@@ -204,30 +552,17 @@ class JawPage(QWidget):
         list_card = QFrame()
         list_card.setProperty('catalogShell', True)
         list_layout = QVBoxLayout(list_card)
-        list_layout.setContentsMargins(6, 0, 10, 10)
+        list_layout.setContentsMargins(0, 0, 0, 0)
         list_layout.setSpacing(10)
 
-        self.jaw_list = QListView()
+        self.jaw_list = QListWidget()
         self.jaw_list.setObjectName('toolCatalog')
-        self.jaw_list.setVerticalScrollMode(QListView.ScrollPerPixel)
-        self.jaw_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.jaw_list.setSelectionMode(QListView.SingleSelection)
-        self.jaw_list.setMouseTracking(True)
-        self.jaw_list.setUniformItemSizes(True)
-        self.jaw_list.setStyleSheet(
-            "QListView#toolCatalog { background-color: rgba(205, 212, 238, 0.97);"
-            " border: none; outline: none; padding: 8px; }"
-            " QListView#toolCatalog::item { background: transparent; border: none; }"
-        )
+        self.jaw_list.setVerticalScrollMode(QListWidget.ScrollPerPixel)
         self.jaw_list.setSpacing(4)
-        self._jaw_model = QStandardItemModel(self)
-        self.jaw_list.setModel(self._jaw_model)
-        self._jaw_delegate = JawCatalogDelegate(parent=self.jaw_list, translate=self._t)
-        self.jaw_list.setItemDelegate(self._jaw_delegate)
         self.jaw_list.installEventFilter(self)
         self.jaw_list.viewport().installEventFilter(self)
-        self.jaw_list.selectionModel().currentChanged.connect(self._on_current_changed)
-        self.jaw_list.doubleClicked.connect(self._on_double_clicked)
+        self.jaw_list.currentItemChanged.connect(self.on_current_item_changed)
+        self.jaw_list.itemDoubleClicked.connect(self.on_item_double_clicked)
         list_layout.addWidget(self.jaw_list, 1)
 
         self.splitter.addWidget(list_card)
@@ -251,8 +586,6 @@ class JawPage(QWidget):
         self.detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.detail_panel = QWidget()
         self.detail_panel.setObjectName('detailPanel')
-        self.detail_panel.setMinimumWidth(0)
-        self.detail_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.detail_layout = QVBoxLayout(self.detail_panel)
         self.detail_layout.setContentsMargins(0, 0, 0, 0)
         self.detail_layout.setSpacing(10)
@@ -318,11 +651,10 @@ class JawPage(QWidget):
         self.module_toggle_btn.setText(display)
         self.module_toggle_btn.setToolTip(self._t('tool_library.module.switch_to_target', 'Switch to {target} module', target=display))
 
-    def set_master_filter(self, jaw_ids, active: bool, refresh: bool = True):
-        self._master_filter_ids = {self._norm_id(j) for j in (jaw_ids or []) if str(j).strip()}
+    def set_master_filter(self, jaw_ids, active: bool):
+        self._master_filter_ids = {str(j).strip() for j in (jaw_ids or []) if str(j).strip()}
         self._master_filter_active = bool(active) and bool(self._master_filter_ids)
-        if refresh:
-            self.refresh_list()
+        self.refresh_list()
 
     def _toggle_search(self):
         show = self.search_toggle.isChecked()
@@ -395,7 +727,6 @@ class JawPage(QWidget):
             widget = item.widget()
             if widget is not None:
                 widget.setParent(None)
-        self.filter_layout.addWidget(self.toolbar_title_host, 0, Qt.AlignLeft | Qt.AlignVCenter)
         self.filter_layout.addWidget(self.search_toggle)
         self.filter_layout.addWidget(self.toggle_details_btn)
         if self.search.isVisible():
@@ -413,7 +744,6 @@ class JawPage(QWidget):
 
     def _clear_type_filter(self):
         self._set_type_filter_value('all')
-        self._on_type_filter_changed(self.jaw_type_filter.currentIndex())
 
     def eventFilter(self, obj, event):
         if obj is getattr(self, 'jaw_type_filter', None) or (
@@ -422,15 +752,20 @@ class JawPage(QWidget):
                 return True
         if obj in (getattr(self, 'jaw_list', None),
                    getattr(self, 'jaw_list', None) and self.jaw_list.viewport()):
-            if event.type() == QEvent.MouseButtonPress:
-                if not self.jaw_list.indexAt(event.pos()).isValid():
-                    self._clear_selection()
+            if event.type() == QEvent.MouseButtonPress and self.jaw_list.itemAt(event.pos()) is None:
+                self._clear_selection()
         return super().eventFilter(obj, event)
 
     def _clear_selection(self):
+        current = getattr(self, 'jaw_list', None) and self.jaw_list.currentItem()
+        if current:
+            prev_widget = self.jaw_list.itemWidget(current)
+            if prev_widget is not None:
+                prev_widget.setProperty('selected', False)
+                self._refresh_row_style(prev_widget)
         if hasattr(self, 'jaw_list'):
-            self.jaw_list.selectionModel().clearSelection()
-            self.jaw_list.setCurrentIndex(QModelIndex())
+            self.jaw_list.setCurrentRow(-1)
+            self.jaw_list.clearSelection()
         self.current_jaw_id = None
         self.populate_details(None)
 
@@ -489,28 +824,15 @@ class JawPage(QWidget):
         h_layout = QVBoxLayout(header)
         h_layout.setContentsMargins(14, 14, 14, 12)
         h_layout.setSpacing(4)
-
-        heading_field = QFrame()
-        heading_field.setProperty('detailField', True)
-        heading_field.setProperty('detailHeroField', True)
-        heading_layout = QVBoxLayout(heading_field)
-        heading_layout.setContentsMargins(10, 8, 10, 8)
-        heading_layout.setSpacing(4)
-
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(10)
         jaw_id_lbl = QLabel(jaw.get('jaw_id', ''))
         jaw_id_lbl.setProperty('detailHeroTitle', True)
         jaw_id_lbl.setWordWrap(True)
-        jaw_id_lbl.setMinimumWidth(0)
-        jaw_id_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         diam_lbl = QLabel(jaw.get('clamping_diameter_text', '') or '')
         diam_lbl.setProperty('detailHeroTitle', True)
-        diam_lbl.setWordWrap(True)
         diam_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        diam_lbl.setMinimumWidth(0)
-        diam_lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         title_row.addWidget(jaw_id_lbl, 1)
         title_row.addWidget(diam_lbl, 0, Qt.AlignRight)
         badge_row = QHBoxLayout()
@@ -519,33 +841,27 @@ class JawPage(QWidget):
         badge.setProperty('toolBadge', True)
         badge_row.addWidget(badge, 0, Qt.AlignLeft)
         badge_row.addStretch(1)
-        heading_layout.addLayout(title_row)
-        heading_layout.addLayout(badge_row)
-        h_layout.addWidget(heading_field)
+        h_layout.addLayout(title_row)
+        h_layout.addLayout(badge_row)
         layout.addWidget(header)
 
         # detailField grid â€” same card-box style as Tool Library
         def build_field(label_text, value_text):
             field_frame = QFrame()
             field_frame.setProperty('detailField', True)
-            field_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-            field_frame.setMinimumWidth(0)
+            field_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
             fl = QVBoxLayout(field_frame)
             fl.setContentsMargins(6, 4, 6, 4)
             fl.setSpacing(4)
             klbl = QLabel(label_text)
             klbl.setProperty('detailFieldKey', True)
-            klbl.setWordWrap(True)
-            klbl.setMinimumWidth(0)
-            klbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+            klbl.setWordWrap(False)
             vlbl = QLabel(value_text if value_text else '-')
             vlbl.setProperty('detailValue', True)
             vlbl.setProperty('detailFieldValue', True)
             vlbl.setWordWrap(True)
             vlbl.setAlignment(Qt.AlignLeft | Qt.AlignTop)
             vlbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            vlbl.setMinimumWidth(0)
-            vlbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
             fl.addWidget(klbl)
             fl.addWidget(vlbl)
             return field_frame
@@ -553,17 +869,14 @@ class JawPage(QWidget):
         def build_used_in_works_field(value_text: str):
             field_frame = QFrame()
             field_frame.setProperty('detailField', True)
-            field_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-            field_frame.setMinimumWidth(0)
+            field_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
             fl = QVBoxLayout(field_frame)
             fl.setContentsMargins(6, 4, 6, 4)
             fl.setSpacing(4)
 
             klbl = QLabel(self._t('jaw_library.field.used_in_works', 'Used in works:'))
             klbl.setProperty('detailFieldKey', True)
-            klbl.setWordWrap(True)
-            klbl.setMinimumWidth(0)
-            klbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+            klbl.setWordWrap(False)
             fl.addWidget(klbl)
 
             works = self._split_used_in_works(value_text)
@@ -574,8 +887,6 @@ class JawPage(QWidget):
                 empty.setWordWrap(True)
                 empty.setAlignment(Qt.AlignLeft | Qt.AlignTop)
                 empty.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                empty.setMinimumWidth(0)
-                empty.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
                 fl.addWidget(empty)
                 return field_frame
 
@@ -586,8 +897,6 @@ class JawPage(QWidget):
                 value.setWordWrap(True)
                 value.setAlignment(Qt.AlignLeft | Qt.AlignTop)
                 value.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                value.setMinimumWidth(0)
-                value.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
                 fl.addWidget(value)
                 if idx < len(works) - 1:
                     sep = QFrame()
@@ -614,10 +923,6 @@ class JawPage(QWidget):
         info = QGridLayout()
         info.setHorizontalSpacing(14)
         info.setVerticalSpacing(8)
-        info.setColumnStretch(0, 1)
-        info.setColumnStretch(1, 1)
-        info.setColumnStretch(2, 1)
-        info.setColumnStretch(3, 1)
         total       = len(pairs)
         left_count  = (total + 1) // 2
         right_count = total - left_count
@@ -634,23 +939,17 @@ class JawPage(QWidget):
         if notes_text:
             notes_field = QFrame()
             notes_field.setProperty('detailField', True)
-            notes_field.setMinimumWidth(0)
-            notes_field.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
             nl = QVBoxLayout(notes_field)
             nl.setContentsMargins(6, 4, 6, 4)
             nl.setSpacing(4)
             nk = QLabel(self._t('jaw_library.field.notes', 'Notes'))
             nk.setProperty('detailFieldKey', True)
-            nk.setWordWrap(True)
-            nk.setMinimumWidth(0)
-            nk.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+            nk.setWordWrap(False)
             nv = QLabel(notes_text)
             nv.setProperty('detailValue', True)
             nv.setProperty('detailFieldValue', True)
             nv.setWordWrap(True)
             nv.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            nv.setMinimumWidth(0)
-            nv.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
             nl.addWidget(nk)
             nl.addWidget(nv)
             info.addWidget(notes_field, used_in_works_row + 1, 0, 1, 4, Qt.AlignTop)
@@ -700,57 +999,48 @@ class JawPage(QWidget):
         layout.addStretch(1)
         self.detail_layout.addWidget(card)
 
-    def _update_row_type_visibility(self, _show: bool):
-        """Delegate rows are painted directly; a viewport repaint is sufficient."""
-        self.jaw_list.viewport().update()
+    def _refresh_row_style(self, widget):
+        if widget is None:
+            return
+        style = widget.style()
+        style.unpolish(widget)
+        style.polish(widget)
+        widget.update()
 
     def select_jaw_by_id(self, jaw_id: str):
         """Navigate the list to the jaw with the given jaw_id."""
         self.current_jaw_id = jaw_id.strip()
         self.refresh_list()
-        for row in range(self._jaw_model.rowCount()):
-            idx = self._jaw_model.index(row, 0)
-            if idx.data(ROLE_JAW_ID) == self.current_jaw_id:
-                self.jaw_list.setCurrentIndex(idx)
-                self.jaw_list.scrollTo(idx)
+        # Scroll to and select the matching item.
+        for i in range(self.jaw_list.count()):
+            item = self.jaw_list.item(i)
+            if item.data(Qt.UserRole) == self.current_jaw_id:
+                self.jaw_list.setCurrentItem(item)
+                self.jaw_list.scrollToItem(item)
                 break
 
     def refresh_list(self):
-        if not hasattr(self, 'jaw_list'):
-            return
         type_filter = self.jaw_type_filter.currentData() if hasattr(self, 'jaw_type_filter') else 'all'
         jaws = self.jaw_service.list_jaws(self.search.text(), self.current_view_mode, type_filter)
         if self._master_filter_active:
-            jaws = [jaw for jaw in jaws if self._norm_id(jaw.get('jaw_id', '')) in self._master_filter_ids]
-        self.jaw_list.setUpdatesEnabled(False)
-        self._jaw_model.clear()
-        items = []
+            jaws = [jaw for jaw in jaws if str(jaw.get('jaw_id', '')).strip() in self._master_filter_ids]
+        self.jaw_list.clear()
+
         for jaw in jaws:
-            item = QStandardItem()
-            item.setData(jaw.get('jaw_id', ''), ROLE_JAW_ID)
-            item.setData(jaw, ROLE_JAW_DATA)
-            item.setData(jaw_icon_for_row(jaw), ROLE_JAW_ICON)
-            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            items.append(item)
-        if items:
-            self._jaw_model.invisibleRootItem().appendRows(items)
-        self.jaw_list.setUpdatesEnabled(True)
-        found = False
+            item = QListWidgetItem()
+            item.setData(Qt.UserRole, jaw.get('jaw_id', ''))
+            widget = ResponsiveJawRowWidget(jaw, translate=self._t)
+            widget.set_detail_context(self._details_hidden)
+            self.jaw_list.addItem(item)
+            self.jaw_list.setItemWidget(item, widget)
+            item.setSizeHint(QSize(0, styled_list_item_height(widget, self.jaw_list.spacing())))
+
         if self.current_jaw_id:
-            for row in range(self._jaw_model.rowCount()):
-                idx = self._jaw_model.index(row, 0)
-                if idx.data(ROLE_JAW_ID) == self.current_jaw_id:
-                    self.jaw_list.setCurrentIndex(idx)
-                    self.jaw_list.scrollTo(idx)
-                    found = True
+            for idx in range(self.jaw_list.count()):
+                item = self.jaw_list.item(idx)
+                if item.data(Qt.UserRole) == self.current_jaw_id:
+                    self.jaw_list.setCurrentItem(item)
                     break
-        if self.current_jaw_id and not found:
-            self.current_jaw_id = None
-            self.jaw_list.setCurrentIndex(QModelIndex())
-            if not self._details_hidden:
-                self.populate_details(None)
-        self.jaw_list.doItemsLayout()
-        self.jaw_list.viewport().update()
 
     def toggle_details(self):
         if self._details_hidden:
@@ -775,7 +1065,7 @@ class JawPage(QWidget):
             total = max(600, self.splitter.width())
             self._last_splitter_sizes = [int(total * 0.62), int(total * 0.38)]
         self.splitter.setSizes(self._last_splitter_sizes)
-        self._update_row_type_visibility(False)
+        self.refresh_list()
 
     def hide_details(self):
         self._details_hidden = True
@@ -784,22 +1074,32 @@ class JawPage(QWidget):
         self.detail_container.hide()
         self.detail_header_container.hide()
         self.splitter.setSizes([1, 0])
-        self._update_row_type_visibility(True)
+        self.refresh_list()
 
-    def _on_current_changed(self, current: QModelIndex, previous: QModelIndex):
-        _ = previous
-        if not current.isValid():
+    def on_current_item_changed(self, current, previous):
+        if previous is not None:
+            prev_widget = self.jaw_list.itemWidget(previous)
+            if prev_widget is not None:
+                prev_widget.setProperty('selected', False)
+                self._refresh_row_style(prev_widget)
+
+        if current is None:
             self.current_jaw_id = None
             self.populate_details(None)
             return
 
-        self.current_jaw_id = current.data(ROLE_JAW_ID)
+        self.current_jaw_id = current.data(Qt.UserRole)
+        current_widget = self.jaw_list.itemWidget(current)
+        if current_widget is not None:
+            current_widget.setProperty('selected', True)
+            self._refresh_row_style(current_widget)
+
         if not self._details_hidden:
             jaw = self.jaw_service.get_jaw(self.current_jaw_id)
             self.populate_details(jaw)
 
-    def _on_double_clicked(self, index: QModelIndex):
-        self.current_jaw_id = index.data(ROLE_JAW_ID)
+    def on_item_double_clicked(self, item):
+        self.current_jaw_id = item.data(Qt.UserRole)
         if QApplication.keyboardModifiers() & Qt.ControlModifier:
             self.edit_jaw()
             return
@@ -860,11 +1160,8 @@ class JawPage(QWidget):
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None):
         if translate is not None:
             self._translate = translate
-        if hasattr(self, '_jaw_delegate'):
-            self._jaw_delegate.set_translate(self._t)
-            self.jaw_list.viewport().update()
         if hasattr(self, 'toolbar_title_label'):
-            self.toolbar_title_label.setText(self._t('tool_library.rail_title.jaws', 'Jaws Library'))
+            self.toolbar_title_label.setText(self._t('tool_library.module.jaws', 'JAWS'))
         if hasattr(self, 'search'):
             self.search.setPlaceholderText(
                 self._t('jaw_library.search.placeholder', 'Search jaw ID, type, spindle, diameter, work, washer or notes')

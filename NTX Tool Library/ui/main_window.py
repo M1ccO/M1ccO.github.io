@@ -21,7 +21,6 @@ from PySide6.QtWidgets import (
     QButtonGroup,
     QComboBox,
     QFrame,
-    QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -34,6 +33,7 @@ from PySide6.QtWidgets import (
     QStyle,
     QStyleOptionComboBox,
     QStylePainter,
+    QSizePolicy,
 )
 from config import (
     APP_TITLE,
@@ -93,6 +93,7 @@ class RailFilterCombo(QComboBox):
         max_text_width = max(8, full_text_rect.width())
         text = self.fontMetrics().elidedText(self.currentText(), Qt.ElideRight, max_text_width)
         painter.drawText(full_text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
+        painter.end()
 
 
 class PlaceholderPage(QWidget):
@@ -127,10 +128,11 @@ class MainWindow(QMainWindow):
         self.localization = LocalizationService(I18N_DIR)
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._clamping_screen_bounds = False
-        self._nav_width = 56
+        self._nav_width = 48
         self._nav_revealed = False
         self._nav_anim_group = None
         self._nav_button_effects = []
+        self._disabled_graphics_effects = []
         self._nav_hide_timer = QTimer(self)
         self._nav_hide_timer.setSingleShot(True)
         self._nav_hide_timer.setInterval(160)
@@ -153,6 +155,7 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._ensure_on_screen()
+        self._position_rail_title()
 
     def moveEvent(self, event):
         super().moveEvent(event)
@@ -161,6 +164,16 @@ class MainWindow(QMainWindow):
     def showEvent(self, event):
         super().showEvent(event)
         self._ensure_on_screen()
+        self._position_rail_title()
+
+    def _position_rail_title(self):
+        """Place the header label at the top-left of the central widget."""
+        if not hasattr(self, 'rail_title'):
+            return
+        self.rail_title.move(10, 13)
+        # Let it be as wide as its text needs — it's outside the layout.
+        self.rail_title.setFixedWidth(self.rail_title.fontMetrics().horizontalAdvance(self.rail_title.text()) + 16)
+        self.rail_title.raise_()
 
     def _ensure_on_screen(self):
         if self._clamping_screen_bounds:
@@ -175,8 +188,8 @@ class MainWindow(QMainWindow):
 
             frame_w_extra = max(0, geom.width() - self.width())
             frame_h_extra = max(0, geom.height() - self.height())
-            max_client_w = max(480, available.width() - frame_w_extra)
-            max_client_h = max(320, available.height() - frame_h_extra)
+            max_client_w = max(320, available.width() - frame_w_extra)
+            max_client_h = max(260, available.height() - frame_h_extra)
 
             width = min(self.width(), max_client_w)
             height = min(self.height(), max_client_h)
@@ -319,36 +332,29 @@ class MainWindow(QMainWindow):
         central = QWidget()
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
-        outer = QVBoxLayout(central)
-        outer.setContentsMargins(4, 22, 12, 12)
-        outer.setSpacing(8)
 
-        self.rail_header_host = QWidget()
-        rail_header_layout = QHBoxLayout(self.rail_header_host)
-        rail_header_layout.setContentsMargins(6, 0, 0, 0)
-        rail_header_layout.setSpacing(0)
+        # ── Header: absolutely positioned, NOT in any layout ─────────────────
+        # This is the only way to guarantee the title width has zero effect on
+        # the rail width.  It's a direct child of central, raised above the
+        # layout, and repositioned via _position_rail_title().
+        self._header_height = 38
+        self.rail_title = QLabel(self._t("tool_library.rail_title.tools", "Tool Library"), central)
+        self.rail_title.setStyleSheet('color: #000000; font-size: 14pt; font-weight: 700;')
+        self.rail_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.rail_title.setFixedHeight(self._header_height)
+        self.rail_title.adjustSize()
+        self.rail_title.raise_()
 
-        self.rail_title = QLabel(self._t("tool_library.rail_title.tools", "Tool Library"))
-        self.rail_title.setStyleSheet('color: #000000; font-size: 16pt; font-weight: 700;')
-        self.rail_title.setWordWrap(False)
-        self.rail_title.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        rail_header_layout.addWidget(self.rail_title, 0, Qt.AlignLeft | Qt.AlignTop)
-        rail_header_layout.addStretch(1)
-        # Keep the object for existing localization hooks, but never render this strip:
-        # title is shown in each page's top toolbar row.
-        self.rail_header_host.setFixedHeight(0)
-        self.rail_header_host.setVisible(False)
-        outer.addWidget(self.rail_header_host, 0)
-
-        root = QHBoxLayout()
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(4)
-        outer.addLayout(root, 1)
+        # ── Main layout: rail + stack, with a compact shared top gutter ──────
+        root = QHBoxLayout(central)
+        root.setContentsMargins(4, 10, 12, 12)
+        root.setSpacing(0)
 
         self.toggle_rail = QWidget()
-        self.toggle_rail.setFixedWidth(132)
+        self.toggle_rail.setFixedWidth(110)
+        self.toggle_rail.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         toggle_layout = QVBoxLayout(self.toggle_rail)
-        toggle_layout.setContentsMargins(6, 10, 6, 10)
+        toggle_layout.setContentsMargins(6, 60, 6, 10)
         toggle_layout.setSpacing(0)
 
         self.nav_frame = QFrame()
@@ -367,7 +373,7 @@ class MainWindow(QMainWindow):
             btn.setIconSize(QSize(30, 30))
             btn.setCheckable(True)
             btn.setAutoExclusive(True)
-            btn.setFixedSize(46, 50)
+            btn.setFixedSize(42, 46)
             btn.clicked.connect(lambda checked=False, idx=index: self._on_nav_button_clicked(idx))
             self.nav_button_group.addButton(btn, index)
             self.nav_buttons.append(btn)
@@ -384,12 +390,15 @@ class MainWindow(QMainWindow):
 
         self.tool_head_filter_combo = RailFilterCombo()
         self.tool_head_filter_combo.setObjectName('toolHeadRailFilter')
-        self.tool_head_filter_combo.addItems(['HEAD1/2', 'HEAD1', 'HEAD2'])
         self.tool_head_filter_combo.setFixedWidth(RAIL_HEAD_DROPDOWN_WIDTH)
         self.tool_head_filter_combo.setCursor(Qt.PointingHandCursor)
+        combo_policy = self.tool_head_filter_combo.sizePolicy()
+        combo_policy.setRetainSizeWhenHidden(True)
+        self.tool_head_filter_combo.setSizePolicy(combo_policy)
         add_shadow(self.tool_head_filter_combo)
         apply_shared_dropdown_style(self.tool_head_filter_combo)
-        self.tool_head_filter_combo.currentTextChanged.connect(self._on_global_tool_head_changed)
+        self._rebuild_head_filter_combo_items()
+        self.tool_head_filter_combo.currentIndexChanged.connect(self._on_global_tool_head_changed)
         toggle_layout.addSpacing(10)
         toggle_layout.addWidget(self.tool_head_filter_combo, 0, Qt.AlignHCenter)
         toggle_layout.addSpacing(10)
@@ -422,7 +431,7 @@ class MainWindow(QMainWindow):
         self.back_to_setup_btn.setProperty('topBarIconButton', True)
         self.back_to_setup_btn.setIcon(self._icon_by_name('home_icon.svg', QSize(34, 34)))
         self.back_to_setup_btn.setIconSize(QSize(34, 34))
-        self.back_to_setup_btn.setFixedSize(42, 42)
+        self.back_to_setup_btn.setFixedSize(38, 38)
         self.back_to_setup_btn.setAutoRaise(True)
         self.back_to_setup_btn.setCursor(Qt.PointingHandCursor)
         self.back_to_setup_btn.setToolTip(self._t("tool_library.back_to_setup_tip", "Switch back to Setup Manager"))
@@ -506,76 +515,29 @@ class MainWindow(QMainWindow):
 
     def _setup_nav_hover_animation(self):
         self._nav_button_effects.clear()
-        for btn in self.nav_buttons:
-            effect = QGraphicsOpacityEffect(btn)
-            effect.setOpacity(1.0)
-            btn.setGraphicsEffect(effect)
-            self._nav_button_effects.append(effect)
-
         self._nav_hover_widgets = []
         self._nav_revealed = True
-
-        def _init_visible_state():
-            self.nav_frame.move(0, 0)
-            self._set_nav_button_opacity(1.0)
-
-        QTimer.singleShot(0, _init_visible_state)
+        self.nav_frame.move(0, 0)
+        self._set_nav_button_opacity(1.0)
 
     def _set_nav_button_opacity(self, opacity: float):
-        for effect in self._nav_button_effects:
-            effect.setOpacity(opacity)
+        _ = opacity
 
     def _animate_nav(self, show: bool):
-        if self._nav_anim_group is not None:
-            self._nav_anim_group.stop()
-
-        group = QParallelAnimationGroup(self)
-
-        slide = QPropertyAnimation(self.nav_frame, b'pos', group)
-        slide.setDuration(220 if show else 180)
-        slide.setEasingCurve(QEasingCurve.OutCubic if show else QEasingCurve.InCubic)
-        slide.setStartValue(self.nav_frame.pos())
-        slide.setEndValue(QPoint(0, 0) if show else QPoint(-self._nav_width, 0))
-        group.addAnimation(slide)
-
-        count = len(self._nav_button_effects)
-        for idx, effect in enumerate(self._nav_button_effects):
-            seq = QSequentialAnimationGroup(group)
-            # Start icon fades slightly after slide begins so the first button doesn't look clipped.
-            delay = (70 + idx * 36) if show else (count - 1 - idx) * 20
-            if delay > 0:
-                seq.addAnimation(QPauseAnimation(delay))
-            fade = QPropertyAnimation(effect, b'opacity', seq)
-            fade.setDuration(120 if show else 80)
-            fade.setEasingCurve(QEasingCurve.OutCubic)
-            fade.setStartValue(effect.opacity())
-            fade.setEndValue(1.0 if show else 0.0)
-            seq.addAnimation(fade)
-            group.addAnimation(seq)
-
         self._nav_revealed = show
-        self._nav_anim_group = group
-        def _finalize_nav_state():
-            if show:
-                self.nav_frame.move(0, 0)
-                self._set_nav_button_opacity(1.0)
-            else:
-                self.nav_frame.move(-self._nav_width, 0)
-                self._set_nav_button_opacity(0.0)
-
-        group.finished.connect(_finalize_nav_state)
-        group.start()
+        self.nav_frame.move(0, 0)
+        self._set_nav_button_opacity(1.0)
 
     def _show_nav(self):
         self._nav_hide_timer.stop()
-        if not self._nav_revealed:
-            self._animate_nav(True)
+        self._nav_revealed = True
+        self.nav_frame.move(0, 0)
+        self._set_nav_button_opacity(1.0)
 
     def _hide_nav_if_needed(self):
-        if self._cursor_inside_nav_zone():
-            return
-        if self._nav_revealed:
-            self._animate_nav(False)
+        self._nav_revealed = True
+        self.nav_frame.move(0, 0)
+        self._set_nav_button_opacity(1.0)
 
     def _cursor_inside_nav_zone(self) -> bool:
         if not self.toggle_rail.isVisible():
@@ -709,6 +671,7 @@ class MainWindow(QMainWindow):
             # Update left rail title for JAWS module
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.jaws", "Jaws Library"))
+                self._position_rail_title()
             except Exception:
                 pass
         else:
@@ -719,6 +682,7 @@ class MainWindow(QMainWindow):
             # Update left rail title for Tools module
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.tools", "Tool Library"))
+                self._position_rail_title()
             except Exception:
                 pass
 
@@ -732,6 +696,23 @@ class MainWindow(QMainWindow):
             return
         self._apply_module_mode('tools')
 
+    def _rebuild_head_filter_combo_items(self):
+        current_data = str(self.tool_head_filter_combo.currentData() or 'HEAD1/2').strip().upper()
+        if current_data not in {'HEAD1/2', 'HEAD1', 'HEAD2'}:
+            current_data = 'HEAD1/2'
+
+        self.tool_head_filter_combo.blockSignals(True)
+        self.tool_head_filter_combo.clear()
+        self.tool_head_filter_combo.addItem(self._t('tool_library.head_filter.all', 'HEAD1/2'), 'HEAD1/2')
+        self.tool_head_filter_combo.addItem(self._t('tool_library.head_filter.head1', 'HEAD1'), 'HEAD1')
+        self.tool_head_filter_combo.addItem(self._t('tool_library.head_filter.head2', 'HEAD2'), 'HEAD2')
+
+        for idx in range(self.tool_head_filter_combo.count()):
+            if (self.tool_head_filter_combo.itemData(idx) or '').strip().upper() == current_data:
+                self.tool_head_filter_combo.setCurrentIndex(idx)
+                break
+        self.tool_head_filter_combo.blockSignals(False)
+
     def _on_nav_button_clicked(self, index: int):
         if index < 0 or index >= len(self._active_nav_items):
             return
@@ -741,7 +722,8 @@ class MainWindow(QMainWindow):
             self.nav_buttons[index].setChecked(True)
         self._refresh_nav_button_icons()
 
-    def _on_global_tool_head_changed(self, head_value: str):
+    def _on_global_tool_head_changed(self, _index: int):
+        head_value = str(self.tool_head_filter_combo.currentData() or 'HEAD1/2').strip().upper()
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
             page.set_head_filter_value(head_value, refresh=False)
             page.refresh_list()
@@ -797,6 +779,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, "master_filter_toggle"):
             self.master_filter_toggle.setToolTip(self._t("tool_library.master_filter.button", "MASTER FILTER"))
             self._update_master_filter_toggle_visual()
+        if hasattr(self, "tool_head_filter_combo"):
+            self._rebuild_head_filter_combo_items()
         if hasattr(self, "home_page"):
             self.home_page.set_page_title(self._t("tool_library.rail_title.tools", "Tool Library"))
             if hasattr(self.home_page, "apply_localization"):
@@ -819,10 +803,8 @@ class MainWindow(QMainWindow):
     def _build_ui_preference_overrides(self) -> str:
         theme_name = self.ui_preferences.get("color_theme", "classic")
         palette = THEME_PALETTES.get(theme_name, THEME_PALETTES["classic"])
-        font_family = self.ui_preferences.get("font_family", "Segoe UI").replace("'", "\\'")
         return (
             "/* Runtime UI preference overrides */\n"
-            f"* {{ font-family: '{font_family}'; }}\n"
             "QFrame[catalogShell=\"true\"],\n"
             "QListView#toolCatalog,\n"
             "QListView#toolCatalog::viewport,\n"
@@ -833,32 +815,49 @@ class MainWindow(QMainWindow):
             "QFrame[detailField=\"true\"] {\n"
             f"    background-color: {palette['detail_box_bg']};\n"
             "}\n"
-            "QFrame[detailField=\"true\"][detailHeroField=\"true\"] {\n"
-            "    background-color: transparent;\n"
-            "}\n"
         )
 
+    def _set_graphics_effects_enabled(self, enabled: bool):
+        if enabled:
+            for effect in self._disabled_graphics_effects:
+                try:
+                    effect.setEnabled(True)
+                except Exception:
+                    pass
+            self._disabled_graphics_effects = []
+            return
+
+        if self._disabled_graphics_effects:
+            return
+
+        disabled_effects = []
+        for widget in self.findChildren(QWidget):
+            effect = widget.graphicsEffect()
+            if effect is None or not effect.isEnabled():
+                continue
+            try:
+                effect.setEnabled(False)
+                disabled_effects.append(effect)
+            except Exception:
+                pass
+        self._disabled_graphics_effects = disabled_effects
+
     def _fade_out_and(self, callback):
-        """Animate window opacity 1→0 then call *callback*."""
-        anim = QPropertyAnimation(self, b"windowOpacity", self)
-        anim.setDuration(180)
-        anim.setStartValue(1.0)
-        anim.setEndValue(0.0)
-        anim.setEasingCurve(QEasingCurve.InQuad)
-        anim.finished.connect(callback)
-        self._fade_anim = anim
-        anim.start()
+        """Immediately run *callback* without animation."""
+        if getattr(self, '_fade_anim', None) is not None:
+            self._fade_anim.stop()
+        self._fade_anim = None
+        self.setWindowOpacity(1.0)
+        self._set_graphics_effects_enabled(True)
+        callback()
 
     def fade_in(self):
-        """Animate window opacity 0→1 (called after being shown by IPC)."""
-        self.setWindowOpacity(0.0)
-        anim = QPropertyAnimation(self, b"windowOpacity", self)
-        anim.setDuration(220)
-        anim.setStartValue(0.0)
-        anim.setEndValue(1.0)
-        anim.setEasingCurve(QEasingCurve.OutQuad)
-        self._fade_anim = anim
-        anim.start()
+        """Show fully visible without animation."""
+        if getattr(self, '_fade_anim', None) is not None:
+            self._fade_anim.stop()
+        self._fade_anim = None
+        self.setWindowOpacity(1.0)
+        self._set_graphics_effects_enabled(True)
 
     def _current_window_rect(self) -> tuple[int, int, int, int]:
         """Return the actual on-screen window rectangle, including snap placement."""
@@ -974,10 +973,11 @@ class MainWindow(QMainWindow):
             if item_id:
                 self.home_page.select_tool_by_id(item_id)
 
-    def apply_external_request(self, payload: dict):
-        # Tool Library may stay hidden while Setup Manager edits shared preferences.
-        # Reload on each external show/open request so theme and language stay in sync.
-        self._reload_shared_preferences()
+    def apply_external_request(self, payload: dict, reload_preferences: bool = True):
+        # Preference reload is deferred to after show/fade_in when called from the
+        # IPC handoff path so it never blocks the transition animation.
+        if reload_preferences:
+            self._reload_shared_preferences()
 
         # Clear master filter when switching back normally (no filter context).
         if payload.get('clear_master_filter'):
