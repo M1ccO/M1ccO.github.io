@@ -134,17 +134,13 @@ QGroupBox::title {
 
 QDialog[workEditorDialog="true"] QFrame[editorPartsPanel="true"] {
     background-color: #ffffff;
-    border: 1px solid #c8d4e0;
+    border: 1px solid #d9e0e8;
     border-radius: 6px;
 }
 
 QDialog[workEditorDialog="true"] QFrame[modelsContainerCard="true"] {
-    border-left: 1px solid #c3ced8;
-    border-right: 1px solid #c3ced8;
-    border-bottom: 1px solid #c3ced8;
-    border-top: none;
-    border-top-left-radius: 0px;
-    border-top-right-radius: 0px;
+    border: none;
+    background: transparent;
 }
 
 QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable {

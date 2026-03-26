@@ -23,7 +23,7 @@ from PySide6.QtWidgets import (
 
 from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
-from editor_helpers import (
+from shared.editor_helpers import (
     add_shadow,
     setup_editor_dialog,
     create_dialog_buttons,

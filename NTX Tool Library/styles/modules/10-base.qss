@@ -61,6 +61,25 @@ QFrame[editorFieldCard="true"] {
     border-radius: 0px;
 }
 
+QFrame[editorFieldGroup="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #d0d8e0;
+    border-radius: 6px;
+    padding: 4px 2px;
+}
+
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"] {
+    color: #2b3136;
+}
+
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"][swappableLabel="true"] {
+    color: #2b3136;
+}
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"][swappableLabel="true"]:hover {
+    color: #1a6daa;
+    text-decoration: underline;
+}
+
 QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"] {
     margin-bottom: 2px;
     font-size: 10.5pt;
@@ -75,7 +94,8 @@ QFrame[editorFieldCard="true"] QComboBox {
     border: 1px solid #d8dfe7;
     border-radius: 6px;
     padding: 6px 10px;
-    min-height: 0px;
+    min-height: 28px;
+    max-height: 28px;
     font-size: 10.5pt;
     font-weight: 400;
 }

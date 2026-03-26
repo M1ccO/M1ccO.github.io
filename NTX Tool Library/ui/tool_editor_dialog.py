@@ -5,14 +5,15 @@ from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixma
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
-    QLineEdit, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
-    QFileDialog, QColorDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
+    QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
+    QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
 )
-from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH, APP_DIR, STYLE_PATH
+from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH
 from ui.widgets.parts_table import PartsTable
 from ui.stl_preview import StlPreviewWidget
+from ui.widgets.color_picker_dialog import ColorPickerDialog
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
-from editor_helpers import (
+from shared.editor_helpers import (
     add_shadow,
     setup_editor_dialog,
     create_dialog_buttons,
@@ -166,6 +167,7 @@ class AddEditToolDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.setObjectName('toolEditorTabs')
         self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
+        self.tabs.currentChanged.connect(self._on_tab_changed)
         root.addWidget(self.tabs, 1)
 
         # -------------------------
@@ -228,13 +230,7 @@ class AddEditToolDialog(QDialog):
         header_layout.addLayout(meta_row)
         form_layout.addWidget(header)
 
-        self.general_fields_host = QWidget()
-        self.general_fields_host.setProperty('editorFieldsHost', True)
-        self.general_fields_grid = QGridLayout(self.general_fields_host)
-        self.general_fields_grid.setContentsMargins(0, 0, 0, 0)
-        self.general_fields_grid.setHorizontalSpacing(12)
-        self.general_fields_grid.setVerticalSpacing(8)
-        form_layout.addWidget(self.general_fields_host)
+        self.general_fields_grid = None  # Groups handle layout directly
 
         self.tool_id = QLineEdit()
         self.tool_head = QComboBox()
@@ -250,6 +246,11 @@ class AddEditToolDialog(QDialog):
         self._style_combo(self.tool_type)
         self.tool_type.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.tool_type.setMinimumWidth(180)
+        self.tool_type.setMaxVisibleItems(10)
+        type_popup = QListView()
+        type_popup.setVerticalScrollMode(QListView.ScrollPerPixel)
+        type_popup.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.tool_type.setView(type_popup)
 
         self.description = QLineEdit()
         self.geom_x = QLineEdit()
@@ -312,31 +313,92 @@ class AddEditToolDialog(QDialog):
         ]:
             self._style_general_editor(w)
 
-        self._general_field_order = []
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.row.tool_id', 'Tool ID'), self.tool_id))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.tool_head', 'Tool Head'), self.tool_head))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.tool_type', 'Tool type'), self.tool_type))
-        self._general_field_order.append(self._build_edit_field(self._t('setup_page.field.description', 'Description'), self.description))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.geom_x', 'Geom X'), self.geom_x))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.geom_z', 'Geom Z'), self.geom_z))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.radius', 'Radius'), self.radius))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), self.nose_corner_radius))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.holder_code', 'Holder code'), self.holder_code_row))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.holder_link', 'Holder link'), self.holder_link))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.add_element', 'Add. Element'), self.holder_add_element))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.add_element_link', 'Add. Element link'), self.holder_add_element_link))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.cutting_component_type', 'Cutting component type'), self.cutting_type_row))
+        # -- Build grouped field sections --
+
+        # Group 1: Identity
+        group1 = self._build_field_group([
+            self._build_edit_field(self._t('tool_library.row.tool_id', 'Tool ID'), self.tool_id),
+            self._build_edit_field(self._t('tool_editor.field.tool_head', 'Tool Head'), self.tool_head),
+            self._build_edit_field(self._t('tool_editor.field.tool_type', 'Tool type'), self.tool_type),
+            self._build_edit_field(self._t('setup_page.field.description', 'Description'), self.description),
+        ])
+
+        # Group 2: Geometry
+        group2 = self._build_field_group([
+            self._build_edit_field(self._t('tool_library.field.geom_x', 'Geom X'), self.geom_x),
+            self._build_edit_field(self._t('tool_library.field.geom_z', 'Geom Z'), self.geom_z),
+            self._build_edit_field(self._t('tool_library.field.radius', 'Radius'), self.radius),
+            self._build_edit_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), self.nose_corner_radius),
+        ])
+
+        # Group 3: Holder (code/link toggle)
+        self.holder_code_field = self._build_edit_field(self._t('tool_library.field.holder_code', 'Holder code'), self.holder_code_row)
+        self.holder_link_field = self._build_edit_field(self._t('tool_editor.field.holder_link', 'Holder link'), self.holder_link)
+        self.holder_add_field = self._build_edit_field(self._t('tool_library.field.add_element', 'Add. Element'), self.holder_add_element)
+        self.holder_add_link_field = self._build_edit_field(self._t('tool_editor.field.add_element_link', 'Add. Element link'), self.holder_add_element_link)
+        self.holder_link_field.setVisible(False)
+        self.holder_add_link_field.setVisible(False)
+        group3 = self._build_field_group([
+            self.holder_code_field, self.holder_link_field,
+            self.holder_add_field, self.holder_add_link_field,
+        ])
+
+        # Group 4: Cutting (code/link toggle)
+        cutting_type_field = self._build_edit_field(self._t('tool_editor.field.cutting_component_type', 'Cutting component type'), self.cutting_type_row)
         self.cutting_code_field = self._build_edit_field('', self.cutting_code_row, key_label=self.cutting_code_label)
-        self._general_field_order.append(self.cutting_code_field)
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.cutting_component_link', 'Cutting component link'), self.cutting_link))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.add_cutting_any', 'Add. Insert/Drill/Mill'), self.cutting_add_element))
-        self._general_field_order.append(self._build_edit_field(self._t('tool_editor.field.add_cutting_any_link', 'Add. Insert/Drill/Mill link'), self.cutting_add_element_link))
+        self.cutting_link_field = self._build_edit_field(self._t('tool_editor.field.cutting_component_link', 'Cutting component link'), self.cutting_link)
+        self.cutting_add_field = self._build_edit_field(self._t('tool_editor.field.add_cutting_any', 'Add. Insert/Drill/Mill'), self.cutting_add_element)
+        self.cutting_add_link_field = self._build_edit_field(self._t('tool_editor.field.add_cutting_any_link', 'Add. Insert/Drill/Mill link'), self.cutting_add_element_link)
+        self.cutting_link_field.setVisible(False)
+        self.cutting_add_link_field.setVisible(False)
         self.drill_field = self._build_edit_field('', self.drill_nose_angle, key_label=self.drill_row_label)
         self.mill_field = self._build_edit_field('', self.mill_cutting_edges, key_label=self.mill_row_label)
-        self._general_field_order.append(self.drill_field)
-        self._general_field_order.append(self.mill_field)
-        self._general_field_order.append(self._build_edit_field(self._t('tool_library.field.notes', 'Notes'), self.notes))
-        self._reflow_general_fields()
+        group4 = self._build_field_group([
+            cutting_type_field,
+            self.cutting_code_field, self.cutting_link_field,
+            self.cutting_add_field, self.cutting_add_link_field,
+            self.drill_field, self.mill_field,
+        ])
+
+        # Group 5: Notes
+        group5 = self._build_field_group([
+            self._build_edit_field(self._t('tool_library.field.notes', 'Notes'), self.notes),
+        ])
+
+        # Wire per-field label clicks to swap individual code/link pairs
+        self._showing_links = False
+        self._code_link_pairs = [
+            (self.holder_code_field, self.holder_link_field),
+            (self.holder_add_field, self.holder_add_link_field),
+            (self.cutting_code_field, self.cutting_link_field),
+            (self.cutting_add_field, self.cutting_add_link_field),
+        ]
+        for code_f, link_f in self._code_link_pairs:
+            _cf, _lf = code_f, link_f
+            lbl_c = getattr(_cf, '_field_label', None)
+            lbl_l = getattr(_lf, '_field_label', None)
+            if lbl_c:
+                lbl_c.setProperty('swappableLabel', True)
+                lbl_c.setCursor(Qt.PointingHandCursor)
+                lbl_c.style().unpolish(lbl_c)
+                lbl_c.style().polish(lbl_c)
+                lbl_c.mousePressEvent = lambda _e, a=_cf, b=_lf: self._swap_field_pair(a, b)
+            if lbl_l:
+                lbl_l.setProperty('swappableLabel', True)
+                lbl_l.setCursor(Qt.PointingHandCursor)
+                lbl_l.style().unpolish(lbl_l)
+                lbl_l.style().polish(lbl_l)
+                lbl_l.mousePressEvent = lambda _e, a=_lf, b=_cf: self._swap_field_pair(a, b)
+
+        # Dummy field order for compatibility
+        self._general_field_order = []
+
+        # Add groups to form layout
+        form_layout.addWidget(group1)
+        form_layout.addWidget(group2)
+        form_layout.addWidget(group3)
+        form_layout.addWidget(group4)
+        form_layout.addWidget(group5)
 
         general_content_layout.addWidget(form_frame)
         general_content_layout.addStretch(1)
@@ -390,12 +452,12 @@ class AddEditToolDialog(QDialog):
         self.remove_part_btn = QPushButton()
         style_icon_action_button(
             self.add_part_btn,
-            TOOL_ICONS_DIR / 'select.svg',
+            TOOL_ICONS_DIR / 'Plus_icon.svg',
             self._t('tool_editor.action.add_part', 'Add part'),
         )
         style_icon_action_button(
             self.remove_part_btn,
-            TOOL_ICONS_DIR / 'delete.svg',
+            TOOL_ICONS_DIR / 'remove.svg',
             self._t('tool_editor.action.remove_selected_part', 'Remove selected part'),
             danger=True,
         )
@@ -449,54 +511,25 @@ class AddEditToolDialog(QDialog):
         models_tab = QWidget()
         models_tab.setProperty('editorPageSurface', True)
         models_layout = QVBoxLayout(models_tab)
-        models_layout.setContentsMargins(0, 0, 0, 0)
-        models_layout.setSpacing(0)
-
-        models_scroll = QScrollArea()
-        models_scroll.setWidgetResizable(True)
-        models_scroll.setFrameShape(QFrame.NoFrame)
-        models_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        models_layout.addWidget(models_scroll, 1)
-
-        models_content = QWidget()
-        models_content.setProperty('editorFieldsViewport', True)
-        models_content.setProperty('editorPageSurface', True)
-        models_content_layout = QVBoxLayout(models_content)
-        models_content_layout.setContentsMargins(0, 0, 0, 0)
-        models_content_layout.setSpacing(0)
-        models_scroll.setWidget(models_content)
-
-        models_container = QFrame()
-        models_container.setProperty('subCard', True)
-        models_container.setProperty('modelsContainerCard', True)
-        models_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        models_frame_layout = QVBoxLayout(models_container)
-        models_frame_layout.setContentsMargins(14, 8, 14, 14)
-        models_frame_layout.setSpacing(0)
+        models_layout.setContentsMargins(18, 18, 18, 18)
+        models_layout.setSpacing(8)
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.setProperty('editorTransparentPanel', True)
         splitter.setHandleWidth(8)
 
-        # Left side: table wrapped in panel (like spare parts tab)
-        left_panel = QWidget()
-        left_panel.setProperty('editorTransparentPanel', True)
-        left_panel.setMinimumWidth(320)
-        left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(8)
-
-        # Wrap table in panel frame for consistent styling
+        # Left side: table in panel frame (same structure as spare parts tab)
         models_panel = QFrame()
         models_panel.setProperty('editorPartsPanel', True)
+        models_panel.setMinimumWidth(320)
         models_panel_layout = QVBoxLayout(models_panel)
         models_panel_layout.setContentsMargins(8, 10, 8, 8)
         models_panel_layout.setSpacing(0)
 
         self.model_table = PartsTable(['Part Name', 'STL File', 'Color'])
         self.model_table.setObjectName('editorModelsTable')
-        self.model_table.setMinimumHeight(360)
-        self.model_table.verticalHeader().setDefaultSectionSize(32)
+        self.model_table.setMinimumHeight(320)
+        self.model_table.verticalHeader().setDefaultSectionSize(44)
         self.model_table.verticalHeader().setMinimumSectionSize(28)
         self.model_table.setColumnCount(3)
         self.model_table.setHorizontalHeaderLabels([
@@ -516,23 +549,41 @@ class AddEditToolDialog(QDialog):
         self.model_table.itemChanged.connect(self._on_model_table_changed)
 
         models_panel_layout.addWidget(self.model_table, 1)
-        left_layout.addWidget(models_panel, 1)
+
+        # Right side: preview panel
+        preview_panel = QFrame()
+        preview_panel.setProperty('editorPartsPanel', True)
+        preview_panel.setMinimumWidth(240)
+        preview_panel_layout = QVBoxLayout(preview_panel)
+        preview_panel_layout.setContentsMargins(8, 8, 8, 8)
+        preview_panel_layout.setSpacing(0)
+
+        self.models_preview = StlPreviewWidget()
+        preview_panel_layout.addWidget(self.models_preview, 1)
+
+        splitter.addWidget(models_panel)
+        splitter.addWidget(preview_panel)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setSizes([400, 300])
+
+        models_layout.addWidget(splitter, 1)
 
         model_btn_bar = QFrame()
         model_btn_bar.setProperty('editorButtonBar', True)
         model_btns = QHBoxLayout(model_btn_bar)
-        model_btns.setContentsMargins(2, 10, 2, 2)
+        model_btns.setContentsMargins(2, 6, 2, 2)
         model_btns.setSpacing(8)
         self.add_model_btn = QPushButton(self._t('tool_editor.action.add_model', 'ADD MODEL'))
         self.remove_model_btn = QPushButton(self._t('tool_editor.action.remove_selected_model', 'REMOVE SELECTED MODEL'))
         style_icon_action_button(
             self.add_model_btn,
-            TOOL_ICONS_DIR / 'select.svg',
+            TOOL_ICONS_DIR / 'add_file.svg',
             self._t('tool_editor.action.add_model', 'Add model'),
         )
         style_icon_action_button(
             self.remove_model_btn,
-            TOOL_ICONS_DIR / 'delete.svg',
+            TOOL_ICONS_DIR / 'remove.svg',
             self._t('tool_editor.action.remove_selected_model', 'Remove selected model'),
             danger=True,
         )
@@ -549,36 +600,8 @@ class AddEditToolDialog(QDialog):
         model_btns.addWidget(self.model_up_btn)
         model_btns.addWidget(self.model_down_btn)
         model_btns.addStretch(1)
-        left_layout.addWidget(model_btn_bar)
+        models_layout.addWidget(model_btn_bar)
 
-        # Right side: preview panel
-        right_panel = QWidget()
-        right_panel.setProperty('editorTransparentPanel', True)
-        right_panel.setMinimumWidth(240)
-        right_layout = QVBoxLayout(right_panel)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(0)
-
-        # Add preview header
-        preview_panel = QFrame()
-        preview_panel.setProperty('editorPartsPanel', True)
-        preview_panel_layout = QVBoxLayout(preview_panel)
-        preview_panel_layout.setContentsMargins(8, 8, 8, 8)
-        preview_panel_layout.setSpacing(0)
-
-        self.models_preview = StlPreviewWidget()
-        preview_panel_layout.addWidget(self.models_preview, 1)
-        right_layout.addWidget(preview_panel, 1)
-
-        splitter.addWidget(left_panel)
-        splitter.addWidget(right_panel)
-        splitter.setCollapsible(0, False)
-        splitter.setCollapsible(1, False)
-        splitter.setSizes([400, 300])
-
-        models_frame_layout.addWidget(splitter, 1)
-        models_content_layout.addWidget(models_container)
-        models_content_layout.addStretch(1)
         self.tabs.addTab(models_tab, self._t('tool_editor.tab.models', '3D models'))
 
         # -------------------------
@@ -592,7 +615,24 @@ class AddEditToolDialog(QDialog):
             on_cancel=self.reject,
         )
         self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
-        root.addWidget(self._dialog_buttons)
+
+        self.code_link_toggle_btn = QPushButton()
+        style_icon_action_button(
+            self.code_link_toggle_btn,
+            TOOL_ICONS_DIR / 'import_export.svg',
+            self._t('tool_editor.action.show_links', 'Show links'),
+        )
+        self.code_link_toggle_btn.clicked.connect(self._toggle_code_link_mode)
+
+        bottom_bar = QWidget()
+        bottom_bar.setObjectName('dialogBottomBar')
+        bottom_bar.setStyleSheet('#dialogBottomBar { background: transparent; }')
+        bottom_layout = QHBoxLayout(bottom_bar)
+        bottom_layout.setContentsMargins(0, 0, 0, 0)
+        bottom_layout.setSpacing(8)
+        bottom_layout.addWidget(self.code_link_toggle_btn)
+        bottom_layout.addWidget(self._dialog_buttons, 1)
+        root.addWidget(bottom_bar)
 
         apply_secondary_button_theme(self, self._save_btn)
 
@@ -637,9 +677,51 @@ class AddEditToolDialog(QDialog):
         label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         label.setMinimumWidth(200)
         label.setMaximumWidth(200)
+        label.mousePressEvent = lambda event, w=editor: self._focus_editor(w)
         layout.addWidget(label, 0)
         layout.addWidget(editor, 1)
+        frame._field_label = label
         return frame
+
+    def _build_field_group(self, fields: list) -> QFrame:
+        group = QFrame()
+        group.setProperty('editorFieldGroup', True)
+        layout = QVBoxLayout(group)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+        for f in fields:
+            layout.addWidget(f)
+        return group
+
+    def _focus_editor(self, widget: QWidget):
+        if isinstance(widget, QLineEdit):
+            widget.setFocus()
+            widget.selectAll()
+            return
+        if isinstance(widget, QComboBox):
+            widget.setFocus()
+            return
+        for child in widget.findChildren(QLineEdit):
+            child.setFocus()
+            child.selectAll()
+            return
+        for child in widget.findChildren(QComboBox):
+            child.setFocus()
+            return
+
+    def _swap_field_pair(self, hide_field: QFrame, show_field: QFrame):
+        hide_field.setVisible(False)
+        show_field.setVisible(True)
+
+    def _toggle_code_link_mode(self):
+        self._showing_links = not self._showing_links
+        for code_field, link_field in self._code_link_pairs:
+            code_field.setVisible(not self._showing_links)
+            link_field.setVisible(self._showing_links)
+        if self._showing_links:
+            self.code_link_toggle_btn.setToolTip(self._t('tool_editor.action.show_codes', 'Show codes'))
+        else:
+            self.code_link_toggle_btn.setToolTip(self._t('tool_editor.action.show_links', 'Show links'))
 
     def _style_combo(self, combo: QComboBox):
         apply_shared_dropdown_style(combo)
@@ -856,19 +938,12 @@ class AddEditToolDialog(QDialog):
         self.group_name_edit.setVisible(False)
         self.group_hint_label.setVisible(False)
 
+    def _on_tab_changed(self, index: int):
+        if hasattr(self, 'code_link_toggle_btn'):
+            self.code_link_toggle_btn.setVisible(index == 0)
+
     def _reflow_general_fields(self, force: bool = False):
-        if not hasattr(self, 'general_fields_grid'):
-            return
-        columns = 1
-        if not force and columns == self._general_field_columns:
-            return
-        self._general_field_columns = columns
-        reflow_fields_grid(
-            self.general_fields_grid,
-            self._general_field_order,
-            columns,
-            scroll=getattr(self, 'general_scroll', None),
-        )
+        pass  # Field groups handle their own layout
 
     def _update_general_header(self):
         if not hasattr(self, 'editor_header_title'):
@@ -940,9 +1015,18 @@ class AddEditToolDialog(QDialog):
         return '#9ea7b3'
 
     def _set_color_button(self, row: int, color_hex: str):
+        # Use a minimal inset so the swatch fills the cell while keeping a small edge gap.
+        container = QWidget()
+        container.setStyleSheet('background: transparent;')
+        container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        c_layout = QHBoxLayout(container)
+        c_layout.setContentsMargins(0, 0, 0, 0)
+        c_layout.setSpacing(0)
 
         btn = QPushButton("")
-        btn.setFixedSize(52, 24)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        btn.setMinimumSize(0, 0)
+        btn.setFlat(True)
         btn.setToolTip(color_hex)
         btn.setCursor(Qt.PointingHandCursor)
 
@@ -952,156 +1036,31 @@ class AddEditToolDialog(QDialog):
                 border: 1px solid #8a95a0;
                 border-radius: 3px;
                 padding: 0px;
+                margin: 0px;
+                min-width: 0px;
+                min-height: 0px;
             }}
             QPushButton:hover {{
-                border: 2px solid #3d7ab5;
+                border: 1px solid #3d7ab5;
             }}
             QPushButton:pressed {{
-                border: 2px solid #1f5f92;
+                border: 1px solid #1f5f92;
             }}
         """)
 
+        c_layout.addWidget(btn, 1)
         btn.clicked.connect(lambda _, r=row: self._choose_model_color(r))
-
-        wrap = QWidget()
-        lay = QHBoxLayout(wrap)
-        lay.setContentsMargins(4, 4, 4, 4)
-        lay.setSpacing(0)
-        lay.addWidget(btn, 0, Qt.AlignCenter)
-        self.model_table.setCellWidget(row, 2, wrap)
-
-    def _app_stylesheet(self) -> str:
-        """Find the active app stylesheet from parent chain or QApplication."""
-        w = self.parent()
-        while w is not None:
-            ss = w.styleSheet()
-            if ss:
-                return ss
-            w = w.parent()
-
-        app = QApplication.instance()
-        if app is not None and app.styleSheet():
-            return app.styleSheet()
-
-        # Fallback for dialogs opened without a styled parent chain.
-        modules_dir = APP_DIR / 'styles' / 'modules'
-        if modules_dir.exists():
-            parts = [p.read_text(encoding='utf-8') for p in sorted(modules_dir.glob('*.qss'))]
-            if parts:
-                return '\n\n'.join(parts)
-
-        if STYLE_PATH.exists():
-            return STYLE_PATH.read_text(encoding='utf-8')
-        return ''
+        self.model_table.setCellWidget(row, 2, container)
 
     def _choose_model_color(self, row: int):
         current = self._get_model_row_color(row)
-        qcolor = QColor(current if current else '#9ea7b3')
-
-        dlg = QColorDialog(qcolor, self)
-        dlg.setWindowTitle(self._t('tool_editor.dialog.select_part_color', 'Select part color'))
-        dlg.setOption(QColorDialog.DontUseNativeDialog, True)
-        dlg.setSizeGripEnabled(True)
-        dlg.resize(760, 560)
-        dlg.setMinimumSize(640, 500)
-        # Required for QDialog to honour background-color from stylesheet.
-        from PySide6.QtCore import Qt as _Qt
-        dlg.setAttribute(_Qt.WA_StyledBackground, True)
-
-        dialog_ss = """
-            QDialog {
-                background-color: #eceff2;
-            }
-            * {
-                font-family: 'Segoe UI';
-                font-size: 10pt;
-                color: #1f1f1f;
-            }
-            QLabel {
-                background: transparent;
-                color: #22303c;
-            }
-            QLineEdit {
-                background-color: #ffffff;
-                border: 1px solid #c8d4e0;
-                border-radius: 6px;
-                padding: 5px 8px;
-                min-height: 26px;
-                color: #1f1f1f;
-            }
-            QLineEdit:focus {
-                border: 1px solid #1e88e5;
-            }
-            QSpinBox {
-                background-color: #ffffff;
-                border: 1px solid #c8d4e0;
-                border-radius: 4px;
-                padding: 3px 4px 3px 6px;
-                min-height: 24px;
-                color: #1f1f1f;
-            }
-            QSpinBox:focus {
-                border: 1px solid #1e88e5;
-            }
-            QSpinBox::up-button {
-                subcontrol-origin: border;
-                subcontrol-position: top right;
-                width: 17px;
-                border-left: 1px solid #c8d4e0;
-                border-top-right-radius: 4px;
-                background-color: #f0f4f7;
-            }
-            QSpinBox::up-button:hover { background-color: #ddeefa; }
-            QSpinBox::down-button {
-                subcontrol-origin: border;
-                subcontrol-position: bottom right;
-                width: 17px;
-                border-left: 1px solid #c8d4e0;
-                border-bottom-right-radius: 4px;
-                background-color: #f0f4f7;
-            }
-            QSpinBox::down-button:hover { background-color: #ddeefa; }
-            QSpinBox::up-arrow {
-                width: 7px; height: 5px;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-bottom: 5px solid #5a6a7a;
-            }
-            QSpinBox::down-arrow {
-                width: 7px; height: 5px;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 5px solid #5a6a7a;
-            }
-        """
-        dlg.setStyleSheet(dialog_ss)
-
-        # QPushButton selectors in a dialog's own stylesheet don't reach buttons
-        # inside QDialogButtonBox — stamp the style directly on each button.
-        btn_ss = (
-            "QPushButton {"
-            " color: #2b3640;"
-            " min-height: 36px;"
-            " padding: 6px 16px;"
-            " border: 1px solid #b6c0c9;"
-            " background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-            "  stop:0 #ffffff, stop:1 #e8edf1);"
-            "}"
-            "QPushButton:hover {"
-            " background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-            "  stop:0 #ffffff, stop:1 #f0f4f7);"
-            "}"
-            "QPushButton:pressed {"
-            " background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
-            "  stop:0 #dee6ec, stop:1 #f9fbfc);"
-            "}"
+        chosen = ColorPickerDialog.get_color(
+            initial_color=current if current else '#9ea7b3',
+            parent=self,
+            translate=self._translate,
         )
-        for btn in dlg.findChildren(QPushButton):
-            btn.setStyleSheet(btn_ss)
-
-        if not dlg.exec():
+        if chosen is None:
             return
-        chosen = dlg.currentColor()
         if not chosen.isValid():
             return
         color_hex = chosen.name()
@@ -1323,7 +1282,7 @@ class AddEditToolDialog(QDialog):
             return
 
         self.tool_id.setText(self.tool.get('id', ''))
-        self.tool_head.setCurrentText((self.tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper())
+        self._set_combo_by_data(self.tool_head, (self.tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper())
         self._set_combo_by_data(self.tool_type, self.tool.get('tool_type', 'O.D Turning'))
         self.description.setText(self.tool.get('description', ''))
         self.geom_x.setText(str(self.tool.get('geom_x', '')))
