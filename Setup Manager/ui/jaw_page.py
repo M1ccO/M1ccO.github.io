@@ -70,12 +70,21 @@ class JawRowWidget(QFrame):
     def _value(self, text: str) -> QLabel:
         lbl = AutoShrinkLabel(text)
         lbl.setProperty('toolCardValue', True)
+        lbl.setProperty('catalogRowValue', True)
+        lbl.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+        return lbl
+
+    def _header(self, text: str) -> QLabel:
+        lbl = AutoShrinkLabel(text, min_point_size=7)
+        lbl.setProperty('toolCardHeader', True)
         lbl.setAlignment(Qt.AlignCenter)
+        lbl.setWordWrap(False)
+        lbl.setMinimumHeight(16)
         return lbl
 
     def _build_ui(self):
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 4, 10, 4)
+        layout.setContentsMargins(10, 2, 10, 2)
         layout.setSpacing(10)
 
         icon_label = QLabel()
@@ -98,14 +107,10 @@ class JawRowWidget(QFrame):
         for _key, title, value, weight in self._card_columns():
             col = QVBoxLayout()
             col.setContentsMargins(0, 0, 0, 0)
-            col.setSpacing(1)
+            col.setSpacing(0)
             self._col_layouts.append(col)
 
-            head = QLabel(title)
-            head.setProperty('toolCardHeader', True)
-            head.setAlignment(Qt.AlignCenter)
-            head.setWordWrap(True)
-            head.setMinimumHeight(20)
+            head = self._header(title)
 
             val = self._value(value)
 
@@ -117,7 +122,7 @@ class JawRowWidget(QFrame):
 
             col.addWidget(head)
             col.addWidget(val)
-            layout.addWidget(wrap, weight, Qt.AlignVCenter)
+            layout.addWidget(wrap, weight, Qt.AlignTop)
 
             self._head_labels.append(head)
             self._val_labels.append(val)
@@ -131,23 +136,29 @@ class JawRowWidget(QFrame):
         if lay is None:
             return
         if w < 560:
-            lay.setContentsMargins(7, 4, 7, 4)
+            lay.setContentsMargins(7, 2, 7, 2)
             lay.setSpacing(7)
-            v_size, h_size, col_spacing = 11.5, 8.6, 1
+            v_size, h_size, col_spacing = 11.0, 8.2, 0
         else:
-            lay.setContentsMargins(10, 4, 10, 4)
+            lay.setContentsMargins(10, 2, 10, 2)
             lay.setSpacing(10)
-            v_size, h_size, col_spacing = 12.8, 9.4, 1
+            v_size, h_size, col_spacing = 12.2, 9.0, 0
         for col in self._col_layouts:
             col.setSpacing(col_spacing)
         for lbl in self._val_labels:
-            f = lbl.font()
-            f.setPointSizeF(v_size)
-            lbl.setFont(f)
+            if isinstance(lbl, AutoShrinkLabel):
+                lbl.set_target_point_size(v_size)
+            else:
+                f = lbl.font()
+                f.setPointSizeF(v_size)
+                lbl.setFont(f)
         for lbl in self._head_labels:
-            f = lbl.font()
-            f.setPointSizeF(h_size)
-            lbl.setFont(f)
+            if isinstance(lbl, AutoShrinkLabel):
+                lbl.set_target_point_size(h_size)
+            else:
+                f = lbl.font()
+                f.setPointSizeF(h_size)
+                lbl.setFont(f)
 
 
 class JawPage(QWidget):

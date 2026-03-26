@@ -110,23 +110,34 @@ class ToolRowWidget(QFrame):
     def _value(self, text: str) -> QLabel:
         lbl = AutoShrinkLabel(text)
         lbl.setProperty('toolCardValue', True)
+        lbl.setProperty('catalogRowValue', True)
+        lbl.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
+        return lbl
+
+    def _header(self, text: str) -> QLabel:
+        lbl = AutoShrinkLabel(text, min_point_size=7)
+        lbl.setProperty('toolCardHeader', True)
         lbl.setAlignment(Qt.AlignCenter)
+        lbl.setWordWrap(False)
+        lbl.setMinimumHeight(16)
         return lbl
 
     def _name_value(self, text: str) -> QLabel:
         # Tool name wraps to a second line instead of shrinking the font
-        lbl = QLabel(text)
+        lbl = AutoShrinkLabel(text, min_point_size=8)
         lbl.setProperty('toolCardValue', True)
-        lbl.setAlignment(Qt.AlignCenter)
+        lbl.setProperty('toolCardName', True)
+        lbl.setProperty('shrinkWrappedText', True)
+        lbl.setAlignment(Qt.AlignHCenter | Qt.AlignTop)
         lbl.setWordWrap(True)
         lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        lbl.setMinimumHeight(42)
-        lbl.setMargin(2)
+        lbl.setMinimumHeight(26)
+        lbl.setMargin(0)
         return lbl
 
     def _build_ui(self, icon: QIcon):
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 4, 10, 4)
+        layout.setContentsMargins(10, 2, 10, 2)
         layout.setSpacing(10)
 
         icon_label = QLabel()
@@ -143,14 +154,10 @@ class ToolRowWidget(QFrame):
         for key, title, value, weight in cols:
             col = QVBoxLayout()
             col.setContentsMargins(0, 0, 0, 0)
-            col.setSpacing(2)
+            col.setSpacing(0)
             self._col_layouts.append(col)
 
-            head = QLabel(title)
-            head.setProperty('toolCardHeader', True)
-            head.setAlignment(Qt.AlignCenter)
-            head.setWordWrap(True)
-            head.setMinimumHeight(20)
+            head = self._header(title)
 
             val = self._name_value(value) if key == 'tool_name' else self._value(value)
 
@@ -175,7 +182,7 @@ class ToolRowWidget(QFrame):
 
             col.addWidget(head)
             col.addWidget(val)
-            layout.addWidget(wrap, weight, Qt.AlignVCenter)
+            layout.addWidget(wrap, weight, Qt.AlignTop)
 
         layout.addStretch(1)
 
@@ -209,43 +216,40 @@ class ToolRowWidget(QFrame):
         if lay is None:
             return
         if w < 380:
-            lay.setContentsMargins(4, 4, 4, 4)
+            lay.setContentsMargins(4, 2, 4, 2)
             lay.setSpacing(6)
-            v_size, name_size, h_size, col_spacing = 10.5, 10.0, 8.0, 1
+            v_size, name_size, h_size, col_spacing = 10.2, 9.8, 7.8, 0
         elif w < 560:
-            lay.setContentsMargins(7, 4, 7, 4)
+            lay.setContentsMargins(7, 2, 7, 2)
             lay.setSpacing(7)
-            v_size, name_size, h_size, col_spacing = 11.5, 10.5, 8.6, 1
+            v_size, name_size, h_size, col_spacing = 11.0, 10.2, 8.2, 0
         else:
-            lay.setContentsMargins(10, 4, 10, 4)
+            lay.setContentsMargins(10, 2, 10, 2)
             lay.setSpacing(10)
-            v_size, name_size, h_size, col_spacing = 12.8, 11.5, 9.4, 1
+            v_size, name_size, h_size, col_spacing = 12.2, 11.0, 9.0, 0
         for col in self._col_layouts:
             col.setSpacing(col_spacing)
         for lbl in self._val_labels:
-            f = lbl.font()
-            f.setPointSizeF(v_size)
-            lbl.setFont(f)
+            if isinstance(lbl, AutoShrinkLabel):
+                lbl.set_target_point_size(v_size)
+            else:
+                f = lbl.font()
+                f.setPointSizeF(v_size)
+                lbl.setFont(f)
         for lbl in self._name_labels:
-            f = lbl.font()
-            f.setPointSizeF(name_size)
-            # Keep decreasing in 0.5pt steps until wrapped text fits the current label box.
-            available_w = max(1, lbl.width() - 4)
-            available_h = max(1, lbl.height() - 4)
-            test_size = name_size
-            while test_size > 8.0:
-                f.setPointSizeF(test_size)
-                fm = QFontMetrics(f)
-                rect = fm.boundingRect(0, 0, available_w, 1000, Qt.TextWordWrap, lbl.text())
-                if rect.height() <= available_h:
-                    break
-                test_size -= 0.5
-            f.setPointSizeF(test_size)
-            lbl.setFont(f)
+            if isinstance(lbl, AutoShrinkLabel):
+                lbl.set_target_point_size(name_size)
+            else:
+                f = lbl.font()
+                f.setPointSizeF(name_size)
+                lbl.setFont(f)
         for lbl in self._head_labels:
-            f = lbl.font()
-            f.setPointSizeF(h_size)
-            lbl.setFont(f)
+            if isinstance(lbl, AutoShrinkLabel):
+                lbl.set_target_point_size(h_size)
+            else:
+                f = lbl.font()
+                f.setPointSizeF(h_size)
+                lbl.setFont(f)
 
 
 # ==============================

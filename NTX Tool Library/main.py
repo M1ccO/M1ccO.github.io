@@ -4,7 +4,7 @@ import ctypes
 import ctypes.wintypes
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtGui import QColor, QPalette
+from PySide6.QtGui import QColor, QGuiApplication, QPalette
 from PySide6.QtWidgets import QApplication, QProgressDialog, QProxyStyle, QStyle
 
 
@@ -92,6 +92,11 @@ def _apply_frame_geometry_string(widget, geometry_text: str) -> bool:
 
 
 def main():
+    # Avoid fractional-scale half-pixel painting artifacts on Windows.
+    QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
+        Qt.HighDpiScaleFactorRoundingPolicy.RoundPreferFloor
+    )
+
     app = QApplication(sys.argv)
     # Parse deep-link and geometry arguments before Qt consumes argv.
     import argparse

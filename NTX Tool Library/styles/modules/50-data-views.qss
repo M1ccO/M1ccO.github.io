@@ -60,6 +60,61 @@ QTabBar::tab:selected {
     font-weight: 700;
 }
 
+/* Editor dialogs (Tool/Jaw) – unified via workEditorDialog property. */
+QDialog[workEditorDialog="true"] {
+    background: #ffffff;
+}
+
+/* Visible but not harsh input borders */
+QDialog[workEditorDialog="true"] QLineEdit,
+QDialog[workEditorDialog="true"] QTextEdit {
+    background: #ffffff;
+    border: 1px solid #a0b4c8;
+}
+QDialog[workEditorDialog="true"] QLineEdit:focus,
+QDialog[workEditorDialog="true"] QTextEdit:focus {
+    border: 1px solid #00C8FF;
+}
+QDialog[workEditorDialog="true"] QLineEdit:disabled {
+    border: 1px solid #c4cfd8;
+}
+
+/* Bold field labels */
+QDialog[workEditorDialog="true"] QLabel {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #1e2d3d;
+}
+QDialog[workEditorDialog="true"] QLabel[detailFieldKey="true"] {
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #4a5a6a;
+}
+
+QDialog[workEditorDialog="true"] QWidget[editorPageSurface="true"] {
+    background: #ffffff;
+}
+
+QDialog[workEditorDialog="true"] QFrame[subCard="true"],
+QDialog[workEditorDialog="true"] QFrame[detailHeader="true"],
+QDialog[workEditorDialog="true"] QFrame[editorButtonBar="true"],
+QDialog[workEditorDialog="true"] QWidget[previewColumn="true"],
+QDialog[workEditorDialog="true"] QLabel[previewHeader="true"] {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+}
+
+QDialog[workEditorDialog="true"] QWidget[previewBody="true"] {
+    background: #ffffff;
+    border: 1px solid #c9d1d9;
+    border-radius: 0px;
+}
+
+QDialogButtonBox QPushButton {
+    min-width: 80px;
+}
+
 /* Group box cards */
 QGroupBox {
     border: 1px solid #dbe2e8;

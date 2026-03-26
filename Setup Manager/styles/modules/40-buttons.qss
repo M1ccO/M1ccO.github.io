@@ -123,6 +123,11 @@ QPushButton[panelActionButton="true"][dangerAction="true"]:hover {
                                       stop:0 #fffdfd, stop:1 #f5e8e8);
 }
 
+QPushButton[panelActionButton="true"][sidebarLaunchButton="true"] {
+    min-width: 154px;
+    padding: 2px 6px;
+}
+
 /* Top bar icon buttons are borderless with hover tint */
 QToolButton[topBarIconButton="true"] {
     border: none;

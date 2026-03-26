@@ -1,6 +1,8 @@
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
+    QDialogButtonBox,
     QFileDialog,
     QFrame,
     QGridLayout,
@@ -18,7 +20,14 @@ from PySide6.QtWidgets import (
 )
 
 from ui.stl_preview import StlPreviewWidget
-from ui.widgets.common import BorderOnlyComboItemDelegate, add_shadow
+from ui.widgets.common import apply_shared_dropdown_style, clear_focused_dropdown_on_outside_click
+from editor_helpers import (
+    add_shadow,
+    setup_editor_dialog,
+    create_dialog_buttons,
+    apply_secondary_button_theme,
+    reflow_fields_grid,
+)
 
 
 class AddEditJawDialog(QDialog):
@@ -35,42 +44,45 @@ class AddEditJawDialog(QDialog):
         self.resize(920, 640)
         self.setMinimumSize(820, 540)
         self.setModal(True)
+        setup_editor_dialog(self)
         self._build_ui()
         self._load_jaw()
 
     def _build_ui(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(10)
-
-        title = QLabel('Jaw Editor')
-        title.setProperty('pageTitle', True)
-        root.addWidget(title)
 
         self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
         root.addWidget(self.tabs, 1)
 
         self.tabs.addTab(self._build_general_tab(), 'General')
         self.tabs.addTab(self._build_model_tab(), '3D Model')
 
-        buttons = QHBoxLayout()
-        buttons.addStretch(1)
-        self.cancel_btn = QPushButton('CANCEL')
-        self.cancel_btn.setProperty('panelActionButton', True)
-        self.save_btn = QPushButton('SAVE JAW')
-        self.save_btn.setProperty('panelActionButton', True)
-        self.save_btn.setProperty('primaryAction', True)
-        add_shadow(self.cancel_btn)
-        add_shadow(self.save_btn)
-        self.cancel_btn.clicked.connect(self.reject)
-        self.save_btn.clicked.connect(self.accept)
-        buttons.addWidget(self.cancel_btn)
-        buttons.addWidget(self.save_btn)
-        root.addLayout(buttons)
+        self._dialog_buttons = create_dialog_buttons(
+            self,
+            save_text='SAVE JAW',
+            cancel_text='CANCEL',
+            on_save=self.accept,
+            on_cancel=self.reject,
+        )
+        self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
+        root.addWidget(self._dialog_buttons)
+
+        apply_secondary_button_theme(self, self._save_btn)
+
+        QApplication.instance().installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            clear_focused_dropdown_on_outside_click(obj, self)
+        return super().eventFilter(obj, event)
+
+    def hideEvent(self, event):
+        QApplication.instance().removeEventFilter(self)
+        super().hideEvent(event)
 
     def _build_general_tab(self):
         tab = QWidget()
+        tab.setProperty('editorPageSurface', True)
         layout = QVBoxLayout(tab)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -84,6 +96,7 @@ class AddEditJawDialog(QDialog):
 
         general_content = QWidget()
         general_content.setProperty('editorFieldsViewport', True)
+        general_content.setProperty('editorPageSurface', True)
         general_content_layout = QVBoxLayout(general_content)
         general_content_layout.setContentsMargins(0, 0, 0, 0)
         general_content_layout.setSpacing(0)
@@ -221,21 +234,12 @@ class AddEditJawDialog(QDialog):
         if not force and columns == self._general_field_columns:
             return
         self._general_field_columns = columns
-
-        sb = self.general_scroll.verticalScrollBar() if hasattr(self, 'general_scroll') else None
-        old_scroll = sb.value() if sb is not None else 0
-
-        while self.general_fields_grid.count():
-            item = self.general_fields_grid.takeAt(0)
-            w = item.widget()
-            if w:
-                w.setParent(None)
-
-        for row_idx, field in enumerate(self._general_field_order):
-            self.general_fields_grid.addWidget(field, row_idx, 0, 1, 2)
-
-        if sb is not None:
-            QTimer.singleShot(0, lambda s=sb, v=old_scroll: s.setValue(min(v, s.maximum())))
+        reflow_fields_grid(
+            self.general_fields_grid,
+            self._general_field_order,
+            columns,
+            scroll=getattr(self, 'general_scroll', None),
+        )
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -243,15 +247,10 @@ class AddEditJawDialog(QDialog):
 
     def _build_model_tab(self):
         tab = QWidget()
+        tab.setProperty('editorPageSurface', True)
         layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(10)
-
-        card = QFrame()
-        card.setProperty('subCard', True)
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(14, 14, 14, 14)
-        card_layout.setSpacing(10)
 
         path_row = QHBoxLayout()
         path_lbl = QLabel('STL file')
@@ -265,7 +264,7 @@ class AddEditJawDialog(QDialog):
         path_row.addWidget(path_lbl)
         path_row.addWidget(self.stl_path, 1)
         path_row.addWidget(self.browse_btn)
-        card_layout.addLayout(path_row)
+        layout.addLayout(path_row)
 
         controls_row = QHBoxLayout()
         controls_row.setContentsMargins(0, 0, 0, 0)
@@ -296,12 +295,10 @@ class AddEditJawDialog(QDialog):
         controls_row.addWidget(self.rotate_z_btn)
         controls_row.addWidget(self.reset_rot_btn)
         controls_row.addStretch(1)
-        card_layout.addLayout(controls_row)
+        layout.addLayout(controls_row)
 
         self.preview_widget = StlPreviewWidget()
-        card_layout.addWidget(self.preview_widget, 1)
-
-        layout.addWidget(card, 1)
+        layout.addWidget(self.preview_widget, 1)
 
         self.browse_btn.clicked.connect(self._pick_stl_file)
         self.stl_path.editingFinished.connect(self._refresh_preview)
@@ -314,8 +311,7 @@ class AddEditJawDialog(QDialog):
         return tab
 
     def _style_combo(self, combo: QComboBox):
-        combo.setItemDelegate(BorderOnlyComboItemDelegate(combo.view()))
-        add_shadow(combo)
+        apply_shared_dropdown_style(combo)
 
     def _load_jaw(self):
         if not self.jaw:

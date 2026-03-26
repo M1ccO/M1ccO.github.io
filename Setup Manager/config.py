@@ -54,6 +54,9 @@ else:
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DRAWINGS_DIR.mkdir(parents=True, exist_ok=True)
+_shared_dir = str(PROJECTS_DIR / 'shared')
+if _shared_dir not in sys.path:
+    sys.path.insert(0, _shared_dir)
 
 
 def _seed_frozen_databases():

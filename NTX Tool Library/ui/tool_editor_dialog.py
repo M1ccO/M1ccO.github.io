@@ -1,17 +1,29 @@
 import json
 from typing import Callable
-from PySide6.QtCore import Qt, QTimer, QSize
+from PySide6.QtCore import QEvent, Qt, QTimer, QSize
 from PySide6.QtGui import QColor, QGuiApplication, QIcon
 from PySide6.QtWidgets import (
     QApplication,
-    QComboBox, QDialog, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
     QLineEdit, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
     QFileDialog, QColorDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
 )
 from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH
 from ui.widgets.parts_table import PartsTable
 from ui.stl_preview import StlPreviewWidget
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style
+from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
+from editor_helpers import (
+    add_shadow,
+    setup_editor_dialog,
+    create_dialog_buttons,
+    apply_secondary_button_theme,
+    make_arrow_button,
+    style_panel_action_button,
+    style_icon_action_button,
+    style_move_arrow_button,
+    reflow_fields_grid,
+    build_picker_row,
+)
 
 
 class ComponentPickerDialog(QDialog):
@@ -122,6 +134,7 @@ class AddEditToolDialog(QDialog):
         self.resize(920, 600)
         self.setMinimumSize(800, 520)
         self.setModal(True)
+        setup_editor_dialog(self)
         self._build_ui()
         self._load_tool()
         self._update_cutting_label()
@@ -148,16 +161,9 @@ class AddEditToolDialog(QDialog):
 
     def _build_ui(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(16, 16, 16, 16)
-        root.setSpacing(10)
         combo_width = EDITOR_DROPDOWN_WIDTH
 
-        title = QLabel(self._t('tool_editor.title', 'Tool Editor'))
-        title.setProperty('pageTitle', True)
-        root.addWidget(title)
-
         self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
         self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
         root.addWidget(self.tabs, 1)
 
@@ -165,6 +171,7 @@ class AddEditToolDialog(QDialog):
         # GENERAL TAB
         # -------------------------
         general_tab = QWidget()
+        general_tab.setProperty('editorPageSurface', True)
         general_layout = QVBoxLayout(general_tab)
         general_layout.setContentsMargins(0, 0, 0, 0)
         general_layout.setSpacing(0)
@@ -178,6 +185,7 @@ class AddEditToolDialog(QDialog):
 
         general_content = QWidget()
         general_content.setProperty('editorFieldsViewport', True)
+        general_content.setProperty('editorPageSurface', True)
         general_content_layout = QVBoxLayout(general_content)
         general_content_layout.setContentsMargins(0, 0, 0, 0)
         general_content_layout.setSpacing(0)
@@ -337,12 +345,12 @@ class AddEditToolDialog(QDialog):
         # ADDITIONAL PARTS TAB
         # -------------------------
         parts_tab = QWidget()
+        parts_tab.setProperty('editorPageSurface', True)
         parts_tab_layout = QVBoxLayout(parts_tab)
-        parts_tab_layout.setContentsMargins(0, 0, 0, 0)
+        parts_tab_layout.setContentsMargins(18, 18, 18, 18)
+        parts_tab_layout.setSpacing(8)
 
-        parts_box = QGroupBox(self._t('tool_editor.tab.additional_parts', 'Additional parts'))
-        p_layout = QVBoxLayout(parts_box)
-        p_layout.setContentsMargins(8, 8, 8, 10)
+        p_layout = parts_tab_layout
         p_layout.setSpacing(8)
 
         self.parts_table = PartsTable([
@@ -361,12 +369,23 @@ class AddEditToolDialog(QDialog):
         p_btns = QHBoxLayout(parts_btn_bar)
         p_btns.setContentsMargins(2, 6, 2, 2)
         p_btns.setSpacing(8)
-        self.add_part_btn = QPushButton(self._t('tool_editor.action.add_part', 'ADD PART'))
-        self.remove_part_btn = QPushButton(self._t('tool_editor.action.remove_selected_part', 'REMOVE SELECTED PART'))
-        self._style_panel_action_button(self.add_part_btn)
-        self._style_panel_action_button(self.remove_part_btn)
-        self.part_up_btn = self._make_arrow_button('keyboard_arrow_up.svg', self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
-        self.part_down_btn = self._make_arrow_button('keyboard_arrow_down.svg', self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
+        self.add_part_btn = QPushButton()
+        self.remove_part_btn = QPushButton()
+        style_icon_action_button(
+            self.add_part_btn,
+            TOOL_ICONS_DIR / 'select.svg',
+            self._t('tool_editor.action.add_part', 'Add part'),
+        )
+        style_icon_action_button(
+            self.remove_part_btn,
+            TOOL_ICONS_DIR / 'delete.svg',
+            self._t('tool_editor.action.remove_selected_part', 'Remove selected part'),
+            danger=True,
+        )
+        self.part_up_btn = QPushButton()
+        self.part_down_btn = QPushButton()
+        style_move_arrow_button(self.part_up_btn, self._t('work_editor.tools.move_up', '▲'), self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
+        style_move_arrow_button(self.part_down_btn, self._t('work_editor.tools.move_down', '▼'), self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
         self.pick_part_btn = self._make_arrow_button('menu_open.svg', self._t('tool_editor.tooltip.pick_additional_part', 'Pick additional part from existing tools'))
         self.add_part_btn.clicked.connect(lambda: self.parts_table.add_empty_row())
         self.remove_part_btn.clicked.connect(self.parts_table.remove_selected_row)
@@ -380,22 +399,17 @@ class AddEditToolDialog(QDialog):
         p_btns.addStretch(1)
         p_btns.addWidget(self.pick_part_btn)
         p_layout.addWidget(parts_btn_bar)
-
-        parts_tab_layout.addWidget(parts_box, 1)
         self.tabs.addTab(parts_tab, self._t('tool_editor.tab.additional_parts', 'Additional parts'))
 
         # -------------------------
         # 3D MODELS TAB
         # -------------------------
         models_tab = QWidget()
+        models_tab.setProperty('editorPageSurface', True)
         models_tab.setProperty('editorTransparentPanel', True)
         models_layout = QVBoxLayout(models_tab)
-        models_layout.setContentsMargins(0, 0, 0, 0)
-
-        models_box = QGroupBox(self._t('tool_editor.tab.models', '3D models'))
-        m_layout = QVBoxLayout(models_box)
-        m_layout.setContentsMargins(8, 8, 8, 10)
-        m_layout.setSpacing(8)
+        models_layout.setContentsMargins(18, 18, 18, 18)
+        models_layout.setSpacing(8)
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.setProperty('editorTransparentPanel', True)
@@ -433,10 +447,21 @@ class AddEditToolDialog(QDialog):
         model_btns.setSpacing(8)
         self.add_model_btn = QPushButton(self._t('tool_editor.action.add_model', 'ADD MODEL'))
         self.remove_model_btn = QPushButton(self._t('tool_editor.action.remove_selected_model', 'REMOVE SELECTED MODEL'))
-        self._style_panel_action_button(self.add_model_btn)
-        self._style_panel_action_button(self.remove_model_btn)
-        self.model_up_btn = self._make_arrow_button('keyboard_arrow_up.svg', self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
-        self.model_down_btn = self._make_arrow_button('keyboard_arrow_down.svg', self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
+        style_icon_action_button(
+            self.add_model_btn,
+            TOOL_ICONS_DIR / 'select.svg',
+            self._t('tool_editor.action.add_model', 'Add model'),
+        )
+        style_icon_action_button(
+            self.remove_model_btn,
+            TOOL_ICONS_DIR / 'delete.svg',
+            self._t('tool_editor.action.remove_selected_model', 'Remove selected model'),
+            danger=True,
+        )
+        self.model_up_btn = QPushButton()
+        self.model_down_btn = QPushButton()
+        style_move_arrow_button(self.model_up_btn, self._t('work_editor.tools.move_up', '▲'), self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
+        style_move_arrow_button(self.model_down_btn, self._t('work_editor.tools.move_down', '▼'), self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
         self.add_model_btn.clicked.connect(self._add_model_row)
         self.remove_model_btn.clicked.connect(self._remove_model_row)
         self.model_up_btn.clicked.connect(lambda: self._move_model_row(-1))
@@ -468,27 +493,25 @@ class AddEditToolDialog(QDialog):
         splitter.addWidget(right_panel)
         splitter.setSizes([620, 420])
 
-        m_layout.addWidget(splitter, 1)
-        models_layout.addWidget(models_box, 1)
+        models_layout.addWidget(splitter, 1)
         self.tabs.addTab(models_tab, self._t('tool_editor.tab.models', '3D models'))
 
         # -------------------------
         # BOTTOM BUTTONS
         # -------------------------
-        buttons = QHBoxLayout()
-        buttons.addStretch(1)
-        self.cancel_btn = QPushButton(self._t('common.cancel', 'Cancel').upper())
-        self.save_btn = QPushButton(self._t('tool_editor.action.save_tool', 'SAVE TOOL'))
-        self.cancel_btn.setProperty('panelActionButton', True)
-        self.save_btn.setProperty('panelActionButton', True)
-        self.save_btn.setProperty('primaryAction', True)
-        add_shadow(self.cancel_btn)
-        add_shadow(self.save_btn)
-        self.cancel_btn.clicked.connect(self.reject)
-        self.save_btn.clicked.connect(self.accept)
-        buttons.addWidget(self.cancel_btn)
-        buttons.addWidget(self.save_btn)
-        root.addLayout(buttons)
+        self._dialog_buttons = create_dialog_buttons(
+            self,
+            save_text=self._t('tool_editor.action.save_tool', 'SAVE TOOL'),
+            cancel_text=self._t('common.cancel', 'Cancel').upper(),
+            on_save=self.accept,
+            on_cancel=self.reject,
+        )
+        self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
+        root.addWidget(self._dialog_buttons)
+
+        apply_secondary_button_theme(self, self._save_btn)
+
+        QApplication.instance().installEventFilter(self)
 
         for le in [
             self.tool_id, self.description, self.geom_x, self.geom_z, self.radius,
@@ -503,6 +526,15 @@ class AddEditToolDialog(QDialog):
         self.description.textChanged.connect(self._update_general_header)
         self.tool_type.currentTextChanged.connect(self._update_general_header)
         self._update_general_header()
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.MouseButtonPress:
+            clear_focused_dropdown_on_outside_click(obj, self)
+        return super().eventFilter(obj, event)
+
+    def hideEvent(self, event):
+        QApplication.instance().removeEventFilter(self)
+        super().hideEvent(event)
 
     def _build_edit_field(self, title: str, editor: QWidget, key_label: QLabel | None = None) -> QFrame:
         frame = QFrame()
@@ -527,34 +559,15 @@ class AddEditToolDialog(QDialog):
         pass
 
     def _make_arrow_button(self, icon_name: str, tooltip: str) -> QPushButton:
-        btn = QPushButton('')
-        btn.setProperty('arrowMoveButton', True)
-        btn.setToolTip(tooltip)
-        btn.setCursor(Qt.PointingHandCursor)
         icon_path = TOOL_ICONS_DIR / icon_name
-        btn.setIcon(QIcon(str(icon_path)))
-        btn.setIconSize(QSize(18, 18))
-        btn.setMinimumSize(32, 32)
-        btn.setMaximumSize(32, 32)
-        add_shadow(btn)
-        return btn
+        return make_arrow_button(icon_path, tooltip)
 
     def _style_panel_action_button(self, btn: QPushButton):
-        btn.setProperty('panelActionButton', True)
-        add_shadow(btn)
+        style_panel_action_button(btn)
 
     def _build_picker_row(self, editor: QLineEdit, handler, tooltip: str) -> QWidget:
-        row = QWidget()
-        row.setProperty('editorInlineRow', True)
-        lay = QHBoxLayout(row)
-        lay.setContentsMargins(0, 0, 0, 0)
-        lay.setSpacing(8)
-        lay.addWidget(editor, 1)
-
-        btn = self._make_arrow_button('menu_open.svg', tooltip)
-        btn.clicked.connect(handler)
-        lay.addWidget(btn)
-        return row
+        icon_path = TOOL_ICONS_DIR / 'menu_open.svg'
+        return build_picker_row(editor, handler, tooltip, icon_path)
 
     def _get_tool_service(self):
         if self.tool_service is not None:
@@ -677,36 +690,16 @@ class AddEditToolDialog(QDialog):
     def _reflow_general_fields(self, force: bool = False):
         if not hasattr(self, 'general_fields_grid'):
             return
-        width = self.width()
         columns = 1
         if not force and columns == self._general_field_columns:
             return
         self._general_field_columns = columns
-
-        sb = self.general_scroll.verticalScrollBar() if hasattr(self, 'general_scroll') else None
-        old_scroll = sb.value() if sb is not None else 0
-
-        while self.general_fields_grid.count():
-            item = self.general_fields_grid.takeAt(0)
-            w = item.widget()
-            if w:
-                w.setParent(None)
-        # Always lay out all field cards; hidden drill/mill cards stay hidden automatically.
-        visible_fields = list(self._general_field_order)
-        if columns == 1:
-            for row, field in enumerate(visible_fields):
-                self.general_fields_grid.addWidget(field, row, 0, 1, 2)
-            if sb is not None:
-                QTimer.singleShot(0, lambda s=sb, v=old_scroll: s.setValue(min(v, s.maximum())))
-            return
-        left_count = (len(visible_fields) + 1) // 2
-        right_count = len(visible_fields) - left_count
-        for i in range(left_count):
-            self.general_fields_grid.addWidget(visible_fields[i], i, 0, 1, 2)
-        for j in range(right_count):
-            self.general_fields_grid.addWidget(visible_fields[left_count + j], j, 2, 1, 2)
-        if sb is not None:
-            QTimer.singleShot(0, lambda s=sb, v=old_scroll: s.setValue(min(v, s.maximum())))
+        reflow_fields_grid(
+            self.general_fields_grid,
+            self._general_field_order,
+            columns,
+            scroll=getattr(self, 'general_scroll', None),
+        )
 
     def _update_general_header(self):
         if not hasattr(self, 'editor_header_title'):

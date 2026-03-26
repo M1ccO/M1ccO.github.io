@@ -47,11 +47,11 @@ CARD_RADIUS = 8
 CARD_MARGIN_H = 6          # horizontal gap between cards and list edge
 CARD_MARGIN_V = 2           # vertical gap between cards
 CARD_PADDING_H = 10         # inner horizontal padding inside the card
-CARD_PADDING_V = 2          # inner vertical padding inside the card
+CARD_PADDING_V = 1          # inner vertical padding inside the card
 COL_SPACING = 10            # gap between text columns
-HEADER_VALUE_GAP = 1        # vertical gap between header and value text
+HEADER_VALUE_GAP = 0        # vertical gap between header and value text
 BORDER_INSET = 3            # always reserve space for thickest border so selection doesn't shift
-WRAPPED_LINE_STEP_FACTOR = 0.82
+WRAPPED_LINE_STEP_FACTOR = 0.78
 
 # ── Responsive stage breakpoints ────────────────────────────────────────
 BP_FULL = 620               # card_width >= this → full (all columns)
@@ -72,12 +72,12 @@ CLR_LIST_BG = QColor(205, 212, 238, 247)  # rgba(205,212,238,0.97)
 # ── Fonts (built once, reused) ──────────────────────────────────────────
 def _header_font() -> QFont:
     f = QFont()
-    f.setPointSizeF(10.0)
+    f.setPointSizeF(9.0)
     f.setWeight(QFont.DemiBold)
     return f
 
 
-def _value_font(pt: float = 14.5) -> QFont:
+def _value_font(pt: float = 13.5) -> QFont:
     f = QFont()
     f.setPointSizeF(pt)
     f.setWeight(QFont.DemiBold)
@@ -176,10 +176,10 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         self._translate = translate or (lambda k, d=None, **kw: d or '')
         # pre-build fonts
         self._header_font = _header_font()
-        self._value_font_full = _value_font(14.5)
-        self._value_font_narrow = _value_font(13.0)
-        self._value_font_tight = _value_font(12.0)
-        self._value_font_tiny = _value_font(11.0)
+        self._value_font_full = _value_font(13.5)
+        self._value_font_narrow = _value_font(12.5)
+        self._value_font_tight = _value_font(11.5)
+        self._value_font_tiny = _value_font(10.5)
         # icon pixmap cache  {tool_type: QPixmap}
         self._icon_cache: dict[str, QPixmap] = {}
 
@@ -311,7 +311,8 @@ class ToolCatalogDelegate(QStyledItemDelegate):
 
         # ── compute column rects ────────────────────────────────────────
         text_left = content.x() + ICON_SLOT_W + COL_SPACING
-        text_width = content.width() - ICON_SLOT_W - COL_SPACING
+        gap_budget = COL_SPACING * max(0, len(cols) - 1)
+        text_width = content.width() - ICON_SLOT_W - COL_SPACING - gap_budget
         if text_width < 10:
             painter.restore()
             return
@@ -334,38 +335,47 @@ class ToolCatalogDelegate(QStyledItemDelegate):
             if rect.width() < 8:
                 continue
 
+            text_rect = rect.adjusted(1, 0, -3, 0)
+            if text_rect.width() < 8:
+                continue
+
             # determine if header is multi-line
             header_lines = header.split('\n') if '\n' in header else [header]
-            header_h = single_header_h * len(header_lines) + 2
+            header_h = single_header_h * len(header_lines)
+            if key == 'tool_name' and len(header_lines) == 1:
+                header_h = max(1, header_h - 3)
 
             # compute block height and vertical offset to center it
             line_count = (
-                self._description_line_count(vfm, value, rect.width(), stage)
+                self._description_line_count(vfm, value, text_rect.width(), stage)
                 if key == 'tool_name' else 1
             )
             wrapped = line_count == 2 and key == 'tool_name'
+            header_value_gap = -2 if key == 'nose_corner_radius' else (-2 if wrapped else 0)
             effective_value_h = int(round(value_line_h * WRAPPED_LINE_STEP_FACTOR)) if wrapped else value_line_h
             value_h = value_line_h + effective_value_h if wrapped else value_line_h * line_count
-            block_h = header_h + HEADER_VALUE_GAP + value_h
-            y_off = max(0, (rect.height() - block_h) // 2)
+            block_h = header_h + header_value_gap + value_h
+            vertical_bias = 5 if wrapped else (2 if key == 'nose_corner_radius' else (1 if len(header_lines) > 1 else 0))
+            y_off = max(0, (text_rect.height() - block_h) // 2 - vertical_bias)
 
             # header
             painter.setFont(hfont)
             painter.setPen(CLR_HEADER_TEXT)
             if len(header_lines) > 1:
                 for ln_i, ln_text in enumerate(header_lines):
-                    ln_rect = QRect(rect.x(), rect.y() + y_off + single_header_h * ln_i,
-                                    rect.width(), single_header_h)
-                    elided_ln = hfm.elidedText(ln_text.strip(), Qt.ElideRight, rect.width())
+                    ln_rect = QRect(text_rect.x(), text_rect.y() + y_off + single_header_h * ln_i,
+                                    text_rect.width(), single_header_h)
+                    elided_ln = hfm.elidedText(ln_text.strip(), Qt.ElideRight, text_rect.width())
                     painter.drawText(ln_rect, Qt.AlignHCenter | Qt.AlignBottom, elided_ln)
             else:
-                header_rect = QRect(rect.x(), rect.y() + y_off, rect.width(), header_h)
-                elided_header = hfm.elidedText(header_lines[0], Qt.ElideRight, rect.width())
+                header_y = text_rect.y() + y_off + (1 if key == 'tool_name' else 0)
+                header_rect = QRect(text_rect.x(), header_y, text_rect.width(), header_h)
+                elided_header = hfm.elidedText(header_lines[0], Qt.ElideRight, text_rect.width())
                 painter.drawText(header_rect, Qt.AlignHCenter | Qt.AlignBottom, elided_header)
 
             # value
-            value_rect = QRect(rect.x(), rect.y() + y_off + header_h + HEADER_VALUE_GAP,
-                               rect.width(), rect.height() - y_off - header_h - HEADER_VALUE_GAP)
+            value_rect = QRect(text_rect.x(), text_rect.y() + y_off + header_h + header_value_gap,
+                               text_rect.width(), text_rect.height() - y_off - header_h - header_value_gap)
             painter.setFont(vfont)
             painter.setPen(CLR_VALUE_TEXT)
 
@@ -390,10 +400,11 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         two_lines = self._description_line_count(fm, raw, w, stage) == 2
         line_h = fm.height()
         line_step = max(1, int(round(line_h * WRAPPED_LINE_STEP_FACTOR))) if two_lines else line_h
+        top_inset = 1 if two_lines else 0
 
         if not two_lines or fm.horizontalAdvance(raw) <= w:
             elided = fm.elidedText(raw, Qt.ElideRight, w)
-            painter.drawText(rect, Qt.AlignHCenter | Qt.AlignTop, elided)
+            painter.drawText(rect.adjusted(0, top_inset, 0, 0), Qt.AlignHCenter | Qt.AlignTop, elided)
             return
 
         # try to split at ' - ' first
@@ -402,10 +413,10 @@ class ToolCatalogDelegate(QStyledItemDelegate):
             left = left.strip()
             right = f'- {right.strip()}'
             if left and fm.horizontalAdvance(left) <= w:
-                painter.drawText(QRect(rect.x(), rect.y(), w, line_h),
+                painter.drawText(QRect(rect.x(), rect.y() + top_inset, w, line_h),
                                  Qt.AlignHCenter | Qt.AlignTop, left)
                 elided2 = fm.elidedText(right, Qt.ElideRight, w)
-                painter.drawText(QRect(rect.x(), rect.y() + line_step, w, line_h),
+                painter.drawText(QRect(rect.x(), rect.y() + top_inset + line_step, w, line_h),
                                  Qt.AlignHCenter | Qt.AlignTop, elided2)
                 return
 
@@ -423,13 +434,13 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         line1 = ' '.join(first_tokens)
         if not rest:
             elided1 = fm.elidedText(line1, Qt.ElideRight, w)
-            painter.drawText(rect, Qt.AlignHCenter | Qt.AlignTop, elided1)
+            painter.drawText(rect.adjusted(0, top_inset, 0, 0), Qt.AlignHCenter | Qt.AlignTop, elided1)
             return
 
-        painter.drawText(QRect(rect.x(), rect.y(), w, line_h),
+        painter.drawText(QRect(rect.x(), rect.y() + top_inset, w, line_h),
                          Qt.AlignHCenter | Qt.AlignTop, fm.elidedText(line1, Qt.ElideRight, w))
         line2 = fm.elidedText(' '.join(rest), Qt.ElideRight, w)
-        painter.drawText(QRect(rect.x(), rect.y() + line_step, w, line_h),
+        painter.drawText(QRect(rect.x(), rect.y() + top_inset + line_step, w, line_h),
                          Qt.AlignHCenter | Qt.AlignTop, line2)
 
     # ── icon cache ──────────────────────────────────────────────────────

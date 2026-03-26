@@ -26,11 +26,28 @@ class AutoShrinkLabel(QLabel):
         if not self.text():
             return
         if self.wordWrap():
-            if self._orig_point_size:
-                font = self.font()
-                if font.pointSizeF() != self._orig_point_size:
-                    font.setPointSizeF(self._orig_point_size)
-                    self.setFont(font)
+            if not self.property('shrinkWrappedText'):
+                if self._orig_point_size:
+                    font = self.font()
+                    if font.pointSizeF() != self._orig_point_size:
+                        font.setPointSizeF(self._orig_point_size)
+                        self.setFont(font)
+                return
+            available_w = max(1, self.width() - 4)
+            available_h = max(1, self.height() - 2)
+            font = self.font()
+            size = self._orig_point_size or font.pointSizeF()
+            if size <= 0:
+                size = QApplication.font(self).pointSizeF() or 12.0
+            while size > self._min_point_size:
+                font.setPointSizeF(size)
+                fm = QFontMetrics(font)
+                rect = fm.boundingRect(0, 0, available_w, 1000, Qt.TextWordWrap, self.text())
+                if rect.height() <= available_h:
+                    break
+                size -= 0.5
+            font.setPointSizeF(size)
+            self.setFont(font)
             return
         available = max(1, self.width() - 4)
         font = self.font()

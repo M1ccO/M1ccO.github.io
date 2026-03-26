@@ -108,7 +108,7 @@ QFrame[workCard="true"][selected="true"] QLabel {
 
 /* Row text typography */
 QLabel[toolCardHeader="true"] {
-    font-size: 10.5pt;
+    font-size: 9pt;
     font-weight: 600;
     color: #2b3136;
 }
@@ -119,9 +119,20 @@ QLabel[catalogRowHeader="true"] {
 }
 
 QLabel[toolCardValue="true"] {
-    font-size: 16pt;
+    font-size: 14pt;
     font-weight: 600;
     color: #171a1d;
+}
+
+QFrame[toolListCard="true"] QLabel[catalogRowValue="true"] {
+    min-height: 24px;
+    max-height: 24px;
+}
+
+QFrame[toolListCard="true"] QLabel[toolCardName="true"] {
+    font-size: 12pt;
+    font-weight: 600;
+    min-height: 24px;
 }
 
 QFrame[workRowCard="true"] QLabel[catalogRowValue="true"] {

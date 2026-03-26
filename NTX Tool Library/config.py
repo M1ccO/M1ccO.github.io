@@ -28,6 +28,10 @@ else:
     EXPORT_DEFAULT_PATH = SOURCE_DIR / 'tool_library_export.xlsx'
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
+PROJECTS_DIR = SOURCE_DIR.parent
+_shared_dir = str(PROJECTS_DIR / 'shared')
+if _shared_dir not in sys.path:
+    sys.path.insert(0, _shared_dir)
 RUNTIME_DIR = (local_appdata / 'NTX Shared Runtime') if IS_FROZEN else (SOURCE_DIR.parent / '.runtime')
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 SHARED_UI_PREFERENCES_PATH = RUNTIME_DIR / 'shared_ui_preferences.json'

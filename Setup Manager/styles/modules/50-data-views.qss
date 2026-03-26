@@ -166,6 +166,26 @@ QDialog[workEditorDialog="true"] QFrame[toolIdsHostSurface="true"] {
     border-radius: 0px;
 }
 
+QDialog[workEditorDialog="true"] QWidget[editorPageSurface="true"] {
+    background: #ffffff;
+}
+
+QDialog[workEditorDialog="true"] QFrame[subCard="true"],
+QDialog[workEditorDialog="true"] QFrame[detailHeader="true"],
+QDialog[workEditorDialog="true"] QFrame[editorButtonBar="true"],
+QDialog[workEditorDialog="true"] QWidget[previewColumn="true"],
+QDialog[workEditorDialog="true"] QLabel[previewHeader="true"] {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+}
+
+QDialog[workEditorDialog="true"] QWidget[previewBody="true"] {
+    background: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 0px;
+}
+
 QDialog[workEditorDialog="true"] QGroupBox[toolIdsPanel="true"] {
     background: #f6f9fc;
 }

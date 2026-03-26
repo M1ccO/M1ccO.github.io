@@ -29,9 +29,9 @@ CARD_RADIUS = 8
 CARD_MARGIN_H = 6
 CARD_MARGIN_V = 2
 CARD_PADDING_H = 10
-CARD_PADDING_V = 2
+CARD_PADDING_V = 1
 COL_SPACING = 10
-HEADER_VALUE_GAP = 1
+HEADER_VALUE_GAP = 0
 BORDER_INSET = 3
 WRAPPED_LINE_STEP_FACTOR = 0.82
 
@@ -50,7 +50,7 @@ _ICON_OBJECT_CACHE: dict[str, QIcon] = {}
 
 def _header_font() -> QFont:
     font = QFont()
-    font.setPointSizeF(10.0)
+    font.setPointSizeF(9.0)
     font.setWeight(QFont.DemiBold)
     return font
 
@@ -121,10 +121,10 @@ class JawCatalogDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or "")
         self._header_font = _header_font()
-        self._value_font_full = _value_font(14.2)
-        self._value_font_narrow = _value_font(13.0)
-        self._value_font_tight = _value_font(12.0)
-        self._value_font_tiny = _value_font(11.0)
+        self._value_font_full = _value_font(13.4)
+        self._value_font_narrow = _value_font(12.4)
+        self._value_font_tight = _value_font(11.4)
+        self._value_font_tiny = _value_font(10.4)
         self._icon_cache: dict[tuple[str, str], QPixmap] = {}
 
     def set_translate(self, translate: Callable):
@@ -291,10 +291,12 @@ class JawCatalogDelegate(QStyledItemDelegate):
                 if key == "jaw_type" else 1
             )
             wrapped = line_count == 2 and key == "jaw_type"
+            header_value_gap = -2 if wrapped else 0
             effective_value_h = int(round(value_line_h * WRAPPED_LINE_STEP_FACTOR)) if wrapped else value_line_h
             value_h = value_line_h + effective_value_h if wrapped else value_line_h * line_count
-            block_h = header_h + HEADER_VALUE_GAP + value_h
-            y_offset = max(0, (text_rect.height() - block_h) // 2)
+            block_h = header_h + header_value_gap + value_h
+            vertical_bias = 3 if wrapped else (1 if len(header_lines) > 1 else 0)
+            y_offset = max(0, (text_rect.height() - block_h) // 2 - vertical_bias)
 
             painter.setFont(header_font)
             painter.setPen(CLR_HEADER_TEXT)
@@ -310,9 +312,9 @@ class JawCatalogDelegate(QStyledItemDelegate):
 
             value_rect = QRect(
                 text_rect.x(),
-                text_rect.y() + y_offset + header_h + HEADER_VALUE_GAP,
+                text_rect.y() + y_offset + header_h + header_value_gap,
                 text_rect.width(),
-                text_rect.height() - y_offset - header_h - HEADER_VALUE_GAP,
+                text_rect.height() - y_offset - header_h - header_value_gap,
             )
             painter.setFont(value_font)
             painter.setPen(CLR_VALUE_TEXT)

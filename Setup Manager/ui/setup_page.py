@@ -793,6 +793,8 @@ class SetupPage(QWidget):
 
         splitter.addWidget(detail_host)
         splitter.setChildrenCollapsible(False)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
         self._setup_splitter = splitter
@@ -1073,8 +1075,21 @@ class SetupPage(QWidget):
         if self._clamping_splitter:
             return
         sizes = self._setup_splitter.sizes()
-        if not sizes or sizes[1] <= 0:
+        if not sizes:
             return
+
+        if sizes[1] <= 0:
+            total = max(1, sum(sizes))
+            clamped_right = min(max(self._min_detail_panel_width, 1), max(1, total - self._min_list_panel_width))
+            clamped_left = max(self._min_list_panel_width, total - clamped_right)
+            self._clamping_splitter = True
+            try:
+                self._setup_splitter.setSizes([clamped_left, clamped_right])
+            finally:
+                self._clamping_splitter = False
+            sizes = self._setup_splitter.sizes()
+            if not sizes or sizes[1] <= 0:
+                return
 
         left, right = sizes[0], sizes[1]
         clamped_left = max(self._min_list_panel_width, left)
