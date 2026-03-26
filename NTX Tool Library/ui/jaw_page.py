@@ -776,11 +776,14 @@ class JawPage(QWidget):
         return super().eventFilter(obj, event)
 
     def _clear_selection(self):
+        details_were_open = not self._details_hidden
         if hasattr(self, 'jaw_list'):
             self.jaw_list.selectionModel().clearSelection()
             self.jaw_list.setCurrentIndex(QModelIndex())
         self.current_jaw_id = None
         self.populate_details(None)
+        if details_were_open:
+            self.hide_details()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:

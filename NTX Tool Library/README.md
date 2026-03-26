@@ -194,6 +194,16 @@ Tool Library is intended to run beside the sibling Setup Manager application.
 
 ---
 
+## Repository Cleanup Notes (March 2026)
+
+The Tool Library icon set was cleaned to remove unused legacy alias files named `ToolIdentification_Small_*.png`.
+
+Canonical icon names in active runtime are defined by config mappings and UI lookups under `assets/icons/tools`.
+
+If you add new tool-type icons, wire them through the existing config mapping instead of introducing alternate alias filenames.
+
+---
+
 ## How to Run
 
 **Requirements:** Windows, Python 3.10

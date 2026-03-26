@@ -657,11 +657,14 @@ class HomePage(QWidget):
 
     def _clear_selection(self):
         """Internal helper to clear row selection and reset details."""
+        details_were_open = not self._details_hidden
         if hasattr(self, 'tool_list'):
             self.tool_list.selectionModel().clearSelection()
             self.tool_list.setCurrentIndex(QModelIndex())
         self.current_tool_id = None
         self.populate_details(None)
+        if details_were_open:
+            self.hide_details()
         if hasattr(self, 'preview_window_btn') and self.preview_window_btn.isChecked():
             self._close_detached_preview()
 

@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QApplication, QComboBox, QWidget, QToolButton, QVB
 
 _COMBO_SURFACE = QColor('#FCFCFC')
 _COMBO_TEXT = QColor('#111111')
-_COMBO_BORDER = QColor('#00C8FF')
+_COMBO_BORDER = QColor('#c8d0d8')
 _COMBO_HOVER = QColor('#F0F0F0')
 _SHADOW_COLOR = QColor(121, 138, 156, 72)
 
@@ -226,7 +226,7 @@ def apply_shared_dropdown_style(combo):
     popup_window = view.window()
     popup_window.setAttribute(Qt.WA_StyledBackground, True)
     popup_window.setPalette(view_palette)
-    popup_window.setStyleSheet('background-color: #FCFCFC; border: 1px solid #00C8FF;')
+    popup_window.setStyleSheet('background-color: #FCFCFC; border: 1px solid #c8d0d8;')
 
     hover_filter = _ComboHoverFilter(combo)
     combo.installEventFilter(hover_filter)

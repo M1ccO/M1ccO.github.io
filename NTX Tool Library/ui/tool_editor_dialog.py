@@ -1,7 +1,7 @@
 import json
 from typing import Callable
 from PySide6.QtCore import QEvent, Qt, QTimer, QSize
-from PySide6.QtGui import QColor, QGuiApplication, QIcon
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
@@ -164,6 +164,7 @@ class AddEditToolDialog(QDialog):
         combo_width = EDITOR_DROPDOWN_WIDTH
 
         self.tabs = QTabWidget()
+        self.tabs.setObjectName('toolEditorTabs')
         self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
         root.addWidget(self.tabs, 1)
 
@@ -353,16 +354,24 @@ class AddEditToolDialog(QDialog):
         p_layout = parts_tab_layout
         p_layout.setSpacing(8)
 
+        parts_panel = QFrame()
+        parts_panel.setProperty('editorPartsPanel', True)
+        parts_panel_layout = QVBoxLayout(parts_panel)
+        parts_panel_layout.setContentsMargins(8, 10, 8, 8)
+        parts_panel_layout.setSpacing(8)
+
         self.parts_table = PartsTable([
             self._t('tool_editor.table.part_name', 'Part name'),
             self._t('tool_editor.table.code', 'Code'),
             self._t('tool_editor.table.link', 'Link'),
         ])
+        self.parts_table.setObjectName('editorPartsTable')
         self.parts_table.horizontalHeader().setStretchLastSection(True)
         self.parts_table.verticalHeader().setDefaultSectionSize(32)
         self.parts_table.verticalHeader().setMinimumSectionSize(28)
         self.parts_table.setMinimumHeight(320)
-        p_layout.addWidget(self.parts_table, 1)
+        parts_panel_layout.addWidget(self.parts_table, 1)
+        p_layout.addWidget(parts_panel, 1)
 
         parts_btn_bar = QFrame()
         parts_btn_bar.setProperty('editorButtonBar', True)
@@ -406,23 +415,53 @@ class AddEditToolDialog(QDialog):
         # -------------------------
         models_tab = QWidget()
         models_tab.setProperty('editorPageSurface', True)
-        models_tab.setProperty('editorTransparentPanel', True)
         models_layout = QVBoxLayout(models_tab)
-        models_layout.setContentsMargins(18, 18, 18, 18)
-        models_layout.setSpacing(8)
+        models_layout.setContentsMargins(0, 0, 0, 0)
+        models_layout.setSpacing(0)
+
+        models_scroll = QScrollArea()
+        models_scroll.setWidgetResizable(True)
+        models_scroll.setFrameShape(QFrame.NoFrame)
+        models_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        models_layout.addWidget(models_scroll, 1)
+
+        models_content = QWidget()
+        models_content.setProperty('editorFieldsViewport', True)
+        models_content.setProperty('editorPageSurface', True)
+        models_content_layout = QVBoxLayout(models_content)
+        models_content_layout.setContentsMargins(0, 0, 0, 0)
+        models_content_layout.setSpacing(0)
+        models_scroll.setWidget(models_content)
+
+        models_container = QFrame()
+        models_container.setProperty('subCard', True)
+        models_container.setProperty('modelsContainerCard', True)
+        models_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        models_frame_layout = QVBoxLayout(models_container)
+        models_frame_layout.setContentsMargins(14, 8, 14, 14)
+        models_frame_layout.setSpacing(0)
 
         splitter = QSplitter(Qt.Horizontal)
         splitter.setProperty('editorTransparentPanel', True)
-        splitter.setHandleWidth(0)
+        splitter.setHandleWidth(8)
 
-        # Left side: table + buttons
+        # Left side: table wrapped in panel (like spare parts tab)
         left_panel = QWidget()
         left_panel.setProperty('editorTransparentPanel', True)
+        left_panel.setMinimumWidth(320)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(8)
 
+        # Wrap table in panel frame for consistent styling
+        models_panel = QFrame()
+        models_panel.setProperty('editorPartsPanel', True)
+        models_panel_layout = QVBoxLayout(models_panel)
+        models_panel_layout.setContentsMargins(8, 10, 8, 8)
+        models_panel_layout.setSpacing(0)
+
         self.model_table = PartsTable(['Part Name', 'STL File', 'Color'])
+        self.model_table.setObjectName('editorModelsTable')
         self.model_table.setMinimumHeight(360)
         self.model_table.verticalHeader().setDefaultSectionSize(32)
         self.model_table.verticalHeader().setMinimumSectionSize(28)
@@ -432,13 +471,19 @@ class AddEditToolDialog(QDialog):
             self._t('jaw_editor.field.stl_file', 'STL File'),
             self._t('tool_editor.table.color', 'Color'),
         ])
-        self.model_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-        self.model_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.model_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
-        self.model_table.setColumnWidth(2, 86)
+        model_header = self.model_table.horizontalHeader()
+        model_header.setSectionResizeMode(0, QHeaderView.Interactive)
+        model_header.setSectionResizeMode(1, QHeaderView.Stretch)
+        model_header.setSectionResizeMode(2, QHeaderView.Interactive)
+        model_header.setStretchLastSection(False)
+        self.model_table.setColumnWidth(0, 120)
+        self.model_table.setColumnWidth(1, 260)
+        self.model_table.setColumnWidth(2, 80)
+        self.model_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.model_table.itemChanged.connect(self._on_model_table_changed)
 
-        left_layout.addWidget(self.model_table, 1)
+        models_panel_layout.addWidget(self.model_table, 1)
+        left_layout.addWidget(models_panel, 1)
 
         model_btn_bar = QFrame()
         model_btn_bar.setProperty('editorButtonBar', True)
@@ -473,27 +518,34 @@ class AddEditToolDialog(QDialog):
         model_btns.addStretch(1)
         left_layout.addWidget(model_btn_bar)
 
-        # Right side: preview
+        # Right side: preview panel
         right_panel = QWidget()
         right_panel.setProperty('editorTransparentPanel', True)
-        right_panel.setProperty('previewColumn', True)
+        right_panel.setMinimumWidth(240)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
 
-        preview_label = QLabel(self._t('tool_library.section.preview', 'Preview'))
-        preview_label.setProperty('previewHeader', True)
-        right_layout.addWidget(preview_label)
+        # Add preview header
+        preview_panel = QFrame()
+        preview_panel.setProperty('editorPartsPanel', True)
+        preview_panel_layout = QVBoxLayout(preview_panel)
+        preview_panel_layout.setContentsMargins(8, 8, 8, 8)
+        preview_panel_layout.setSpacing(0)
 
         self.models_preview = StlPreviewWidget()
-        self.models_preview.setProperty('previewBody', True)
-        right_layout.addWidget(self.models_preview, 1)
+        preview_panel_layout.addWidget(self.models_preview, 1)
+        right_layout.addWidget(preview_panel, 1)
 
         splitter.addWidget(left_panel)
         splitter.addWidget(right_panel)
-        splitter.setSizes([620, 420])
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setSizes([400, 300])
 
-        models_layout.addWidget(splitter, 1)
+        models_frame_layout.addWidget(splitter, 1)
+        models_content_layout.addWidget(models_container)
+        models_content_layout.addStretch(1)
         self.tabs.addTab(models_tab, self._t('tool_editor.tab.models', '3D models'))
 
         # -------------------------
@@ -544,10 +596,10 @@ class AddEditToolDialog(QDialog):
         layout.setSpacing(8)
         label = key_label if key_label is not None else QLabel(title)
         label.setProperty('detailFieldKey', True)
-        label.setWordWrap(False)
-        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        label.setMinimumWidth(210)
-        label.setMaximumWidth(210)
+        label.setWordWrap(True)
+        label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        label.setMinimumWidth(176)
+        label.setMaximumWidth(176)
         layout.addWidget(label, 0)
         layout.addWidget(editor, 1)
         return frame
@@ -773,22 +825,26 @@ class AddEditToolDialog(QDialog):
     def _set_color_button(self, row: int, color_hex: str):
 
         btn = QPushButton("")
-        btn.setFixedSize(24, 24)
+        btn.setFixedSize(34, 22)
         btn.setToolTip(color_hex)
         btn.setCursor(Qt.PointingHandCursor)
+        btn.setIcon(self._build_color_chip_icon(color_hex))
+        btn.setIconSize(QSize(12, 12))
 
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {color_hex};
-                border: 1px solid #6e7a86;
-                border-radius: 6px;
+                background-color: #f4f7fa;
+                border: 1px solid #b8c7d6;
+                border-radius: 11px;
                 padding: 0px;
             }}
             QPushButton:hover {{
-                border: 1px solid #2d6fa3;
+                background-color: #ffffff;
+                border: 1px solid #8ea9bf;
             }}
             QPushButton:pressed {{
-                border: 1px solid #1f5f92;
+                background-color: #eaf0f5;
+                border: 1px solid #7391aa;
             }}
         """)
 
@@ -796,11 +852,21 @@ class AddEditToolDialog(QDialog):
 
         wrap = QWidget()
         lay = QHBoxLayout(wrap)
-        lay.setContentsMargins(6, 0, 6, 0)
+        lay.setContentsMargins(4, 0, 4, 0)
         lay.setSpacing(0)
-        lay.addStretch(1)
-        lay.addWidget(btn, 0, Qt.AlignRight | Qt.AlignVCenter)
+        lay.addWidget(btn, 0, Qt.AlignCenter)
         self.model_table.setCellWidget(row, 2, wrap)
+
+    def _build_color_chip_icon(self, color_hex: str) -> QIcon:
+        pixmap = QPixmap(14, 14)
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setPen(QPen(QColor('#5f6e7c')))
+        painter.setBrush(QColor(color_hex))
+        painter.drawEllipse(1, 1, 12, 12)
+        painter.end()
+        return QIcon(pixmap)
 
     def _choose_model_color(self, row: int):
         current = self._get_model_row_color(row)

@@ -105,7 +105,8 @@ QDialog[workEditorDialog="true"] QLabel[previewHeader="true"] {
     border-radius: 0px;
 }
 
-QDialog[workEditorDialog="true"] QWidget[previewBody="true"] {
+QDialog[workEditorDialog="true"] QWidget[previewBody="true"],
+QDialog[workEditorDialog="true"] QFrame[previewBody="true"] {
     background: #ffffff;
     border: 1px solid #c9d1d9;
     border-radius: 0px;
@@ -129,6 +130,85 @@ QGroupBox::title {
     left: 10px;
     padding: 0 6px;
     color: #22303c;
+}
+
+QDialog[workEditorDialog="true"] QFrame[editorPartsPanel="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+}
+
+QDialog[workEditorDialog="true"] QFrame[modelsContainerCard="true"] {
+    border-left: 1px solid #c3ced8;
+    border-right: 1px solid #c3ced8;
+    border-bottom: 1px solid #c3ced8;
+    border-top: none;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 0px;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    gridline-color: #d8e0e8;
+    selection-background-color: #cfe4f8;
+    selection-color: #16334e;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable::item {
+    padding: 7px 10px;
+    border: none;
+    border-bottom: 1px solid #d8e0e8;
+    background-color: transparent;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable::item:selected,
+QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable::item:selected:active,
+QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable::item:selected:!active {
+    background-color: #cfe4f8;
+    color: #16334e;
+    border: 1px solid #8db9df;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable QHeaderView::section {
+    background-color: #f3f6f8;
+    border: 1px solid #d9e0e6;
+    padding: 7px 8px;
+    font-weight: 700;
+    color: #25313b;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    gridline-color: #d8e0e8;
+    selection-background-color: #cfe4f8;
+    selection-color: #16334e;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable::item {
+    padding: 7px 10px;
+    border: none;
+    border-bottom: 1px solid #d8e0e8;
+    background-color: transparent;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable::item:selected,
+QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable::item:selected:active,
+QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable::item:selected:!active {
+    background-color: #cfe4f8;
+    color: #16334e;
+    border: 1px solid #8db9df;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable QHeaderView::section {
+    background-color: #f3f6f8;
+    border: 1px solid #d9e0e6;
+    padding: 7px 8px;
+    font-weight: 700;
+    color: #25313b;
 }
 
 /* Diagram / preview helper panel */

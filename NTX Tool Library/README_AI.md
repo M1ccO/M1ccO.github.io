@@ -66,10 +66,13 @@ Canonical source for:
 - Stylesheet path
 - Default export path
 - Tool type lists
-- Icon mapping tables
-- Navigation item names
+- Icon mapping tables used by runtime UI
 
 Always use `config.py` for paths rather than hardcoding them elsewhere.
+
+Cleanup note (March 2026):
+- Legacy `ToolIdentification_Small_*.png` icon aliases were removed.
+- Keep using mapped canonical icon names from config/runtime lookups.
 
 ---
 

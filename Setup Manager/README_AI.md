@@ -20,6 +20,17 @@ Setup Manager owns only its own data:
 
 It does not create, migrate, or write to the Tool Library or Jaws Library databases. Those remain the source of truth for tools and jaws.
 
+## Cleanup Scope Notes (March 2026)
+
+Setup Manager was trimmed to its operational scope:
+- SetupPage
+- DrawingPage
+- LogbookPage
+
+Legacy copy/paste modules from Tool Library were removed from `Setup Manager/ui` and `Setup Manager/services`.
+
+Do not reintroduce tool/jaw catalog ownership into Setup Manager. Tool/jaw authoring belongs in Tool Library.
+
 ## High-Level Architecture
 
 main.py

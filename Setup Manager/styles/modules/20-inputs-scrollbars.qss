@@ -71,7 +71,7 @@ QComboBox[modernDropdown="true"]::down-arrow {
 QComboBox[modernDropdown="true"] QAbstractItemView {
     background-color: #FCFCFC;
     color: #111111;
-    border: 1px solid #00C8FF;
+    border: 1px solid #c8d0d8;
     border-radius: 6px;
     outline: none;
     padding: 2px 0;

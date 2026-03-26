@@ -54,7 +54,7 @@ BORDER_INSET = 3            # always reserve space for thickest border so select
 WRAPPED_LINE_STEP_FACTOR = 0.78
 
 # ── Responsive stage breakpoints ────────────────────────────────────────
-BP_FULL = 620               # card_width >= this → full (all columns)
+BP_FULL = 860               # card_width >= this → full (all columns)
 BP_REDUCED = 390            # card_width >= this → reduced (id + name)
 BP_NAME_ONLY = 180          # card_width >= this → name only
 # below BP_NAME_ONLY → icon only

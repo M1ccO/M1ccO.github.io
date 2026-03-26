@@ -107,6 +107,18 @@ Window switching behavior:
 
 Use Tool Library to maintain tools and jaws. Use Setup Manager to build work setups from those references.
 
+## Scope and Cleanup Notes (March 2026)
+
+Setup Manager intentionally focuses on operational setup workflow only.
+
+The following legacy copy-paste modules were removed from Setup Manager during cleanup:
+- old Tool Library-style home catalog pages
+- jaw catalog/editor/export pages
+- tool editor/export pages
+- unused tool/jaw/export/settings service stubs
+
+If you need to edit tool or jaw master data, do it in NTX Tool Library. Setup Manager reads those databases in read-only mode by design.
+
 ## Project Layout
 
 ```text
