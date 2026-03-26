@@ -110,9 +110,11 @@ class HomePage(QWidget):
         filter_frame.setObjectName('filterFrame')
         filter_frame.setProperty('card', True)
         self.filter_layout = QHBoxLayout(filter_frame)
-        # slim down left/right padding to push controls closer to the edge
-        self.filter_layout.setContentsMargins(56, 6, 0, 6)
-        # reduce spacing between icons/widgets
+        # Left margin must clear the absolutely-positioned rail_title label in
+        # main_window, which starts at x=10 on the central widget and can extend
+        # ~200px for long Finnish titles, bleeding ~90px into the stack area.
+        # 108px ensures the first toolbar button is always visible.
+        self.filter_layout.setContentsMargins(108, 6, 0, 6)
         self.filter_layout.setSpacing(4)
 
         self.toolbar_title_label = QLabel(self.page_title)
@@ -121,17 +123,18 @@ class HomePage(QWidget):
 
         # search toggle button - use image assets instead of a unicode glyph
         self.search_toggle = QToolButton()
-        self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
+        # PNG avoids occasional SVG clipping on some Qt/Windows render paths.
+        self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.png'))
         self.close_icon = QIcon(str(TOOL_ICONS_DIR / 'close_icon.svg'))
         self.search_toggle.setIcon(self.search_icon)
         # slightly larger than before so the glass is visible
         # bump default icon size up a bit
-        self.search_toggle.setIconSize(QSize(28, 28))
+        self.search_toggle.setIconSize(QSize(24, 24))
         self.search_toggle.setCheckable(True)
         self.search_toggle.setAutoRaise(True)
         self.search_toggle.setProperty('topBarIconButton', True)
         # larger overall to give padding around the graphic
-        self.search_toggle.setFixedSize(36, 36)
+        self.search_toggle.setFixedSize(34, 34)
         # give it a name so we can target the icon hover specifically
         self.search_toggle.setObjectName('searchToggle')
         # larger icon on hover will be handled by stylesheet (qproperty-iconSize)
@@ -1030,6 +1033,7 @@ class HomePage(QWidget):
             grid.addWidget(self._value_label(cutting_extra['code']), row, 1)
             row += 1
 
+        last_group = None
         for part in support_parts:
             if isinstance(part, str):
                 try:
@@ -1038,6 +1042,21 @@ class HomePage(QWidget):
                     part = {'name': part, 'code': '', 'link': ''}
             if not isinstance(part, dict):
                 continue
+
+            group = (part.get('group', '') or '').strip()
+            if group and group != last_group:
+                group_label = QLabel(group)
+                group_label.setProperty('detailGroupHeading', True)
+                group_label.setStyleSheet(
+                    'background: transparent;'
+                    'font-weight: 600; font-size: 11px; color: #5a6a7a;'
+                    'border-bottom: 1px solid #d0d8e0; padding: 4px 0 2px 0;'
+                    'margin-top: 6px;'
+                )
+                grid.addWidget(group_label, row, 0, 1, 2)
+                row += 1
+            last_group = group
+
             btn = QPushButton(part.get('name', self._t('tool_library.field.part', 'Part')))
             btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)

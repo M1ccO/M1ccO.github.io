@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QLineEdit, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
     QFileDialog, QColorDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
 )
-from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH
+from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH, APP_DIR, STYLE_PATH
 from ui.widgets.parts_table import PartsTable
 from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
@@ -364,9 +364,17 @@ class AddEditToolDialog(QDialog):
             self._t('tool_editor.table.part_name', 'Part name'),
             self._t('tool_editor.table.code', 'Code'),
             self._t('tool_editor.table.link', 'Link'),
+            self._t('tool_editor.table.group', 'Group'),
         ])
         self.parts_table.setObjectName('editorPartsTable')
-        self.parts_table.horizontalHeader().setStretchLastSection(True)
+        self.parts_table.setSelectionMode(PartsTable.ExtendedSelection)
+        self.parts_table.horizontalHeader().setStretchLastSection(False)
+        header = self.parts_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Interactive)
+        header.setSectionResizeMode(1, QHeaderView.Interactive)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.Interactive)
+        self.parts_table.setColumnWidth(3, 120)
         self.parts_table.verticalHeader().setDefaultSectionSize(32)
         self.parts_table.verticalHeader().setMinimumSectionSize(28)
         self.parts_table.setMinimumHeight(320)
@@ -396,15 +404,40 @@ class AddEditToolDialog(QDialog):
         style_move_arrow_button(self.part_up_btn, self._t('work_editor.tools.move_up', '▲'), self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
         style_move_arrow_button(self.part_down_btn, self._t('work_editor.tools.move_down', '▼'), self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
         self.pick_part_btn = self._make_arrow_button('menu_open.svg', self._t('tool_editor.tooltip.pick_additional_part', 'Pick additional part from existing tools'))
+        self.group_btn = QPushButton()
+        style_icon_action_button(
+            self.group_btn,
+            TOOL_ICONS_DIR / 'assemblies_icon.svg',
+            self._t('tool_editor.action.group_parts', 'Group selected parts'),
+        )
+        self.group_btn.setVisible(False)
+        self.group_name_edit = QLineEdit()
+        self.group_name_edit.setPlaceholderText(self._t('tool_editor.placeholder.group_name', 'Group name...'))
+        self.group_name_edit.setVisible(False)
+        self.group_name_edit.setMinimumHeight(34)
+        self.group_name_edit.setMaximumWidth(160)
+        self.group_hint_label = QLabel(self._t('tool_editor.hint.press_enter_to_add', 'Press Enter to add'))
+        self.group_hint_label.setVisible(False)
+        self.group_hint_label.setStyleSheet('background: transparent; font-size: 12px; color: #7a8a9a; font-style: italic;')
+        self.group_select_hint_label = QLabel(self._t('tool_editor.hint.select_multiple', 'Select multiple parts to make a group'))
+        self.group_select_hint_label.setStyleSheet('background: transparent; font-size: 12px; color: #9aabb8; font-style: italic;')
         self.add_part_btn.clicked.connect(lambda: self.parts_table.add_empty_row())
         self.remove_part_btn.clicked.connect(self.parts_table.remove_selected_row)
         self.part_up_btn.clicked.connect(lambda: self.parts_table.move_selected_row(-1))
         self.part_down_btn.clicked.connect(lambda: self.parts_table.move_selected_row(1))
         self.pick_part_btn.clicked.connect(self._pick_additional_part)
+        self.group_btn.clicked.connect(self._toggle_group)
+        self.group_name_edit.returnPressed.connect(self._apply_group_name)
+        self.group_name_edit.installEventFilter(self)
+        self.parts_table.itemSelectionChanged.connect(self._update_group_button_visibility)
         p_btns.addWidget(self.add_part_btn)
         p_btns.addWidget(self.remove_part_btn)
         p_btns.addWidget(self.part_up_btn)
         p_btns.addWidget(self.part_down_btn)
+        p_btns.addWidget(self.group_btn)
+        p_btns.addWidget(self.group_name_edit)
+        p_btns.addWidget(self.group_hint_label)
+        p_btns.addWidget(self.group_select_hint_label)
         p_btns.addStretch(1)
         p_btns.addWidget(self.pick_part_btn)
         p_layout.addWidget(parts_btn_bar)
@@ -580,6 +613,10 @@ class AddEditToolDialog(QDialog):
         self._update_general_header()
 
     def eventFilter(self, obj, event):
+        if obj is self.group_name_edit and event.type() == QEvent.KeyPress:
+            if event.key() in (Qt.Key_Return, Qt.Key_Enter):
+                self._apply_group_name()
+                return True  # fully consume — prevent dialog default button from firing
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
         return super().eventFilter(obj, event)
@@ -598,8 +635,8 @@ class AddEditToolDialog(QDialog):
         label.setProperty('detailFieldKey', True)
         label.setWordWrap(True)
         label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        label.setMinimumWidth(176)
-        label.setMaximumWidth(176)
+        label.setMinimumWidth(200)
+        label.setMaximumWidth(200)
         layout.addWidget(label, 0)
         layout.addWidget(editor, 1)
         return frame
@@ -739,6 +776,86 @@ class AddEditToolDialog(QDialog):
             entry.get('link', ''),
         ])
 
+    def _update_group_button_visibility(self):
+        selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
+        if len(selected_rows) < 2:
+            self.group_btn.setVisible(False)
+            self.group_name_edit.setVisible(False)
+            self.group_hint_label.setVisible(False)
+            self.group_select_hint_label.setVisible(True)
+            return
+
+        self.group_btn.setVisible(True)
+        self.group_select_hint_label.setVisible(False)
+
+        groups = set()
+        for row in selected_rows:
+            item = self.parts_table.item(row, 3)
+            groups.add(item.text().strip() if item else '')
+
+        non_empty = groups - {''}
+        all_same_group = bool(non_empty) and len(non_empty) == 1 and '' not in groups
+
+        if all_same_group:
+            self.group_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'delete.svg')))
+            self.group_btn.setToolTip(self._t('tool_editor.action.remove_group', 'Remove group from selected parts'))
+            self.group_btn.setProperty('dangerAction', True)
+            self.group_name_edit.setVisible(False)
+            self.group_hint_label.setVisible(False)
+        else:
+            self.group_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'assemblies_icon.svg')))
+            self.group_btn.setToolTip(self._t('tool_editor.action.group_parts', 'Group selected parts'))
+            self.group_btn.setProperty('dangerAction', False)
+
+        self.group_btn.style().unpolish(self.group_btn)
+        self.group_btn.style().polish(self.group_btn)
+
+    def _toggle_group(self):
+        selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
+        if not selected_rows:
+            return
+
+        groups = set()
+        for row in selected_rows:
+            item = self.parts_table.item(row, 3)
+            groups.add(item.text().strip() if item else '')
+
+        non_empty = groups - {''}
+        all_same_group = bool(non_empty) and len(non_empty) == 1 and '' not in groups
+
+        if all_same_group:
+            for row in selected_rows:
+                item = self.parts_table.item(row, 3)
+                if item:
+                    item.setText('')
+                else:
+                    self.parts_table.setItem(row, 3, QTableWidgetItem(''))
+            self.group_name_edit.setVisible(False)
+            self.group_hint_label.setVisible(False)
+        else:
+            self.group_name_edit.setVisible(True)
+            self.group_hint_label.setVisible(True)
+            self.group_name_edit.clear()
+            self.group_name_edit.setFocus()
+
+    def _apply_group_name(self):
+        name = self.group_name_edit.text().strip()
+        if not name:
+            self.group_name_edit.setVisible(False)
+            self.group_hint_label.setVisible(False)
+            return
+
+        selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
+        for row in selected_rows:
+            item = self.parts_table.item(row, 3)
+            if item:
+                item.setText(name)
+            else:
+                self.parts_table.setItem(row, 3, QTableWidgetItem(name))
+
+        self.group_name_edit.setVisible(False)
+        self.group_hint_label.setVisible(False)
+
     def _reflow_general_fields(self, force: bool = False):
         if not hasattr(self, 'general_fields_grid'):
             return
@@ -825,26 +942,22 @@ class AddEditToolDialog(QDialog):
     def _set_color_button(self, row: int, color_hex: str):
 
         btn = QPushButton("")
-        btn.setFixedSize(34, 22)
+        btn.setFixedSize(52, 24)
         btn.setToolTip(color_hex)
         btn.setCursor(Qt.PointingHandCursor)
-        btn.setIcon(self._build_color_chip_icon(color_hex))
-        btn.setIconSize(QSize(12, 12))
 
         btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: #f4f7fa;
-                border: 1px solid #b8c7d6;
-                border-radius: 11px;
+                background-color: {color_hex};
+                border: 1px solid #8a95a0;
+                border-radius: 3px;
                 padding: 0px;
             }}
             QPushButton:hover {{
-                background-color: #ffffff;
-                border: 1px solid #8ea9bf;
+                border: 2px solid #3d7ab5;
             }}
             QPushButton:pressed {{
-                background-color: #eaf0f5;
-                border: 1px solid #7391aa;
+                border: 2px solid #1f5f92;
             }}
         """)
 
@@ -852,26 +965,143 @@ class AddEditToolDialog(QDialog):
 
         wrap = QWidget()
         lay = QHBoxLayout(wrap)
-        lay.setContentsMargins(4, 0, 4, 0)
+        lay.setContentsMargins(4, 4, 4, 4)
         lay.setSpacing(0)
         lay.addWidget(btn, 0, Qt.AlignCenter)
         self.model_table.setCellWidget(row, 2, wrap)
 
-    def _build_color_chip_icon(self, color_hex: str) -> QIcon:
-        pixmap = QPixmap(14, 14)
-        pixmap.fill(Qt.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        painter.setPen(QPen(QColor('#5f6e7c')))
-        painter.setBrush(QColor(color_hex))
-        painter.drawEllipse(1, 1, 12, 12)
-        painter.end()
-        return QIcon(pixmap)
+    def _app_stylesheet(self) -> str:
+        """Find the active app stylesheet from parent chain or QApplication."""
+        w = self.parent()
+        while w is not None:
+            ss = w.styleSheet()
+            if ss:
+                return ss
+            w = w.parent()
+
+        app = QApplication.instance()
+        if app is not None and app.styleSheet():
+            return app.styleSheet()
+
+        # Fallback for dialogs opened without a styled parent chain.
+        modules_dir = APP_DIR / 'styles' / 'modules'
+        if modules_dir.exists():
+            parts = [p.read_text(encoding='utf-8') for p in sorted(modules_dir.glob('*.qss'))]
+            if parts:
+                return '\n\n'.join(parts)
+
+        if STYLE_PATH.exists():
+            return STYLE_PATH.read_text(encoding='utf-8')
+        return ''
 
     def _choose_model_color(self, row: int):
         current = self._get_model_row_color(row)
         qcolor = QColor(current if current else '#9ea7b3')
-        chosen = QColorDialog.getColor(qcolor, self, self._t('tool_editor.dialog.select_part_color', 'Select part color'))
+
+        dlg = QColorDialog(qcolor, self)
+        dlg.setWindowTitle(self._t('tool_editor.dialog.select_part_color', 'Select part color'))
+        dlg.setOption(QColorDialog.DontUseNativeDialog, True)
+        dlg.setSizeGripEnabled(True)
+        dlg.resize(760, 560)
+        dlg.setMinimumSize(640, 500)
+        # Required for QDialog to honour background-color from stylesheet.
+        from PySide6.QtCore import Qt as _Qt
+        dlg.setAttribute(_Qt.WA_StyledBackground, True)
+
+        dialog_ss = """
+            QDialog {
+                background-color: #eceff2;
+            }
+            * {
+                font-family: 'Segoe UI';
+                font-size: 10pt;
+                color: #1f1f1f;
+            }
+            QLabel {
+                background: transparent;
+                color: #22303c;
+            }
+            QLineEdit {
+                background-color: #ffffff;
+                border: 1px solid #c8d4e0;
+                border-radius: 6px;
+                padding: 5px 8px;
+                min-height: 26px;
+                color: #1f1f1f;
+            }
+            QLineEdit:focus {
+                border: 1px solid #1e88e5;
+            }
+            QSpinBox {
+                background-color: #ffffff;
+                border: 1px solid #c8d4e0;
+                border-radius: 4px;
+                padding: 3px 4px 3px 6px;
+                min-height: 24px;
+                color: #1f1f1f;
+            }
+            QSpinBox:focus {
+                border: 1px solid #1e88e5;
+            }
+            QSpinBox::up-button {
+                subcontrol-origin: border;
+                subcontrol-position: top right;
+                width: 17px;
+                border-left: 1px solid #c8d4e0;
+                border-top-right-radius: 4px;
+                background-color: #f0f4f7;
+            }
+            QSpinBox::up-button:hover { background-color: #ddeefa; }
+            QSpinBox::down-button {
+                subcontrol-origin: border;
+                subcontrol-position: bottom right;
+                width: 17px;
+                border-left: 1px solid #c8d4e0;
+                border-bottom-right-radius: 4px;
+                background-color: #f0f4f7;
+            }
+            QSpinBox::down-button:hover { background-color: #ddeefa; }
+            QSpinBox::up-arrow {
+                width: 7px; height: 5px;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-bottom: 5px solid #5a6a7a;
+            }
+            QSpinBox::down-arrow {
+                width: 7px; height: 5px;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 5px solid #5a6a7a;
+            }
+        """
+        dlg.setStyleSheet(dialog_ss)
+
+        # QPushButton selectors in a dialog's own stylesheet don't reach buttons
+        # inside QDialogButtonBox — stamp the style directly on each button.
+        btn_ss = (
+            "QPushButton {"
+            " color: #2b3640;"
+            " min-height: 36px;"
+            " padding: 6px 16px;"
+            " border: 1px solid #b6c0c9;"
+            " background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "  stop:0 #ffffff, stop:1 #e8edf1);"
+            "}"
+            "QPushButton:hover {"
+            " background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "  stop:0 #ffffff, stop:1 #f0f4f7);"
+            "}"
+            "QPushButton:pressed {"
+            " background-color: qlineargradient(x1:0,y1:0,x2:0,y2:1,"
+            "  stop:0 #dee6ec, stop:1 #f9fbfc);"
+            "}"
+        )
+        for btn in dlg.findChildren(QPushButton):
+            btn.setStyleSheet(btn_ss)
+
+        if not dlg.exec():
+            return
+        chosen = dlg.currentColor()
         if not chosen.isValid():
             return
         color_hex = chosen.name()
@@ -1127,7 +1357,7 @@ class AddEditToolDialog(QDialog):
                     part = {'name': part, 'code': '', 'link': ''}
             if not isinstance(part, dict):
                 continue
-            self.parts_table.add_empty_row([part.get('name', ''), part.get('code', ''), part.get('link', '')])
+            self.parts_table.add_empty_row([part.get('name', ''), part.get('code', ''), part.get('link', ''), part.get('group', '')])
 
         # Load 3D model data from stl_path
         stl_data = self.tool.get('stl_path', '')
@@ -1217,6 +1447,6 @@ class AddEditToolDialog(QDialog):
             'notes': self.notes.text().strip(),
             'drill_nose_angle': parse_float(self.drill_nose_angle, self._t('tool_library.field.nose_angle', 'Nose angle')) if selected_cutting == 'Drill' else 0.0,
             'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.cutting_edges', 'Cutting edges')) if selected_cutting == 'Mill' else 0,
-            'support_parts': self._table_to_parts(self.parts_table, ['name', 'code', 'link']),
+            'support_parts': self._table_to_parts(self.parts_table, ['name', 'code', 'link', 'group']),
             'stl_path': json.dumps(model_parts) if model_parts else '',
         }

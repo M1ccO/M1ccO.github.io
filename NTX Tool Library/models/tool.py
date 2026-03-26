@@ -7,6 +7,7 @@ class AdditionalPart:
     name: str = ''
     code: str = ''
     link: str = ''
+    group: str = ''
 
 
 @dataclass
