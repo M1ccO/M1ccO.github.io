@@ -13,7 +13,6 @@ PREVIEW_DIR = APP_DIR / 'preview'
 
 ASSETS_DIR = APP_DIR / 'assets'
 TOOL_ICONS_DIR = ASSETS_DIR / 'icons' / 'tools'
-NAV_ICONS_DIR = ASSETS_DIR / 'icons' / 'nav'
 
 if IS_FROZEN:
     local_appdata = Path(os.environ.get('LOCALAPPDATA') or (Path.home() / 'AppData' / 'Local'))
@@ -117,7 +116,6 @@ TOOL_TYPE_TO_ICON = {
 }
 DEFAULT_TOOL_ICON = 'default.png'
 
-NAV_ITEM_NAMES = ['TOOLS', 'JAWS', 'ASSEMBLIES', 'HOLDERS', 'INSERTS', 'EXPORT']
 NAV_ITEM_TO_ICON = {
     'TOOLS': 'library.svg',
     'JAWS': 'jaw_icon.png',

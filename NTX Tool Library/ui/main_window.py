@@ -43,7 +43,6 @@ from config import (
     SHARED_UI_PREFERENCES_PATH,
     I18N_DIR,
     RAIL_HEAD_DROPDOWN_WIDTH,
-    NAV_ICONS_DIR,
     TOOL_ICONS_DIR,
     NAV_ITEM_TO_ICON,
     NAV_ICON_DEFAULT_SIZE,
@@ -263,9 +262,6 @@ class MainWindow(QMainWindow):
             tool_path = TOOL_ICONS_DIR / candidate
             if tool_path.exists():
                 return tool_path
-            nav_path = NAV_ICONS_DIR / candidate
-            if nav_path.exists():
-                return nav_path
         return None
 
     def _pixmap_by_path(self, path: Path, target_size: QSize) -> QPixmap:
