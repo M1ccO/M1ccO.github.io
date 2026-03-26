@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSplitter,
     QStackedWidget,
     QStatusBar,
     QToolButton,
@@ -103,7 +104,8 @@ class MainWindow(QMainWindow):
 
         widget = obj
         while widget is not None:
-            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView)):
+            # Skip interactive widgets and splitters
+            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView, QSplitter)):
                 return
             widget = widget.parentWidget()
 

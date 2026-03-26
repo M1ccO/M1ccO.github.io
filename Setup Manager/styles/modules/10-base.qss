@@ -87,8 +87,8 @@ QFrame[detailCard="true"] {
 
 QFrame[card="true"] {
     background-color: #ffffff;
-    border: 1px solid #c8d4e0;
-    border-radius: 6px;
+    border: 1px solid #b8c5d1;
+    border-radius: 2px;
 }
 
 QFrame[editorFieldCard="true"] {
@@ -166,7 +166,7 @@ QLabel[detailValue="true"] {
 
 QLabel[detailFieldValue="true"] {
     background-color: #ffffff;
-    border: 1px solid #d8dfe7;
+    border: 1px solid #c8d4e0;
     border-radius: 4px;
     padding: 4px 6px;
     font-size: 14pt;
@@ -175,9 +175,11 @@ QLabel[detailFieldValue="true"] {
 }
 
 QLabel[detailFieldKey="true"] {
-    color: #495866;
+    color: #2b3136;
     background: transparent;
-    font-size: 10pt;
+    font-size: 9.5pt;
+    font-weight: 600;
+    margin-bottom: 2px;
 }
 
 QLabel[jawGroupTitle="true"] {
@@ -195,7 +197,7 @@ QFrame[jawGroupHost="true"] {
 
 QWidget[detailContentHost="true"],
 QWidget[detailPaneHost="true"] {
-    background-color: #ffffff;
+    background-color: transparent;
 }
 
 QLabel[detailHeroTitle="true"] {
@@ -219,18 +221,18 @@ QFrame[detailHeader="true"] {
 }
 
 QFrame[detailField="true"] {
-    background-color: #e8f0fa;
+    background-color: #ffffff;
     border: 1px solid #c8d4e0;
-    border-radius: 2px;
+    border-radius: 4px;
 }
 
 QFrame[detailField="true"][detailHeroField="true"] {
-    background-color: #ffffff;
+    background-color: transparent;
 }
 
 QFrame[subCard="true"] {
     background-color: #ffffff;
-    border: 1px solid #c8d4e0;
+    border: 1px solid #c3ced8;
     border-radius: 2px;
 }
 

@@ -17,6 +17,7 @@ CARD_MARGIN_V = 6
 CARD_RADIUS = 8
 CARD_PADDING_H = 10
 CARD_PADDING_V = 2
+CARD_TRAILING_PAD = 0
 COL_SPACING = 8
 HEADER_VALUE_GAP = 1
 BORDER_INSET = 3
@@ -94,7 +95,7 @@ class SetupCatalogDelegate(QStyledItemDelegate):
         content = card.adjusted(
             CARD_PADDING_H + BORDER_INSET,
             CARD_PADDING_V + BORDER_INSET,
-            -(CARD_PADDING_H + BORDER_INSET),
+            -(CARD_PADDING_H + BORDER_INSET + CARD_TRAILING_PAD),
             -(CARD_PADDING_V + BORDER_INSET),
         )
 

@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSplitter,
     QStackedWidget,
     QToolButton,
     QVBoxLayout,
@@ -564,8 +565,11 @@ class MainWindow(QMainWindow):
         if obj.window() is not self:
             return
         # Skip directly interactive widgets — their own handlers manage state.
-        if isinstance(obj, (QAbstractButton, QLineEdit, QComboBox)):
-            return
+        widget = obj
+        while widget is not None:
+            if isinstance(widget, (QAbstractButton, QLineEdit, QComboBox, QAbstractItemView, QSplitter)):
+                return
+            widget = widget.parentWidget()
 
         page = self.stack.currentWidget() if hasattr(self, 'stack') else None
         if page is None:

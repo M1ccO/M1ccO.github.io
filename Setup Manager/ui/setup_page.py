@@ -677,14 +677,20 @@ class SetupPage(QWidget):
         root.addWidget(controls_frame)
 
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setObjectName("setupWorkSplitter")
+        splitter.setHandleWidth(1)
         self.work_list = QListView()
-        self.work_list.setObjectName("toolCatalog")
+        self.work_list.setObjectName("setupWorkList")
         self.work_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.work_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.work_list.setSpacing(0)
         self.work_list.setSelectionMode(QListView.SingleSelection)
         self.work_list.setMouseTracking(True)
         self.work_list.setUniformItemSizes(True)
+        self.work_list.setStyleSheet(
+            "QListView#setupWorkList { border: none; outline: none; padding: 8px; }"
+            " QListView#setupWorkList::item { background: transparent; border: none; }"
+        )
         self._work_model = QStandardItemModel(self)
         self._work_delegate = SetupCatalogDelegate(
             self.work_list,
@@ -702,13 +708,13 @@ class SetupPage(QWidget):
         list_shell.setObjectName("setupWorkShell")
         list_shell.setProperty("catalogShell", True)
         list_shell_layout = QVBoxLayout(list_shell)
-        list_shell_layout.setContentsMargins(6, 6, 6, 6)
+        list_shell_layout.setContentsMargins(0, 0, 8, 0)
         list_shell_layout.setSpacing(0)
         list_shell_layout.addWidget(self.work_list)
 
         list_shell_container = QWidget()
         list_shell_container_layout = QVBoxLayout(list_shell_container)
-        list_shell_container_layout.setContentsMargins(12, 8, 12, 8)
+        list_shell_container_layout.setContentsMargins(0, 0, 0, 0)
         list_shell_container_layout.setSpacing(0)
         list_shell_container_layout.addWidget(list_shell)
         list_shell_container.setMinimumWidth(self._min_list_panel_width)
@@ -718,7 +724,7 @@ class SetupPage(QWidget):
         detail_host.setProperty("detailPaneHost", True)
         detail_layout = QVBoxLayout(detail_host)
         detail_layout.setContentsMargins(0, 0, 0, 0)
-        detail_layout.setSpacing(8)
+        detail_layout.setSpacing(2)
 
         # Hero header - mirror Tool Library detail style with a bordered heading field.
         detail_hero = QFrame()
@@ -754,6 +760,7 @@ class SetupPage(QWidget):
 
         # Wrap the hero and all section cards in one scroll area so everything scrolls together
         detail_scroll = QScrollArea()
+        detail_scroll.setObjectName("detailScrollArea")
         detail_scroll.setWidgetResizable(True)
         detail_scroll.setFrameShape(QFrame.NoFrame)
         detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -781,7 +788,14 @@ class SetupPage(QWidget):
 
         detail_scroll_layout.addStretch(1)
         detail_scroll.setWidget(detail_scroll_content)
-        detail_layout.addWidget(detail_scroll, 1)
+
+        self.detail_card = QFrame()
+        self.detail_card.setProperty("card", True)
+        detail_card_layout = QVBoxLayout(self.detail_card)
+        detail_card_layout.setContentsMargins(0, 0, 0, 0)
+        detail_card_layout.setSpacing(0)
+        detail_card_layout.addWidget(detail_scroll, 1)
+        detail_layout.addWidget(self.detail_card, 1)
 
         self.detail_scroll = detail_scroll
         self.detail_scroll_content = detail_scroll_content
@@ -800,7 +814,13 @@ class SetupPage(QWidget):
         self._setup_splitter = splitter
         splitter.setSizes([1, 0])
         splitter.splitterMoved.connect(self._on_splitter_moved)
-        root.addWidget(splitter, 1)
+
+        splitter_host = QWidget()
+        splitter_host_layout = QVBoxLayout(splitter_host)
+        splitter_host_layout.setContentsMargins(0, 0, 12, 0)
+        splitter_host_layout.setSpacing(0)
+        splitter_host_layout.addWidget(splitter)
+        root.addWidget(splitter_host, 1)
 
         button_bar = QFrame()
         button_bar.setProperty("bottomBar", True)
@@ -978,9 +998,31 @@ class SetupPage(QWidget):
             QTimer.singleShot(0, self._sync_work_row_widths)
         if obj in (self.work_list, self.work_list.viewport()):
             if event.type() == QEvent.MouseButtonPress:
+                # If the press starts on/near the splitter handle, let splitter drag begin
+                # and do not treat it as an empty-list click that clears selection.
+                if self._is_press_near_splitter_handle(event):
+                    return False
                 if not self.work_list.indexAt(event.pos()).isValid():
                     self._clear_selection()
         return super().eventFilter(obj, event)
+
+    def _is_press_near_splitter_handle(self, event) -> bool:
+        if not hasattr(self, "_setup_splitter") or self._setup_splitter is None:
+            return False
+        if not self._details_open:
+            return False
+        handle = self._setup_splitter.handle(1)
+        if handle is None:
+            return False
+        handle_rect = handle.geometry().adjusted(-10, 0, 10, 0)
+        if hasattr(event, "globalPosition"):
+            global_pos = event.globalPosition().toPoint()
+        elif hasattr(event, "globalPos"):
+            global_pos = event.globalPos()
+        else:
+            return False
+        pos_in_splitter = self._setup_splitter.mapFromGlobal(global_pos)
+        return handle_rect.contains(pos_in_splitter)
 
     def _sync_detail_content_width(self):
         if not hasattr(self, "detail_scroll_content") or not hasattr(self, "detail_scroll"):

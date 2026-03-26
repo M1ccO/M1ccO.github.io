@@ -18,3 +18,8 @@ QSplitter::handle:vertical {
     background: #c8d4e0;
     height: 2px;
 }
+
+QSplitter#setupWorkSplitter::handle:horizontal {
+    background: #c8d4e0;
+    width: 2px;
+}
