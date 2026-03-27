@@ -59,7 +59,7 @@ class PrintService:
             return coord
         return "-"
 
-    def _tool_data(self, tool_id):
+    def _tool_data(self, tool_id, tool_uid=None):
         tool_id = self._to_text(tool_id)
         if not tool_id:
             return None
@@ -68,6 +68,15 @@ class PrintService:
         service = self.reference_service
         if service is None:
             return result
+
+        if tool_uid is not None:
+            try:
+                full_by_uid = service.get_full_tool_by_uid(tool_uid)
+            except Exception:
+                full_by_uid = None
+            if isinstance(full_by_uid, dict):
+                result.update(full_by_uid)
+                return result
 
         try:
             full = service.get_full_tool(tool_id)
@@ -88,20 +97,43 @@ class PrintService:
     def _tool_entry_data(self, assignment):
         if not isinstance(assignment, dict):
             tool_id = self._to_text(assignment)
+            tool_uid = None
             spindle = "main"
             comment = ""
+            pot = ""
+            override_id = ""
+            override_description = ""
         else:
             tool_id = self._to_text(assignment.get("tool_id") or assignment.get("id"))
+            raw_uid = assignment.get("tool_uid", assignment.get("uid"))
+            try:
+                tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
+            except Exception:
+                tool_uid = None
             spindle = self._to_text(assignment.get("spindle")).lower() or "main"
             comment = self._to_text(assignment.get("comment"))
+            pot = self._to_text(assignment.get("pot"))
+            override_id = self._to_text(assignment.get("override_id"))
+            override_description = self._to_text(assignment.get("override_description"))
         if not tool_id:
             return None
 
-        tool = self._tool_data(tool_id)
+        tool = self._tool_data(tool_id, tool_uid=tool_uid)
         if not tool:
-            return None
+            # Deleted tool – still include it with a placeholder description
+            tool = {
+                "id": tool_id,
+                "description": self._t("work_editor.tools.deleted_tool", "DELETED TOOL"),
+                "tool_type": "",
+            }
+        # Apply overrides
+        if override_id:
+            tool["id"] = override_id
+        if override_description:
+            tool["description"] = override_description
         tool["spindle"] = spindle if spindle in {"main", "sub"} else "main"
         tool["comment"] = comment
+        tool["pot"] = pot
         return tool
 
     def _tool_sections_for_head(self, assignments):
@@ -382,7 +414,7 @@ class PrintService:
         # Keep cards compact and only expand for visible comment lines.
         return self._TOOL_CARD_HEIGHT + (len(comment_lines) * 4)
 
-    def _draw_tool_card(self, canvas, x, top_y, width, tool):
+    def _draw_tool_card(self, canvas, x, top_y, width, tool, show_pot=False):
         card_h = self._tool_card_height(tool, width)
         bottom_y = top_y - card_h
 
@@ -400,10 +432,17 @@ class PrintService:
             except Exception:
                 pass
 
+        pot = self._to_text(tool.get("pot")) if show_pot else ""
+        pot_width = 0
+        if pot:
+            canvas.setFont("Helvetica-Bold", 9)
+            pot_width = canvas.stringWidth(pot, "Helvetica-Bold", 9) + 16
+
         tool_id = self._to_text(tool.get("id"))
         desc = self._to_text(tool.get("description")) or self._t("tool_library.common.no_description", "No description")
         title = f"{tool_id} - {desc}" if tool_id else desc
-        title = textwrap.shorten(title, width=max(26, int((width - 36) / 4.9)), placeholder="...")
+        max_title_w = max(26, int((width - 36 - pot_width) / 4.9))
+        title = textwrap.shorten(title, width=max_title_w, placeholder="...")
 
         comment_lines = self._tool_comment_lines(tool, width)
 
@@ -412,8 +451,6 @@ class PrintService:
         canvas.setFillColorRGB(0.11, 0.15, 0.20)
         canvas.setFont("Helvetica-Bold", 9.9)
         canvas.setFillColorRGB(0.11, 0.15, 0.20)
-        # drawString uses baseline coordinates; keep plain rows visually centered
-        # and lift comment rows slightly to reserve room for comment text.
         title_y = (card_mid - 1.0) if comment_lines else (card_mid - 4.4)
         canvas.drawString(tx, title_y, title)
         if comment_lines:
@@ -423,6 +460,13 @@ class PrintService:
             for line in comment_lines:
                 canvas.drawString(tx, comment_y, line)
                 comment_y -= 4.6
+
+        if pot:
+            pot_x = x + width - pot_width - 4
+            canvas.setFont("Helvetica-Bold", 9)
+            canvas.setFillColorRGB(0.17, 0.28, 0.41)
+            canvas.drawString(pot_x, card_mid - 4.0, pot)
+
         return bottom_y - self._TOOL_CARD_GAP
 
     def _draw_tool_column_container(self, canvas, x, top_y, width, bottom_y):
@@ -475,7 +519,7 @@ class PrintService:
             "consumed_bottom": container_bottom,
         }
 
-    def _draw_tool_section(self, canvas, x, top_y, width, label, plan):
+    def _draw_tool_section(self, canvas, x, top_y, width, label, plan, show_pot=False):
         canvas.setFont("Helvetica-Bold", 11.5)
         canvas.setFillColorRGB(0.17, 0.28, 0.41)
         canvas.drawString(x, top_y, label)
@@ -483,7 +527,7 @@ class PrintService:
             return
         self._draw_tool_column_container(canvas, x, plan["container_top"], width, plan["container_bottom"])
         for card_top, tool in plan["placements"]:
-            self._draw_tool_card(canvas, x + 6, card_top, width - 12, tool)
+            self._draw_tool_card(canvas, x + 6, card_top, width - 12, tool, show_pot=show_pot)
 
     def _layout_tool_columns(
         self,
@@ -500,6 +544,7 @@ class PrintService:
         *,
         render=False,
         show_tools_heading=False,
+        show_pot=False,
     ):
         section_titles = [
             ("SP1", "SP1"),
@@ -549,9 +594,9 @@ class PrintService:
             right_label = f"HEAD2 - {section_titles[global_section_index][1]}"
             if render:
                 if left_has_remaining:
-                    self._draw_tool_section(canvas, left_x, current_y, col_w, left_label, left_plan)
+                    self._draw_tool_section(canvas, left_x, current_y, col_w, left_label, left_plan, show_pot=show_pot)
                 if right_has_remaining:
-                    self._draw_tool_section(canvas, right_x, current_y, col_w, right_label, right_plan)
+                    self._draw_tool_section(canvas, right_x, current_y, col_w, right_label, right_plan, show_pot=show_pot)
 
             consumed = [current_y]
             if left_has_remaining:
@@ -798,6 +843,7 @@ class PrintService:
         head1_sections = self._tool_sections_for_head(work.get("head1_tool_assignments") or [])
         head2_sections = self._tool_sections_for_head(work.get("head2_tool_assignments") or [])
         min_bottom = margin + 18
+        show_pot = bool(work.get("print_pots"))
 
         page1_tool_start = self._tool_section_start_y(top_y)
         blank_tool_page_start = self._tools_page_start_y(page_h, margin)
@@ -805,20 +851,20 @@ class PrintService:
         # Decide whether tools fit on page 1, on a dedicated page 2, or need multi-page spillover.
         sim_left_1, sim_right_1 = self._layout_tool_columns(
             None, left_x, right_x, page1_tool_start, col_w, min_bottom,
-            head1_sections, head2_sections, (0, 0), (0, 0), render=False, show_tools_heading=True,
+            head1_sections, head2_sections, (0, 0), (0, 0), render=False, show_tools_heading=True, show_pot=show_pot,
         )
 
         if sim_left_1[0] >= len(head1_sections) and sim_right_1[0] >= len(head2_sections):
             self._layout_tool_columns(
                 pdf, left_x, right_x, page1_tool_start, col_w, min_bottom,
-                head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=True,
+                head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=True, show_pot=show_pot,
             )
             pdf.save()
             return output_path
 
         sim_left_2, sim_right_2 = self._layout_tool_columns(
             None, left_x, right_x, blank_tool_page_start, col_w, min_bottom,
-            head1_sections, head2_sections, (0, 0), (0, 0), render=False, show_tools_heading=False,
+            head1_sections, head2_sections, (0, 0), (0, 0), render=False, show_tools_heading=False, show_pot=show_pot,
         )
 
         if sim_left_2[0] >= len(head1_sections) and sim_right_2[0] >= len(head2_sections):
@@ -826,14 +872,14 @@ class PrintService:
             tool_page_start = self._draw_tools_page_header(pdf, page_w, margin, page_h - margin, work_id, drawing_id, description)
             self._layout_tool_columns(
                 pdf, left_x, right_x, tool_page_start, col_w, min_bottom,
-                head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=False,
+                head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=False, show_pot=show_pot,
             )
             pdf.save()
             return output_path
 
         next_left, next_right = self._layout_tool_columns(
             pdf, left_x, right_x, page1_tool_start, col_w, min_bottom,
-            head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=True,
+            head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=True, show_pot=show_pot,
         )
 
         while next_left[0] < len(head1_sections) or next_right[0] < len(head2_sections):
@@ -841,7 +887,7 @@ class PrintService:
             tool_page_start = self._draw_tools_page_header(pdf, page_w, margin, page_h - margin, work_id, drawing_id, description)
             next_left, next_right = self._layout_tool_columns(
                 pdf, left_x, right_x, tool_page_start, col_w, min_bottom,
-                head1_sections, head2_sections, next_left, next_right, render=True, show_tools_heading=False,
+                head1_sections, head2_sections, next_left, next_right, render=True, show_tools_heading=False, show_pot=show_pot,
             )
 
         pdf.save()

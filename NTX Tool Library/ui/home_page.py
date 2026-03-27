@@ -6,7 +6,7 @@ from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, Q
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
     QAbstractButton, QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
-    QInputDialog, QLabel, QLineEdit, QListView, QMessageBox, QPushButton,
+    QDialogButtonBox, QLabel, QLineEdit, QListView, QMessageBox, QPushButton,
     QScrollArea, QSplitter, QVBoxLayout, QWidget, QSizePolicy, QToolButton
 )
 from config import (
@@ -19,9 +19,10 @@ from config import (
 from ui.tool_editor_dialog import AddEditToolDialog
 from ui.tool_catalog_delegate import (
     ToolCatalogDelegate, tool_icon_for_type,
-    ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON,
+    ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON, ROLE_TOOL_UID,
 )
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style, repolish_widget
+from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, setup_editor_dialog
 
 # the STL preview widget may live in a separate module; import lazily so the
 # rest of the application still runs if the real implementation is missing.
@@ -53,6 +54,7 @@ class HomePage(QWidget):
         self.page_title = page_title
         self.view_mode = (view_mode or 'home').lower()
         self.current_tool_id = None
+        self.current_tool_uid = None
         self._details_hidden = True
         self._last_splitter_sizes = None
         self._detached_preview_dialog = None
@@ -486,7 +488,7 @@ class HomePage(QWidget):
             self._close_detached_preview()
             return False
 
-        tool = self.tool_service.get_tool(self.current_tool_id)
+        tool = self._get_selected_tool()
         if not tool:
             self._close_detached_preview()
             return False
@@ -536,6 +538,7 @@ class HomePage(QWidget):
     def select_tool_by_id(self, tool_id: str):
         """Navigate the list to the tool with the given id."""
         self.current_tool_id = tool_id.strip()
+        self.current_tool_uid = None
         self.refresh_list()
         for row in range(self._tool_model.rowCount()):
             idx = self._tool_model.index(row, 0)
@@ -543,6 +546,15 @@ class HomePage(QWidget):
                 self.tool_list.setCurrentIndex(idx)
                 self.tool_list.scrollTo(idx)
                 break
+
+    def _get_selected_tool(self):
+        if self.current_tool_uid is not None:
+            tool = self.tool_service.get_tool_by_uid(self.current_tool_uid)
+            if tool:
+                return tool
+        if self.current_tool_id:
+            return self.tool_service.get_tool(self.current_tool_id)
+        return None
 
     def refresh_list(self):
         # bail if UI hasn't been built yet
@@ -561,14 +573,23 @@ class HomePage(QWidget):
         for tool in tools:
             item = QStandardItem()
             tool_id = tool.get('id', '')
+            tool_uid = tool.get('uid')
             item.setData(tool_id, ROLE_TOOL_ID)
+            item.setData(tool_uid, ROLE_TOOL_UID)
             item.setData(tool, ROLE_TOOL_DATA)
             item.setData(tool_icon_for_type(tool.get('tool_type', '')), ROLE_TOOL_ICON)
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
             self._tool_model.appendRow(item)
         self._tool_model.blockSignals(False)
         # restore selection
-        if self.current_tool_id:
+        if self.current_tool_uid is not None:
+            for row in range(self._tool_model.rowCount()):
+                idx = self._tool_model.index(row, 0)
+                if idx.data(ROLE_TOOL_UID) == self.current_tool_uid:
+                    self.tool_list.setCurrentIndex(idx)
+                    self.tool_list.scrollTo(idx)
+                    break
+        elif self.current_tool_id:
             for row in range(self._tool_model.rowCount()):
                 idx = self._tool_model.index(row, 0)
                 if idx.data(ROLE_TOOL_ID) == self.current_tool_id:
@@ -616,7 +637,7 @@ class HomePage(QWidget):
             if not self.current_tool_id:
                 QMessageBox.information(self, self._t('tool_library.message.show_details', 'Show details'), self._t('tool_library.message.select_tool_first', 'Select a tool first.'))
                 return
-            tool = self.tool_service.get_tool(self.current_tool_id)
+            tool = self._get_selected_tool()
             self.populate_details(tool)
             self.show_details()
         else:
@@ -666,6 +687,7 @@ class HomePage(QWidget):
             self.tool_list.selectionModel().clearSelection()
             self.tool_list.setCurrentIndex(QModelIndex())
         self.current_tool_id = None
+        self.current_tool_uid = None
         self.populate_details(None)
         if details_were_open:
             self.hide_details()
@@ -750,20 +772,23 @@ class HomePage(QWidget):
     def _on_current_changed(self, current: QModelIndex, previous: QModelIndex):
         if not current.isValid():
             self.current_tool_id = None
+            self.current_tool_uid = None
             self.populate_details(None)
             if self.preview_window_btn.isChecked():
                 self._close_detached_preview()
             return
         self.current_tool_id = current.data(ROLE_TOOL_ID)
+        self.current_tool_uid = current.data(ROLE_TOOL_UID)
         # if details pane is already visible, refresh its contents
         if not self._details_hidden:
-            tool = self.tool_service.get_tool(self.current_tool_id)
+            tool = self._get_selected_tool()
             self.populate_details(tool)
         if self.preview_window_btn.isChecked():
             self._sync_detached_preview(show_errors=False)
 
     def _on_double_clicked(self, index: QModelIndex):
         self.current_tool_id = index.data(ROLE_TOOL_ID)
+        self.current_tool_uid = index.data(ROLE_TOOL_UID)
         if QApplication.keyboardModifiers() & Qt.ControlModifier:
             self.edit_tool()
             return
@@ -771,7 +796,7 @@ class HomePage(QWidget):
         if not self._details_hidden:
             self.hide_details()
         else:
-            self.populate_details(self.tool_service.get_tool(self.current_tool_id))
+            self.populate_details(self._get_selected_tool())
             self.show_details()
 
     # ==============================
@@ -1167,10 +1192,31 @@ class HomePage(QWidget):
     def _save_from_dialog(self, dlg):
         try:
             data = dlg.get_tool_data()
-            self.tool_service.save_tool(data)
-            self.current_tool_id = data['id']
+            source_uid = (getattr(dlg, 'tool', {}) or {}).get('uid')
+            if source_uid is not None:
+                data['uid'] = source_uid
+
+            if self.tool_service.tcode_exists(data['id'], exclude_uid=data.get('uid')):
+                confirm_text = (
+                    self._t(
+                        'tool_library.warning.duplicate_tcode',
+                        'This T-code already exists, want to save the tool anyway?\n\n'
+                        'This does not overwrite or replace the existing tool.',
+                    )
+                )
+                if not self._confirm_yes_no(
+                    self._t('tool_library.warning.duplicate_tcode_title', 'Duplicate T-code'),
+                    confirm_text,
+                    danger=False,
+                ):
+                    return
+
+            saved_uid = self.tool_service.save_tool(data, allow_duplicate=True)
+            saved_tool = self.tool_service.get_tool_by_uid(saved_uid)
+            self.current_tool_uid = saved_uid
+            self.current_tool_id = (saved_tool or {}).get('id', data['id'])
             self.refresh_list()
-            self.populate_details(self.tool_service.get_tool(self.current_tool_id))
+            self.populate_details(saved_tool)
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
 
@@ -1187,7 +1233,7 @@ class HomePage(QWidget):
                 self._t('tool_library.message.select_tool_first', 'Select a tool first.'),
             )
             return
-        tool = self.tool_service.get_tool(self.current_tool_id)
+        tool = self._get_selected_tool()
         dlg = AddEditToolDialog(self, tool=tool, tool_service=self.tool_service, translate=self._t)
         if dlg.exec() == QDialog.Accepted:
             self._save_from_dialog(dlg)
@@ -1216,8 +1262,8 @@ class HomePage(QWidget):
         if hasattr(self, 'type_filter'):
             self._build_tool_type_filter_items()
         self.refresh_list()
-        if self.current_tool_id:
-            self.populate_details(self.tool_service.get_tool(self.current_tool_id))
+        if self.current_tool_id or self.current_tool_uid is not None:
+            self.populate_details(self._get_selected_tool())
         else:
             self.populate_details(None)
 
@@ -1240,28 +1286,83 @@ class HomePage(QWidget):
             self._t('tool_library.prompt.new_description_optional', 'New description (optional):'),
         )
         try:
-            self.tool_service.copy_tool(self.current_tool_id, new_id, new_desc)
-            self.current_tool_id = new_id.strip()
+            if self.current_tool_uid is not None:
+                copied = self.tool_service.copy_tool_by_uid(self.current_tool_uid, new_id, new_desc)
+            else:
+                copied = self.tool_service.copy_tool(self.current_tool_id, new_id, new_desc)
+            self.current_tool_uid = copied.get('uid') if isinstance(copied, dict) else None
+            self.current_tool_id = (copied.get('id') if isinstance(copied, dict) else '') or new_id.strip()
             self.refresh_list()
-            self.populate_details(self.tool_service.get_tool(self.current_tool_id))
+            self.populate_details(self._get_selected_tool())
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.action.copy_tool_title', 'Copy tool'), str(exc))
 
     def _prompt_text(self, title: str, label: str, initial: str = '') -> tuple[str, bool]:
-        dlg = QInputDialog(self)
+        dlg = QDialog(self)
+        setup_editor_dialog(dlg)
         dlg.setWindowTitle(title)
-        dlg.setLabelText(label)
-        dlg.setTextValue(initial)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setOkButtonText(self._t('common.ok', 'OK'))
-        dlg.setCancelButtonText(self._t('common.cancel', 'Cancel'))
+        dlg.setModal(True)
 
-        # Ensure copy dialogs match panel button styling.
-        for btn in dlg.findChildren(QPushButton):
-            btn.setProperty('panelActionButton', True)
+        root = QVBoxLayout(dlg)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(8)
+
+        prompt = QLabel(label)
+        prompt.setProperty('detailFieldKey', True)
+        prompt.setWordWrap(True)
+        root.addWidget(prompt)
+
+        editor = QLineEdit()
+        editor.setText(initial)
+        root.addWidget(editor)
+
+        buttons = create_dialog_buttons(
+            dlg,
+            save_text=self._t('common.ok', 'OK'),
+            cancel_text=self._t('common.cancel', 'Cancel'),
+            on_save=dlg.accept,
+            on_cancel=dlg.reject,
+        )
+        root.addWidget(buttons)
+
+        apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
+        editor.setFocus()
+        editor.selectAll()
 
         accepted = dlg.exec() == QDialog.Accepted
-        return dlg.textValue(), accepted
+        return editor.text(), accepted
+
+    def _confirm_yes_no(self, title: str, text: str, *, danger: bool) -> bool:
+        box = QMessageBox(self)
+        setup_editor_dialog(box)
+        box.setIcon(QMessageBox.Warning if danger else QMessageBox.Question)
+        box.setWindowTitle(title)
+        main_text = text
+        info_text = ''
+        if '\n\n' in text:
+            main_text, info_text = text.split('\n\n', 1)
+        box.setText(main_text)
+        if info_text:
+            box.setInformativeText(info_text)
+            # Style only the secondary line to be subtler.
+            box.setStyleSheet(
+                '#qt_msgbox_informativelabel { font-style: italic; font-weight: 400; color: #5f6a74; }'
+            )
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+        yes_btn = box.button(QMessageBox.Yes)
+        no_btn = box.button(QMessageBox.No)
+        if yes_btn is not None:
+            yes_btn.setText(self._t('common.yes', 'Yes'))
+            yes_btn.setProperty('panelActionButton', True)
+            yes_btn.setProperty('dangerAction', bool(danger))
+            yes_btn.setProperty('primaryAction', not danger)
+        if no_btn is not None:
+            no_btn.setText(self._t('common.no', 'No'))
+            no_btn.setProperty('panelActionButton', True)
+            no_btn.setProperty('secondaryAction', True)
+
+        return box.exec() == QMessageBox.Yes
 
     def delete_tool(self):
         if not self.current_tool_id:
@@ -1271,14 +1372,17 @@ class HomePage(QWidget):
                 self._t('tool_library.message.select_tool_first', 'Select a tool first.'),
             )
             return
-        answer = QMessageBox.question(
-            self,
+        if self._confirm_yes_no(
             self._t('tool_library.action.delete_tool_title', 'Delete tool'),
             self._t('tool_library.prompt.delete_tool', 'Delete tool {tool_id}?', tool_id=self.current_tool_id),
-        )
-        if answer == QMessageBox.Yes:
-            self.tool_service.delete_tool(self.current_tool_id)
+            danger=True,
+        ):
+            if self.current_tool_uid is not None:
+                self.tool_service.delete_tool_by_uid(self.current_tool_uid)
+            else:
+                self.tool_service.delete_tool(self.current_tool_id)
             self.current_tool_id = None
+            self.current_tool_uid = None
             self.refresh_list()
             self.populate_details(None)
             if self.preview_window_btn.isChecked():

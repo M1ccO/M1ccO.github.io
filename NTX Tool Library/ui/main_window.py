@@ -1046,16 +1046,20 @@ class MainWindow(QMainWindow):
             self.navigate_to(kind, item_id)
 
     def _apply_style(self):
+        def _resolve_asset_urls(qss: str) -> str:
+            assets_dir = (APP_DIR / 'assets').resolve().as_posix()
+            return qss.replace('url("assets/', f'url("{assets_dir}/').replace("url('assets/", f"url('{assets_dir}/")
+
         base_style = ""
         # Modules directory is the single source of truth for styles.
         modules_dir = APP_DIR / 'styles' / 'modules'
         if modules_dir.exists():
-            parts = [p.read_text(encoding='utf-8') for p in sorted(modules_dir.glob('*.qss'))]
+            parts = [_resolve_asset_urls(p.read_text(encoding='utf-8')) for p in sorted(modules_dir.glob('*.qss'))]
             if parts:
                 base_style = '\n\n'.join(parts)
 
         # Fallback for legacy deployments where the modules directory is absent.
         if not base_style and STYLE_PATH.exists():
-            base_style = STYLE_PATH.read_text(encoding='utf-8')
+            base_style = _resolve_asset_urls(STYLE_PATH.read_text(encoding='utf-8'))
 
         self.setStyleSheet(base_style + "\n\n" + self._build_ui_preference_overrides())

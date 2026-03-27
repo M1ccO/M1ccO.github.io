@@ -37,21 +37,39 @@ class WorkService:
     def _normalize_tool_assignment(cls, value, default_spindle="main"):
         if isinstance(value, dict):
             tool_id = str(value.get("tool_id") or value.get("id") or "").strip()
+            raw_uid = value.get("tool_uid", value.get("uid"))
+            try:
+                tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
+            except Exception:
+                tool_uid = None
             spindle = str(value.get("spindle") or default_spindle or "main").strip().lower()
             comment = str(value.get("comment") or "").strip()
+            pot = str(value.get("pot") or "").strip()
+            override_id = str(value.get("override_id") or "").strip()
+            override_description = str(value.get("override_description") or "").strip()
         else:
             tool_id = str(value or "").strip()
+            tool_uid = None
             spindle = str(default_spindle or "main").strip().lower()
             comment = ""
+            pot = ""
+            override_id = ""
+            override_description = ""
         if not tool_id:
             return None
         if spindle not in cls._SPINDLES:
             spindle = "main"
-        return {
+        normalized = {
             "tool_id": tool_id,
             "spindle": spindle,
             "comment": comment,
+            "pot": pot,
+            "override_id": override_id,
+            "override_description": override_description,
         }
+        if tool_uid is not None:
+            normalized["tool_uid"] = tool_uid
+        return normalized
 
     @classmethod
     def _parse_tool_assignments(cls, raw_value, fallback_ids=None):
@@ -103,6 +121,7 @@ class WorkService:
 
     def _row_to_work(self, row):
         data = dict(row)
+        data["print_pots"] = bool(data.get("print_pots", 0))
         head1_legacy_ids = self._parse_json_list(data.get("head1_tool_ids"))
         head2_legacy_ids = self._parse_json_list(data.get("head2_tool_ids"))
         data["head1_tool_assignments"] = self._parse_tool_assignments(
@@ -206,6 +225,7 @@ class WorkService:
             ),
             "robot_info": self._normalize_optional_text(payload.get("robot_info")),
             "notes": self._normalize_optional_text(payload.get("notes")),
+            "print_pots": 1 if payload.get("print_pots") else 0,
             "created_at": created_at,
             "updated_at": now_iso,
         }

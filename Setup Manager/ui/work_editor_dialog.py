@@ -1,12 +1,14 @@
+from html import escape as _html_escape
 from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QIcon
+from PySide6.QtGui import QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QBoxLayout,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -333,7 +335,7 @@ class _ToolPickerDialog(QDialog):
         self.resize(760, 560)
         self.setProperty("toolPickerDialog", True)
         self._all_tools = all_tools
-        self._selected_ids = {str(item).strip() for item in (current_ids or []) if str(item).strip()}
+        self._selected_keys = {str(item).strip() for item in (current_ids or []) if str(item).strip()}
         self._updating_list = False
         self._search_visible = False
         self._search_icon = _toolbar_icon("search_icon")
@@ -459,6 +461,13 @@ class _ToolPickerDialog(QDialog):
         text = f"{tool_id} {description} {tool_type}".lower()
         return query in text
 
+    @staticmethod
+    def _tool_key(tool: dict) -> str:
+        uid = tool.get("uid") if isinstance(tool, dict) else None
+        if uid is not None and str(uid).strip():
+            return f"uid:{uid}"
+        return f"id:{(tool.get('id') or '').strip()}"
+
     def _build_list(self, *_args):
         self._updating_list = True
 
@@ -472,29 +481,30 @@ class _ToolPickerDialog(QDialog):
             description = (tool.get("description") or "").strip()
             label = f"{tool_id}  \u2014  {description}" if description else tool_id
             item = QListWidgetItem(label)
-            item.setData(Qt.UserRole, tool_id)
+            item.setData(Qt.UserRole, self._tool_key(tool))
+            item.setData(Qt.UserRole + 1, dict(tool))
             item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if tool_id in self._selected_ids else Qt.Unchecked)
+            item.setCheckState(Qt.Checked if self._tool_key(tool) in self._selected_keys else Qt.Unchecked)
             self.tool_list.addItem(item)
         self._updating_list = False
 
     def _on_item_changed(self, item: QListWidgetItem):
         if self._updating_list:
             return
-        tool_id = (item.data(Qt.UserRole) or "").strip()
-        if not tool_id:
+        tool_key = (item.data(Qt.UserRole) or "").strip()
+        if not tool_key:
             return
         if item.checkState() == Qt.Checked:
-            self._selected_ids.add(tool_id)
+            self._selected_keys.add(tool_key)
         else:
-            self._selected_ids.discard(tool_id)
+            self._selected_keys.discard(tool_key)
 
-    def get_selected_ids(self) -> list:
-        selected = self._selected_ids
+    def get_selected_tools(self) -> list[dict]:
+        selected = self._selected_keys
         return [
-            (tool.get("id") or "").strip()
+            dict(tool)
             for tool in (self._all_tools or [])
-            if (tool.get("id") or "").strip() in selected
+            if self._tool_key(tool) in selected
         ]
 
 
@@ -507,27 +517,58 @@ class _OrderedToolList(QWidget):
     )
 
     class _ToolAssignmentRowWidget(QWidget):
-        def __init__(self, text: str, comment: str, parent=None):
+        editRequested = Signal()
+
+        def __init__(self, text: str, comment: str, pot: str = "", edited: bool = False, parent=None):
             super().__init__(parent)
             self.setAttribute(Qt.WA_StyledBackground, False)
             layout = QHBoxLayout(self)
             layout.setContentsMargins(6, 3, 6, 3)
-            layout.setSpacing(8)
+            layout.setSpacing(0)
 
-            text_label = QLabel(text)
-            text_label.setWordWrap(True)
+            # Render the whole row as a single QLabel using an HTML table so
+            # that no tiny child QLabel widgets are created.  Tiny child
+            # QLabel widgets acquire native HWNDs on Windows and trigger
+            # "Unable to set geometry" warnings because Windows enforces a
+            # ~148 px minimum window width for native child windows.
+            txt = _html_escape(text)
+            txt_style = "color:#0b66c3;font-weight:bold;" if edited else ""
+
+            right_parts = []
+            if pot:
+                right_parts.append(
+                    f'<span style="font-weight:bold;">'
+                    f'{_html_escape(pot)}</span>'
+                )
+            if comment:
+                right_parts.append(
+                    f'<span style="color:#5a6977;">[C]</span>'
+                )
+            right_html = "&nbsp;&nbsp;".join(right_parts)
+
+            # Always use an HTML table so QLabel stays in RichText mode
+            # regardless of whether pot/comment badges are present.
+            # Switching between plain-text and rich-text modes changes the
+            # label's internal line-height and makes rows shift visually.
+            html = (
+                f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
+                f'<td valign="middle" style="{txt_style}">{txt}</td>'
+                f'<td align="right" valign="middle" style="padding-left:10px;white-space:nowrap;">'
+                f'{right_html}</td>'
+                f'</tr></table>'
+            )
+
+            text_label = QLabel()
+            text_label.setText(html)
+            text_label.setWordWrap(False)
             text_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            text_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
             text_label.setStyleSheet("background: transparent;")
             layout.addWidget(text_label, 1)
 
-            comment_badge = QLabel("[C]")
-            comment_badge.setVisible(bool(comment))
-            comment_badge.setToolTip(comment)
-            comment_badge.setProperty("detailFieldKey", True)
-            comment_badge.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-            comment_badge.setMinimumWidth(28)
-            comment_badge.setStyleSheet("background: transparent;")
-            layout.addWidget(comment_badge, 0, Qt.AlignRight | Qt.AlignVCenter)
+        def mouseDoubleClickEvent(self, event):
+            self.editRequested.emit()
+            super().mouseDoubleClickEvent(event)
 
     @staticmethod
     def _configure_icon_action(btn: QPushButton, icon_name: str, tooltip: str, *, danger: bool = False):
@@ -656,6 +697,7 @@ class _OrderedToolList(QWidget):
         self.tool_list.currentRowChanged.connect(self._update_action_states)
 
         self._all_tools: list = []
+        self._show_pot: bool = False
         self._assignments_by_spindle = {"main": [], "sub": []}
         self._update_action_states()
 
@@ -675,9 +717,26 @@ class _OrderedToolList(QWidget):
         spindle = self._current_spindle()
         return self._assignments_by_spindle.setdefault(spindle, [])
 
-    def _tool_label(self, tool_id: str) -> str:
-        desc = self._labels_by_tool_id().get(tool_id, tool_id)
-        return desc
+    @staticmethod
+    def _assignment_key(item: dict) -> str:
+        if not isinstance(item, dict):
+            return ""
+        uid = item.get("tool_uid")
+        if uid is not None and str(uid).strip():
+            return f"uid:{uid}"
+        tool_id = (item.get("tool_id") or "").strip()
+        return f"id:{tool_id}" if tool_id else ""
+
+    def _tool_label(self, assignment: dict) -> str:
+        labels = self._labels_by_tool_key()
+        key = self._assignment_key(assignment)
+        tool_id = (assignment.get("tool_id") or "").strip()
+        label = labels.get(key)
+        if label is None:
+            # Tool no longer exists in the database
+            deleted = self._t("work_editor.tools.deleted_tool", "DELETED TOOL")
+            return f"{tool_id}  -  {deleted}" if tool_id else deleted
+        return label
 
     def _tool_assignment(self, row: int | None = None) -> dict | None:
         target_row = self.tool_list.currentRow() if row is None else row
@@ -688,10 +747,28 @@ class _OrderedToolList(QWidget):
         return dict(data) if isinstance(data, dict) else None
 
     def _render_assignment_row(self, item: QListWidgetItem, row_index: int, assignment: dict):
-        label = self._tool_label(assignment.get("tool_id", ""))
+        label = self._tool_label(assignment)
+        override_id = (assignment.get("override_id") or "").strip()
+        override_desc = (assignment.get("override_description") or "").strip()
+        is_edited = bool(override_id or override_desc)
+        if is_edited:
+            lib_desc = ""
+            if "  -  " in label:
+                _, lib_desc = label.split("  -  ", 1)
+            tool_id = override_id or (assignment.get("tool_id") or "").strip()
+            desc = override_desc or lib_desc
+            label = f"{tool_id}  -  {desc}" if desc else tool_id
         display_text = f"{row_index + 1}. {label}"
         item.setText("")
-        widget = self._ToolAssignmentRowWidget(display_text, assignment.get("comment", ""), self.tool_list)
+        pot = (assignment.get("pot") or "").strip() if self._show_pot else ""
+        widget = self._ToolAssignmentRowWidget(
+            display_text,
+            assignment.get("comment", ""),
+            pot=pot,
+            edited=is_edited,
+            parent=self.tool_list,
+        )
+        widget.editRequested.connect(lambda r=row_index: self._inline_edit_row(r))
         self.tool_list.setItemWidget(item, widget)
 
     def _render_current_spindle(self):
@@ -770,58 +847,158 @@ class _OrderedToolList(QWidget):
         self._render_current_spindle()
         self.tool_list.setCurrentRow(row)
 
-    def _open_picker(self):
-        current_ids = [item.get("tool_id", "") for item in self._current_assignments() if item.get("tool_id")]
-        dlg = _ToolPickerDialog(self._all_tools, current_ids, self, translate=self._t)
+    def _inline_edit_row(self, row_index: int):
+        """Open an inline editing dialog for T-code, description, and pot overrides."""
+        assignments = self._current_assignments()
+        if row_index < 0 or row_index >= len(assignments):
+            return
+        assignment = assignments[row_index]
+        tool_id = (assignment.get("tool_id") or "").strip()
+        # Get current display values
+        labels = self._labels_by_tool_key()
+        key = self._assignment_key(assignment)
+        lib_label = labels.get(key, tool_id)
+        lib_id = tool_id
+        lib_desc = ""
+        if "  -  " in lib_label:
+            lib_id, lib_desc = lib_label.split("  -  ", 1)
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self._t("work_editor.tools.edit_row_title", "Edit Tool Row"))
+        dlg.setModal(True)
+        dlg.resize(420, 0)
+        form = QFormLayout(dlg)
+        form.setContentsMargins(14, 14, 14, 14)
+        form.setSpacing(8)
+
+        id_input = QLineEdit()
+        id_input.setPlaceholderText(lib_id)
+        id_input.setText((assignment.get("override_id") or "").strip())
+        form.addRow(self._t("work_editor.tools.override_id", "T-code"), id_input)
+
+        desc_input = QLineEdit()
+        desc_input.setPlaceholderText(lib_desc)
+        desc_input.setText((assignment.get("override_description") or "").strip())
+        form.addRow(self._t("work_editor.tools.override_description", "Description"), desc_input)
+
+        effective_pot = (assignment.get("pot") or "").strip() or self._default_pot_for_assignment(self, assignment)
+        pot_input = QLineEdit()
+        pot_input.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "e.g. P1"))
+        pot_input.setText(effective_pot)
+        form.addRow(self._t("work_editor.tools.pot_number", "Pot"), pot_input)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        ok_btn = buttons.button(QDialogButtonBox.Ok)
+        cancel_btn = buttons.button(QDialogButtonBox.Cancel)
+        if ok_btn:
+            ok_btn.setProperty("panelActionButton", True)
+            ok_btn.setProperty("primaryAction", True)
+        if cancel_btn:
+            cancel_btn.setProperty("panelActionButton", True)
+            cancel_btn.setProperty("secondaryAction", True)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+
         if dlg.exec() != QDialog.Accepted:
             return
-        selected = dlg.get_selected_ids()
+        new_id = id_input.text().strip()
+        new_desc = desc_input.text().strip()
+        new_pot = pot_input.text().strip()
+        # Only store overrides if user actually typed something different
+        assignment["override_id"] = new_id if new_id and new_id != lib_id else ""
+        assignment["override_description"] = new_desc if new_desc and new_desc != lib_desc else ""
+        assignment["pot"] = new_pot
+        self._render_current_spindle()
+        self.tool_list.setCurrentRow(row_index)
+
+    def _open_picker(self):
+        current_keys = [self._assignment_key(item) for item in self._current_assignments() if self._assignment_key(item)]
+        dlg = _ToolPickerDialog(self._all_tools, current_keys, self, translate=self._t)
+        if dlg.exec() != QDialog.Accepted:
+            return
+        selected_tools = dlg.get_selected_tools()
         # Keep existing order for retained items; append newly selected.
         current_assignments = self._current_assignments()
-        kept = [item for item in current_assignments if item.get("tool_id") in set(selected)]
-        kept_ids = {item.get("tool_id") for item in kept}
-        added = [
-            {
-                "tool_id": tid,
+        selected_keys = {
+            f"uid:{tool.get('uid')}" if tool.get('uid') is not None and str(tool.get('uid')).strip() else f"id:{(tool.get('id') or '').strip()}"
+            for tool in selected_tools
+            if (tool.get('id') or '').strip()
+        }
+        kept = [item for item in current_assignments if self._assignment_key(item) in selected_keys]
+        kept_keys = {self._assignment_key(item) for item in kept}
+        added = []
+        for tool in selected_tools:
+            tool_id = (tool.get("id") or "").strip()
+            if not tool_id:
+                continue
+            key = f"uid:{tool.get('uid')}" if tool.get('uid') is not None and str(tool.get('uid')).strip() else f"id:{tool_id}"
+            if key in kept_keys:
+                continue
+            entry = {
+                "tool_id": tool_id,
                 "spindle": self._current_spindle(),
                 "comment": "",
+                "pot": (tool.get("default_pot") or "").strip(),
+                "override_id": "",
+                "override_description": "",
             }
-            for tid in selected
-            if tid not in kept_ids
-        ]
+            if tool.get("uid") is not None and str(tool.get("uid")).strip():
+                entry["tool_uid"] = int(tool.get("uid"))
+            added.append(entry)
         self._assignments_by_spindle[self._current_spindle()] = kept + added
         self._render_current_spindle()
 
-    def _labels_by_tool_id(self) -> dict:
-        id_to_label: dict = {}
+    def _labels_by_tool_key(self) -> dict:
+        key_to_label: dict = {}
         for tool in self._all_tools:
             tid = (tool.get("id") or "").strip()
             if not tid:
                 continue
             desc = (tool.get("description") or "").strip()
-            id_to_label[tid] = f"{tid}  \u2014  {desc}" if desc else tid
-        return id_to_label
+            uid = tool.get("uid")
+            key = f"uid:{uid}" if uid is not None and str(uid).strip() else f"id:{tid}"
+            key_to_label[key] = f"{tid}  -  {desc}" if desc else tid
+        return key_to_label
 
     def set_tool_assignments(self, assignments: list):
         grouped = {"main": [], "sub": []}
         for item in assignments or []:
+            tool_uid = None
             if not isinstance(item, dict):
                 tool_id = str(item or "").strip()
                 spindle = "main"
                 comment = ""
+                pot = ""
+                override_id = ""
+                override_description = ""
             else:
                 tool_id = str(item.get("tool_id") or item.get("id") or "").strip()
+                raw_uid = item.get("tool_uid", item.get("uid"))
+                try:
+                    tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
+                except Exception:
+                    tool_uid = None
                 spindle = str(item.get("spindle") or "main").strip().lower()
                 comment = str(item.get("comment") or "").strip()
+                pot = str(item.get("pot") or "").strip()
+                override_id = str(item.get("override_id") or "").strip()
+                override_description = str(item.get("override_description") or "").strip()
             if not tool_id:
                 continue
             if spindle not in grouped:
                 spindle = "main"
-            grouped[spindle].append({
+            entry = {
                 "tool_id": tool_id,
                 "spindle": spindle,
                 "comment": comment,
-            })
+                "pot": pot,
+                "override_id": override_id,
+                "override_description": override_description,
+            }
+            if tool_uid is not None:
+                entry["tool_uid"] = tool_uid
+            grouped[spindle].append(entry)
         self._assignments_by_spindle = grouped
         self._render_current_spindle()
 
@@ -848,11 +1025,20 @@ class _OrderedToolList(QWidget):
                 tool_id = (item.get("tool_id") or "").strip()
                 if not tool_id:
                     continue
-                assignments.append({
+                entry = {
                     "tool_id": tool_id,
                     "spindle": spindle,
                     "comment": (item.get("comment") or "").strip(),
-                })
+                    "pot": (item.get("pot") or "").strip(),
+                    "override_id": (item.get("override_id") or "").strip(),
+                    "override_description": (item.get("override_description") or "").strip(),
+                }
+                if item.get("tool_uid") is not None:
+                    try:
+                        entry["tool_uid"] = int(item.get("tool_uid"))
+                    except Exception:
+                        pass
+                assignments.append(entry)
         return assignments
 
 
@@ -929,6 +1115,9 @@ class WorkEditorDialog(QDialog):
         QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
+        if event.type() == QEvent.ToolTip and isinstance(obj, QWidget):
+            if obj is self or self.isAncestorOf(obj):
+                return True
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
         return super().eventFilter(obj, event)
@@ -1142,12 +1331,43 @@ class WorkEditorDialog(QDialog):
         self.tools_spindle_switch.setProperty("modernDropdown", True)
         self.tools_spindle_switch.setMinimumWidth(112)
         self.tools_spindle_switch.setMaximumWidth(146)
+        self.tools_spindle_switch.setFixedHeight(30)
         self._apply_coord_combo_popup_style(self.tools_spindle_switch)
         self.tools_spindle_switch.addItem("SP1", "main")
         self.tools_spindle_switch.addItem("SP2", "sub")
         self.tools_spindle_switch.currentIndexChanged.connect(self._sync_tool_spindle_view)
         toolbar.addWidget(self.tools_spindle_switch)
+
         toolbar.addStretch(1)
+
+        self.print_pots_checkbox = QCheckBox(self._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"))
+        _check_x_svg = (Path(ICONS_DIR) / "check_x.svg").as_posix()
+        self.print_pots_checkbox.setStyleSheet(
+            "QCheckBox { font-size: 13px; min-height: 30px; }"
+            "QCheckBox::indicator { width: 16px; height: 16px; border: 2px solid #6b829a; border-radius: 3px; background: #ffffff; }"
+            f"QCheckBox::indicator:checked {{ border: 2px solid #2f79c7; background: #e9f3ff;"
+            f" image: url('{_check_x_svg}'); }}"
+        )
+        self.print_pots_checkbox.setFixedHeight(30)
+
+        self.edit_pots_btn = QPushButton(self._t("work_editor.tools.edit_pots", "Edit Pots"))
+        self.edit_pots_btn.setProperty("secondaryButton", True)
+        self.edit_pots_btn.setFixedHeight(30)
+        button_metrics = QFontMetrics(self.edit_pots_btn.font())
+        button_text = self.edit_pots_btn.text().upper()
+        button_width = max(180, button_metrics.horizontalAdvance(button_text) + 42)
+        self.edit_pots_btn.setFixedWidth(button_width)
+        edit_pots_size_policy = self.edit_pots_btn.sizePolicy()
+        edit_pots_size_policy.setRetainSizeWhenHidden(True)
+        self.edit_pots_btn.setSizePolicy(edit_pots_size_policy)
+        self.edit_pots_btn.setVisible(False)
+        self.edit_pots_btn.clicked.connect(self._open_pot_editor)
+        toolbar.addWidget(self.edit_pots_btn)
+        toolbar.addWidget(self.print_pots_checkbox)
+
+        self.print_pots_checkbox.toggled.connect(self.edit_pots_btn.setVisible)
+        self.print_pots_checkbox.toggled.connect(self._on_print_pots_toggled)
+
         layout.addLayout(toolbar)
 
         self.head1_ordered = _OrderedToolList(
@@ -1179,6 +1399,102 @@ class WorkEditorDialog(QDialog):
         spindle = (self.tools_spindle_switch.currentData() or "main").strip().lower()
         self.head1_ordered.set_current_spindle(spindle)
         self.head2_ordered.set_current_spindle(spindle)
+
+    def _on_print_pots_toggled(self, checked: bool):
+        if checked:
+            self._populate_default_pots()
+        self.head1_ordered._show_pot = checked
+        self.head2_ordered._show_pot = checked
+        self.head1_ordered._render_current_spindle()
+        self.head2_ordered._render_current_spindle()
+
+    @staticmethod
+    def _default_pot_for_assignment(ordered_list, assignment: dict) -> str:
+        assignment_key = ordered_list._assignment_key(assignment)
+        tool_id = (assignment.get("tool_id") or "").strip()
+        for tool in ordered_list._all_tools or []:
+            if not isinstance(tool, dict):
+                continue
+            tool_key = ordered_list._assignment_key(
+                {
+                    "tool_id": (tool.get("id") or "").strip(),
+                    "tool_uid": tool.get("uid"),
+                }
+            )
+            if tool_key == assignment_key:
+                return str(tool.get("default_pot") or "").strip()
+        if not tool_id:
+            return ""
+        for tool in ordered_list._all_tools or []:
+            if not isinstance(tool, dict):
+                continue
+            if str(tool.get("id") or "").strip() == tool_id:
+                return str(tool.get("default_pot") or "").strip()
+        return ""
+
+    def _populate_default_pots(self):
+        changed = False
+        for ordered_list in (self.head1_ordered, self.head2_ordered):
+            for spindle in ("main", "sub"):
+                for assignment in ordered_list._assignments_by_spindle.get(spindle, []):
+                    if (assignment.get("pot") or "").strip():
+                        continue
+                    default_pot = self._default_pot_for_assignment(ordered_list, assignment)
+                    if default_pot:
+                        assignment["pot"] = default_pot
+                        changed = True
+        if changed:
+            self.head1_ordered._render_current_spindle()
+            self.head2_ordered._render_current_spindle()
+
+    def _open_pot_editor(self):
+        self._populate_default_pots()
+        all_items = []
+        for head_name, ordered_list in (("HEAD1", self.head1_ordered), ("HEAD2", self.head2_ordered)):
+            for spindle in ("main", "sub"):
+                for item in ordered_list._assignments_by_spindle.get(spindle, []):
+                    tool_id = (item.get("tool_id") or "").strip()
+                    if not tool_id:
+                        continue
+                    label = ordered_list._tool_label(item)
+                    all_items.append((item, label, head_name, spindle))
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self._t("work_editor.tools.pot_editor_title", "Pot Editor"))
+        dlg.setMinimumWidth(420)
+        dlg_layout = QVBoxLayout(dlg)
+        dlg_layout.setContentsMargins(16, 16, 16, 16)
+        dlg_layout.setSpacing(10)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        container = QWidget()
+        form = QFormLayout(container)
+        form.setContentsMargins(4, 4, 4, 4)
+        form.setSpacing(8)
+
+        pot_inputs = []
+        for item, label, head_name, spindle in all_items:
+            inp = QLineEdit()
+            inp.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "Pot #"))
+            inp.setMaximumWidth(100)
+            inp.setText(item.get("pot") or "")
+            form.addRow(QLabel(f"[{head_name}/{spindle.upper()}]  {label}"), inp)
+            pot_inputs.append((item, inp))
+
+        scroll.setWidget(container)
+        dlg_layout.addWidget(scroll, 1)
+
+        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        btn_box.accepted.connect(dlg.accept)
+        btn_box.rejected.connect(dlg.reject)
+        dlg_layout.addWidget(btn_box)
+
+        if dlg.exec() == QDialog.Accepted:
+            for item, inp in pot_inputs:
+                item["pot"] = inp.text().strip()
+            self.head1_ordered._render_current_spindle()
+            self.head2_ordered._render_current_spindle()
 
     def _build_notes_tab(self):
         layout = QVBoxLayout(self.notes_tab)
@@ -1216,18 +1532,14 @@ class WorkEditorDialog(QDialog):
             self.drawing_path_input.setText(path)
 
     def _load_external_refs(self):
-        if WorkEditorDialog._tool_cache_h1 is None:
-            WorkEditorDialog._tool_cache_h1 = self.draw_service.list_tool_refs(head_filter='HEAD1')
-        if WorkEditorDialog._tool_cache_h2 is None:
-            WorkEditorDialog._tool_cache_h2 = self.draw_service.list_tool_refs(head_filter='HEAD2')
+        WorkEditorDialog._tool_cache_h1 = self.draw_service.list_tool_refs(force_reload=True, head_filter='HEAD1', dedupe_by_id=False)
+        WorkEditorDialog._tool_cache_h2 = self.draw_service.list_tool_refs(force_reload=True, head_filter='HEAD2', dedupe_by_id=False)
         # Fall back to combined list if head-specific filters returned nothing
         if not WorkEditorDialog._tool_cache_h1 and not WorkEditorDialog._tool_cache_h2:
-            if WorkEditorDialog._tool_cache is None:
-                WorkEditorDialog._tool_cache = self.draw_service.list_tool_refs()
+            WorkEditorDialog._tool_cache = self.draw_service.list_tool_refs(force_reload=True, dedupe_by_id=False)
             WorkEditorDialog._tool_cache_h1 = WorkEditorDialog._tool_cache
             WorkEditorDialog._tool_cache_h2 = WorkEditorDialog._tool_cache
-        if WorkEditorDialog._jaw_cache is None:
-            WorkEditorDialog._jaw_cache = self.draw_service.list_jaw_refs()
+        WorkEditorDialog._jaw_cache = self.draw_service.list_jaw_refs(force_reload=True)
 
         self.main_jaw_selector.populate(WorkEditorDialog._jaw_cache)
         self.sub_jaw_selector.populate(WorkEditorDialog._jaw_cache)
@@ -1281,6 +1593,8 @@ class WorkEditorDialog(QDialog):
         self.head1_ordered.set_tool_assignments(self.work.get("head1_tool_assignments", []))
         self.head2_ordered.set_tool_assignments(self.work.get("head2_tool_assignments", []))
 
+        self.print_pots_checkbox.setChecked(bool(self.work.get("print_pots", False)))
+
         self.robot_info_input.setPlainText(self.work.get("robot_info", ""))
         self.notes_input.setPlainText(self.work.get("notes", ""))
 
@@ -1306,6 +1620,7 @@ class WorkEditorDialog(QDialog):
             "sub_pickup_z": self.sub_pickup_z_input.text().strip(),
             "head1_tool_assignments": self.head1_ordered.get_tool_assignments(),
             "head2_tool_assignments": self.head2_ordered.get_tool_assignments(),
+            "print_pots": self.print_pots_checkbox.isChecked(),
             "robot_info": self.robot_info_input.toPlainText().strip(),
             "notes": self.notes_input.toPlainText().strip(),
         }

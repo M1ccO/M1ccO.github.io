@@ -38,6 +38,11 @@ class ToolService:
 
     def _normalize_tool_record(self, row_dict):
         tool = dict(row_dict)
+        if 'uid' in tool:
+            try:
+                tool['uid'] = int(tool['uid'])
+            except Exception:
+                tool['uid'] = None
         tool_head = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper()
         tool['tool_head'] = tool_head if tool_head in {'HEAD1', 'HEAD2'} else 'HEAD1'
         tool['geometry_profiles'] = self._coerce_json_list(tool.get('geometry_profiles'))
@@ -120,14 +125,31 @@ class ToolService:
             query += ' AND tool_head = ?'
             params.append(selected_head)
 
-        query += ' ORDER BY id'
+        query += ' ORDER BY id, uid'
         return [self._normalize_tool_record(r) for r in self.db.conn.execute(query, params).fetchall()]
 
     def get_tool(self, tool_id):
-        row = self.db.conn.execute('SELECT * FROM tools WHERE id = ?', (tool_id,)).fetchone()
+        row = self.db.conn.execute('SELECT * FROM tools WHERE id = ? ORDER BY uid DESC LIMIT 1', (tool_id,)).fetchone()
         return self._normalize_tool_record(row) if row else None
 
-    def save_tool(self, tool):
+    def get_tool_by_uid(self, uid):
+        row = self.db.conn.execute('SELECT * FROM tools WHERE uid = ?', (uid,)).fetchone()
+        return self._normalize_tool_record(row) if row else None
+
+    def tcode_exists(self, tool_id: str, exclude_uid=None) -> bool:
+        tool_id = (tool_id or '').strip()
+        if not tool_id:
+            return False
+        if exclude_uid is None:
+            row = self.db.conn.execute('SELECT 1 FROM tools WHERE id = ? LIMIT 1', (tool_id,)).fetchone()
+            return bool(row)
+        row = self.db.conn.execute(
+            'SELECT 1 FROM tools WHERE id = ? AND uid <> ? LIMIT 1',
+            (tool_id, int(exclude_uid)),
+        ).fetchone()
+        return bool(row)
+
+    def save_tool(self, tool, allow_duplicate: bool = False):
         geometry_profiles = self._coerce_json_list(tool.get('geometry_profiles', []))
         support_parts = self._coerce_json_list(tool.get('support_parts', []))
         selected_head = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper()
@@ -159,57 +181,102 @@ class ToolService:
             json.dumps(geometry_profiles, ensure_ascii=False),
             json.dumps(support_parts, ensure_ascii=False),
             tool.get('stl_path', ''),
+            tool.get('default_pot', '').strip(),
         )
+        uid = tool.get('uid')
         with self.db.conn:
+            if uid is None:
+                tool_id = tool['id'].strip()
+                if (not allow_duplicate) and self.tcode_exists(tool_id):
+                    existing_row = self.db.conn.execute(
+                        'SELECT uid FROM tools WHERE id = ? ORDER BY uid DESC LIMIT 1',
+                        (tool_id,),
+                    ).fetchone()
+                    if existing_row:
+                        uid = int(existing_row[0])
+                if uid is None:
+                    self.db.conn.execute(
+                        """
+                        INSERT INTO tools (
+                            id, tool_head, tool_type, description, geom_x, geom_z, radius,
+                            nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
+                            cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
+                            notes, drill_nose_angle, mill_cutting_edges, spare_parts,
+                            geometry_profiles, support_parts, stl_path, default_pot
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        payload,
+                    )
+                    return int(self.db.conn.execute('SELECT last_insert_rowid()').fetchone()[0])
+
+            update_payload = payload + (int(uid),)
             self.db.conn.execute(
                 """
-                INSERT INTO tools (
-                    id, tool_head, tool_type, description, geom_x, geom_z, radius,
-                    nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
-                    cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
-                    notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                    geometry_profiles, support_parts, stl_path
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    tool_head=excluded.tool_head,
-                    tool_type=excluded.tool_type,
-                    description=excluded.description,
-                    geom_x=excluded.geom_x,
-                    geom_z=excluded.geom_z,
-                    radius=excluded.radius,
-                    nose_corner_radius=excluded.nose_corner_radius,
-                    holder_code=excluded.holder_code,
-                    holder_link=excluded.holder_link,
-                    holder_add_element=excluded.holder_add_element,
-                    holder_add_element_link=excluded.holder_add_element_link,
-                    cutting_type=excluded.cutting_type,
-                    cutting_code=excluded.cutting_code,
-                    cutting_link=excluded.cutting_link,
-                    cutting_add_element=excluded.cutting_add_element,
-                    cutting_add_element_link=excluded.cutting_add_element_link,
-                    notes=excluded.notes,
-                    drill_nose_angle=excluded.drill_nose_angle,
-                    mill_cutting_edges=excluded.mill_cutting_edges,
-                    spare_parts=excluded.spare_parts,
-                    geometry_profiles=excluded.geometry_profiles,
-                    support_parts=excluded.support_parts,
-                    stl_path=excluded.stl_path
+                UPDATE tools
+                SET
+                    id=?,
+                    tool_head=?,
+                    tool_type=?,
+                    description=?,
+                    geom_x=?,
+                    geom_z=?,
+                    radius=?,
+                    nose_corner_radius=?,
+                    holder_code=?,
+                    holder_link=?,
+                    holder_add_element=?,
+                    holder_add_element_link=?,
+                    cutting_type=?,
+                    cutting_code=?,
+                    cutting_link=?,
+                    cutting_add_element=?,
+                    cutting_add_element_link=?,
+                    notes=?,
+                    drill_nose_angle=?,
+                    mill_cutting_edges=?,
+                    spare_parts=?,
+                    geometry_profiles=?,
+                    support_parts=?,
+                    stl_path=?,
+                    default_pot=?
+                WHERE uid=?
                 """,
-                payload,
+                update_payload,
             )
+            return int(uid)
 
     def delete_tool(self, tool_id):
         with self.db.conn:
             self.db.conn.execute('DELETE FROM tools WHERE id = ?', (tool_id,))
 
+    def delete_tool_by_uid(self, uid):
+        with self.db.conn:
+            self.db.conn.execute('DELETE FROM tools WHERE uid = ?', (uid,))
+
     def copy_tool(self, source_id: str, new_id: str, new_description: str = ''):
         tool = self.get_tool(source_id)
         if not tool:
             raise ValueError('Source tool not found.')
-        if self.get_tool(new_id):
+        if self.tcode_exists(new_id):
             raise ValueError(f'Tool ID {new_id} already exists.')
+        tool.pop('uid', None)
         tool['id'] = new_id.strip()
         if new_description.strip():
             tool['description'] = new_description.strip()
-        self.save_tool(tool)
-        return tool
+        new_uid = self.save_tool(tool)
+        copied = self.get_tool_by_uid(new_uid)
+        return copied or tool
+
+    def copy_tool_by_uid(self, source_uid: int, new_id: str, new_description: str = ''):
+        tool = self.get_tool_by_uid(source_uid)
+        if not tool:
+            raise ValueError('Source tool not found.')
+        if self.tcode_exists(new_id):
+            raise ValueError(f'Tool ID {new_id} already exists.')
+        tool.pop('uid', None)
+        tool['id'] = new_id.strip()
+        if new_description.strip():
+            tool['description'] = new_description.strip()
+        new_uid = self.save_tool(tool)
+        copied = self.get_tool_by_uid(new_uid)
+        return copied or tool

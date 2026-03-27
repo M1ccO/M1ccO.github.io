@@ -37,6 +37,7 @@ from config import DEFAULT_TOOL_ICON, TOOL_ICONS_DIR, TOOL_TYPE_TO_ICON
 ROLE_TOOL_ID = Qt.UserRole
 ROLE_TOOL_DATA = Qt.UserRole + 1
 ROLE_TOOL_ICON = Qt.UserRole + 2
+ROLE_TOOL_UID = Qt.UserRole + 3
 
 # ── Layout constants ────────────────────────────────────────────────────
 ROW_HEIGHT = 74

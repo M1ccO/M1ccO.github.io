@@ -51,6 +51,7 @@ def _ensure_works_table(conn):
                 head2_tool_ids TEXT DEFAULT '[]',
                 head1_tool_assignments TEXT DEFAULT '[]',
                 head2_tool_assignments TEXT DEFAULT '[]',
+                print_pots INTEGER DEFAULT 0,
                 robot_info TEXT DEFAULT '',
                 notes TEXT DEFAULT '',
                 created_at TEXT DEFAULT '',
@@ -103,6 +104,7 @@ def _ensure_works_table(conn):
         "sub_pickup_z": "TEXT DEFAULT ''",
         "head1_tool_assignments": "TEXT DEFAULT '[]'",
         "head2_tool_assignments": "TEXT DEFAULT '[]'",
+        "print_pots": "INTEGER DEFAULT 0",
     }
     cols = table_columns(conn, "works")
     with conn:

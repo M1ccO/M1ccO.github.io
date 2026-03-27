@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import json
 from typing import Callable
 
 from PySide6.QtCore import QPoint, QRect, QSize, Qt, Signal
@@ -23,7 +24,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import TOOL_ICONS_DIR
+from config import SETTINGS_PATH, TOOL_ICONS_DIR
 from shared.editor_helpers import add_shadow, setup_editor_dialog
 
 
@@ -340,6 +341,7 @@ class _HandleCursorSlider(QSlider):
 class ColorPickerDialog(QDialog):
     _custom_colors = ["" for _ in range(13)]
     _custom_insert_index = 0
+    _custom_colors_loaded = False
     _custom_add_icon = QIcon(str(TOOL_ICONS_DIR / "Plus_icon.svg"))
     _custom_delete_icon = QIcon(str(TOOL_ICONS_DIR / "delete.svg"))
 
@@ -352,6 +354,7 @@ class ColorPickerDialog(QDialog):
         super().__init__(parent)
         self._translate = translate or _noop_translate
         self._updating_fields = False
+        type(self)._load_custom_colors_from_settings()
         self._selected_color = QColor(initial_color if QColor(initial_color).isValid() else "#9ea7b3")
         self._selected_basic_index = -1
         self._selected_custom_index = -1
@@ -388,6 +391,58 @@ class ColorPickerDialog(QDialog):
         if dialog.exec():
             return dialog.selected_color()
         return None
+
+    @classmethod
+    def _load_custom_colors_from_settings(cls):
+        if cls._custom_colors_loaded:
+            return
+
+        cls._custom_colors_loaded = True
+        try:
+            if SETTINGS_PATH.exists():
+                payload = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            else:
+                payload = {}
+        except Exception:
+            payload = {}
+
+        raw_colors = payload.get("color_picker_custom_colors")
+        if isinstance(raw_colors, list):
+            normalized = []
+            for value in raw_colors[: len(cls._custom_colors)]:
+                if isinstance(value, str) and QColor(value).isValid():
+                    normalized.append(QColor(value).name())
+                else:
+                    normalized.append("")
+            while len(normalized) < len(cls._custom_colors):
+                normalized.append("")
+            cls._custom_colors = normalized
+
+        try:
+            insert_index = int(payload.get("color_picker_custom_insert_index", cls._custom_insert_index))
+        except Exception:
+            insert_index = 0
+        cls._custom_insert_index = insert_index % len(cls._custom_colors)
+
+    @classmethod
+    def _save_custom_colors_to_settings(cls):
+        try:
+            if SETTINGS_PATH.exists():
+                payload = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+            else:
+                payload = {}
+        except Exception:
+            payload = {}
+
+        payload["color_picker_custom_colors"] = list(cls._custom_colors)
+        payload["color_picker_custom_insert_index"] = int(cls._custom_insert_index)
+
+        try:
+            SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            SETTINGS_PATH.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            # Persistence is best-effort; picker should still work without disk writes.
+            pass
 
     @staticmethod
     def _build_grid_palette() -> list[str]:
@@ -840,6 +895,7 @@ class ColorPickerDialog(QDialog):
         if not (0 <= index < len(type(self)._custom_colors)):
             return
         type(self)._custom_colors[index] = ""
+        type(self)._save_custom_colors_to_settings()
         self._custom_swatches[index].set_color("")
         self._selected_custom_index = -1
         self._update_swatch_selection(self._selected_color.name(), preserve_custom=True)
@@ -854,6 +910,7 @@ class ColorPickerDialog(QDialog):
             current_colors[index] = color_hex
             type(self)._custom_insert_index = (index + 1) % len(current_colors)
             self._custom_swatches[index].set_color(color_hex)
+            type(self)._save_custom_colors_to_settings()
         self._selected_custom_index = index
         self._update_swatch_selection(color_hex, preserve_custom=True)
 

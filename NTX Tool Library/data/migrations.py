@@ -87,7 +87,79 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
     migrate_tool_head_defaults(conn)
     migrate_note_fields(conn)
     migrate_cutting_type(conn)
+    migrate_tools_uid_schema(conn)
+    migrate_default_pot(conn)
     migrate_jaws_schema(conn)
+
+
+def migrate_default_pot(conn: sqlite3.Connection):
+    cols = table_columns(conn, 'tools')
+    if 'default_pot' not in cols:
+        with conn:
+            conn.execute("ALTER TABLE tools ADD COLUMN default_pot TEXT DEFAULT ''")
+
+
+def migrate_tools_uid_schema(conn: sqlite3.Connection):
+    cols = table_columns(conn, 'tools')
+    if 'uid' in cols:
+        with conn:
+            conn.execute('CREATE INDEX IF NOT EXISTS idx_tools_id ON tools(id)')
+        return
+
+    with conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tools_new (
+                uid INTEGER PRIMARY KEY AUTOINCREMENT,
+                id TEXT NOT NULL,
+                tool_head TEXT DEFAULT 'HEAD1',
+                tool_type TEXT DEFAULT 'Turning',
+                description TEXT DEFAULT '',
+                geom_x REAL DEFAULT 0,
+                geom_z REAL DEFAULT 0,
+                radius REAL DEFAULT 0,
+                nose_corner_radius REAL DEFAULT 0,
+                holder_code TEXT DEFAULT '',
+                holder_link TEXT DEFAULT '',
+                holder_add_element TEXT DEFAULT '',
+                holder_add_element_link TEXT DEFAULT '',
+                cutting_type TEXT DEFAULT 'Insert',
+                cutting_code TEXT DEFAULT '',
+                cutting_link TEXT DEFAULT '',
+                cutting_add_element TEXT DEFAULT '',
+                cutting_add_element_link TEXT DEFAULT '',
+                notes TEXT DEFAULT '',
+                drill_nose_angle REAL DEFAULT 0,
+                mill_cutting_edges INTEGER DEFAULT 0,
+                spare_parts TEXT DEFAULT '',
+                geometry_profiles TEXT DEFAULT '[]',
+                support_parts TEXT DEFAULT '[]',
+                stl_path TEXT DEFAULT '',
+                default_pot TEXT DEFAULT ''
+            )
+            """
+        )
+        conn.execute(
+            """
+            INSERT INTO tools_new (
+                id, tool_head, tool_type, description, geom_x, geom_z, radius,
+                nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
+                cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
+                notes, drill_nose_angle, mill_cutting_edges, spare_parts,
+                geometry_profiles, support_parts, stl_path
+            )
+            SELECT
+                id, tool_head, tool_type, description, geom_x, geom_z, radius,
+                nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
+                cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
+                notes, drill_nose_angle, mill_cutting_edges, spare_parts,
+                geometry_profiles, support_parts, stl_path
+            FROM tools
+            """
+        )
+        conn.execute('DROP TABLE tools')
+        conn.execute('ALTER TABLE tools_new RENAME TO tools')
+        conn.execute('CREATE INDEX IF NOT EXISTS idx_tools_id ON tools(id)')
 
 
 def migrate_tool_head_defaults(conn: sqlite3.Connection):

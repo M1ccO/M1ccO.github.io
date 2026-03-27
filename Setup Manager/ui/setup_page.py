@@ -590,6 +590,8 @@ class SetupPage(QWidget):
             for key, (translation_key, default) in self._section_title_keys.items()
         }
         self._detail_section_title_labels: dict[str, QLabel] = {}
+        self._tool_db_mtime = self._safe_mtime(self.draw_service.tool_db_path)
+        self._jaw_db_mtime = self._safe_mtime(self.draw_service.jaw_db_path)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -844,8 +846,36 @@ class SetupPage(QWidget):
 
         self.refresh_works()
 
+        self._external_refs_timer = QTimer(self)
+        self._external_refs_timer.setInterval(1500)
+        self._external_refs_timer.timeout.connect(self._on_external_references_maybe_changed)
+        self._external_refs_timer.start()
+
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
+
+    @staticmethod
+    def _safe_mtime(path) -> float | None:
+        try:
+            p = Path(path)
+            return p.stat().st_mtime if p.exists() else None
+        except Exception:
+            return None
+
+    def _on_external_references_maybe_changed(self):
+        tool_mtime = self._safe_mtime(self.draw_service.tool_db_path)
+        jaw_mtime = self._safe_mtime(self.draw_service.jaw_db_path)
+        changed = (tool_mtime != self._tool_db_mtime) or (jaw_mtime != self._jaw_db_mtime)
+        if not changed:
+            return
+
+        self._tool_db_mtime = tool_mtime
+        self._jaw_db_mtime = jaw_mtime
+
+        # If details are open, refresh immediately so deleted/updated tools and jaws
+        # are reflected without restarting Setup Manager.
+        if self._details_open and self.current_work_id:
+            self._refresh_details()
 
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None):
         if translate is not None:
@@ -1259,31 +1289,74 @@ class SetupPage(QWidget):
         row_host.add_widget(_jaw_box(self._t("setup_page.field.sp2", "SP2"), sub_jaw_id, sub_stop_screws))
         layout.addWidget(row_host)
 
-    def _set_tool_cards(self, key: str, tool_ids: list):
+    def _set_tool_cards(self, key: str, tool_assignments: list):
         self._clear_section(key)
         layout = self.detail_sections[key]
-        clean_ids = [str(tid).strip() for tid in (tool_ids or []) if str(tid).strip()]
-        if not clean_ids:
+        normalized = []
+        for entry in (tool_assignments or []):
+            if isinstance(entry, dict):
+                tool_id = str(entry.get("tool_id") or entry.get("id") or "").strip()
+                raw_uid = entry.get("tool_uid", entry.get("uid"))
+                try:
+                    tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
+                except Exception:
+                    tool_uid = None
+                override_id = str(entry.get("override_id") or "").strip()
+                override_description = str(entry.get("override_description") or "").strip()
+                pot = str(entry.get("pot") or "").strip()
+            else:
+                tool_id = str(entry or "").strip()
+                tool_uid = None
+                override_id = ""
+                override_description = ""
+                pot = ""
+            if tool_id:
+                normalized.append((tool_id, tool_uid, override_id, override_description, pot))
+
+        if not normalized:
             placeholder = QLabel(self._t("setup_page.message.no_tools_assigned", "No tools assigned"))
             placeholder.setProperty("detailHint", True)
             layout.addWidget(placeholder)
             return
-        for tool_id in clean_ids:
-            tool = self.draw_service.get_tool_ref(tool_id)
+
+        for tool_id, tool_uid, override_id, override_description, pot in normalized:
+            tool = None
+            if tool_uid is not None:
+                tool = self.draw_service.get_tool_ref_by_uid(tool_uid)
             if not tool:
-                text = self._t(
-                    "setup_page.message.tool_missing_from_db",
-                    "{tool_id} - (missing from tool database)",
-                    tool_id=tool_id,
-                )
+                tool = self.draw_service.get_tool_ref(tool_id)
+            if not tool:
+                deleted_label = self._t("work_editor.tools.deleted_tool", "DELETED TOOL")
+                display_id = override_id or tool_id
+                text = f"{display_id} - {deleted_label}" if display_id else deleted_label
             else:
-                desc = (tool.get("description") or "").strip()
-                text = f"{tool_id} - {desc}" if desc else tool_id
-            line = QLabel(text)
-            line.setProperty("detailFieldValue", True)
-            line.setWordWrap(True)
-            line.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            layout.addWidget(line)
+                display_id = override_id or tool_id
+                desc = override_description or (tool.get("description") or "").strip()
+                text = f"{display_id} - {desc}" if desc else display_id
+            from html import escape as _he
+            row = QFrame()
+            row.setProperty("toolCardRow", True)
+            row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(6, 4, 6, 4)
+            row_layout.setSpacing(8)
+
+            text_lbl = QLabel(text)
+            text_lbl.setWordWrap(False)
+            text_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            text_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            text_lbl.setStyleSheet("background: transparent; font-size: 14pt; font-weight: 600; color: #171a1d;")
+            row_layout.addWidget(text_lbl, 1)
+
+            if pot:
+                pot_lbl = QLabel(pot)
+                pot_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                pot_lbl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+                pot_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                pot_lbl.setStyleSheet("background: transparent; font-size: 14pt; font-weight: 700; color: #171a1d;")
+                row_layout.addWidget(pot_lbl, 0)
+
+            layout.addWidget(row)
 
     def _update_open_library_viewer_visibility(self, work=None):
         tool_ids, jaw_ids = self._collect_library_filter_ids(work)
@@ -1402,7 +1475,10 @@ class SetupPage(QWidget):
         ])
         self._set_jaw_overview(main_jaw, sub_jaw, main_stop_screws, sub_stop_screws)
         self._set_section_fields("head1", _head_fields("head1"))
-        self._set_tool_cards("head1_tools", work.get("head1_tool_ids") or [])
+        self._set_tool_cards(
+            "head1_tools",
+            work.get("head1_tool_assignments") or work.get("head1_tool_ids") or [],
+        )
         head2_fields = _head_fields("head2")
         self._set_section_fields(
             "head2",
@@ -1410,7 +1486,10 @@ class SetupPage(QWidget):
                 (self._t("setup_page.field.status", "Status"), self._t("setup_page.field.unused_setup", "Unused for this setup"))
             ],
         )
-        self._set_tool_cards("head2_tools", work.get("head2_tool_ids") or [])
+        self._set_tool_cards(
+            "head2_tools",
+            work.get("head2_tool_assignments") or work.get("head2_tool_ids") or [],
+        )
         sub_pickup = (work.get("sub_pickup_z") or "").strip()
         robot_info = (work.get("robot_info", "") or "").strip()
         robot_fields = []

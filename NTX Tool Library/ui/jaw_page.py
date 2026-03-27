@@ -10,10 +10,10 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
+    QDialogButtonBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QListView,
@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 from config import TOOL_ICONS_DIR
 from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_ICON, ROLE_JAW_ID, jaw_icon_for_row
 from ui.jaw_editor_dialog import AddEditJawDialog
+from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, setup_editor_dialog
 
 
 def _load_transparent_icon(path, threshold: int = 220) -> QPixmap:
@@ -1156,12 +1157,25 @@ class JawPage(QWidget):
                 self._t('jaw_library.message.select_jaw_first', 'Select a jaw first.'),
             )
             return
-        answer = QMessageBox.question(
-            self,
-            self._t('jaw_library.action.delete_jaw', 'Delete jaw'),
-            self._t('jaw_library.message.delete_jaw_prompt', 'Delete jaw {jaw_id}?', jaw_id=self.current_jaw_id),
-        )
-        if answer != QMessageBox.Yes:
+        box = QMessageBox(self)
+        setup_editor_dialog(box)
+        box.setIcon(QMessageBox.Warning)
+        box.setWindowTitle(self._t('jaw_library.action.delete_jaw', 'Delete jaw'))
+        box.setText(self._t('jaw_library.message.delete_jaw_prompt', 'Delete jaw {jaw_id}?', jaw_id=self.current_jaw_id))
+        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+
+        yes_btn = box.button(QMessageBox.Yes)
+        no_btn = box.button(QMessageBox.No)
+        if yes_btn is not None:
+            yes_btn.setText(self._t('common.yes', 'Yes'))
+            yes_btn.setProperty('panelActionButton', True)
+            yes_btn.setProperty('dangerAction', True)
+        if no_btn is not None:
+            no_btn.setText(self._t('common.no', 'No'))
+            no_btn.setProperty('panelActionButton', True)
+            no_btn.setProperty('secondaryAction', True)
+
+        if box.exec() != QMessageBox.Yes:
             return
         self.jaw_service.delete_jaw(self.current_jaw_id)
         self.current_jaw_id = None
@@ -1199,20 +1213,39 @@ class JawPage(QWidget):
             QMessageBox.warning(self, self._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
 
     def _prompt_text(self, title: str, label: str, initial: str = '') -> tuple[str, bool]:
-        dlg = QInputDialog(self)
+        dlg = QDialog(self)
+        setup_editor_dialog(dlg)
         dlg.setWindowTitle(title)
-        dlg.setLabelText(label)
-        dlg.setTextValue(initial)
-        dlg.setInputMode(QInputDialog.TextInput)
-        dlg.setOkButtonText(self._t('common.ok', 'OK'))
-        dlg.setCancelButtonText(self._t('common.cancel', 'Cancel'))
+        dlg.setModal(True)
 
-        # Ensure copy dialogs match panel button styling.
-        for btn in dlg.findChildren(QPushButton):
-            btn.setProperty('panelActionButton', True)
+        root = QVBoxLayout(dlg)
+        root.setContentsMargins(12, 12, 12, 12)
+        root.setSpacing(8)
+
+        prompt = QLabel(label)
+        prompt.setProperty('detailFieldKey', True)
+        prompt.setWordWrap(True)
+        root.addWidget(prompt)
+
+        editor = QLineEdit()
+        editor.setText(initial)
+        root.addWidget(editor)
+
+        buttons = create_dialog_buttons(
+            dlg,
+            save_text=self._t('common.ok', 'OK'),
+            cancel_text=self._t('common.cancel', 'Cancel'),
+            on_save=dlg.accept,
+            on_cancel=dlg.reject,
+        )
+        root.addWidget(buttons)
+
+        apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
+        editor.setFocus()
+        editor.selectAll()
 
         accepted = dlg.exec() == QDialog.Accepted
-        return dlg.textValue(), accepted
+        return editor.text(), accepted
 
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None):
         if translate is not None:

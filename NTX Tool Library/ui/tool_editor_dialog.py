@@ -152,6 +152,12 @@ class AddEditToolDialog(QDialog):
         key = f"tool_library.cutting_type.{(raw_cutting_type or '').strip().lower().replace(' ', '_')}"
         return self._t(key, raw_cutting_type)
 
+    def _localized_tool_head(self, head: str) -> str:
+        normalized = (head or 'HEAD1').strip().upper()
+        if normalized == 'HEAD2':
+            return self._t('tool_editor.tool_head.head2', 'Head 2')
+        return self._t('tool_editor.tool_head.head1', 'Head 1')
+
     @staticmethod
     def _set_combo_by_data(combo: QComboBox, value: str):
         target = (value or '').strip()
@@ -233,7 +239,7 @@ class AddEditToolDialog(QDialog):
         self.general_fields_grid = None  # Groups handle layout directly
 
         self.tool_id = QLineEdit()
-        self.tool_head = QPushButton('HEAD1')
+        self.tool_head = QPushButton(self._localized_tool_head('HEAD1'))
         self.tool_head.setCheckable(True)
         self.tool_head.clicked.connect(self._toggle_tool_head)
         apply_secondary_button_theme(self.tool_head)
@@ -289,6 +295,7 @@ class AddEditToolDialog(QDialog):
         self.cutting_add_element = QLineEdit()
         self.cutting_add_element_link = QLineEdit()
         self.notes = QLineEdit()
+        self.default_pot = QLineEdit()
 
         self.holder_code_row = self._build_picker_row(
             self.holder_code,
@@ -322,7 +329,7 @@ class AddEditToolDialog(QDialog):
             self.holder_add_element, self.holder_add_element_link, self.cutting_type,
             self.cutting_code, self.cutting_link, self.cutting_add_element,
             self.cutting_add_element_link, self.drill_nose_angle,
-            self.mill_cutting_edges, self.notes
+            self.mill_cutting_edges, self.notes, self.default_pot
         ]:
             self._style_general_editor(w)
 
@@ -332,6 +339,7 @@ class AddEditToolDialog(QDialog):
         group1 = self._build_field_group([
             self._build_edit_field(self._t('tool_library.row.tool_id', 'Tool ID'), self.tool_id),
             self._build_edit_field(self._t('tool_editor.field.tool_type', 'Tool type'), self.tool_type_row),
+            self._build_edit_field(self._t('tool_editor.field.default_pot', 'Default pot'), self.default_pot),
             self._build_edit_field(self._t('setup_page.field.description', 'Description'), self.description),
         ])
 
@@ -751,11 +759,11 @@ class AddEditToolDialog(QDialog):
         is_head2 = normalized == 'HEAD2'
         self.tool_head.blockSignals(True)
         self.tool_head.setChecked(is_head2)
-        self.tool_head.setText('HEAD2' if is_head2 else 'HEAD1')
+        self.tool_head.setText(self._localized_tool_head('HEAD2' if is_head2 else 'HEAD1'))
         self.tool_head.blockSignals(False)
 
     def _toggle_tool_head(self, checked: bool):
-        self.tool_head.setText('HEAD2' if checked else 'HEAD1')
+        self.tool_head.setText(self._localized_tool_head('HEAD2' if checked else 'HEAD1'))
 
     def _get_tool_head_value(self) -> str:
         return 'HEAD2' if self.tool_head.isChecked() else 'HEAD1'
@@ -1333,6 +1341,7 @@ class AddEditToolDialog(QDialog):
         self.cutting_add_element.setText(self.tool.get('cutting_add_element', ''))
         self.cutting_add_element_link.setText(self.tool.get('cutting_add_element_link', ''))
         self.notes.setText(self.tool.get('notes', self.tool.get('spare_parts', '')))
+        self.default_pot.setText(self.tool.get('default_pot', ''))
         self.drill_nose_angle.setText(str(self.tool.get('drill_nose_angle', '')))
         self.mill_cutting_edges.setText(str(self.tool.get('mill_cutting_edges', '')))
 
@@ -1442,4 +1451,5 @@ class AddEditToolDialog(QDialog):
             'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.cutting_edges', 'Cutting edges')) if selected_cutting == 'Mill' else 0,
             'support_parts': self._table_to_parts(self.parts_table, ['name', 'code', 'link', 'group']),
             'stl_path': json.dumps(model_parts) if model_parts else '',
+            'default_pot': self.default_pot.text().strip(),
         }

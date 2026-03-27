@@ -674,19 +674,23 @@ class MainWindow(QMainWindow):
 
     def _apply_style(self):
         try:
+            def _resolve_asset_urls(qss: str) -> str:
+                assets_dir = (Path(STYLE_PATH).parent.parent / "assets").resolve().as_posix()
+                return qss.replace('url("assets/', f'url("{assets_dir}/').replace("url('assets/", f"url('{assets_dir}/")
+
             style_dir = Path(STYLE_PATH).parent
             modules_dir = style_dir / "modules"
             merged = []
             if modules_dir.is_dir():
                 for module_path in sorted(modules_dir.glob("*.qss")):
                     try:
-                        merged.append(module_path.read_text(encoding="utf-8"))
+                        merged.append(_resolve_asset_urls(module_path.read_text(encoding="utf-8")))
                     except Exception:
                         pass
             if merged:
                 self.setStyleSheet("\n".join(merged) + "\n\n" + self._build_ui_preference_overrides())
             else:
-                qss = Path(STYLE_PATH).read_text(encoding="utf-8")
+                qss = _resolve_asset_urls(Path(STYLE_PATH).read_text(encoding="utf-8"))
                 self.setStyleSheet(qss + "\n\n" + self._build_ui_preference_overrides())
         except Exception:
             pass
