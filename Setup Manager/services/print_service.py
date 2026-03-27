@@ -469,10 +469,11 @@ class PrintService:
             box_h = 14
             box_x = x + width - box_w - 5
             box_y = card_mid - box_h / 2
-            canvas.setStrokeColorRGB(0.70, 0.78, 0.88)
+            canvas.setStrokeColorRGB(0.55, 0.66, 0.77)
             canvas.roundRect(box_x, box_y, box_w, box_h, 4, stroke=1, fill=0)
             canvas.setFillColorRGB(0.17, 0.28, 0.41)
-            canvas.drawString(box_x + box_pad_x, card_mid - 4.2, pot)
+            text_x = box_x + box_w / 2 - pot_text_w / 2
+            canvas.drawString(text_x, card_mid - 3.5, pot)
 
         return bottom_y - self._TOOL_CARD_GAP
 
