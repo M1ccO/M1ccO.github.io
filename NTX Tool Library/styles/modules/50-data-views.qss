@@ -175,6 +175,59 @@ QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable QHeaderView::sect
     color: #25313b;
 }
 
+/* Spare parts table inside editor */
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    gridline-color: #d8e0e8;
+    selection-background-color: #cfe4f8;
+    selection-color: #16334e;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable::item {
+    padding: 7px 10px;
+    border: none;
+    border-bottom: 1px solid #d8e0e8;
+    background-color: transparent;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable::item:selected,
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable::item:selected:active,
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable::item:selected:!active {
+    background-color: #cfe4f8;
+    color: #16334e;
+    border: 1px solid #8db9df;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable QHeaderView::section {
+    background-color: #f3f6f8;
+    border: 1px solid #d9e0e6;
+    padding: 7px 8px;
+    font-weight: 700;
+    color: #25313b;
+}
+
+/* Combo inside spare parts table cells - flat integrated look */
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable QComboBox {
+    border: none;
+    border-radius: 0px;
+    background: transparent;
+    padding: 4px 8px;
+    font-size: 10pt;
+    min-height: 24px;
+    max-height: 28px;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable QComboBox:hover {
+    background: #f0f4f8;
+}
+
+QDialog[workEditorDialog="true"] QTableWidget#editorSparePartsTable QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
 QDialog[workEditorDialog="true"] QTableWidget#editorModelsTable {
     background-color: transparent;
     border: none;

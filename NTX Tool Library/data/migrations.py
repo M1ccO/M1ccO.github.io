@@ -45,7 +45,8 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
                 mill_cutting_edges INTEGER DEFAULT 0,
                 spare_parts TEXT DEFAULT '',
                 geometry_profiles TEXT DEFAULT '[]',
-                support_parts TEXT DEFAULT '[]'
+                support_parts TEXT DEFAULT '[]',
+                component_items TEXT DEFAULT '[]'
             )
             """
         )
@@ -73,6 +74,7 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
         'spare_parts': "TEXT DEFAULT ''",
         'geometry_profiles': "TEXT DEFAULT '[]'",
         'support_parts': "TEXT DEFAULT '[]'",
+        'component_items': "TEXT DEFAULT '[]'",
         # new column for storing path to an STL file used for 3‑D preview
         'stl_path': "TEXT DEFAULT ''",
     }
@@ -89,6 +91,7 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
     migrate_cutting_type(conn)
     migrate_tools_uid_schema(conn)
     migrate_default_pot(conn)
+    migrate_component_items(conn)
     migrate_jaws_schema(conn)
 
 
@@ -134,6 +137,7 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
                 spare_parts TEXT DEFAULT '',
                 geometry_profiles TEXT DEFAULT '[]',
                 support_parts TEXT DEFAULT '[]',
+                component_items TEXT DEFAULT '[]',
                 stl_path TEXT DEFAULT '',
                 default_pot TEXT DEFAULT ''
             )
@@ -146,14 +150,14 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
                 nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                 cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                 notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                geometry_profiles, support_parts, stl_path
+                geometry_profiles, support_parts, component_items, stl_path
             )
             SELECT
                 id, tool_head, tool_type, description, geom_x, geom_z, radius,
                 nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                 cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                 notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                geometry_profiles, support_parts, stl_path
+                geometry_profiles, support_parts, component_items, stl_path
             FROM tools
             """
         )
@@ -249,6 +253,87 @@ def migrate_cutting_type(conn: sqlite3.Connection):
                 inferred = 'Mill'
             tool_id = row['id'] if hasattr(row, 'keys') else row[0]
             conn.execute('UPDATE tools SET cutting_type = ? WHERE id = ?', (inferred, tool_id))
+
+
+def _legacy_component_items_from_row(row):
+    keys = row.keys() if hasattr(row, 'keys') else []
+    components = []
+
+    def _add(role: str, label: str, code: str, link: str = '', group: str = ''):
+        code_text = (code or '').strip()
+        if not code_text:
+            return
+        components.append(
+            {
+                'role': role,
+                'label': label,
+                'code': code_text,
+                'link': (link or '').strip(),
+                'group': (group or '').strip(),
+                'order': len(components),
+            }
+        )
+
+    holder_code = row['holder_code'] if 'holder_code' in keys else ''
+    holder_link = row['holder_link'] if 'holder_link' in keys else ''
+    holder_add = row['holder_add_element'] if 'holder_add_element' in keys else ''
+    holder_add_link = row['holder_add_element_link'] if 'holder_add_element_link' in keys else ''
+    cutting_type = (row['cutting_type'] if 'cutting_type' in keys else 'Insert') or 'Insert'
+    cutting_code = row['cutting_code'] if 'cutting_code' in keys else ''
+    cutting_link = row['cutting_link'] if 'cutting_link' in keys else ''
+    cutting_add = row['cutting_add_element'] if 'cutting_add_element' in keys else ''
+    cutting_add_link = row['cutting_add_element_link'] if 'cutting_add_element_link' in keys else ''
+
+    _add('holder', 'Holder', holder_code, holder_link)
+    _add('holder', 'Add. Element', holder_add, holder_add_link)
+    _add('cutting', str(cutting_type).strip() or 'Insert', cutting_code, cutting_link)
+    _add('cutting', f"Add. {str(cutting_type).strip() or 'Insert'}", cutting_add, cutting_add_link)
+
+    support_parts = json_loads(row['support_parts'] if 'support_parts' in keys else '[]')
+    if isinstance(support_parts, list):
+        for part in support_parts:
+            if isinstance(part, str):
+                try:
+                    part = json.loads(part)
+                except Exception:
+                    part = {'name': part, 'code': '', 'link': '', 'group': ''}
+            if not isinstance(part, dict):
+                continue
+            _add(
+                'support',
+                (part.get('name') or 'Part').strip() or 'Part',
+                part.get('code', ''),
+                part.get('link', ''),
+                part.get('group', ''),
+            )
+
+    return components
+
+
+def migrate_component_items(conn: sqlite3.Connection):
+    cols = table_columns(conn, 'tools')
+    if 'component_items' not in cols:
+        return
+
+    rows = conn.execute('SELECT uid, * FROM tools').fetchall()
+    with conn:
+        for row in rows:
+            raw = row['component_items'] if 'component_items' in row.keys() else ''
+            current = json_loads(raw)
+            if isinstance(current, list) and current:
+                continue
+            components = _legacy_component_items_from_row(row)
+            uid = row['uid'] if 'uid' in row.keys() else None
+            if uid is None:
+                conn.execute(
+                    'UPDATE tools SET component_items = ? WHERE id = ?',
+                    (json.dumps(components, ensure_ascii=False), row['id']),
+                )
+            else:
+                conn.execute(
+                    'UPDATE tools SET component_items = ? WHERE uid = ?',
+                    (json.dumps(components, ensure_ascii=False), uid),
+                )
 
 
 def migrate_old_part_fields(conn: sqlite3.Connection):

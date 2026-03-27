@@ -36,6 +36,130 @@ class ToolService:
 
         return parsed if isinstance(parsed, list) else []
 
+    @staticmethod
+    def _normalize_component_item(item, default_order=0):
+        if not isinstance(item, dict):
+            return None
+        role = (item.get('role') or '').strip().lower()
+        if role not in {'holder', 'cutting', 'support'}:
+            return None
+        code = (item.get('code') or '').strip()
+        if not code:
+            return None
+        label = (item.get('label') or '').strip()
+        if not label:
+            if role == 'holder':
+                label = 'Holder'
+            elif role == 'cutting':
+                label = 'Cutting'
+            else:
+                label = 'Part'
+        try:
+            order = int(item.get('order', default_order))
+        except Exception:
+            order = default_order
+        return {
+            'role': role,
+            'label': label,
+            'code': code,
+            'link': (item.get('link') or '').strip(),
+            'group': (item.get('group') or '').strip(),
+            'order': order,
+        }
+
+    def _component_items_from_legacy(self, tool):
+        items = []
+
+        def _add(role, label, code, link='', group=''):
+            code_text = (code or '').strip()
+            if not code_text:
+                return
+            normalized = self._normalize_component_item(
+                {
+                    'role': role,
+                    'label': label,
+                    'code': code_text,
+                    'link': (link or '').strip(),
+                    'group': (group or '').strip(),
+                    'order': len(items),
+                },
+                default_order=len(items),
+            )
+            if normalized is not None:
+                items.append(normalized)
+
+        cutting_type = (tool.get('cutting_type') or 'Insert').strip() or 'Insert'
+        _add('holder', 'Holder', tool.get('holder_code', ''), tool.get('holder_link', ''))
+        _add('holder', 'Add. Element', tool.get('holder_add_element', ''), tool.get('holder_add_element_link', ''))
+        _add('cutting', cutting_type, tool.get('cutting_code', ''), tool.get('cutting_link', ''))
+        _add(
+            'cutting',
+            f'Add. {cutting_type}',
+            tool.get('cutting_add_element', ''),
+            tool.get('cutting_add_element_link', ''),
+        )
+
+        support_parts = self._coerce_json_list(tool.get('support_parts', []))
+        for part in support_parts:
+            if isinstance(part, str):
+                try:
+                    part = json.loads(part)
+                except Exception:
+                    part = {'name': part, 'code': '', 'link': '', 'group': ''}
+            if not isinstance(part, dict):
+                continue
+            _add(
+                'support',
+                (part.get('name') or 'Part').strip() or 'Part',
+                part.get('code', ''),
+                part.get('link', ''),
+                part.get('group', ''),
+            )
+
+        return items
+
+    def _legacy_fields_from_component_items(self, component_items, fallback_cutting_type='Insert'):
+        holders = [i for i in component_items if i.get('role') == 'holder']
+        cuttings = [i for i in component_items if i.get('role') == 'cutting']
+        supports = [i for i in component_items if i.get('role') == 'support']
+
+        holder_main = holders[0] if len(holders) >= 1 else {}
+        holder_extra = holders[1] if len(holders) >= 2 else {}
+        cutting_main = cuttings[0] if len(cuttings) >= 1 else {}
+        cutting_extra = cuttings[1] if len(cuttings) >= 2 else {}
+
+        cutting_type = (
+            (cutting_main.get('label') or '').strip()
+            or (fallback_cutting_type or 'Insert').strip()
+            or 'Insert'
+        )
+        if cutting_type.lower().startswith('add. '):
+            cutting_type = (fallback_cutting_type or 'Insert').strip() or 'Insert'
+
+        support_parts = []
+        for item in supports:
+            support_parts.append(
+                {
+                    'name': (item.get('label') or 'Part').strip() or 'Part',
+                    'code': (item.get('code') or '').strip(),
+                    'link': (item.get('link') or '').strip(),
+                    'group': (item.get('group') or '').strip(),
+                }
+            )
+
+        return {
+            'holder_code': (holder_main.get('code') or '').strip(),
+            'holder_link': (holder_main.get('link') or '').strip(),
+            'holder_add_element': (holder_extra.get('code') or '').strip(),
+            'holder_add_element_link': (holder_extra.get('link') or '').strip(),
+            'cutting_type': cutting_type,
+            'cutting_code': (cutting_main.get('code') or '').strip(),
+            'cutting_link': (cutting_main.get('link') or '').strip(),
+            'cutting_add_element': (cutting_extra.get('code') or '').strip(),
+            'cutting_add_element_link': (cutting_extra.get('link') or '').strip(),
+            'support_parts': support_parts,
+        }
+
     def _normalize_tool_record(self, row_dict):
         tool = dict(row_dict)
         if 'uid' in tool:
@@ -47,6 +171,16 @@ class ToolService:
         tool['tool_head'] = tool_head if tool_head in {'HEAD1', 'HEAD2'} else 'HEAD1'
         tool['geometry_profiles'] = self._coerce_json_list(tool.get('geometry_profiles'))
         tool['support_parts'] = self._coerce_json_list(tool.get('support_parts'))
+        raw_components = self._coerce_json_list(tool.get('component_items'))
+        normalized_components = []
+        for idx, item in enumerate(raw_components):
+            normalized = self._normalize_component_item(item, idx)
+            if normalized is not None:
+                normalized_components.append(normalized)
+        normalized_components.sort(key=lambda entry: int(entry.get('order', 0)))
+        if not normalized_components:
+            normalized_components = self._component_items_from_legacy(tool)
+        tool['component_items'] = normalized_components
         return tool
 
     def _seed_if_empty(self):
@@ -76,6 +210,14 @@ class ToolService:
                 {'name': 'Screw', 'code': '438.3-831'},
                 {'name': 'Clamp', 'code': '438.3-840'},
                 {'name': 'Extra holder / sleeve', 'code': 'ER32-C6'},
+            ],
+            'component_items': [
+                {'role': 'holder', 'label': 'Holder', 'code': 'C6-PSRNR-35065-15HP', 'link': '', 'group': '', 'order': 0},
+                {'role': 'cutting', 'label': 'Insert', 'code': 'SNMG 15 06 16-QM 1205', 'link': '', 'group': '', 'order': 1},
+                {'role': 'support', 'label': 'Shim', 'code': '174.3-857', 'link': '', 'group': '', 'order': 2},
+                {'role': 'support', 'label': 'Screw', 'code': '438.3-831', 'link': '', 'group': '', 'order': 3},
+                {'role': 'support', 'label': 'Clamp', 'code': '438.3-840', 'link': '', 'group': '', 'order': 4},
+                {'role': 'support', 'label': 'Extra holder / sleeve', 'code': 'ER32-C6', 'link': '', 'group': '', 'order': 5},
             ],
             'notes': 'Clamp + screw set',
             'drill_nose_angle': 0,
@@ -151,7 +293,23 @@ class ToolService:
 
     def save_tool(self, tool, allow_duplicate: bool = False):
         geometry_profiles = self._coerce_json_list(tool.get('geometry_profiles', []))
+        raw_component_items = self._coerce_json_list(tool.get('component_items', []))
+        component_items = []
+        for idx, item in enumerate(raw_component_items):
+            normalized = self._normalize_component_item(item, idx)
+            if normalized is not None:
+                component_items.append(normalized)
+        component_items.sort(key=lambda entry: int(entry.get('order', 0)))
+        if not component_items:
+            component_items = self._component_items_from_legacy(tool)
+
+        legacy = self._legacy_fields_from_component_items(
+            component_items,
+            fallback_cutting_type=(str(tool.get('cutting_type', 'Insert') or 'Insert').strip() or 'Insert'),
+        )
         support_parts = self._coerce_json_list(tool.get('support_parts', []))
+        if not support_parts:
+            support_parts = legacy['support_parts']
         selected_head = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper()
         if selected_head not in {'HEAD1', 'HEAD2'}:
             selected_head = 'HEAD1'
@@ -165,21 +323,22 @@ class ToolService:
             float(tool.get('geom_z', 0) or 0),
             float(tool.get('radius', 0) or 0),
             float(tool.get('nose_corner_radius', 0) or 0),
-            tool.get('holder_code', '').strip(),
-            tool.get('holder_link', '').strip(),
-            tool.get('holder_add_element', '').strip(),
-            tool.get('holder_add_element_link', '').strip(),
-            tool.get('cutting_type', 'Insert').strip() or 'Insert',
-            tool.get('cutting_code', '').strip(),
-            tool.get('cutting_link', '').strip(),
-            tool.get('cutting_add_element', '').strip(),
-            tool.get('cutting_add_element_link', '').strip(),
+            legacy['holder_code'],
+            legacy['holder_link'],
+            legacy['holder_add_element'],
+            legacy['holder_add_element_link'],
+            legacy['cutting_type'],
+            legacy['cutting_code'],
+            legacy['cutting_link'],
+            legacy['cutting_add_element'],
+            legacy['cutting_add_element_link'],
             tool.get('notes', '').strip(),
             float(tool.get('drill_nose_angle', 0) or 0),
             int(tool.get('mill_cutting_edges', 0) or 0),
             tool.get('notes', '').strip(),
             json.dumps(geometry_profiles, ensure_ascii=False),
             json.dumps(support_parts, ensure_ascii=False),
+            json.dumps(component_items, ensure_ascii=False),
             tool.get('stl_path', ''),
             tool.get('default_pot', '').strip(),
         )
@@ -202,8 +361,8 @@ class ToolService:
                             nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                             cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                             notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                            geometry_profiles, support_parts, stl_path, default_pot
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            geometry_profiles, support_parts, component_items, stl_path, default_pot
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         payload,
                     )
@@ -237,6 +396,7 @@ class ToolService:
                     spare_parts=?,
                     geometry_profiles=?,
                     support_parts=?,
+                    component_items=?,
                     stl_path=?,
                     default_pot=?
                 WHERE uid=?

@@ -896,14 +896,11 @@ class HomePage(QWidget):
             return field_frame
 
         raw_cutting_type = tool.get('cutting_type', 'Insert')
-        cutting_type = self._localized_cutting_type(raw_cutting_type)
-        holder_add_element = (tool.get('holder_add_element', '') or '').strip()
-        cutting_add_element = (tool.get('cutting_add_element', '') or '').strip()
 
         # Build the information grid.
         # Row 0: Geom X (left half) | Geom Z (right half)
         # Row 1: Radius (left half) | Nose R / Corner R (right half)
-        # Row 2+: full-width code fields stacked one by one
+        # Row 2+: type-specific fields and notes.
         info = QGridLayout()
         info.setHorizontalSpacing(14)
         info.setVerticalSpacing(8)
@@ -918,16 +915,6 @@ class HomePage(QWidget):
         info.addWidget(build_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), str(tool.get('nose_corner_radius', ''))), 1, 2, 1, 2, Qt.AlignTop)
 
         full_row = 2
-        info.addWidget(build_field(self._t('tool_library.field.holder_code', 'Holder code'), tool.get('holder_code', '')), full_row, 0, 1, 4, Qt.AlignTop)
-        full_row += 1
-        if holder_add_element:
-            info.addWidget(build_field(self._t('tool_library.field.add_element', 'Add. Element'), holder_add_element), full_row, 0, 1, 4, Qt.AlignTop)
-            full_row += 1
-        info.addWidget(build_field(self._t('tool_library.field.cutting_code', '{cutting_type} code', cutting_type=cutting_type), tool.get('cutting_code', '')), full_row, 0, 1, 4, Qt.AlignTop)
-        full_row += 1
-        if cutting_add_element:
-            info.addWidget(build_field(self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=cutting_type), cutting_add_element), full_row, 0, 1, 4, Qt.AlignTop)
-            full_row += 1
         if raw_cutting_type == 'Drill':
             info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), str(tool.get('drill_nose_angle', ''))), full_row, 0, 1, 4, Qt.AlignTop)
             full_row += 1
@@ -992,106 +979,248 @@ class HomePage(QWidget):
         grid.setColumnStretch(0, 1)
         grid.setColumnStretch(1, 1)
         row = 0
-        raw_cutting_name = tool.get('cutting_type', '')
-        cutting_name = self._localized_cutting_type(raw_cutting_name) if raw_cutting_name else self._t('tool_library.field.cutting_part', 'Cutting part')
 
-        holder_part = {
-            'name': self._t('tool_library.field.holder', 'Holder'),
-            'code': tool.get('holder_code', ''),
-            'link': (tool.get('holder_link', '') or '').strip(),
-        }
-        btn = QPushButton(holder_part['name'])
-        btn.setProperty('assemblyPart', True)
-        btn.setProperty('panelActionButton', True)
-        btn.setMinimumWidth(0)
-        btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        btn.clicked.connect(lambda _=False, p=holder_part: self.part_clicked(p))
-        grid.addWidget(btn, row, 0)
-        grid.addWidget(self._value_label(holder_part['code']), row, 1)
-        row += 1
+        def _component_key(item: dict, fallback_idx: int) -> str:
+            explicit = (item.get('component_key') or '').strip()
+            if explicit:
+                return explicit
+            role = (item.get('role') or 'component').strip().lower()
+            code = (item.get('code') or '').strip()
+            if code:
+                return f"{role}:{code}"
+            return f"{role}:idx:{fallback_idx}"
 
-        holder_add_element = (tool.get('holder_add_element', '') or '').strip()
-        if holder_add_element:
-            holder_extra = {
-                'name': self._t('tool_library.field.add_element', 'Add. Element'),
-                'code': holder_add_element,
-                'link': (tool.get('holder_add_element_link', '') or '').strip(),
-            }
-            btn = QPushButton(holder_extra['name'])
-            btn.setProperty('assemblyPart', True)
-            btn.setProperty('panelActionButton', True)
-            btn.setMinimumWidth(0)
-            btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-            btn.clicked.connect(lambda _=False, p=holder_extra: self.part_clicked(p))
-            grid.addWidget(btn, row, 0)
-            grid.addWidget(self._value_label(holder_extra['code']), row, 1)
-            row += 1
+        def _wrap_title(text: str) -> str:
+            raw = (text or '').strip()
+            if len(raw) <= 18:
+                return raw
+            words = raw.split()
+            if len(words) <= 1:
+                return raw
+            line1 = ''
+            line2 = ''
+            for word in words:
+                candidate = (line1 + ' ' + word).strip()
+                if not line1 or len(candidate) <= 18:
+                    line1 = candidate
+                else:
+                    line2 = (line2 + ' ' + word).strip()
+            return f"{line1}\n{line2}" if line2 else line1
 
-        cutting_part = {
-            'name': cutting_name,
-            'code': tool.get('cutting_code', ''),
-            'link': (tool.get('cutting_link', '') or '').strip(),
-        }
-        btn = QPushButton(cutting_part['name'])
-        btn.setProperty('assemblyPart', True)
-        btn.setProperty('panelActionButton', True)
-        btn.setMinimumWidth(0)
-        btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        btn.clicked.connect(lambda _=False, p=cutting_part: self.part_clicked(p))
-        grid.addWidget(btn, row, 0)
-        grid.addWidget(self._value_label(cutting_part['code']), row, 1)
-        row += 1
+        component_items = tool.get('component_items', [])
+        if isinstance(component_items, str):
+            try:
+                component_items = json.loads(component_items or '[]')
+            except Exception:
+                component_items = []
 
-        cutting_add_element = (tool.get('cutting_add_element', '') or '').strip()
-        if cutting_add_element:
-            cutting_extra = {
-                'name': self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=cutting_name),
-                'code': cutting_add_element,
-                'link': (tool.get('cutting_add_element_link', '') or '').strip(),
-            }
-            btn = QPushButton(cutting_extra['name'])
-            btn.setProperty('assemblyPart', True)
-            btn.setProperty('panelActionButton', True)
-            btn.setMinimumWidth(0)
-            btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-            btn.clicked.connect(lambda _=False, p=cutting_extra: self.part_clicked(p))
-            grid.addWidget(btn, row, 0)
-            grid.addWidget(self._value_label(cutting_extra['code']), row, 1)
-            row += 1
+        normalized = []
+        if isinstance(component_items, list):
+            for idx, item in enumerate(component_items):
+                if not isinstance(item, dict):
+                    continue
+                role = (item.get('role') or '').strip().lower()
+                if role not in {'holder', 'cutting', 'support'}:
+                    continue
+                code = (item.get('code') or '').strip()
+                if not code:
+                    continue
+                try:
+                    order = int(item.get('order', idx))
+                except Exception:
+                    order = idx
+                normalized.append(
+                    {
+                        'role': role,
+                        'label': (item.get('label') or '').strip(),
+                        'code': code,
+                        'link': (item.get('link') or '').strip(),
+                        'group': (item.get('group') or '').strip(),
+                        'component_key': (item.get('component_key') or '').strip(),
+                        'order': order,
+                    }
+                )
 
-        last_group = None
-        for part in support_parts:
+        if not normalized:
+            # Legacy fallback for rows without component_items.
+            raw_cutting_name = tool.get('cutting_type', '')
+            cutting_name = self._localized_cutting_type(raw_cutting_name) if raw_cutting_name else self._t('tool_library.field.cutting_part', 'Cutting part')
+            legacy_candidates = [
+                {
+                    'role': 'holder',
+                    'label': self._t('tool_library.field.holder', 'Holder'),
+                    'code': tool.get('holder_code', ''),
+                    'link': (tool.get('holder_link', '') or '').strip(),
+                    'group': '',
+                    'component_key': 'holder:' + (tool.get('holder_code', '') or '').strip(),
+                    'order': 0,
+                },
+                {
+                    'role': 'holder',
+                    'label': self._t('tool_library.field.add_element', 'Add. Element'),
+                    'code': tool.get('holder_add_element', ''),
+                    'link': (tool.get('holder_add_element_link', '') or '').strip(),
+                    'group': '',
+                    'component_key': 'holder:' + (tool.get('holder_add_element', '') or '').strip(),
+                    'order': 1,
+                },
+                {
+                    'role': 'cutting',
+                    'label': cutting_name,
+                    'code': tool.get('cutting_code', ''),
+                    'link': (tool.get('cutting_link', '') or '').strip(),
+                    'group': '',
+                    'component_key': 'cutting:' + (tool.get('cutting_code', '') or '').strip(),
+                    'order': 2,
+                },
+                {
+                    'role': 'cutting',
+                    'label': self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=cutting_name),
+                    'code': tool.get('cutting_add_element', ''),
+                    'link': (tool.get('cutting_add_element_link', '') or '').strip(),
+                    'group': '',
+                    'component_key': 'cutting:' + (tool.get('cutting_add_element', '') or '').strip(),
+                    'order': 3,
+                },
+            ]
+            normalized.extend([item for item in legacy_candidates if (item.get('code') or '').strip()])
+
+        normalized.sort(key=lambda entry: int(entry.get('order', 0)))
+
+        spare_index = {}
+        for part in support_parts or []:
             if isinstance(part, str):
                 try:
                     part = json.loads(part)
                 except Exception:
-                    part = {'name': part, 'code': '', 'link': ''}
+                    part = {'name': part, 'code': '', 'link': '', 'component_key': ''}
             if not isinstance(part, dict):
                 continue
+            part_key = (
+                (part.get('component_key') or '').strip()
+                or (part.get('component') or '').strip()
+                or (part.get('component_code') or '').strip()
+            )
+            if not part_key:
+                continue
+            spare_index.setdefault(part_key, []).append(part)
 
-            group = (part.get('group', '') or '').strip()
-            if group and group != last_group:
-                group_label = QLabel(group)
-                group_label.setProperty('detailGroupHeading', True)
-                group_label.setStyleSheet(
-                    'background: transparent;'
-                    'font-weight: 600; font-size: 11px; color: #5a6a7a;'
-                    'border-bottom: 1px solid #d0d8e0; padding: 4px 0 2px 0;'
-                    'margin-top: 6px;'
-                )
-                grid.addWidget(group_label, row, 0, 1, 2)
-                row += 1
-            last_group = group
+        last_group = None
+        for idx, item in enumerate(normalized):
+            group = (item.get('group') or '').strip()
+            if group != last_group:
+                last_group = group
+                if group:
+                    group_label = QLabel(group)
+                    group_label.setProperty('detailGroupHeading', True)
+                    group_label.setStyleSheet(
+                        'background: transparent;'
+                        'font-weight: 600; font-size: 11px; color: #5a6a7a;'
+                        'border-bottom: 1px solid #d0d8e0; padding: 4px 0 2px 0;'
+                        'margin-top: 6px;'
+                    )
+                    grid.addWidget(group_label, row, 0, 1, 2)
+                    row += 1
 
-            btn = QPushButton(part.get('name', self._t('tool_library.field.part', 'Part')))
+            display_name = item.get('label', self._t('tool_library.field.part', 'Part'))
+            wrapped_name = _wrap_title(display_name)
+
+            component_key = _component_key(item, idx)
+            linked_spares = spare_index.get(component_key, [])
+
+            btn = QPushButton(wrapped_name)
             btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)
-            btn.setMinimumWidth(0)
-            btn.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-            btn.clicked.connect(lambda _=False, p=part: self.part_clicked(p))
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.setToolTip((item.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=display_name))
+            btn.setMinimumWidth(100)
+            fm = QFontMetrics(btn.font())
+            widest_line = max([fm.horizontalAdvance(line) for line in wrapped_name.split('\n')] or [100])
+            btn.setMaximumWidth(max(120, min(260, widest_line + 36)))
+            btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            btn.clicked.connect(lambda _=False, p=item: self.part_clicked(p))
+
             grid.addWidget(btn, row, 0)
-            grid.addWidget(self._value_label(part.get('code', '')), row, 1)
+
+            # Code label + optional arrow indicator for spare parts
+            code_row = QHBoxLayout()
+            code_row.setContentsMargins(0, 0, 0, 0)
+            code_row.setSpacing(6)
+            code_lbl = QLabel(item.get('code', ''))
+            code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            code_lbl.setStyleSheet(
+                'background: transparent; border: none; color: #22303c; font-size: 12pt; font-weight: 500; padding: 0px;'
+            )
+            code_row.addWidget(code_lbl, 1)
+
+            if linked_spares:
+                arrow_lbl = QLabel('▼')
+                arrow_lbl.setStyleSheet(
+                    'background: transparent; border: none; color: #7a8a9a; '
+                    'font-size: 12pt; padding: 0 4px;'
+                )
+                arrow_lbl.setCursor(Qt.PointingHandCursor)
+                arrow_lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+                code_row.addWidget(arrow_lbl, 0)
+                # Make the whole code area clickable to toggle spares
+                code_lbl.setCursor(Qt.PointingHandCursor)
+
+            code_widget = QWidget()
+            code_widget.setStyleSheet('background: transparent; border: none;')
+            code_widget.setLayout(code_row)
+            grid.addWidget(code_widget, row, 1)
             row += 1
+
+            if linked_spares:
+                spare_host = QFrame()
+                spare_host.setStyleSheet(
+                    'QFrame { background: #f8fbfd; border: 1px solid #d0d8e0; '
+                    'border-radius: 4px; padding: 0px; margin: 0px; }'
+                )
+                spare_host_layout = QVBoxLayout(spare_host)
+                spare_host_layout.setContentsMargins(10, 8, 10, 8)
+                spare_host_layout.setSpacing(4)
+                spare_host.setVisible(False)
+
+                SPARE_BTN_WIDTH = 150
+
+                for spare in linked_spares:
+                    spare_row_layout = QHBoxLayout()
+                    spare_row_layout.setContentsMargins(0, 0, 0, 0)
+                    spare_row_layout.setSpacing(8)
+
+                    spare_name = (spare.get('name') or self._t('tool_library.field.part', 'Part')).strip()
+                    spare_code_lbl = self._value_label((spare.get('code') or '').strip())
+                    spare_code_lbl.setStyleSheet(
+                        'background: transparent; border: none; font-size: 10pt; color: #5a6a7a;'
+                    )
+
+                    spare_btn = QPushButton(_wrap_title(spare_name))
+                    spare_btn.setProperty('panelActionButton', True)
+                    spare_btn.setCursor(Qt.PointingHandCursor)
+                    spare_btn.setToolTip((spare.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=spare_name))
+                    spare_btn.setStyleSheet('font-size: 9pt;')
+                    spare_btn.setFixedWidth(SPARE_BTN_WIDTH)
+                    spare_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+                    spare_btn.clicked.connect(lambda _=False, p=spare: self.part_clicked(p))
+
+                    spare_row_layout.addWidget(spare_btn, 0)
+                    spare_row_layout.addWidget(spare_code_lbl, 1)
+                    spare_host_layout.addLayout(spare_row_layout)
+
+                def _toggle_spares(_e, host=spare_host, arrow=arrow_lbl):
+                    visible = not host.isVisible()
+                    host.setVisible(visible)
+                    arrow.setText('▲' if visible else '▼')
+
+                code_lbl.mousePressEvent = _toggle_spares
+                arrow_lbl.mousePressEvent = _toggle_spares
+
+                grid.addWidget(spare_host, row, 0, 1, 2)
+                row += 1
+
+        if row == 0:
+            grid.addWidget(self._value_label('-'), row, 0, 1, 2)
         layout.addLayout(grid)
         return frame
 
