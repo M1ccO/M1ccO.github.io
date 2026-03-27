@@ -436,7 +436,7 @@ class PrintService:
         pot_width = 0
         if pot:
             canvas.setFont("Helvetica-Bold", 9)
-            pot_width = canvas.stringWidth(pot, "Helvetica-Bold", 9) + 16
+            pot_width = canvas.stringWidth(pot, "Helvetica-Bold", 9) + 20
 
         tool_id = self._to_text(tool.get("id"))
         desc = self._to_text(tool.get("description")) or self._t("tool_library.common.no_description", "No description")
@@ -462,10 +462,17 @@ class PrintService:
                 comment_y -= 4.6
 
         if pot:
-            pot_x = x + width - pot_width - 4
             canvas.setFont("Helvetica-Bold", 9)
+            pot_text_w = canvas.stringWidth(pot, "Helvetica-Bold", 9)
+            box_pad_x = 5
+            box_w = pot_text_w + box_pad_x * 2
+            box_h = 14
+            box_x = x + width - box_w - 5
+            box_y = card_mid - box_h / 2
+            canvas.setStrokeColorRGB(0.70, 0.78, 0.88)
+            canvas.roundRect(box_x, box_y, box_w, box_h, 4, stroke=1, fill=0)
             canvas.setFillColorRGB(0.17, 0.28, 0.41)
-            canvas.drawString(pot_x, card_mid - 4.0, pot)
+            canvas.drawString(box_x + box_pad_x, card_mid - 4.2, pot)
 
         return bottom_y - self._TOOL_CARD_GAP
 
