@@ -177,10 +177,11 @@ class HomePage(QWidget):
         self._build_tool_type_filter_items()
         self.type_filter.setMaxVisibleItems(8)
         type_popup_view = self.type_filter.view()
+        type_popup_view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         type_popup_view.setMinimumHeight(0)
-        type_popup_view.setMaximumHeight(8 * 32)
+        type_popup_view.setMaximumHeight(8 * 40)
         type_popup_view.window().setMinimumHeight(0)
-        type_popup_view.window().setMaximumHeight(8 * 32 + 8)
+        type_popup_view.window().setMaximumHeight(8 * 40 + 8)
         # make the combo just wide enough for its content, don't stretch
         from PySide6.QtWidgets import QSizePolicy
         self.type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)

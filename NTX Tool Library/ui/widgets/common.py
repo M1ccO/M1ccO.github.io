@@ -94,7 +94,7 @@ class BorderOnlyComboItemDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
-        return QSize(size.width(), max(size.height(), 32))
+        return QSize(size.width(), max(size.height(), 40))
 
 
 from PySide6.QtWidgets import QGraphicsDropShadowEffect

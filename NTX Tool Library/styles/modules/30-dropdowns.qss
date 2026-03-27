@@ -119,7 +119,7 @@ QComboBox QAbstractItemView {
 
 /* Popup row base state */
 QComboBox QAbstractItemView::item {
-    padding: 10px 14px;
+    padding: 0;
     background-color: #FCFCFC;
     border: none;
 }

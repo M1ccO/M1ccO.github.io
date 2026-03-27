@@ -4,7 +4,7 @@ from PySide6.QtCore import QEvent, Qt, QTimer, QSize
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
     QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
     QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
 )
@@ -233,24 +233,37 @@ class AddEditToolDialog(QDialog):
         self.general_fields_grid = None  # Groups handle layout directly
 
         self.tool_id = QLineEdit()
-        self.tool_head = QComboBox()
-        self.tool_head.addItems(['HEAD1', 'HEAD2'])
-        self._style_combo(self.tool_head)
-        self.tool_head.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.tool_head.setMinimumWidth(180)
+        self.tool_head = QPushButton('HEAD1')
+        self.tool_head.setCheckable(True)
+        self.tool_head.clicked.connect(self._toggle_tool_head)
+        apply_secondary_button_theme(self.tool_head)
+        self.tool_head.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.tool_head.setFixedWidth(118)
 
         self.tool_type = QComboBox()
         for raw_type in ALL_TOOL_TYPES:
             self.tool_type.addItem(self._localized_tool_type(raw_type), raw_type)
         self.tool_type.currentTextChanged.connect(self._update_tool_type_fields)
         self._style_combo(self.tool_type)
-        self.tool_type.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.tool_type.setMinimumWidth(180)
-        self.tool_type.setMaxVisibleItems(10)
-        type_popup = QListView()
-        type_popup.setVerticalScrollMode(QListView.ScrollPerPixel)
-        type_popup.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.tool_type.setView(type_popup)
+        self.tool_type.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.tool_type.setFixedWidth(330)
+        self.tool_type.setMaxVisibleItems(8)
+        type_popup_view = self.tool_type.view()
+        type_popup_view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        type_popup_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        type_popup_view.setMinimumHeight(0)
+        type_popup_view.setMaximumHeight(8 * 40)
+        type_popup_view.window().setMinimumHeight(0)
+        type_popup_view.window().setMaximumHeight(8 * 40 + 8)
+
+        self.tool_type_row = QWidget()
+        self.tool_type_row.setProperty('editorInlineRow', True)
+        ttl = QHBoxLayout(self.tool_type_row)
+        ttl.setContentsMargins(0, 0, 0, 0)
+        ttl.setSpacing(10)
+        ttl.addWidget(self.tool_type)
+        ttl.addWidget(self.tool_head)
+        ttl.addStretch(1)
 
         self.description = QLineEdit()
         self.geom_x = QLineEdit()
@@ -318,8 +331,7 @@ class AddEditToolDialog(QDialog):
         # Group 1: Identity
         group1 = self._build_field_group([
             self._build_edit_field(self._t('tool_library.row.tool_id', 'Tool ID'), self.tool_id),
-            self._build_edit_field(self._t('tool_editor.field.tool_head', 'Tool Head'), self.tool_head),
-            self._build_edit_field(self._t('tool_editor.field.tool_type', 'Tool type'), self.tool_type),
+            self._build_edit_field(self._t('tool_editor.field.tool_type', 'Tool type'), self.tool_type_row),
             self._build_edit_field(self._t('setup_page.field.description', 'Description'), self.description),
         ])
 
@@ -701,11 +713,17 @@ class AddEditToolDialog(QDialog):
         if isinstance(widget, QComboBox):
             widget.setFocus()
             return
+        if isinstance(widget, QPushButton):
+            widget.setFocus()
+            return
         for child in widget.findChildren(QLineEdit):
             child.setFocus()
             child.selectAll()
             return
         for child in widget.findChildren(QComboBox):
+            child.setFocus()
+            return
+        for child in widget.findChildren(QPushButton):
             child.setFocus()
             return
 
@@ -725,6 +743,22 @@ class AddEditToolDialog(QDialog):
 
     def _style_combo(self, combo: QComboBox):
         apply_shared_dropdown_style(combo)
+
+    def _set_tool_head_value(self, head: str):
+        normalized = (head or 'HEAD1').strip().upper()
+        if normalized not in {'HEAD1', 'HEAD2'}:
+            normalized = 'HEAD1'
+        is_head2 = normalized == 'HEAD2'
+        self.tool_head.blockSignals(True)
+        self.tool_head.setChecked(is_head2)
+        self.tool_head.setText('HEAD2' if is_head2 else 'HEAD1')
+        self.tool_head.blockSignals(False)
+
+    def _toggle_tool_head(self, checked: bool):
+        self.tool_head.setText('HEAD2' if checked else 'HEAD1')
+
+    def _get_tool_head_value(self) -> str:
+        return 'HEAD2' if self.tool_head.isChecked() else 'HEAD1'
 
     def _style_general_editor(self, editor: QWidget):
         pass
@@ -1027,7 +1061,7 @@ class AddEditToolDialog(QDialog):
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         btn.setMinimumSize(0, 0)
         btn.setFlat(True)
-        btn.setToolTip(color_hex)
+        btn.setProperty('colorHex', color_hex)
         btn.setCursor(Qt.PointingHandCursor)
 
         btn.setStyleSheet(f"""
@@ -1070,11 +1104,11 @@ class AddEditToolDialog(QDialog):
     def _get_model_row_color(self, row: int) -> str:
         widget = self.model_table.cellWidget(row, 2)
         if isinstance(widget, QPushButton):
-            return widget.toolTip() or '#9ea7b3'
+            return widget.property('colorHex') or widget.toolTip() or '#9ea7b3'
         if isinstance(widget, QWidget):
             btn = widget.findChild(QPushButton)
             if btn is not None:
-                return btn.toolTip() or '#9ea7b3'
+                return btn.property('colorHex') or btn.toolTip() or '#9ea7b3'
         item = self.model_table.item(row, 2)
         return item.text().strip() if item else '#9ea7b3'
 
@@ -1282,7 +1316,7 @@ class AddEditToolDialog(QDialog):
             return
 
         self.tool_id.setText(self.tool.get('id', ''))
-        self._set_combo_by_data(self.tool_head, (self.tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper())
+        self._set_tool_head_value(self.tool.get('tool_head', 'HEAD1'))
         self._set_combo_by_data(self.tool_type, self.tool.get('tool_type', 'O.D Turning'))
         self.description.setText(self.tool.get('description', ''))
         self.geom_x.setText(str(self.tool.get('geom_x', '')))
@@ -1387,7 +1421,7 @@ class AddEditToolDialog(QDialog):
 
         return {
             'id': tool_id,
-            'tool_head': self.tool_head.currentText().strip() or 'HEAD1',
+            'tool_head': self._get_tool_head_value(),
             'tool_type': selected_type,
             'description': self.description.text().strip(),
             'geom_x': parse_float(self.geom_x, self._t('tool_library.field.geom_x', 'Geom X')),
