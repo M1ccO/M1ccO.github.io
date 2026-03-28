@@ -166,10 +166,33 @@ class EditorTable(QTableWidget):
         value = item.data(role)
         return default if value is None else value
 
-    def remove_selected_row(self):
+    def _selected_rows(self) -> list[int]:
+        rows = sorted({index.row() for index in self.selectedIndexes()})
+        if rows:
+            return rows
         row = self.currentRow()
-        if row >= 0:
+        return [row] if row >= 0 else []
+
+    def remove_selected_row(self):
+        rows = self._selected_rows()
+        if not rows:
+            return
+
+        focus_widget = self.focusWidget()
+        if focus_widget is not None and focus_widget is not self:
+            focus_widget.clearFocus()
+
+        next_row = rows[0]
+        for row in reversed(rows):
             self.removeRow(row)
+
+        if self.rowCount() <= 0:
+            self.clearSelection()
+            return
+
+        target_row = min(next_row, self.rowCount() - 1)
+        self.setCurrentCell(target_row, 0)
+        self.selectRow(target_row)
 
     def _apply_item_flags(self, item: QTableWidgetItem, col: int):
         flags = item.flags() | Qt.ItemIsEnabled | Qt.ItemIsSelectable

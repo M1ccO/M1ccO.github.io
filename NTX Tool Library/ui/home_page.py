@@ -1,7 +1,7 @@
 
 import json
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QItemSelectionModel
-from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform
+from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform, QCursor
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
@@ -1241,18 +1241,48 @@ class HomePage(QWidget):
                     spare_row_layout.addWidget(spare_code_lbl, 1)
                     spare_host_layout.addLayout(spare_row_layout)
 
-                def _toggle_spares(_e, host=spare_host, arrow=arrow_lbl, up=arrow_up, left=arrow_left):
-                    visible = not host.isVisible()
-                    host.setVisible(visible)
-                    arrow.setPixmap(up if visible else left)
-
                 def _set_toggle_hover(hovered: bool, label=code_lbl):
                     label.setStyleSheet(code_style_hover if hovered else code_style_default)
 
+                def _cursor_over_toggle(widget=code_widget):
+                    if not widget.isVisible():
+                        return False
+                    return widget.rect().contains(widget.mapFromGlobal(QCursor.pos()))
+
+                def _toggle_spares(
+                    _e,
+                    host=spare_host,
+                    arrow=arrow_lbl,
+                    up=arrow_up,
+                    left=arrow_left,
+                    panel=frame,
+                    panel_grid=grid,
+                    set_hover=_set_toggle_hover,
+                    cursor_over=_cursor_over_toggle,
+                ):
+                    self._component_toggle_hover_suppressed = True
+                    set_hover(False)
+                    visible = not host.isVisible()
+                    host.setVisible(visible)
+                    arrow.setPixmap(up if visible else left)
+                    panel_grid.activate()
+                    panel.updateGeometry()
+                    panel.update()
+
+                    def _restore_hover(owner=self, apply_hover=set_hover, is_cursor_over=cursor_over):
+                        owner._component_toggle_hover_suppressed = False
+                        apply_hover(is_cursor_over())
+
+                    QTimer.singleShot(90, _restore_hover)
+
                 def _hover_enter(_e, set_hover=_set_toggle_hover):
+                    if getattr(self, '_component_toggle_hover_suppressed', False):
+                        return
                     set_hover(True)
 
                 def _hover_leave(_e, set_hover=_set_toggle_hover):
+                    if getattr(self, '_component_toggle_hover_suppressed', False):
+                        return
                     set_hover(False)
 
                 code_lbl.mousePressEvent = _toggle_spares
@@ -1367,11 +1397,10 @@ class HomePage(QWidget):
     def _save_from_dialog(self, dlg):
         try:
             data = dlg.get_tool_data()
-            source_uid = (getattr(dlg, 'tool', {}) or {}).get('uid')
-            if source_uid is not None:
-                data['uid'] = source_uid
+            source_uid = data.get('uid')
+            is_new_tool = source_uid is None
 
-            if self.tool_service.tcode_exists(data['id'], exclude_uid=data.get('uid')):
+            if is_new_tool and self.tool_service.tcode_exists(data['id'], exclude_uid=data.get('uid')):
                 confirm_text = (
                     self._t(
                         'tool_library.warning.duplicate_tcode',
