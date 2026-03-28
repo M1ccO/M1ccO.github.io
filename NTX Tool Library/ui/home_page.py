@@ -1,7 +1,7 @@
 
 import json
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QItemSelectionModel
-from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem
+from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
@@ -961,6 +961,31 @@ class HomePage(QWidget):
         lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         return lbl
 
+    def _component_toggle_arrow_pixmaps(self):
+        cached = getattr(self, '_component_toggle_arrows', None)
+        if cached is not None:
+            return cached
+
+        canvas_size = 20
+        font = self.font()
+        font.setPixelSize(16)
+        font.setBold(True)
+
+        up_arrow = QPixmap(canvas_size, canvas_size)
+        up_arrow.fill(Qt.transparent)
+
+        painter = QPainter(up_arrow)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.TextAntialiasing, True)
+        painter.setFont(font)
+        painter.setPen(QColor('#2b3640'))
+        painter.drawText(up_arrow.rect(), Qt.AlignCenter, '\u25b2')
+        painter.end()
+
+        left_arrow = up_arrow.transformed(QTransform().rotate(-90), Qt.SmoothTransformation)
+        self._component_toggle_arrows = (left_arrow, up_arrow)
+        return self._component_toggle_arrows
+
     # ==============================
     # Detail Panel Sections
     # ==============================
@@ -1148,17 +1173,25 @@ class HomePage(QWidget):
             code_row.setSpacing(6)
             code_lbl = QLabel(item.get('code', ''))
             code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-            code_lbl.setStyleSheet(
-                'background: transparent; border: none; color: #22303c; font-size: 12pt; font-weight: 500; padding: 0px;'
+            code_style_default = (
+                'background: transparent; border: none; color: #22303c; '
+                'font-size: 12pt; font-weight: 500; padding: 0px;'
             )
+            code_style_hover = (
+                'background: transparent; border: none; color: #1f5f9a; '
+                'font-size: 12pt; font-weight: 600; padding: 0px;'
+            )
+            code_lbl.setStyleSheet(code_style_default)
             code_row.addWidget(code_lbl, 1)
 
             if linked_spares:
-                arrow_lbl = QLabel('▼')
-                arrow_lbl.setStyleSheet(
-                    'background: transparent; border: none; color: #7a8a9a; '
-                    'font-size: 12pt; padding: 0 4px;'
-                )
+                arrow_style_default = 'background: transparent; border: none; padding: 0 4px;'
+                arrow_left, arrow_up = self._component_toggle_arrow_pixmaps()
+                arrow_lbl = QLabel()
+                arrow_lbl.setPixmap(arrow_left)
+                arrow_lbl.setStyleSheet(arrow_style_default)
+                arrow_lbl.setAlignment(Qt.AlignCenter)
+                arrow_lbl.setFixedWidth(24)
                 arrow_lbl.setCursor(Qt.PointingHandCursor)
                 arrow_lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
                 code_row.addWidget(arrow_lbl, 0)
@@ -1208,13 +1241,26 @@ class HomePage(QWidget):
                     spare_row_layout.addWidget(spare_code_lbl, 1)
                     spare_host_layout.addLayout(spare_row_layout)
 
-                def _toggle_spares(_e, host=spare_host, arrow=arrow_lbl):
+                def _toggle_spares(_e, host=spare_host, arrow=arrow_lbl, up=arrow_up, left=arrow_left):
                     visible = not host.isVisible()
                     host.setVisible(visible)
-                    arrow.setText('▲' if visible else '▼')
+                    arrow.setPixmap(up if visible else left)
+
+                def _set_toggle_hover(hovered: bool, label=code_lbl):
+                    label.setStyleSheet(code_style_hover if hovered else code_style_default)
+
+                def _hover_enter(_e, set_hover=_set_toggle_hover):
+                    set_hover(True)
+
+                def _hover_leave(_e, set_hover=_set_toggle_hover):
+                    set_hover(False)
 
                 code_lbl.mousePressEvent = _toggle_spares
                 arrow_lbl.mousePressEvent = _toggle_spares
+                code_lbl.enterEvent = _hover_enter
+                code_lbl.leaveEvent = _hover_leave
+                arrow_lbl.enterEvent = _hover_enter
+                arrow_lbl.leaveEvent = _hover_leave
 
                 grid.addWidget(spare_host, row, 0, 1, 2)
                 row += 1
