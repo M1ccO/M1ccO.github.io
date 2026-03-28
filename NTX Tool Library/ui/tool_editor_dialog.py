@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
     QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
-    QFileDialog, QInputDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
+    QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QListWidget, QListWidgetItem
 )
 from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH
 from ui.widgets.parts_table import PartsTable
@@ -68,6 +68,9 @@ class ComponentPickerDialog(QDialog):
         btn_row.addWidget(select_btn)
         root.addLayout(btn_row)
 
+        # Use the same shared button theme as other editor dialogs.
+        apply_secondary_button_theme(self, select_btn)
+
         self._refresh()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
@@ -127,6 +130,10 @@ class AddEditToolDialog(QDialog):
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
         self._general_field_columns = None
         self._clamping_screen_bounds = False
+        self._spare_refresh_timer = QTimer(self)
+        self._spare_refresh_timer.setSingleShot(True)
+        self._spare_refresh_timer.setInterval(75)
+        self._spare_refresh_timer.timeout.connect(self._refresh_spare_component_dropdowns)
         self.setWindowTitle(
             self._t('tool_editor.window_title.add', 'Add Tool')
             if not tool
@@ -254,13 +261,7 @@ class AddEditToolDialog(QDialog):
         self.tool_type.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.tool_type.setFixedWidth(330)
         self.tool_type.setMaxVisibleItems(8)
-        type_popup_view = self.tool_type.view()
-        type_popup_view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-        type_popup_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        type_popup_view.setMinimumHeight(0)
-        type_popup_view.setMaximumHeight(8 * 40)
-        type_popup_view.window().setMinimumHeight(0)
-        type_popup_view.window().setMaximumHeight(8 * 40 + 8)
+        self._configure_combo_popup(self.tool_type, max_rows=8, row_height=40)
 
         self.tool_type_row = QWidget()
         self.tool_type_row.setProperty('editorInlineRow', True)
@@ -430,8 +431,15 @@ class AddEditToolDialog(QDialog):
             self._t('tool_editor.table.link', 'Link'),
             self._t('tool_editor.table.group', 'Group'),
         ])
+        self.parts_table.set_column_keys(['role', 'label', 'code', 'link', 'group'])
         self.parts_table.setObjectName('editorPartsTable')
         self.parts_table.setSelectionMode(PartsTable.ExtendedSelection)
+        self.parts_table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.SelectedClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.AnyKeyPressed
+        )
         self.parts_table.horizontalHeader().setStretchLastSection(False)
         header = self.parts_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Interactive)
@@ -479,7 +487,7 @@ class AddEditToolDialog(QDialog):
             TOOL_ICONS_DIR / 'assemblies_icon.svg',
             self._t('tool_editor.action.group_parts', 'Group selected parts'),
         )
-        self.group_btn.setVisible(False)
+        self.group_btn.setVisible(True)
         self.group_name_edit = QLineEdit()
         self.group_name_edit.setPlaceholderText(self._t('tool_editor.placeholder.group_name', 'Group name...'))
         self.group_name_edit.setVisible(False)
@@ -488,7 +496,7 @@ class AddEditToolDialog(QDialog):
         self.group_hint_label = QLabel(self._t('tool_editor.hint.press_enter_to_add', 'Press Enter to add'))
         self.group_hint_label.setVisible(False)
         self.group_hint_label.setStyleSheet('background: transparent; font-size: 12px; color: #7a8a9a; font-style: italic;')
-        self.group_select_hint_label = QLabel(self._t('tool_editor.hint.select_multiple', 'Select multiple parts to make a group'))
+        self.group_select_hint_label = QLabel(self._t('tool_editor.hint.select_multiple', 'Select part(s) to make a group'))
         self.group_select_hint_label.setStyleSheet('background: transparent; font-size: 12px; color: #9aabb8; font-style: italic;')
         self.add_part_btn.clicked.connect(lambda: self._add_component_row('holder'))
         self.remove_part_btn.clicked.connect(self._remove_component_row)
@@ -499,7 +507,7 @@ class AddEditToolDialog(QDialog):
         self.group_name_edit.returnPressed.connect(self._apply_group_name)
         self.group_name_edit.installEventFilter(self)
         self.parts_table.itemSelectionChanged.connect(self._update_group_button_visibility)
-        self.parts_table.itemChanged.connect(self._refresh_spare_component_dropdowns)
+        self.parts_table.itemChanged.connect(self._schedule_spare_component_refresh)
         p_btns.addWidget(self.add_part_btn)
         p_btns.addWidget(self.remove_part_btn)
         p_btns.addWidget(self.part_up_btn)
@@ -535,8 +543,16 @@ class AddEditToolDialog(QDialog):
             self._t('tool_editor.table.linked_component', 'Linked Component'),
             self._t('tool_editor.table.group', 'Group'),
         ])
+        self.spare_parts_table.set_column_keys(['name', 'code', 'link', 'linked_component', 'group'])
+        self.spare_parts_table.set_read_only_columns(['linked_component'])
         self.spare_parts_table.setObjectName('editorSparePartsTable')
         self.spare_parts_table.setSelectionMode(PartsTable.ExtendedSelection)
+        self.spare_parts_table.setEditTriggers(
+            QAbstractItemView.DoubleClicked
+            | QAbstractItemView.SelectedClicked
+            | QAbstractItemView.EditKeyPressed
+            | QAbstractItemView.AnyKeyPressed
+        )
         self.spare_parts_table.setCornerButtonEnabled(False)
         spare_header = self.spare_parts_table.horizontalHeader()
         spare_header.setStretchLastSection(False)
@@ -832,6 +848,20 @@ class AddEditToolDialog(QDialog):
 
     def _style_combo(self, combo: QComboBox):
         apply_shared_dropdown_style(combo)
+        self._configure_combo_popup(combo, max_rows=8, row_height=40)
+
+    def _configure_combo_popup(self, combo: QComboBox, max_rows: int = 8, row_height: int = 40):
+        view = combo.view()
+        if view is None:
+            return
+        max_height = max_rows * row_height
+        view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        view.setMinimumHeight(0)
+        view.setMaximumHeight(max_height)
+        popup = view.window()
+        popup.setMinimumHeight(0)
+        popup.setMaximumHeight(max_height + 8)
 
     def _set_tool_head_value(self, head: str):
         normalized = (head or 'HEAD1').strip().upper()
@@ -1033,13 +1063,10 @@ class AddEditToolDialog(QDialog):
     def _component_dropdown_values(self):
         values = []
         seen = set()
-        for row in range(self.parts_table.rowCount()):
-            role_item = self.parts_table.item(row, 0)
-            label_item = self.parts_table.item(row, 1)
-            code_item = self.parts_table.item(row, 2)
-            role = (role_item.text().strip().lower() if role_item else 'component')
-            label = (label_item.text().strip() if label_item else '')
-            code = (code_item.text().strip() if code_item else '')
+        for entry in self.parts_table.row_dicts():
+            role = (entry.get('role') or 'component').strip().lower()
+            label = (entry.get('label') or '').strip()
+            code = (entry.get('code') or '').strip()
             if not code:
                 continue
             key = f"{role}:{code}"
@@ -1055,13 +1082,10 @@ class AddEditToolDialog(QDialog):
         key = (key or '').strip()
         if not key:
             return '-'
-        for row in range(self.parts_table.rowCount()):
-            role_item = self.parts_table.item(row, 0)
-            label_item = self.parts_table.item(row, 1)
-            code_item = self.parts_table.item(row, 2)
-            role = (role_item.text().strip().lower() if role_item else 'component')
-            label = (label_item.text().strip() if label_item else '')
-            code = (code_item.text().strip() if code_item else '')
+        for entry in self.parts_table.row_dicts():
+            role = (entry.get('role') or 'component').strip().lower()
+            label = (entry.get('label') or '').strip()
+            code = (entry.get('code') or '').strip()
             if not code:
                 continue
             if f"{role}:{code}" == key:
@@ -1071,51 +1095,61 @@ class AddEditToolDialog(QDialog):
             return key.split(':', 1)[1]
         return key
 
+    def _get_spare_component_key(self, row: int) -> str:
+        return str(self.spare_parts_table.cell_user_data(row, 'linked_component', Qt.UserRole, '') or '').strip()
+
     def _set_spare_component_key(self, row: int, current_key: str = ''):
         current_key = (current_key or '').strip()
-        display = self._component_display_for_key(current_key)
-        item = self.spare_parts_table.item(row, 3)
-        if item is None:
-            item = QTableWidgetItem(display)
-            item.setData(Qt.UserRole, current_key)
-            self.spare_parts_table.setItem(row, 3, item)
-        else:
-            item.setText(display)
-            item.setData(Qt.UserRole, current_key)
+        # Keep linked-component column as plain item data to avoid item/widget desync.
+        existing_widget = self.spare_parts_table.cellWidget(row, 3)
+        if existing_widget is not None:
+            self.spare_parts_table.removeCellWidget(row, 3)
+
+        self.spare_parts_table.set_cell_text(row, 'linked_component', self._component_display_for_key(current_key))
+        self.spare_parts_table.set_cell_user_data(row, 'linked_component', Qt.UserRole, current_key)
+
+    def _schedule_spare_component_refresh(self, *_args):
+        if hasattr(self, '_spare_refresh_timer'):
+            self._spare_refresh_timer.start()
 
     def _refresh_spare_component_dropdowns(self):
-        pass
+        options = self._component_dropdown_values()
+        option_map = {key: display for display, key in options}
+        for row in range(self.spare_parts_table.rowCount()):
+            current_key = self._get_spare_component_key(row)
+            display = option_map.get(current_key, self._component_display_for_key(current_key))
+            self.spare_parts_table.set_cell_text(row, 'linked_component', display)
+            self.spare_parts_table.set_cell_user_data(row, 'linked_component', Qt.UserRole, current_key)
 
     def _add_spare_part_row(self, part: dict | None = None):
         part = part or {}
-        self.spare_parts_table.add_empty_row([
-            (part.get('name') or '').strip(),
-            (part.get('code') or '').strip(),
-            (part.get('link') or '').strip(),
-            '',
-            (part.get('group') or '').strip(),
-        ])
+        self.spare_parts_table.add_row_dict(
+            {
+                'name': (part.get('name') or '').strip(),
+                'code': (part.get('code') or '').strip(),
+                'link': (part.get('link') or '').strip(),
+                'linked_component': '',
+                'group': (part.get('group') or '').strip(),
+            }
+        )
         row = self.spare_parts_table.rowCount() - 1
         self._set_spare_component_key(row, (part.get('component_key') or '').strip())
 
     def _remove_component_row(self):
         self.parts_table.remove_selected_row()
-        self._refresh_spare_component_dropdowns()
+        self._schedule_spare_component_refresh()
 
     def _move_component_row(self, delta: int):
         self.parts_table.move_selected_row(delta)
-        self._refresh_spare_component_dropdowns()
+        self._schedule_spare_component_refresh()
 
     def _selected_component_ref(self) -> str:
         row = self.parts_table.currentRow()
         if row < 0:
             return ''
-        role_item = self.parts_table.item(row, 0)
-        label_item = self.parts_table.item(row, 1)
-        code_item = self.parts_table.item(row, 2)
-        role = (role_item.text().strip().lower() if role_item else 'component')
-        label = (label_item.text().strip() if label_item else '')
-        code = (code_item.text().strip() if code_item else '')
+        entry = self.parts_table.row_dict(row)
+        role = (entry.get('role') or 'component').strip().lower()
+        code = (entry.get('code') or '').strip()
         if not code:
             return ''
         return f"{role}:{code}"
@@ -1142,7 +1176,7 @@ class AddEditToolDialog(QDialog):
         dlg = QDialog(self)
         dlg.setWindowTitle(self._t('tool_editor.component.picker_title', 'Component picker'))
         dlg.setProperty('workEditorDialog', True)
-        dlg.resize(420, 0)
+        dlg.resize(460, 0)
         dlg_layout = QVBoxLayout(dlg)
         dlg_layout.setContentsMargins(18, 18, 18, 18)
         dlg_layout.setSpacing(12)
@@ -1154,12 +1188,41 @@ class AddEditToolDialog(QDialog):
         combo = QComboBox()
         for display, key in options:
             combo.addItem(display, key)
-        combo.setCurrentIndex(0)
+
+        preselected = self._selected_component_ref()
+        if preselected:
+            for idx in range(combo.count()):
+                if str(combo.itemData(idx) or '').strip() == preselected:
+                    combo.setCurrentIndex(idx)
+                    break
+
         self._style_combo(combo)
-        combo.setMinimumHeight(36)
-        dlg_layout.addWidget(combo)
+        combo.setMinimumHeight(28)
+        combo.setMaximumHeight(28)
+        combo.setMaxVisibleItems(8)
+        self._configure_combo_popup(combo, max_rows=8, row_height=40)
+
+        combo_field = QFrame()
+        combo_field.setProperty('editorFieldCard', True)
+        combo_field_layout = QHBoxLayout(combo_field)
+        combo_field_layout.setContentsMargins(2, 2, 2, 2)
+        combo_field_layout.setSpacing(0)
+        combo_field_layout.addWidget(combo, 1)
+        dlg_layout.addWidget(combo_field)
 
         btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        ok_btn = btn_box.button(QDialogButtonBox.Ok)
+        cancel_btn = btn_box.button(QDialogButtonBox.Cancel)
+        if ok_btn is not None:
+            ok_btn.setProperty('panelActionButton', True)
+            ok_btn.setProperty('primaryAction', True)
+            ok_btn.setText(self._t('common.ok', 'OK'))
+        if cancel_btn is not None:
+            cancel_btn.setProperty('panelActionButton', True)
+            cancel_btn.setProperty('secondaryAction', True)
+            cancel_btn.setText(self._t('common.cancel', 'Cancel'))
+
+        apply_secondary_button_theme(dlg, ok_btn)
         btn_box.accepted.connect(dlg.accept)
         btn_box.rejected.connect(dlg.reject)
         dlg_layout.addWidget(btn_box)
@@ -1168,19 +1231,12 @@ class AddEditToolDialog(QDialog):
             return
 
         component_ref = str(combo.currentData() or '').strip()
-        display_label = combo.currentText()
         if not component_ref:
             return
 
         for row in selected_rows:
-            item = self.spare_parts_table.item(row, 3)
-            if item:
-                item.setText(display_label)
-                item.setData(Qt.UserRole, component_ref)
-            else:
-                new_item = QTableWidgetItem(display_label)
-                new_item.setData(Qt.UserRole, component_ref)
-                self.spare_parts_table.setItem(row, 3, new_item)
+            self._set_spare_component_key(row, component_ref)
+        self._schedule_spare_component_refresh()
 
     def _add_component_row(self, role: str = 'support'):
         normalized_role = (role or 'support').strip().lower()
@@ -1191,20 +1247,33 @@ class AddEditToolDialog(QDialog):
             default_label = self._t('tool_library.field.holder', 'Holder')
         elif normalized_role == 'cutting':
             default_label = self._localized_cutting_type('Insert')
-        self.parts_table.add_empty_row([normalized_role, default_label, '', '', ''])
-        self._refresh_spare_component_dropdowns()
+        self.parts_table.add_row_dict(
+            {
+                'role': normalized_role,
+                'label': default_label,
+                'code': '',
+                'link': '',
+                'group': '',
+            }
+        )
+        self._schedule_spare_component_refresh()
 
     def _update_group_button_visibility(self):
         selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
-        if len(selected_rows) < 2:
-            self.group_btn.setVisible(False)
+        if len(selected_rows) < 1:
+            self.group_btn.setVisible(True)
+            self.group_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'assemblies_icon.svg')))
+            self.group_btn.setToolTip(self._t('tool_editor.action.group_parts', 'Group selected parts'))
+            self.group_btn.setProperty('dangerAction', False)
             self.group_name_edit.setVisible(False)
             self.group_hint_label.setVisible(False)
             self.group_select_hint_label.setVisible(True)
+            self.group_btn.style().unpolish(self.group_btn)
+            self.group_btn.style().polish(self.group_btn)
             return
 
         self.group_btn.setVisible(True)
-        self.group_select_hint_label.setVisible(False)
+        self.group_select_hint_label.setVisible(True)
 
         groups = set()
         for row in selected_rows:
@@ -1537,15 +1606,9 @@ class AddEditToolDialog(QDialog):
         if row < 0:
             return
 
-        rows = self._model_table_rows()
-        new_row = row + delta
-        if new_row < 0 or new_row >= len(rows) or new_row == row:
-            return
-
-        moved = rows.pop(row)
-        rows.insert(new_row, moved)
-        self._restore_model_rows(rows, selected_row=new_row)
-        self._refresh_models_preview()
+        self.model_table.move_selected_row(delta)
+        if self.model_table.currentRow() != row:
+            self._refresh_models_preview()
 
     def _on_model_table_changed(self, item):
         if item.column() == 0:
@@ -1738,37 +1801,16 @@ class AddEditToolDialog(QDialog):
         self._update_tool_type_fields()
         self._refresh_models_preview()
 
-    def _table_to_parts(self, table, mapping):
-        result = []
-        for row in range(table.rowCount()):
-            entry = {}
-            all_empty = True
-            for col, key in enumerate(mapping):
-                item = table.item(row, col)
-                text = item.text().strip() if item else ''
-                entry[key] = text
-                if text:
-                    all_empty = False
-            if not all_empty:
-                result.append(entry)
-        return result
-
     def _component_items_from_table(self):
         items = []
-        for row in range(self.parts_table.rowCount()):
-            role_item = self.parts_table.item(row, 0)
-            label_item = self.parts_table.item(row, 1)
-            code_item = self.parts_table.item(row, 2)
-            link_item = self.parts_table.item(row, 3)
-            group_item = self.parts_table.item(row, 4)
-
-            role = (role_item.text().strip().lower() if role_item else 'support')
+        for entry in self.parts_table.row_dicts():
+            role = (entry.get('role') or 'support').strip().lower()
             if role not in {'holder', 'cutting', 'support'}:
                 role = 'support'
-            code = code_item.text().strip() if code_item else ''
+            code = (entry.get('code') or '').strip()
             if not code:
                 continue
-            label = label_item.text().strip() if label_item else ''
+            label = (entry.get('label') or '').strip()
             if not label:
                 if role == 'holder':
                     label = self._t('tool_library.field.holder', 'Holder')
@@ -1782,8 +1824,8 @@ class AddEditToolDialog(QDialog):
                     'role': role,
                     'label': label,
                     'code': code,
-                    'link': link_item.text().strip() if link_item else '',
-                    'group': group_item.text().strip() if group_item else '',
+                    'link': (entry.get('link') or '').strip(),
+                    'group': (entry.get('group') or '').strip(),
                     'component_key': f"{role}:{code}",
                     'order': len(items),
                 }
@@ -1793,17 +1835,13 @@ class AddEditToolDialog(QDialog):
     def _spare_parts_from_table(self):
         result = []
         for row in range(self.spare_parts_table.rowCount()):
-            name_item = self.spare_parts_table.item(row, 0)
-            code_item = self.spare_parts_table.item(row, 1)
-            link_item = self.spare_parts_table.item(row, 2)
-            group_item = self.spare_parts_table.item(row, 4)
+            entry = self.spare_parts_table.row_dict(row)
 
-            name = name_item.text().strip() if name_item else ''
-            code = code_item.text().strip() if code_item else ''
-            link = link_item.text().strip() if link_item else ''
-            comp_item = self.spare_parts_table.item(row, 3)
-            component_key = (comp_item.data(Qt.UserRole) or comp_item.text()).strip() if comp_item else ''
-            group = group_item.text().strip() if group_item else ''
+            name = (entry.get('name') or '').strip()
+            code = (entry.get('code') or '').strip()
+            link = (entry.get('link') or '').strip()
+            component_key = self._get_spare_component_key(row)
+            group = (entry.get('group') or '').strip()
 
             if not (name or code or link or component_key):
                 continue

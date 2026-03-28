@@ -640,7 +640,7 @@ class ColorPickerDialog(QDialog):
         self.add_custom_btn.setFixedSize(30, 30)
         self.add_custom_btn.setProperty("colorPickerAddBtn", True)
         self.add_custom_btn.setText("")
-        self.add_custom_btn.setIconSize(QSize(16, 16))
+        self.add_custom_btn.setIconSize(QSize(20, 20))
         self.add_custom_btn.clicked.connect(self._handle_custom_action)
         custom_grid_layout.addWidget(self.add_custom_btn, 1, custom_columns - 1, alignment=Qt.AlignCenter)
         self._refresh_custom_action_button()
@@ -895,6 +895,8 @@ class ColorPickerDialog(QDialog):
         if not (0 <= index < len(type(self)._custom_colors)):
             return
         type(self)._custom_colors[index] = ""
+        # Reuse the just-freed slot on the next add.
+        type(self)._custom_insert_index = index
         type(self)._save_custom_colors_to_settings()
         self._custom_swatches[index].set_color("")
         self._selected_custom_index = -1
@@ -906,7 +908,16 @@ class ColorPickerDialog(QDialog):
         if color_hex in current_colors:
             index = current_colors.index(color_hex)
         else:
-            index = type(self)._custom_insert_index % len(current_colors)
+            # Prefer empty slots first, starting from the rolling insert cursor.
+            start = type(self)._custom_insert_index % len(current_colors)
+            index = -1
+            for offset in range(len(current_colors)):
+                candidate = (start + offset) % len(current_colors)
+                if not current_colors[candidate]:
+                    index = candidate
+                    break
+            if index < 0:
+                index = start
             current_colors[index] = color_hex
             type(self)._custom_insert_index = (index + 1) % len(current_colors)
             self._custom_swatches[index].set_color(color_hex)
