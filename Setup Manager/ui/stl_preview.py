@@ -4,7 +4,13 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtWidgets import QAbstractScrollArea, QLabel, QVBoxLayout, QWidget
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from config import PREVIEW_DIR
+from config import (
+    JAW_MODELS_ROOT_DEFAULT,
+    PREVIEW_DIR,
+    SHARED_UI_PREFERENCES_PATH,
+    TOOL_MODELS_ROOT_DEFAULT,
+)
+from shared.model_paths import read_model_roots, resolve_model_path
 
 
 class ScrollFriendlyWebView(QWebEngineView):
@@ -137,15 +143,18 @@ class StlPreviewWidget(QWidget):
         self._web.page().runJavaScript(js)
 
     def _send_parts_to_viewer(self, parts: list[dict]):
+        tools_root, jaws_root = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
         payload = []
         for part in parts:
             file_value = (part.get('file') or '').strip()
             if not file_value:
                 continue
 
-            path = Path(file_value)
-            if not path.is_absolute():
-                path = path.resolve()
+            path = resolve_model_path(file_value, tools_root, jaws_root)
 
             if not path.exists():
                 continue
@@ -177,7 +186,12 @@ class StlPreviewWidget(QWidget):
             self.clear()
             return
 
-        stl_path = Path(stl_path).resolve()
+        tools_root, jaws_root = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
+        stl_path = resolve_model_path(str(stl_path), tools_root, jaws_root)
 
         if not stl_path.exists():
             self._show_error(f"STL file not found:\n{stl_path}")

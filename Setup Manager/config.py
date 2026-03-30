@@ -58,6 +58,15 @@ _shared_dir = str(PROJECTS_DIR / 'shared')
 if _shared_dir not in sys.path:
     sys.path.insert(0, _shared_dir)
 
+if IS_FROZEN:
+    _models_base_dir = local_appdata / "Tools and jaws Library" / "assets" / "3d"
+else:
+    _models_base_dir = PROJECTS_DIR / "Tools and jaws Library" / "assets" / "3d"
+TOOL_MODELS_ROOT_DEFAULT = _models_base_dir / "tools"
+JAW_MODELS_ROOT_DEFAULT = _models_base_dir / "jaws"
+TOOL_MODELS_ROOT_DEFAULT.mkdir(parents=True, exist_ok=True)
+JAW_MODELS_ROOT_DEFAULT.mkdir(parents=True, exist_ok=True)
+
 
 def _seed_frozen_databases():
     """Copy bundled DB snapshots to user-data directory on first frozen run."""

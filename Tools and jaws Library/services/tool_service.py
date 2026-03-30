@@ -1,5 +1,8 @@
 import json
 
+from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
+from shared.model_paths import TOOLS_PREFIX, normalize_model_path_for_storage, read_model_roots
+
 
 class ToolService:
     def __init__(self, db):
@@ -314,6 +317,34 @@ class ToolService:
         if selected_head not in {'HEAD1', 'HEAD2'}:
             selected_head = 'HEAD1'
 
+        tools_models_root, _ = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
+
+        raw_stl_path = tool.get('stl_path', '')
+        parsed_parts = self._coerce_json_list(raw_stl_path)
+        if parsed_parts:
+            normalized_parts = []
+            for part in parsed_parts:
+                if not isinstance(part, dict):
+                    continue
+                normalized_part = dict(part)
+                normalized_part['file'] = normalize_model_path_for_storage(
+                    normalized_part.get('file', ''),
+                    tools_models_root,
+                    TOOLS_PREFIX,
+                )
+                normalized_parts.append(normalized_part)
+            normalized_stl_path = json.dumps(normalized_parts, ensure_ascii=False) if normalized_parts else ''
+        else:
+            normalized_stl_path = normalize_model_path_for_storage(
+                raw_stl_path,
+                tools_models_root,
+                TOOLS_PREFIX,
+            )
+
         payload = (
             tool['id'].strip(),
             selected_head,
@@ -339,7 +370,7 @@ class ToolService:
             json.dumps(geometry_profiles, ensure_ascii=False),
             json.dumps(support_parts, ensure_ascii=False),
             json.dumps(component_items, ensure_ascii=False),
-            tool.get('stl_path', ''),
+            normalized_stl_path,
             tool.get('default_pot', '').strip(),
         )
         uid = tool.get('uid')

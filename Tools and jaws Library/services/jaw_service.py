@@ -1,3 +1,7 @@
+from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
+from shared.model_paths import JAWS_PREFIX, normalize_model_path_for_storage, read_model_roots
+
+
 class JawService:
     JAW_TYPES = ['Soft jaws', 'Hard jaws', 'Spiked jaws', 'Special jaws']
     SPINDLE_SIDES = ['Main spindle', 'Sub spindle', 'Both']
@@ -120,6 +124,17 @@ class JawService:
         if spindle_side not in self.SPINDLE_SIDES:
             raise ValueError('Spindle side is invalid.')
 
+        _, jaws_models_root = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
+        normalized_stl_path = normalize_model_path_for_storage(
+            jaw.get('stl_path', ''),
+            jaws_models_root,
+            JAWS_PREFIX,
+        )
+
         payload = (
             jaw_id,
             jaw_type,
@@ -130,7 +145,7 @@ class JawService:
             (jaw.get('turning_washer', '') or '').strip(),
             (jaw.get('last_modified', '') or '').strip(),
             (jaw.get('notes', '') or '').strip(),
-            (jaw.get('stl_path', '') or '').strip(),
+            normalized_stl_path,
             (jaw.get('preview_plane', '') or 'XZ').strip(),
             int(jaw.get('preview_rot_x', 0) or 0) % 360,
             int(jaw.get('preview_rot_y', 0) or 0) % 360,

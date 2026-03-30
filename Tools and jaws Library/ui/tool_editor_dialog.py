@@ -8,7 +8,15 @@ from PySide6.QtWidgets import (
     QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
     QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QTreeWidget, QTreeWidgetItem
 )
-from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR, EDITOR_DROPDOWN_WIDTH
+from config import (
+    ALL_TOOL_TYPES,
+    EDITOR_DROPDOWN_WIDTH,
+    JAW_MODELS_ROOT_DEFAULT,
+    SHARED_UI_PREFERENCES_PATH,
+    TOOL_ICONS_DIR,
+    TOOL_MODELS_ROOT_DEFAULT,
+)
+from shared.model_paths import format_model_path_for_display, read_model_roots
 from ui.widgets.parts_table import PartsTable
 from ui.stl_preview import StlPreviewWidget
 from ui.widgets.color_picker_dialog import ColorPickerDialog
@@ -1170,19 +1178,39 @@ class AddEditToolDialog(QDialog):
             return None
         return dlg.selected_entry()
 
+    def _sync_component_pick_to_table(self, role: str, name: str, code: str, link: str):
+        """Update the first matching-role row in parts_table, or insert a new one."""
+        for row in range(self.parts_table.rowCount()):
+            row_data = self.parts_table.row_dict(row)
+            if (row_data.get('role') or '').strip().lower() == role:
+                self.parts_table.set_cell_text(row, 'label', name)
+                self.parts_table.set_cell_text(row, 'code', code)
+                self.parts_table.set_cell_text(row, 'link', link)
+                return
+        self.parts_table.add_row_dict({'role': role, 'label': name, 'code': code, 'link': link, 'group': ''})
+        self._schedule_spare_component_refresh()
+
     def _pick_holder_component(self):
         entry = self._open_component_picker(self._t('tool_editor.component.select_holder', 'Select holder'), ('holder', 'holder-extra'))
         if not entry:
             return
-        self.holder_code.setText(entry.get('code', ''))
-        self.holder_link.setText(entry.get('link', ''))
+        code = entry.get('code', '')
+        link = entry.get('link', '')
+        name = entry.get('name', self._t('tool_library.field.holder', 'Holder'))
+        self.holder_code.setText(code)
+        self.holder_link.setText(link)
+        self._sync_component_pick_to_table('holder', name, code, link)
 
     def _pick_cutting_component(self):
         entry = self._open_component_picker(self._t('tool_editor.component.select_cutting', 'Select cutting component'), ('cutting', 'cutting-extra'))
         if not entry:
             return
-        self.cutting_code.setText(entry.get('code', ''))
-        self.cutting_link.setText(entry.get('link', ''))
+        code = entry.get('code', '')
+        link = entry.get('link', '')
+        name = entry.get('name', self._localized_cutting_type('Insert'))
+        self.cutting_code.setText(code)
+        self.cutting_link.setText(link)
+        self._sync_component_pick_to_table('cutting', name, code, link)
 
     def _pick_additional_part(self):
         entry = self._open_component_picker(
@@ -1191,20 +1219,21 @@ class AddEditToolDialog(QDialog):
         )
         if not entry:
             return
-        kind = (entry.get('kind') or 'support').strip().lower()
-        role = 'holder'
+        kind = (entry.get('kind') or 'holder').strip().lower()
         if kind.startswith('holder'):
             role = 'holder'
         elif kind.startswith('cutting'):
             role = 'cutting'
-        self.parts_table.add_empty_row([
-            role,
-            entry.get('name', self._t('tool_library.field.part', 'Part')),
-            entry.get('code', ''),
-            entry.get('link', ''),
-            '',
-        ])
-        self._refresh_spare_component_dropdowns()
+        else:
+            role = 'holder'
+        self.parts_table.add_row_dict({
+            'role': role,
+            'label': entry.get('name', self._t('tool_library.field.part', 'Part')),
+            'code': entry.get('code', ''),
+            'link': entry.get('link', ''),
+            'group': '',
+        })
+        self._schedule_spare_component_refresh()
 
     def _pick_spare_part(self):
         entry = self._open_component_picker(
@@ -1659,7 +1688,8 @@ class AddEditToolDialog(QDialog):
         self.model_table.blockSignals(True)
 
         name_item = QTableWidgetItem(name)
-        file_item = QTableWidgetItem(stl_file)
+        file_item = QTableWidgetItem(self._display_model_path(stl_file))
+        file_item.setData(Qt.UserRole, stl_file)
 
         self.model_table.setItem(row, 0, name_item)
         self.model_table.setItem(row, 1, file_item)
@@ -1677,6 +1707,32 @@ class AddEditToolDialog(QDialog):
         pretty = base.replace('_', ' ').replace('-', ' ').strip()
         return pretty.title() if pretty else self._t('tool_editor.model.default_name', 'Model')
 
+    def _tools_models_root(self):
+        tools_models_root, _ = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
+        tools_models_root.mkdir(parents=True, exist_ok=True)
+        return tools_models_root
+
+    def _display_model_path(self, raw_path: str) -> str:
+        tools_models_root, jaws_models_root = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
+        return format_model_path_for_display(raw_path, tools_models_root, jaws_models_root)
+
+    @staticmethod
+    def _stored_model_path(item: QTableWidgetItem | None) -> str:
+        if item is None:
+            return ''
+        raw_value = item.data(Qt.UserRole)
+        if raw_value is None:
+            return item.text().strip()
+        return str(raw_value).strip()
+
 
     def _add_model_row(self, checked=False, values=None):
         if isinstance(checked, dict) and values is None:
@@ -1686,7 +1742,7 @@ class AddEditToolDialog(QDialog):
             file_path, _ = QFileDialog.getOpenFileName(
                 self,
                 self._t('tool_editor.dialog.select_stl_model', 'Select STL model'),
-                '',
+                str(self._tools_models_root()),
                 self._t('jaw_editor.dialog.stl_filter', 'STL Files (*.stl)')
             )
             if not file_path:
@@ -1713,7 +1769,7 @@ class AddEditToolDialog(QDialog):
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             self._t('tool_editor.dialog.select_stl_model', 'Select STL model'),
-            '',
+            str(self._tools_models_root()),
             self._t('jaw_editor.dialog.stl_filter', 'STL Files (*.stl)')
         )
         if not file_path:
@@ -1726,7 +1782,8 @@ class AddEditToolDialog(QDialog):
             file_item = QTableWidgetItem()
             self.model_table.setItem(row, 1, file_item)
 
-        file_item.setText(file_path)
+        file_item.setData(Qt.UserRole, file_path)
+        file_item.setText(self._display_model_path(file_path))
 
         if name_item is None or not name_item.text().strip():
             if name_item is None:
@@ -1750,7 +1807,7 @@ class AddEditToolDialog(QDialog):
             file_item = self.model_table.item(row, 1)
             rows.append({
                 'name': name_item.text().strip() if name_item else '',
-                'file': file_item.text().strip() if file_item else '',
+                'file': self._stored_model_path(file_item),
                 'color': self._get_model_row_color(row),
             })
         return rows
@@ -1783,6 +1840,8 @@ class AddEditToolDialog(QDialog):
             self._refresh_models_preview()
 
     def _on_model_table_changed(self, item):
+        if item.column() == 1:
+            item.setData(Qt.UserRole, item.text().strip())
         if item.column() == 0:
             row = item.row()
             current_color = self._get_model_row_color(row)
@@ -1798,7 +1857,7 @@ class AddEditToolDialog(QDialog):
             file_item = self.model_table.item(row, 1)
 
             name = name_item.text().strip() if name_item else ''
-            stl_file = file_item.text().strip() if file_item else ''
+            stl_file = self._stored_model_path(file_item)
             color = self._get_model_row_color(row)
 
             if name or stl_file:

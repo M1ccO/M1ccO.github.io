@@ -4,10 +4,21 @@ import json
 from pathlib import Path
 
 
+def _default_model_roots() -> tuple[Path, Path]:
+    workspace_root = Path(__file__).resolve().parents[2]
+    base_dir = workspace_root / "Tools and jaws Library" / "assets" / "3d"
+    return base_dir / "tools", base_dir / "jaws"
+
+
+_DEFAULT_TOOLS_ROOT, _DEFAULT_JAWS_ROOT = _default_model_roots()
+
+
 DEFAULT_UI_PREFERENCES = {
     "language": "en",
     "font_family": "Segoe UI",
     "color_theme": "classic",
+    "tools_models_root": str(_DEFAULT_TOOLS_ROOT),
+    "jaws_models_root": str(_DEFAULT_JAWS_ROOT),
 }
 
 SUPPORTED_LANGUAGES = {"en", "fi"}
@@ -35,6 +46,11 @@ def _normalize_preferences(payload: dict | None) -> dict:
         theme = DEFAULT_UI_PREFERENCES["color_theme"]
     data["color_theme"] = theme
 
+    tools_root = str(data.get("tools_models_root") or DEFAULT_UI_PREFERENCES["tools_models_root"]).strip()
+    jaws_root = str(data.get("jaws_models_root") or DEFAULT_UI_PREFERENCES["jaws_models_root"]).strip()
+    data["tools_models_root"] = str(Path(tools_root).expanduser().resolve())
+    data["jaws_models_root"] = str(Path(jaws_root).expanduser().resolve())
+
     return data
 
 
@@ -48,11 +64,18 @@ class UiPreferencesService:
                 payload = json.loads(self.path.read_text(encoding="utf-8"))
             except Exception:
                 payload = {}
-            return _normalize_preferences(payload)
-        return dict(DEFAULT_UI_PREFERENCES)
+            normalized = _normalize_preferences(payload)
+        else:
+            normalized = _normalize_preferences({})
+
+        Path(normalized["tools_models_root"]).mkdir(parents=True, exist_ok=True)
+        Path(normalized["jaws_models_root"]).mkdir(parents=True, exist_ok=True)
+        return normalized
 
     def save(self, payload: dict) -> dict:
         normalized = _normalize_preferences(payload)
+        Path(normalized["tools_models_root"]).mkdir(parents=True, exist_ok=True)
+        Path(normalized["jaws_models_root"]).mkdir(parents=True, exist_ok=True)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
         return normalized

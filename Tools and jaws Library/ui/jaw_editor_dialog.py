@@ -21,6 +21,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
+from shared.model_paths import read_model_roots
 from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
 from shared.editor_helpers import (
@@ -369,10 +371,17 @@ class AddEditJawDialog(QDialog):
         self.type_badge.setText(self.jaw_type.currentText())
 
     def _pick_stl_file(self):
+        _, jaws_models_root = read_model_roots(
+            SHARED_UI_PREFERENCES_PATH,
+            TOOL_MODELS_ROOT_DEFAULT,
+            JAW_MODELS_ROOT_DEFAULT,
+        )
+        jaws_models_root.mkdir(parents=True, exist_ok=True)
+
         path, _ = QFileDialog.getOpenFileName(
             self,
             self._t('jaw_editor.dialog.select_stl_title', 'Select STL file'),
-            '',
+            str(jaws_models_root),
             self._t('jaw_editor.dialog.stl_filter', 'STL Files (*.stl)'),
         )
         if not path:
