@@ -59,6 +59,11 @@ QFrame[workRowCard="true"] {
     max-height: 84px;
 }
 
+QFrame[drawingRowCard="true"] {
+    min-height: 58px;
+    max-height: 58px;
+}
+
 QFrame[workRowCard="true"][compactMode="true"] {
     min-height: 86px;
     max-height: 86px;
@@ -122,6 +127,28 @@ QLabel[toolCardValue="true"] {
     font-size: 14pt;
     font-weight: 600;
     color: #171a1d;
+}
+
+QLabel[drawingRowTitle="true"] {
+    font-size: 12.5pt;
+    font-weight: 700;
+}
+
+QLabel[drawingRowMeta="true"] {
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #31506a;
+}
+
+QLabel[drawingRowPath="true"] {
+    font-size: 9pt;
+    color: #617180;
+}
+
+QLabel[drawingViewerStat="true"] {
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #31506a;
 }
 
 QFrame[toolListCard="true"] QLabel[catalogRowValue="true"] {
@@ -252,40 +279,37 @@ QListWidget#toolIdsOrderList::item:selected:!active {
 }
 
 QListWidget#drawingList {
-    background-color: #ffffff;
-    border: 1px solid #c8d4e0;
+    background-color: rgba(205, 212, 238, 0.97);
+    border: none;
     border-radius: 6px;
     outline: none;
-    padding: 8px 2px 2px 2px;
+    padding: 2px;
     font-size: 12pt;
 }
 
 QListWidget#drawingList::viewport {
-    background-color: #ffffff;
+    background-color: rgba(205, 212, 238, 0.97);
     border: none;
     border-radius: 6px;
 }
 
 QListWidget#drawingList::item {
-    padding: 10px 10px;
-    margin: 0px 2px;
+    padding: 0px;
+    margin: 0px;
     border: none;
-    border-bottom: 1px solid #d8dfe7;
     background-color: transparent;
     color: #24303c;
 }
 
 QListWidget#drawingList::item:hover {
-    background-color: #edf5fc;
-    border-bottom: 1px solid #c9d9ea;
+    background-color: transparent;
 }
 
 QListWidget#drawingList::item:selected,
 QListWidget#drawingList::item:selected:active,
 QListWidget#drawingList::item:selected:!active {
-    background-color: #ffffff;
-    border: 2px solid #1e88e5;
-    border-radius: 4px;
+    background-color: transparent;
+    border: none;
     color: #16334e;
 }
 

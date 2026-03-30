@@ -69,15 +69,160 @@ class DrawService:
         }
 
     def list_drawings(self, search=""):
-        if not self.drawing_dir.exists():
-            return []
+        return self.list_drawings_with_context(search=search, context=None)
+
+    @staticmethod
+    def _safe_resolve(path: Path | None) -> Path | None:
+        if path is None:
+            return None
+        try:
+            return Path(path).expanduser().resolve()
+        except Exception:
+            try:
+                return Path(path).expanduser()
+            except Exception:
+                return None
+
+    @staticmethod
+    def _clean_text(value) -> str:
+        return str(value or "").strip()
+
+    def _context_tokens(self, context: dict | None) -> list[str]:
+        payload = dict(context or {})
+        tokens = []
+        for raw_value in (
+            payload.get("work_id"),
+            payload.get("drawing_id"),
+            payload.get("description"),
+        ):
+            text = self._clean_text(raw_value)
+            if text:
+                tokens.append(text.lower())
+
+        drawing_path_text = self._clean_text(payload.get("drawing_path"))
+        if drawing_path_text:
+            try:
+                path = Path(drawing_path_text)
+                tokens.append(path.stem.strip().lower())
+                tokens.append(path.name.strip().lower())
+            except Exception:
+                pass
+
+        return [token for token in tokens if token]
+
+    def _context_match_score(self, path: Path, context: dict | None) -> int:
+        payload = dict(context or {})
+        score = 0
+        stem = path.stem.strip().lower()
+        name = path.name.strip().lower()
+        relative_label = self._drawing_relative_label(path).lower()
+
+        context_path_text = self._clean_text(payload.get("drawing_path"))
+        context_path = self._safe_resolve(Path(context_path_text)) if context_path_text else None
+        resolved_path = self._safe_resolve(path)
+        if context_path is not None and resolved_path is not None:
+            if resolved_path == context_path:
+                return 100
+            if name == context_path.name.strip().lower():
+                score = max(score, 94)
+            elif stem == context_path.stem.strip().lower():
+                score = max(score, 90)
+
+        drawing_id = self._clean_text(payload.get("drawing_id")).lower()
+        work_id = self._clean_text(payload.get("work_id")).lower()
+
+        if drawing_id:
+            if stem == drawing_id:
+                score = max(score, 92)
+            elif drawing_id in stem or drawing_id in name or drawing_id in relative_label:
+                score = max(score, 80)
+
+        if work_id:
+            if stem == work_id:
+                score = max(score, 88)
+            elif work_id in stem or work_id in name or work_id in relative_label:
+                score = max(score, 72)
+
+        for token in self._context_tokens(payload):
+            if token and token in relative_label:
+                score = max(score, 56)
+
+        return score
+
+    def _drawing_relative_label(self, path: Path) -> str:
+        try:
+            return path.relative_to(self.drawing_dir).as_posix()
+        except Exception:
+            return path.name
+
+    def _drawing_category(self, path: Path, linked: bool) -> str:
+        if linked:
+            return "Linked drawing"
+        try:
+            relative_parent = path.relative_to(self.drawing_dir).parent
+        except Exception:
+            return "General"
+        if str(relative_parent) in {"", "."}:
+            return "General"
+        return relative_parent.as_posix()
+
+    def _make_drawing_entry(self, path: Path, context: dict | None, linked: bool = False) -> dict:
+        resolved = self._safe_resolve(path) or path
+        relative_label = self._drawing_relative_label(resolved)
+        category = self._drawing_category(resolved, linked=linked)
+        return {
+            "drawing_id": resolved.stem,
+            "path": str(resolved),
+            "name": resolved.name,
+            "relative_path": relative_label,
+            "category": category,
+            "source": "linked" if linked else "library",
+            "context_score": self._context_match_score(resolved, context),
+        }
+
+    def list_drawings_with_context(self, search="", context=None):
         query = (search or "").strip().lower()
-        results = []
-        for path in sorted(self.drawing_dir.rglob("*.pdf")):
-            drawing_id = path.stem
-            if query and query not in drawing_id.lower() and query not in str(path).lower():
-                continue
-            results.append({"drawing_id": drawing_id, "path": str(path)})
+        payload = dict(context or {})
+        entries_by_key: dict[str, dict] = {}
+
+        if self.drawing_dir.exists():
+            for path in self.drawing_dir.rglob("*.pdf"):
+                resolved = self._safe_resolve(path)
+                if resolved is None:
+                    continue
+                key = str(resolved).lower()
+                entries_by_key[key] = self._make_drawing_entry(resolved, payload, linked=False)
+
+        explicit_path_text = self._clean_text(payload.get("drawing_path"))
+        if explicit_path_text:
+            explicit_path = self._safe_resolve(Path(explicit_path_text))
+            if explicit_path is not None and explicit_path.exists() and explicit_path.suffix.lower() == ".pdf":
+                key = str(explicit_path).lower()
+                entries_by_key[key] = self._make_drawing_entry(explicit_path, payload, linked=True)
+
+        results = list(entries_by_key.values())
+        if query:
+            filtered = []
+            for item in results:
+                haystacks = (
+                    self._clean_text(item.get("drawing_id")).lower(),
+                    self._clean_text(item.get("name")).lower(),
+                    self._clean_text(item.get("relative_path")).lower(),
+                    self._clean_text(item.get("category")).lower(),
+                    self._clean_text(item.get("path")).lower(),
+                )
+                if any(query in haystack for haystack in haystacks):
+                    filtered.append(item)
+            results = filtered
+
+        results.sort(
+            key=lambda item: (
+                -int(item.get("context_score") or 0),
+                self._clean_text(item.get("category")).lower(),
+                self._clean_text(item.get("relative_path")).lower(),
+                self._clean_text(item.get("drawing_id")).lower(),
+            )
+        )
         return results
 
     def open_drawing(self, drawing_path):

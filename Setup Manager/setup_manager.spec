@@ -18,6 +18,8 @@ datas = [
 datas += collect_data_files('reportlab')
 
 hiddenimports = [
+    'PySide6.QtPdf',
+    'PySide6.QtPdfWidgets',
     'PySide6.QtWebChannel',
     'PySide6.QtWebEngineCore',
     'PySide6.QtWebEngineWidgets',

@@ -46,6 +46,27 @@ def _toolbar_icon(name: str) -> QIcon:
     return QIcon()
 
 
+_SORT_VALUE_ROLE = Qt.UserRole + 1
+
+
+class _SortableTableWidgetItem(QTableWidgetItem):
+    def __init__(self, text: str, sort_value=None):
+        super().__init__(text)
+        self.setData(_SORT_VALUE_ROLE, text if sort_value is None else sort_value)
+
+    def __lt__(self, other):
+        if other is None:
+            return False
+        left_value = self.data(_SORT_VALUE_ROLE)
+        right_value = other.data(_SORT_VALUE_ROLE)
+        if left_value is None or right_value is None:
+            return super().__lt__(other)
+        try:
+            return left_value < right_value
+        except TypeError:
+            return str(left_value) < str(right_value)
+
+
 class LogbookPage(QWidget):
     logbookChanged = Signal()
 
@@ -378,23 +399,32 @@ class LogbookPage(QWidget):
         self.table.setSortingEnabled(False)
         self.table.setRowCount(len(self.entries))
         for row_index, entry in enumerate(self.entries):
+            date_value = entry.get("date", "")
+            formatted_date = self._format_date(str(date_value or ""))
+            quantity_value = entry.get("quantity", "")
+            quantity_text = "" if quantity_value is None else str(quantity_value)
+            try:
+                quantity_sort_value = int(quantity_text)
+            except Exception:
+                quantity_sort_value = 0
             values = [
-                entry.get("date", ""),
-                entry.get("batch_serial", ""),
-                entry.get("work_id", ""),
-                entry.get("order_number", ""),
-                str(entry.get("quantity", "")),
-                entry.get("notes", ""),
+                formatted_date,
+                "" if entry.get("batch_serial") is None else str(entry.get("batch_serial")),
+                "" if entry.get("work_id") is None else str(entry.get("work_id")),
+                "" if entry.get("order_number") is None else str(entry.get("order_number")),
+                quantity_text,
+                "" if entry.get("notes") is None else str(entry.get("notes")),
             ]
             for col_index, value in enumerate(values):
-                item = QTableWidgetItem(value)
+                if col_index == 0:
+                    item = _SortableTableWidgetItem(value, sort_value=str(date_value or ""))
+                elif col_index == 4:
+                    item = _SortableTableWidgetItem(value, sort_value=quantity_sort_value)
+                    item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
+                else:
+                    item = QTableWidgetItem(value)
                 item.setFont(self.table_font)
                 item.setData(Qt.UserRole, entry.get("id"))
-                if col_index == 4:
-                    try:
-                        item.setData(Qt.EditRole, int(value))
-                    except Exception:
-                        item.setData(Qt.EditRole, 0)
                 self.table.setItem(row_index, col_index, item)
 
         self.table.resizeColumnsToContents()
@@ -404,11 +434,7 @@ class LogbookPage(QWidget):
             if self.table.columnWidth(col) < mw:
                 self.table.setColumnWidth(col, mw)
         self.table.setSortingEnabled(True)
-        # Format dates in table to DD/MM/YYYY
         for row_index in range(self.table.rowCount()):
-            date_item = self.table.item(row_index, 0)
-            if date_item:
-                date_item.setText(self._format_date(date_item.text()))
             self.table.setRowHeight(row_index, 40)
         if self.table.rowCount() > 0:
             # In column-search mode, keep rows deselected to reduce visual noise.

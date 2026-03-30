@@ -1384,6 +1384,9 @@ class SetupPage(QWidget):
         payload = {
             "selected": bool(work),
             "work_id": (work.get("work_id") or "").strip() if work else "",
+            "drawing_id": (work.get("drawing_id") or "").strip() if work else "",
+            "drawing_path": (work.get("drawing_path") or "").strip() if work else "",
+            "description": (work.get("description") or "").strip() if work else "",
             "tool_ids": tool_ids,
             "jaw_ids": jaw_ids,
             "has_tools": bool(tool_ids),

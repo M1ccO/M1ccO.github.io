@@ -123,25 +123,15 @@ class HomePage(QWidget):
         self.toolbar_title_label.setProperty('pageTitle', True)
         self.toolbar_title_label.setStyleSheet('padding-left: 0px; padding-right: 20px;')
 
-        # search toggle button - use image assets instead of a unicode glyph
         self.search_toggle = QToolButton()
-        # PNG avoids occasional SVG clipping on some Qt/Windows render paths.
-        self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.png'))
+        self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
         self.close_icon = QIcon(str(TOOL_ICONS_DIR / 'close_icon.svg'))
         self.search_toggle.setIcon(self.search_icon)
-        # slightly larger than before so the glass is visible
-        # bump default icon size up a bit
-        self.search_toggle.setIconSize(QSize(24, 24))
+        self.search_toggle.setIconSize(QSize(28, 28))
         self.search_toggle.setCheckable(True)
         self.search_toggle.setAutoRaise(True)
         self.search_toggle.setProperty('topBarIconButton', True)
-        # larger overall to give padding around the graphic
-        self.search_toggle.setFixedSize(34, 34)
-        # give it a name so we can target the icon hover specifically
-        self.search_toggle.setObjectName('searchToggle')
-        # larger icon on hover will be handled by stylesheet (qproperty-iconSize)
-        # (the objectName was set earlier as 'searchToggle')
-        # remove any custom event overrides if present
+        self.search_toggle.setFixedSize(36, 36)
         self.search_toggle.clicked.connect(self._toggle_search)
 
         # details toggle as icon-only toolbutton (tooltip SVG) - moved next to search

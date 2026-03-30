@@ -218,16 +218,21 @@ class MainWindow(QMainWindow):
         self.logbook_page.logbookChanged.connect(self.setup_page.refresh_works)
         self.setup_page.openLibraryMasterFilterRequested.connect(self._open_tool_library_with_master_filter)
         self.setup_page.libraryLaunchContextChanged.connect(self._on_setup_launch_context_changed)
+        self.setup_page.libraryLaunchContextChanged.connect(self.drawing_page.set_setup_context)
 
         self._launch_context = {
             "selected": False,
             "work_id": "",
+            "drawing_id": "",
+            "drawing_path": "",
+            "description": "",
             "tool_ids": [],
             "jaw_ids": [],
             "has_tools": False,
             "has_jaws": False,
             "has_data": False,
         }
+        self.drawing_page.set_setup_context(self._launch_context)
         self._update_launch_actions()
 
         self.stack.addWidget(self.setup_page)
@@ -481,8 +486,21 @@ class MainWindow(QMainWindow):
         self._launch_context = dict(context or {})
         self._update_launch_actions()
 
+    def _update_navigation_labels(self):
+        for idx, button in enumerate(getattr(self, "nav_buttons", [])):
+            if idx == 0:
+                text = self._t("setup_manager.nav.setups", "SETUPS")
+            elif idx == 1:
+                key = "setup_manager.nav.show_drawing" if self._launch_context.get("selected") else "setup_manager.nav.drawings"
+                default = "SHOW DRAWING" if self._launch_context.get("selected") else "DRAWINGS"
+                text = self._t(key, default)
+            else:
+                text = self._t("setup_manager.nav.logbook", "LOGBOOK")
+            button.setText(text)
+
     def _update_launch_actions(self):
         selected = bool(self._launch_context.get("selected"))
+        self._update_navigation_labels()
         if selected:
             work_id = str(self._launch_context.get("work_id") or "").strip()
             self.launch_body.setText(
@@ -577,15 +595,7 @@ class MainWindow(QMainWindow):
             self.open_jaws_btn.setText(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
         if hasattr(self, "preferences_btn"):
             self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
-        for idx, button in enumerate(getattr(self, "nav_buttons", [])):
-            key = (
-                "setup_manager.nav.setups"
-                if idx == 0
-                else "setup_manager.nav.drawings"
-                if idx == 1
-                else "setup_manager.nav.logbook"
-            )
-            button.setText(self._t(key, button.text()))
+        self._update_navigation_labels()
         if hasattr(self, "setup_page") and hasattr(self.setup_page, "apply_localization"):
             self.setup_page.apply_localization(self._t)
         if hasattr(self, "drawing_page") and hasattr(self.drawing_page, "apply_localization"):
