@@ -123,7 +123,7 @@ def main():
 
     splash = None
     if not _known_args.hidden:
-        splash = QProgressDialog('Starting NTX Tool Library...', '', 0, 8)
+        splash = QProgressDialog('Starting Tools and jaws Library...', '', 0, 8)
         splash.setWindowTitle('Loading')
         splash.setWindowModality(Qt.ApplicationModal)
         splash.setCancelButton(None)

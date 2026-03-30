@@ -1,0 +1,34 @@
+/*
+    Module: 70-menus.qss
+    Purpose:
+    - Standardizes QMenu popups with app visual language.
+    Owns:
+    - QMenu container appearance
+    - Item spacing and separators
+    - Active/selected/hover states
+*/
+
+/* Menu panel */
+QMenu {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
+    border: 1px solid #c8d0d8;
+    font-size: 10.5pt;
+    font-weight: 600;
+}
+
+/* Base row spacing and separator */
+QMenu::item {
+    background-color: transparent;
+    padding: 6px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Active states */
+QMenu::item:selected,
+QMenu::item:checked,
+QMenu::item:hover {
+    color: #000000;
+    border: 1px solid #00C8FF;
+    background-color: #d0ebff;
+}

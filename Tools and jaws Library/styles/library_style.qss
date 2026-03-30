@@ -1,0 +1,5 @@
+/*
+  Tools and jaws Library style entry point.
+  Domain styles are split into modules under styles/modules/*.qss
+  and loaded in lexicographic order by MainWindow._apply_style().
+*/

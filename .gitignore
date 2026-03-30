@@ -3,6 +3,7 @@
 .buildvenv/
 
 # Runtime state markers
+.library_ready
 .ntx_ready
 .runtime/
 

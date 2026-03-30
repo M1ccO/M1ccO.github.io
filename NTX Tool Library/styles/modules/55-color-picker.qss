@@ -1,7 +1,7 @@
 /*
     Module: 55-color-picker.qss
     Purpose:
-    - Custom NTX-styled color picker dialog surfaces.
+    - Custom library-styled color picker dialog surfaces.
     Owns:
     - Color picker group panels
     - Preview swatch framing

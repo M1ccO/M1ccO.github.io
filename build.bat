@@ -6,7 +6,7 @@ set "BUILD_VENV=%ROOT%.buildvenv"
 set "PY=%BUILD_VENV%\Scripts\python.exe"
 set "APP_DIR=%ROOT%Setup Manager"
 set "REQ=%APP_DIR%\requirements-build.txt"
-set "SPEC=%APP_DIR%\ntx_tool_library.spec"
+set "SPEC=%APP_DIR%\setup_manager.spec"
 
 echo [1/4] Checking inputs...
 if not exist "%REQ%" (
@@ -62,9 +62,9 @@ if not "%EC%"=="0" exit /b %EC%
 echo.
 echo Build completed successfully.
 echo Share this folder:
-echo %APP_DIR%\dist\NTX Setup Manager
+echo %APP_DIR%\dist\Setup Manager
 echo.
 echo Launch on target machine with:
-echo NTX Setup Manager.exe
+echo Setup Manager.exe
 
 exit /b 0

@@ -1,4 +1,4 @@
-# NTX Setup Manager - Git How To (Windows)
+﻿# Setup Manager - Git How To (Windows)
 
 This file gives you copy-paste commands for the most common Git tasks.
 
@@ -17,7 +17,7 @@ Use this when the repository already exists on GitHub.
 
 ```powershell
 git clone https://github.com/<your-user>/<your-repo>.git
-cd "NTX Setup Manager"
+cd "Setup Manager"
 git pull origin master
 ```
 
@@ -75,3 +75,4 @@ git status
 git log --oneline -10
 git remote -v
 ```
+

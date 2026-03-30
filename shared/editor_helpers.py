@@ -1,5 +1,5 @@
 """
-Common editor dialog utilities shared between NTX Tool Library and Setup Manager.
+Common editor dialog utilities shared between Tools and jaws Library and Setup Manager.
 
 Extracted from work_editor_dialog patterns so that tool_editor and jaw_editor
 dialogs stay visually consistent without duplicating boilerplate.

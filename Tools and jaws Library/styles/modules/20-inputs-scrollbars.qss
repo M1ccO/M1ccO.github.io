@@ -1,0 +1,80 @@
+/*
+    Module: 20-inputs-scrollbars.qss
+    Purpose:
+    - Text input baseline and focus ring.
+    - Unified minimal scrollbar visuals.
+    Owns:
+    - QLineEdit default/focus states
+    - Vertical and horizontal scrollbar styling
+    - Scroll-area chrome reset
+*/
+
+/* Text entry field baseline — mirrors Setup Manager's input sizing */
+QLineEdit {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    padding: 6px;
+}
+
+/* Focus emphasis for keyboard/mouse editing */
+QLineEdit:focus {
+    border: 1px solid #1e88e5;
+    background-color: #ffffff;
+}
+
+/* Vertical scrollbar */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 2px;
+}
+
+QScrollBar::handle:vertical {
+    background: #b8c3cd;
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #9eabb7;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: transparent;
+    height: 0px;
+}
+
+/* Horizontal scrollbar */
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 2px;
+}
+
+QScrollBar::handle:horizontal {
+    background: #b8c3cd;
+    border-radius: 5px;
+    min-width: 24px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background: #9eabb7;
+}
+
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal,
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: transparent;
+    width: 0px;
+}
+
+/* Scroll areas should not add extra borders */
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}

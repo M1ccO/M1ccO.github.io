@@ -44,7 +44,10 @@ def _project_venv_python() -> Path | None:
 def _maybe_relaunch_with_project_venv() -> None:
     if getattr(sys, "frozen", False):
         return
-    if os.environ.get("NTX_SETUP_MANAGER_VENV_RELAUNCHED") == "1":
+    if (
+        os.environ.get("SETUP_MANAGER_VENV_RELAUNCHED") == "1"
+        or os.environ.get("NTX_SETUP_MANAGER_VENV_RELAUNCHED") == "1"
+    ):
         return
 
     target_python = _project_venv_python()
@@ -61,6 +64,7 @@ def _maybe_relaunch_with_project_venv() -> None:
         return
 
     env = os.environ.copy()
+    env["SETUP_MANAGER_VENV_RELAUNCHED"] = "1"
     env["NTX_SETUP_MANAGER_VENV_RELAUNCHED"] = "1"
     args = [str(target_resolved), str(Path(__file__).resolve())] + sys.argv[1:]
     subprocess.Popen(args, cwd=str(Path(__file__).resolve().parent), env=env)

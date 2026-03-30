@@ -1,5 +1,5 @@
 /*
-    NTX Setup Manager — Stylesheet Entry Point
+    Setup Manager — Stylesheet Entry Point
     ------------------------------------------
     Styles are now loaded from numbered modules in:
         styles/modules/

@@ -15,7 +15,7 @@ class PrintService:
         "C": (201 / 255.0, 106 / 255.0, 18 / 255.0),  # #C96A12
     }
 
-    def __init__(self, app_title="NTX Setup Manager"):
+    def __init__(self, app_title="Setup Manager"):
         self.app_title = app_title
         self.reference_service = None
         self._translate = lambda _key, default=None, **_kwargs: default or ''

@@ -3,12 +3,12 @@ import shutil
 import sys
 from pathlib import Path
 
-APP_TITLE = 'NTX Tool Library'
+APP_TITLE = 'Tools and jaws Library'
 
 SOURCE_DIR = Path(__file__).resolve().parent
 IS_FROZEN = getattr(sys, 'frozen', False)
 APP_DIR = Path(getattr(sys, '_MEIPASS', SOURCE_DIR))
-STYLE_PATH = APP_DIR / 'styles' / 'ntx_tool_library_style.qss'
+STYLE_PATH = APP_DIR / 'styles' / 'library_style.qss'
 PREVIEW_DIR = APP_DIR / 'preview'
 
 ASSETS_DIR = APP_DIR / 'assets'
@@ -18,12 +18,12 @@ if IS_FROZEN:
     local_appdata = Path(os.environ.get('LOCALAPPDATA') or (Path.home() / 'AppData' / 'Local'))
     USER_DATA_DIR = local_appdata / APP_TITLE
     DB_DIR = USER_DATA_DIR / 'databases'
-    SETTINGS_PATH = USER_DATA_DIR / 'ntx_tool_library_settings.json'
+    SETTINGS_PATH = USER_DATA_DIR / 'library_settings.json'
     EXPORT_DEFAULT_PATH = USER_DATA_DIR / 'tool_library_export.xlsx'
 else:
     USER_DATA_DIR = SOURCE_DIR
     DB_DIR = SOURCE_DIR / 'databases'
-    SETTINGS_PATH = SOURCE_DIR / 'ntx_tool_library_settings.json'
+    SETTINGS_PATH = SOURCE_DIR / 'library_settings.json'
     EXPORT_DEFAULT_PATH = SOURCE_DIR / 'tool_library_export.xlsx'
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -31,15 +31,15 @@ PROJECTS_DIR = SOURCE_DIR.parent
 _projects_dir = str(PROJECTS_DIR)
 if _projects_dir not in sys.path:
     sys.path.insert(0, _projects_dir)
-RUNTIME_DIR = (local_appdata / 'NTX Shared Runtime') if IS_FROZEN else (SOURCE_DIR.parent / '.runtime')
+RUNTIME_DIR = (local_appdata / 'Shared Runtime') if IS_FROZEN else (SOURCE_DIR.parent / '.runtime')
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 SHARED_UI_PREFERENCES_PATH = RUNTIME_DIR / 'shared_ui_preferences.json'
 DB_PATH = DB_DIR / 'tool_library.db'
 JAWS_DB_PATH = DB_DIR / 'jaws_library.db'
 TOOL_LIBRARY_READY_PATH = RUNTIME_DIR / 'tool_library.ready'
 TOOL_LIBRARY_SHOW_REQUEST_PATH = RUNTIME_DIR / 'tool_library.show'
-TOOL_LIBRARY_SERVER_NAME = 'ntx_tool_library_single_instance'
-SETUP_MANAGER_SERVER_NAME = 'ntx_setup_manager_single_instance'
+TOOL_LIBRARY_SERVER_NAME = 'tool_library_single_instance'
+SETUP_MANAGER_SERVER_NAME = 'setup_manager_single_instance'
 I18N_DIR = APP_DIR / 'i18n'
 if not I18N_DIR.exists():
     I18N_DIR = SOURCE_DIR / 'i18n'

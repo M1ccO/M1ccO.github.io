@@ -967,7 +967,7 @@ class MainWindow(QMainWindow):
                     launched = False
                 if launched:
                     break
-            for exe_name in ['Setup Manager.exe', 'NTX Setup Manager.exe']:
+            for exe_name in ['Setup Manager.exe']:
                 setup_manager_exe = setup_root / exe_name
                 if not setup_manager_exe.exists():
                     continue

@@ -1,8 +1,8 @@
-# NTX Setup Manager
+﻿# Setup Manager
 
-NTX Setup Manager is the operational desktop application in the NTX software family. It stores setup records for actual work runs, links those records to tool and jaw master data, tracks production history in a logbook, and generates printable setup cards.
+Setup Manager is the operational desktop application in this software family. It stores setup records for actual work runs, links those records to tool and jaw master data, tracks production history in a logbook, and generates printable setup cards.
 
-The application is designed to sit beside NTX Tool Library in the same parent folder and read its tool and jaw databases in read-only mode.
+The application is designed to sit beside Tools and jaws Library in the same parent folder and read its tool and jaw databases in read-only mode.
 
 ## What the Software Does
 
@@ -15,7 +15,7 @@ It manages:
 - printable setup cards
 - direct, bidirectional switching with the sibling Tool Library app from the main UI
 
-It does not own tool or jaw master data. Those records stay in NTX Tool Library.
+It does not own tool or jaw master data. Those records stay in Tools and jaws Library.
 
 ## Main Areas
 
@@ -88,13 +88,13 @@ The page also supports:
 - manual log entry creation from the Logbook page
 - Excel export of the filtered results
 
-## Integration with NTX Tool Library
+## Integration with Tools and jaws Library
 
-Setup Manager reads the tool and jaw master databases from NTX Tool Library without modifying them.
+Setup Manager reads the tool and jaw master databases from Tools and jaws Library without modifying them.
 
 Default path resolution order for the linked databases is:
-1. sibling NTX Tool Library/databases under the shared parent folder
-2. packaged NTX Tool Library user-data directory
+1. sibling Tools and jaws Library/databases under the shared parent folder
+2. packaged Tools and jaws Library user-data directory
 3. local fallback database files under Setup Manager/databases
 
 The Main UI includes a direct switch into Tool Library.
@@ -117,7 +117,7 @@ The following legacy copy-paste modules were removed from Setup Manager during c
 - tool editor/export pages
 - unused tool/jaw/export/settings service stubs
 
-If you need to edit tool or jaw master data, do it in NTX Tool Library. Setup Manager reads those databases in read-only mode by design.
+If you need to edit tool or jaw master data, do it in Tools and jaws Library. Setup Manager reads those databases in read-only mode by design.
 
 ## Project Layout
 
@@ -197,13 +197,13 @@ Build once on your machine:
 Then share this folder from your machine:
 
 ```text
-Setup Manager\dist\NTX Setup Manager
+Setup Manager\dist\Setup Manager
 ```
 
 On the target machine, run:
 
 ```text
-NTX Setup Manager.exe
+Setup Manager.exe
 ```
 
 Notes:
@@ -222,7 +222,7 @@ Runtime dependencies are listed in `requirements.txt` and include:
 ## Data Ownership Rules
 
 - Setup Manager owns only its own setup and logbook database.
-- Tool and jaw master data remain in NTX Tool Library.
+- Tool and jaw master data remain in Tools and jaws Library.
 - External tool and jaw databases are read-only from Setup Manager.
 - Missing master-data references do not block saving a work, but they are shown clearly in the UI.
 

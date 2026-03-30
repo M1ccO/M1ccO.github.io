@@ -1,0 +1,290 @@
+/*
+    Module: 10-base.qss
+    Purpose:
+    - Core app-wide visual foundation.
+    - Typography defaults, neutral surfaces, and shared structural widgets.
+    Owns:
+    - Global font/color baseline
+    - Detail/editor cards and badges
+    - Header/title labels
+    - Left navigation shell base visuals
+*/
+
+/* Global typography and default foreground color */
+* {
+    font-family: 'Segoe UI';
+    font-size: 10pt;
+    color: #1f1f1f;
+}
+
+QMainWindow, QWidget {
+    background-color: #eceff2;
+}
+
+QToolTip {
+    background-color: #ffffff;
+    color: #22303c;
+    border: 1px solid #cfd7df;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 10pt;
+}
+
+QWidget[toolCardColumn="true"] {
+    background: transparent;
+    border: none;
+}
+
+/* Neutralize helper labels used inside key/value cards */
+QLabel[detailValue="true"],
+QLabel[detailKey="true"],
+QLabel[detailFieldKey="true"] {
+    background-color: transparent;
+    border: none;
+    padding: 0px;
+}
+
+/* Detail and editor card containers */
+QFrame[detailField="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 4px;
+}
+
+QFrame[detailField="true"][detailHeroField="true"] {
+    background-color: transparent;
+}
+
+QFrame[editorFieldCard="true"] {
+    background-color: transparent;
+    border: none;
+    border-radius: 0px;
+}
+
+QFrame[editorFieldGroup="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #d0d8e0;
+    border-radius: 6px;
+    padding: 4px 2px;
+}
+
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"] {
+    color: #2b3136;
+}
+
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"][swappableLabel="true"] {
+    color: #2b3136;
+}
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"][swappableLabel="true"]:hover {
+    color: #1a6daa;
+    text-decoration: underline;
+}
+
+QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"] {
+    margin-bottom: 2px;
+    font-size: 10.5pt;
+    font-weight: 400;
+    color: #2b3136;
+}
+
+/* Editor inline inputs inside card surfaces */
+QFrame[editorFieldCard="true"] QLineEdit,
+QFrame[editorFieldCard="true"] QComboBox {
+    background-color: #ffffff;
+    border: 1px solid #d8dfe7;
+    border-radius: 6px;
+    padding: 6px 10px;
+    min-height: 28px;
+    max-height: 28px;
+    font-size: 10.5pt;
+    font-weight: 400;
+}
+
+QFrame[detailField="true"] QLabel[detailFieldKey="true"] {
+    margin-bottom: 2px;
+    font-size: 9.5pt;
+    font-weight: 600;
+    color: #2b3136;
+}
+
+QLabel[detailFieldValue="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 14pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+
+/* Transparent host containers used by dialogs/pages */
+QWidget[editorFieldsViewport="true"],
+QWidget[editorFieldsHost="true"],
+QWidget[editorInlineRow="true"],
+QWidget[editorTransparentPanel="true"],
+QSplitter[editorTransparentPanel="true"] {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea#detailScrollArea,
+QWidget#detailPanel {
+    background-color: #ffffff;
+    border: none;
+}
+
+/* Preview panel structure */
+QWidget[previewColumn="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c9d1d9;
+}
+
+QLabel[previewHeader="true"] {
+    min-height: 32px;
+    padding-left: 16px;
+    background-color: #f3f6f8;
+    border: 1px solid #d9e0e6;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #22303c;
+}
+
+QWidget[previewBody="true"],
+QFrame[editorButtonBar="true"] {
+    background-color: #ffffff;
+    border: none;
+}
+
+/* Title, subtitle, section heading typography */
+QLabel[pageTitle="true"] {
+    font-size: 17px;
+    font-weight: 700;
+    color: #15202b;
+}
+
+QLabel[pageSubtitle="true"] {
+    font-size: 10pt;
+    color: #66717d;
+    margin-bottom: 6px;
+}
+
+QLabel[sectionTitle="true"],
+QLabel[detailSectionTitle="true"] {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: #22303c;
+    background-color: transparent;
+}
+
+QLabel[detailHint="true"],
+QLabel[detailHeroTitle="true"],
+QLabel[detailHeroSubtitle="true"] {
+    background-color: transparent;
+}
+
+QLabel[detailHeroTitle="true"] {
+    font-size: 18px;
+    font-weight: 700;
+    color: #13202b;
+}
+
+QLabel[detailHeroSubtitle="true"] {
+    font-size: 10pt;
+    color: #5a6977;
+}
+
+QLabel#preferencesHintLabel {
+    color: #5a6977;
+    font-size: 10.5pt;
+    font-weight: 500;
+}
+
+/* Consistent metadata pill badge (tool/jaw badges) */
+QLabel[toolBadge="true"] {
+    background-color: #e7f1fb;
+    color: #1d5f9d;
+    border: 1px solid #c2d9ee;
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 9pt;
+    font-weight: 600;
+    min-height: 18px;
+}
+
+/* Left rail frame + navigation buttons */
+#navFrame {
+    background-color: transparent;
+    border: none;
+    min-width: 56px;
+    max-width: 56px;
+}
+
+#sideTitle {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #1c2732;
+    background-color: transparent;
+    padding: 4px 0 10px 2px;
+}
+
+QToolButton#sideNavButton {
+    background-color: #f1f4f7;
+    border: 1px solid #ccd4dc;
+    border-radius: 8px;
+    padding: 0px;
+    margin: 0px;
+    icon-size: 30px;
+}
+
+QToolButton#sideNavButton:hover {
+    background-color: #e2edf9;
+    border: 1px solid #a8c3df;
+}
+
+QToolButton#sideNavButton:checked {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #54c5ff, stop:1 #2397e6);
+    border: 1px solid #1680de;
+    padding: 0px;
+    margin: 0px;
+    icon-size: 30px;
+}
+
+QToolButton#sideNavButton:pressed {
+    padding: 0px;
+    margin: 0px;
+}
+
+/* Primary card shells */
+QFrame[card="true"], QFrame[subCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #b8c5d1;
+    border-radius: 2px;
+}
+
+QFrame[subCard="true"] {
+    border: 1px solid #c3ced8;
+}
+
+/* Top filter strip and bottom action strip backgrounds */
+QFrame#filterFrame,
+QFrame[bottomBar="true"] {
+    background-color: #eceff2;
+    border: none;
+}
+
+/* Header strip inside detail cards */
+QFrame[detailHeader="true"] {
+    background-color: #ffffff;
+    border: 1px solid #c8d4e0;
+    border-radius: 2px;
+}
+
+/* Menubar gradient aligns with control gradients */
+QMenuBar {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #eceff2, stop:1 #FAFAFA);
+}

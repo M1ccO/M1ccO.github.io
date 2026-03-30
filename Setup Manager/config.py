@@ -12,7 +12,7 @@ PROJECTS_DIR = SOURCE_DIR.parent
 PREVIEW_DIR = APP_DIR / "preview"
 ASSETS_DIR = APP_DIR / "assets"
 ICONS_DIR = ASSETS_DIR / "icons"
-STYLE_PATH = APP_DIR / "styles" / "ntx_setup_manager_style.qss"
+STYLE_PATH = APP_DIR / "styles" / "setup_manager_style.qss"
 
 
 def _first_existing_path(*candidates: Path) -> Path:
@@ -33,8 +33,8 @@ if IS_FROZEN:
     USER_DATA_DIR = local_appdata / APP_TITLE
     DB_DIR = USER_DATA_DIR / "databases"
     DRAWINGS_DIR = USER_DATA_DIR / "drawings"
-    TOOL_LIBRARY_USER_DB_DIR = local_appdata / "NTX Tool Library" / "databases"
-    TOOL_LIBRARY_INSTALL_DIR = local_appdata / "Programs" / "NTX Tool Library"
+    TOOL_LIBRARY_USER_DB_DIR = local_appdata / "Tools and jaws Library" / "databases"
+    TOOL_LIBRARY_INSTALL_DIR = local_appdata / "Programs" / "Tools and jaws Library"
     exe_dir = Path(sys.executable).resolve().parent
     dist_dir = exe_dir.parent
     setup_project_dir = dist_dir.parent
@@ -48,8 +48,8 @@ else:
     USER_DATA_DIR = SOURCE_DIR
     DB_DIR = SOURCE_DIR / "databases"
     DRAWINGS_DIR = SOURCE_DIR / "drawings"
-    TOOL_LIBRARY_USER_DB_DIR = PROJECTS_DIR / "NTX Tool Library" / "databases"
-    TOOL_LIBRARY_INSTALL_DIR = PROJECTS_DIR / "NTX Tool Library"
+    TOOL_LIBRARY_USER_DB_DIR = PROJECTS_DIR / "Tools and jaws Library" / "databases"
+    TOOL_LIBRARY_INSTALL_DIR = PROJECTS_DIR / "Tools and jaws Library"
     SIBLING_PROJECTS_DIR = PROJECTS_DIR
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -80,7 +80,27 @@ def _seed_frozen_databases():
 
 _seed_frozen_databases()
 
-RUNTIME_DIR = (local_appdata / "NTX Shared Runtime") if IS_FROZEN else (PROJECTS_DIR / ".runtime")
+
+def _resolve_runtime_dir() -> Path:
+    if not IS_FROZEN:
+        return PROJECTS_DIR / ".runtime"
+
+    runtime_dir = local_appdata / "Shared Runtime"
+    legacy_runtime_dir = local_appdata / "NTX Shared Runtime"
+    runtime_dir.mkdir(parents=True, exist_ok=True)
+
+    legacy_prefs = legacy_runtime_dir / "shared_ui_preferences.json"
+    current_prefs = runtime_dir / "shared_ui_preferences.json"
+    if legacy_prefs.exists() and not current_prefs.exists():
+        try:
+            shutil.copy2(legacy_prefs, current_prefs)
+        except Exception:
+            pass
+
+    return runtime_dir
+
+
+RUNTIME_DIR = _resolve_runtime_dir()
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 SHARED_UI_PREFERENCES_PATH = RUNTIME_DIR / "shared_ui_preferences.json"
 I18N_DIR = APP_DIR / "i18n"
@@ -98,22 +118,22 @@ if IS_FROZEN:
 else:
     DB_PATH = DB_DIR / "setup_manager.db"
 TOOL_LIBRARY_PROJECT_DIR = _first_existing_dir(
-    SIBLING_PROJECTS_DIR / "NTX Tool Library",
-    SOURCE_DIR.parent / "NTX Tool Library",
-    Path(sys.executable).resolve().parent.parent / "NTX Tool Library" if IS_FROZEN else SOURCE_DIR.parent / "NTX Tool Library",
+    SIBLING_PROJECTS_DIR / "Tools and jaws Library",
+    SOURCE_DIR.parent / "Tools and jaws Library",
+    Path(sys.executable).resolve().parent.parent / "Tools and jaws Library" if IS_FROZEN else SOURCE_DIR.parent / "Tools and jaws Library",
 )
 TOOL_LIBRARY_MAIN_PATH = _first_existing_path(
     TOOL_LIBRARY_PROJECT_DIR / "main.py",
-    SOURCE_DIR.parent / "NTX Tool Library" / "main.py",
+    SOURCE_DIR.parent / "Tools and jaws Library" / "main.py",
 )
-TOOL_LIBRARY_SERVER_NAME = "ntx_tool_library_single_instance"
-SETUP_MANAGER_SERVER_NAME = "ntx_setup_manager_single_instance"
+TOOL_LIBRARY_SERVER_NAME = "tool_library_single_instance"
+SETUP_MANAGER_SERVER_NAME = "setup_manager_single_instance"
 TOOL_LIBRARY_EXE_CANDIDATES = [
-    SIBLING_PROJECTS_DIR / "NTX Tool Library" / "dist" / "NTX Tool Library" / "NTX Tool Library.exe",
-    SOURCE_DIR.parent / "NTX Tool Library" / "dist" / "NTX Tool Library" / "NTX Tool Library.exe",
-    Path(sys.executable).resolve().parent.parent / "NTX Tool Library" / "NTX Tool Library.exe" if IS_FROZEN else SOURCE_DIR.parent / "NTX Tool Library" / "NTX Tool Library.exe",
-    TOOL_LIBRARY_PROJECT_DIR / "dist" / "NTX Tool Library" / "NTX Tool Library.exe",
-    TOOL_LIBRARY_INSTALL_DIR / "NTX Tool Library.exe",
+    SIBLING_PROJECTS_DIR / "Tools and jaws Library" / "dist" / "Tools and jaws Library" / "Tools and jaws Library.exe",
+    SOURCE_DIR.parent / "Tools and jaws Library" / "dist" / "Tools and jaws Library" / "Tools and jaws Library.exe",
+    Path(sys.executable).resolve().parent.parent / "Tools and jaws Library" / "Tools and jaws Library.exe" if IS_FROZEN else SOURCE_DIR.parent / "Tools and jaws Library" / "Tools and jaws Library.exe",
+    TOOL_LIBRARY_PROJECT_DIR / "dist" / "Tools and jaws Library" / "Tools and jaws Library.exe",
+    TOOL_LIBRARY_INSTALL_DIR / "Tools and jaws Library.exe",
 ]
 
 # Tool icon lookup is shared with Tool Library. Setup Manager may keep only a

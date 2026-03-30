@@ -35,9 +35,15 @@ if exist "%PYW%" (
 exit /b 0
 
 :ensure_venv
-set "MARKER=%VENV_DIR%\.ntx_ready"
+set "MARKER=%VENV_DIR%\.library_ready"
+set "LEGACY_MARKER=%VENV_DIR%\.ntx_ready"
 
 if exist "%MARKER%" if exist "%PY%" goto :venv_ready
+if exist "%LEGACY_MARKER%" if exist "%PY%" (
+	echo Found legacy venv marker. Migrating to .library_ready...
+	move /y "%LEGACY_MARKER%" "%MARKER%" >nul 2>nul
+	goto :venv_ready
+)
 
 if exist "%VENV_DIR%" (
 	echo Virtual environment incomplete or moved. Recreating...
@@ -84,7 +90,7 @@ if not errorlevel 1 goto :write_marker
 exit /b 1
 :write_marker
 
-echo ntx_ready > "%MARKER%"
+echo library_ready > "%MARKER%"
 
 :venv_ready
 exit /b 0

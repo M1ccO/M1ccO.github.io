@@ -1641,7 +1641,7 @@ class SetupPage(QWidget):
                         self._t("setup_page.message.logbook_created", "Logbook entry created."),
                     )
                     return
-                preview_dir = Path(tempfile.gettempdir()) / "ntx_setup_cards"
+                preview_dir = Path(tempfile.gettempdir()) / "setup_cards"
                 preview_dir.mkdir(parents=True, exist_ok=True)
                 entry_no = created_entry.get("id") if isinstance(created_entry, dict) else "latest"
                 output_path = preview_dir / f"logbook_entry_card_{work_id}_{entry_no}.pdf"
@@ -1736,7 +1736,7 @@ class SetupPage(QWidget):
                 return
 
         try:
-            preview_dir = Path(tempfile.gettempdir()) / "ntx_setup_cards"
+            preview_dir = Path(tempfile.gettempdir()) / "setup_cards"
             preview_dir.mkdir(parents=True, exist_ok=True)
             output_path = preview_dir / f"setup_card_{work_id}.pdf"
             self.print_service.generate_setup_card(work, entry, output_path)

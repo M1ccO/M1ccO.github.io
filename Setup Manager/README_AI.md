@@ -1,10 +1,10 @@
-# NTX Setup Manager — Developer and AI Reference
+﻿# Setup Manager — Developer and AI Reference
 
 This document is the authoritative technical reference for AI agents and developers working on the Setup Manager codebase. Read it before modifying files.
 
 ## System Overview
 
-NTX Setup Manager is the operational desktop application in the NTX software family. It manages work records and production logbook history while reading master data from the sibling Tool Library databases.
+Setup Manager is the operational desktop application in this software family. It manages work records and production logbook history while reading master data from the sibling Tool Library databases.
 
 Tech stack:
 - PySide6
@@ -64,8 +64,8 @@ Important paths:
 - JAW_LIBRARY_DB_PATH: preferred jaw master database path
 
 Path resolution order for external master databases is:
-1. sibling NTX Tool Library/databases under the shared parent folder
-2. NTX Tool Library user-data directory when running frozen
+1. sibling Tools and jaws Library/databases under the shared parent folder
+2. Tools and jaws Library user-data directory when running frozen
 3. local fallback files under Setup Manager/databases
 
 This allows Setup Manager to work directly against the sibling Tool Library repository in development while still tolerating standalone copies.
@@ -224,3 +224,4 @@ Keep this IPC flow intact when modifying launch behavior. Avoid reintroducing ti
 - Export logbook entries to Excel.
 - Print a setup card PDF.
 - Confirm missing tool or jaw databases do not crash the app and unresolved references are shown clearly.
+
