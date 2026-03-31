@@ -1403,7 +1403,7 @@ class HomePage(QWidget):
                     confirm_text,
                     danger=False,
                 ):
-                    return
+                    return 'retry'
 
             saved_uid = self.tool_service.save_tool(data, allow_duplicate=True)
             saved_tool = self.tool_service.get_tool_by_uid(saved_uid)
@@ -1411,13 +1411,28 @@ class HomePage(QWidget):
             self.current_tool_id = (saved_tool or {}).get('id', data['id'])
             self.refresh_list()
             self.populate_details(saved_tool)
+            return 'saved'
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
+            return 'error'
+
+    def _open_tool_editor(self, tool=None):
+        draft_tool = tool
+        while True:
+            dlg = AddEditToolDialog(self, tool=draft_tool, tool_service=self.tool_service, translate=self._t)
+            if dlg.exec() != QDialog.Accepted:
+                return
+            result = self._save_from_dialog(dlg)
+            if result == 'saved':
+                return
+            if result == 'retry':
+                draft_tool = dlg.get_tool_data()
+                draft_tool.pop('uid', None)
+                continue
+            return
 
     def add_tool(self):
-        dlg = AddEditToolDialog(self, tool_service=self.tool_service, translate=self._t)
-        if dlg.exec() == QDialog.Accepted:
-            self._save_from_dialog(dlg)
+        self._open_tool_editor()
 
     def edit_tool(self):
         if not self.current_tool_id:
@@ -1428,9 +1443,7 @@ class HomePage(QWidget):
             )
             return
         tool = self._get_selected_tool()
-        dlg = AddEditToolDialog(self, tool=tool, tool_service=self.tool_service, translate=self._t)
-        if dlg.exec() == QDialog.Accepted:
-            self._save_from_dialog(dlg)
+        self._open_tool_editor(tool=tool)
 
     def apply_localization(self, translate=None):
         if translate is not None:
