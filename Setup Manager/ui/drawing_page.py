@@ -72,6 +72,7 @@ class _MarkerOverlay(QWidget):
         super().__init__(parent)
         self._pdf_view = pdf_view
         self._highlights: list[_TextHighlight] = []
+        self._highlights_visible = True
         self._preview_rects: list[QRectF] = []   # content-px space; cleared after each gesture
         self._preview_color: QColor = QColor("#9fc7ee")
         self._search_rects: list[tuple[int, QRectF]] = []   # (page, pdf-point rect) for search hits
@@ -89,6 +90,16 @@ class _MarkerOverlay(QWidget):
 
     def has_strokes(self) -> bool:
         return bool(self._highlights)
+
+    def strokes_visible(self) -> bool:
+        return self._highlights_visible
+
+    def set_strokes_visible(self, visible: bool) -> None:
+        visible = bool(visible)
+        if self._highlights_visible == visible:
+            return
+        self._highlights_visible = visible
+        self.update()
 
     def clear_strokes(self) -> None:
         if not self._highlights and not self._preview_rects:
@@ -173,7 +184,8 @@ class _MarkerOverlay(QWidget):
 
     def paintEvent(self, event) -> None:
         del event
-        if not self._highlights and not self._preview_rects and not self._search_rects:
+        has_visible_highlights = self._highlights_visible and bool(self._highlights)
+        if not has_visible_highlights and not self._preview_rects and not self._search_rects:
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
@@ -190,10 +202,11 @@ class _MarkerOverlay(QWidget):
                         QRectF(vp.left() - pad, vp.top() - pad, vp.width() + pad * 2, vp.height() + pad * 2),
                         3, 3,
                     )
-        for highlight in self._highlights:
-            painter.setBrush(highlight.color)
-            for rect in self._project_highlight_rects(highlight):
-                painter.drawRoundedRect(rect, 2, 2)
+        if self._highlights_visible:
+            for highlight in self._highlights:
+                painter.setBrush(highlight.color)
+                for rect in self._project_highlight_rects(highlight):
+                    painter.drawRoundedRect(rect, 2, 2)
         if self._preview_rects:
             painter.setBrush(self._preview_color)
             scroll_x = float(self._pdf_view.horizontalScrollBar().value())
@@ -214,6 +227,7 @@ class _MarkerOverlay(QWidget):
 class InteractivePdfView(QPdfView):
     toolChanged = Signal(str)
     markupsChanged = Signal(bool)
+    markupsVisibilityChanged = Signal(bool)
 
     TOOL_SELECT = "select"
     TOOL_HAND = "hand"
@@ -287,16 +301,40 @@ class InteractivePdfView(QPdfView):
 
     def clear_markups(self) -> None:
         had_marks = self.has_markups()
+        visibility_changed = not self.markups_visible()
         self._overlay.clear_strokes()
+        self._overlay.set_strokes_visible(True)
+        if visibility_changed:
+            self.markupsVisibilityChanged.emit(True)
         if had_marks:
             self.markupsChanged.emit(False)
 
     def has_markups(self) -> bool:
         return self._overlay.has_strokes()
 
+    def markups_visible(self) -> bool:
+        return self._overlay.strokes_visible()
+
+    def set_markups_visible(self, visible: bool) -> None:
+        visible = bool(visible)
+        if self._overlay.strokes_visible() == visible:
+            return
+        self._overlay.set_strokes_visible(visible)
+        self.markupsVisibilityChanged.emit(visible)
+
+    def toggle_markups_visibility(self) -> bool:
+        if not self.has_markups():
+            self.set_markups_visible(True)
+            return True
+        new_visible = not self.markups_visible()
+        self.set_markups_visible(new_visible)
+        return new_visible
+
     def reset_markup_state(self, clear_marks: bool = True) -> None:
         if clear_marks:
             self.clear_markups()
+        else:
+            self.set_markups_visible(True)
         self._last_markup_zoom = None
         QTimer.singleShot(0, self.sync_markup_zoom_reference)
 
@@ -976,6 +1014,7 @@ class DrawingPage(QWidget):
         self.pdf_view.zoomModeChanged.connect(self._update_zoom_status)
         self.pdf_view.toolChanged.connect(lambda *_args: self._update_tool_button())
         self.pdf_view.markupsChanged.connect(lambda *_args: self._update_markup_buttons())
+        self.pdf_view.markupsVisibilityChanged.connect(lambda *_args: self._update_markup_buttons())
         self.pdf_view.installEventFilter(self)
         self.viewer_stack.addWidget(self.pdf_view)
 
@@ -1045,14 +1084,14 @@ class DrawingPage(QWidget):
         self.viewer_tools_btn.clicked.connect(self._open_viewer_tools_menu_from_button)
         pdf_controls.addWidget(self.viewer_tools_btn)
 
-        self.clear_marks_btn = self._make_icon_button(
+        self.toggle_marks_btn = self._make_icon_button(
             _toolbar_icon("comment_delete"),
-            self._t("drawing_page.tool.clear_marks", "Clear Marks"),
+            self._t("drawing_page.tool.hide_marks", "Hide Markings"),
             icon_size=22,
             button_size=36,
         )
-        self.clear_marks_btn.clicked.connect(self.pdf_view.clear_markups)
-        pdf_controls.addWidget(self.clear_marks_btn)
+        self.toggle_marks_btn.clicked.connect(self.pdf_view.toggle_markups_visibility)
+        pdf_controls.addWidget(self.toggle_marks_btn)
 
         self.open_external_btn = self._make_icon_button(
             _toolbar_icon("file_open"),
@@ -1779,7 +1818,20 @@ class DrawingPage(QWidget):
         )
 
     def _update_markup_buttons(self) -> None:
-        self.clear_marks_btn.setEnabled(self.pdf_view.has_markups())
+        has_markups = self.pdf_view.has_markups()
+        marks_visible = self.pdf_view.markups_visible()
+        button_text = self._t(
+            "drawing_page.tool.hide_marks",
+            "Hide Markings",
+        ) if marks_visible else self._t(
+            "drawing_page.tool.show_marks",
+            "Show Markings",
+        )
+        button_icon = _toolbar_icon("comment_delete" if marks_visible else "comment")
+        self.toggle_marks_btn.setEnabled(has_markups)
+        self.toggle_marks_btn.setText("")
+        self.toggle_marks_btn.setIcon(button_icon)
+        self.toggle_marks_btn.setToolTip(button_text)
 
     def _update_open_button_state(self) -> None:
         drawing_path = Path(self._current_drawing_path) if self._current_drawing_path else None
@@ -1819,7 +1871,6 @@ class DrawingPage(QWidget):
         self.close_focus_btn.setToolTip(self._t("drawing_page.action.close_focus", "Close focused drawing"))
 
         self.viewer_tools_btn.setToolTip(self._t("drawing_page.tool.menu_tip", "Viewer tools"))
-        self.clear_marks_btn.setToolTip(self._t("drawing_page.tool.clear_marks", "Clear Marks"))
         self.open_external_btn.setToolTip(self._t("drawing_page.action.open", "Open"))
         self.prev_page_btn.setToolTip(self._t("drawing_page.action.page_prev", "Previous page"))
         self.next_page_btn.setToolTip(self._t("drawing_page.action.page_next", "Next page"))
@@ -1833,5 +1884,6 @@ class DrawingPage(QWidget):
         self.next_hit_btn.setToolTip(self._t("drawing_page.action.find_next", "Next hit"))
 
         self._update_tool_button()
+        self._update_markup_buttons()
         self._update_context_labels()
         self.refresh_list()

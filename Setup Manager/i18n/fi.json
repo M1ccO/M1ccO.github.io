@@ -166,6 +166,8 @@
     "drawing_page.tool.width.medium": "Normaali",
     "drawing_page.tool.width.bold": "Paksu",
     "drawing_page.tool.clear_marks": "Tyhjennä merkinnät",
+    "drawing_page.tool.hide_marks": "Piilota merkinn\u00e4t",
+    "drawing_page.tool.show_marks": "N\u00e4yt\u00e4 merkinn\u00e4t",
     "drawing_page.color.yellow": "Keltainen",
     "drawing_page.color.green": "Vihreä",
     "drawing_page.color.blue": "Sininen",

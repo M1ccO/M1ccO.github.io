@@ -175,6 +175,8 @@
     "drawing_page.tool.width.medium": "Medium",
     "drawing_page.tool.width.bold": "Bold",
     "drawing_page.tool.clear_marks": "Clear Marks",
+    "drawing_page.tool.hide_marks": "Hide Markings",
+    "drawing_page.tool.show_marks": "Show Markings",
     "drawing_page.color.yellow": "Yellow",
     "drawing_page.color.green": "Green",
     "drawing_page.color.blue": "Blue",
