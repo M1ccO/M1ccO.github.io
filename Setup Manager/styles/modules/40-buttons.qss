@@ -144,3 +144,28 @@ QToolButton[topBarIconButton="true"]:hover {
 QToolButton[topBarIconButton="true"]:pressed {
     background-color: #c7e0f7;
 }
+
+QToolButton[topBarIconButton="true"][panelActionSquareButton="true"] {
+    border: 1px solid #c0c4c8;
+    border-radius: 5px;
+    color: #2b3640;
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
+    padding: 0px;
+    min-height: 0px;
+}
+
+QToolButton[topBarIconButton="true"][panelActionSquareButton="true"]:hover {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #eaf1f6, stop:1 #ffffff);
+}
+
+QToolButton[topBarIconButton="true"][panelActionSquareButton="true"]:pressed {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #d6dee5, stop:1 #f2f5f8);
+}
+
+QToolButton[topBarIconButton="true"][panelActionSquareButton="true"]:disabled {
+    background: #c8d4e0;
+    border: 1px solid #c0c4c8;
+}

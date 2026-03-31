@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 from config import ICONS_DIR
-from ui.widgets.common import apply_shared_dropdown_style, clear_focused_dropdown_on_outside_click
+from ui.widgets.common import apply_shared_dropdown_style, apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
 
 
 WORK_COORDINATES = ["G54", "G55", "G56", "G57", "G58", "G59"]
@@ -60,20 +60,6 @@ def _toolbar_icon(name: str) -> QIcon:
     if svg.exists():
         return QIcon(str(svg))
     return QIcon()
-
-
-def _apply_tool_library_combo_style(combo: QComboBox):
-    combo.setProperty("modernDropdown", False)
-    combo.setProperty("toolLibraryCombo", True)
-    arrow_icon_path = (Path(ICONS_DIR) / "tools" / "menu_open.svg").as_posix()
-    if Path(arrow_icon_path).exists():
-        # Fallback icon rule to guarantee visible arrows even if parent-scoped
-        # stylesheet selectors do not match at runtime.
-        combo.setStyleSheet(
-            "QComboBox::drop-down { width: 28px; border: none; background: transparent; }"
-            f"QComboBox::down-arrow {{ image: url('{arrow_icon_path}'); width: 20px; height: 20px; }}"
-        )
-    apply_shared_dropdown_style(combo)
 
 
 class _ResponsiveColumnsHost(QWidget):
@@ -419,7 +405,7 @@ class _ToolPickerDialog(QDialog):
         return self._translate(key, default, **kwargs)
 
     def _style_combo_popup(self, combo: QComboBox):
-        _apply_tool_library_combo_style(combo)
+        apply_tool_library_combo_style(combo)
 
     def _tool_types(self) -> list:
         values = {
@@ -604,7 +590,7 @@ class _OrderedToolList(QWidget):
         self.spindle_selector.setProperty("modernDropdown", True)
         self.spindle_selector.setMinimumWidth(116)
         self.spindle_selector.setMaximumWidth(150)
-        _apply_tool_library_combo_style(self.spindle_selector)
+        apply_tool_library_combo_style(self.spindle_selector)
         for label, value in self._SPINDLE_OPTIONS:
             self.spindle_selector.addItem(label, value)
         header_row.addStretch(1)
@@ -1069,6 +1055,12 @@ class WorkEditorDialog(QDialog):
         self.setMinimumSize(760, 560)
         self.setSizeGripEnabled(True)
         self.setProperty("workEditorDialog", True)
+        self._zero_axis_widgets = {axis: [] for axis in ZERO_AXES}
+        self._zero_point_grids: list[QGridLayout] = []
+        self._zero_coord_combos: list[QComboBox] = []
+        self._zero_axis_inputs: dict[str, list[QLineEdit]] = {axis: [] for axis in ZERO_AXES}
+        self._zero_row_spacers: list[QLabel] = []
+        self._zero_grids_with_groups: list[tuple] = []
 
         self.tabs = QTabWidget(self)
 
@@ -1157,7 +1149,7 @@ class WorkEditorDialog(QDialog):
             btn.style().polish(btn)
 
     def _apply_coord_combo_popup_style(self, combo: QComboBox):
-        _apply_tool_library_combo_style(combo)
+        apply_tool_library_combo_style(combo)
 
     def _make_axis_input(self, value_attr_name: str, axis: str) -> QLineEdit:
         value_input = QLineEdit()
@@ -1166,16 +1158,73 @@ class WorkEditorDialog(QDialog):
         setattr(self, value_attr_name, value_input)
         return value_input
 
+    def _set_zero_xy_visibility(self, show_xy: bool) -> None:
+        for axis in ("z", "c"):
+            for widget in self._zero_axis_widgets.get(axis, []):
+                widget.setVisible(True)
+        for axis in ("x", "y"):
+            for widget in self._zero_axis_widgets.get(axis, []):
+                widget.setVisible(show_xy)
+
+        for spacer in self._zero_row_spacers:
+            spacer.setMinimumWidth(82 if show_xy else 0)
+
+        for combo in self._zero_coord_combos:
+            if show_xy:
+                combo.setMinimumWidth(92)
+                combo.setMaximumWidth(16777215)
+            else:
+                combo.setMinimumWidth(74)
+                combo.setMaximumWidth(16777215)
+            combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        zc_min = 74 if not show_xy else 88
+        for axis in ("z", "c"):
+            for value_input in self._zero_axis_inputs.get(axis, []):
+                value_input.setMinimumWidth(zc_min)
+                value_input.setMaximumWidth(16777215)
+                value_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        axis_columns = {"z": 2, "x": 3, "y": 4, "c": 5}
+        axis_stretch = {"z": 1, "x": 1 if show_xy else 0, "y": 1 if show_xy else 0, "c": 1}
+        for grid in self._zero_point_grids:
+            grid.setHorizontalSpacing(6 if show_xy else 2)
+            for axis, col in axis_columns.items():
+                grid.setColumnStretch(col, axis_stretch[axis])
+            grid.setColumnStretch(1, 1 if show_xy else 0)
+            grid.setColumnStretch(0, 0)
+            grid.setColumnMinimumWidth(0, 96 if show_xy else 78)
+
+        for grid, group in self._zero_grids_with_groups:
+            if show_xy:
+                grid.setContentsMargins(12, 8, 12, 8)
+            else:
+                grid.setContentsMargins(8, 6, 8, 6)
+
+        if hasattr(self, "zero_points_host"):
+            self.zero_points_host._switch_width = 1320 if show_xy else 820
+            direction = (
+                QBoxLayout.TopToBottom
+                if self.zero_points_host.width() < self.zero_points_host._switch_width
+                else QBoxLayout.LeftToRight
+            )
+            if self.zero_points_host._layout.direction() != direction:
+                self.zero_points_host._layout.setDirection(direction)
+                self.zero_points_host._update_separator_shapes()
+
     def _build_head_zero_group(self, title: str, prefix: str) -> QGroupBox:
         group = QGroupBox(title)
         grid = QGridLayout(group)
         grid.setContentsMargins(12, 8, 12, 8)
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(6)
+        self._zero_point_grids.append(grid)
+        self._zero_grids_with_groups.append((grid, group))
 
         spacer = QLabel("")
         spacer.setMinimumWidth(82)
         grid.addWidget(spacer, 0, 0)
+        self._zero_row_spacers.append(spacer)
 
         coord_header = QLabel("WCS")
         coord_header.setProperty("detailFieldKey", True)
@@ -1187,6 +1236,7 @@ class WorkEditorDialog(QDialog):
             axis_header.setProperty("detailFieldKey", True)
             axis_header.setAlignment(Qt.AlignCenter)
             grid.addWidget(axis_header, 0, col)
+            self._zero_axis_widgets[axis].append(axis_header)
 
         for row, spindle_key in enumerate(("main", "sub"), start=1):
             spindle_label = QLabel("SP1" if spindle_key == "main" else "SP2")
@@ -1200,6 +1250,7 @@ class WorkEditorDialog(QDialog):
             coord_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             coord_combo.setMinimumWidth(92)
             self._apply_coord_combo_popup_style(coord_combo)
+            self._zero_coord_combos.append(coord_combo)
             setattr(self, combo_attr_name, coord_combo)
             grid.addWidget(coord_combo, row, 1)
 
@@ -1207,6 +1258,8 @@ class WorkEditorDialog(QDialog):
                 value_attr_name = f"{prefix}_{spindle_key}_{axis}_input"
                 value_input = self._make_axis_input(value_attr_name, axis)
                 grid.addWidget(value_input, row, col)
+                self._zero_axis_widgets[axis].append(value_input)
+                self._zero_axis_inputs[axis].append(value_input)
 
         grid.setColumnStretch(0, 0)
         grid.setColumnStretch(1, 1)
@@ -1301,13 +1354,25 @@ class WorkEditorDialog(QDialog):
         )
         content_layout.addWidget(programs_group)
 
+        xy_toggle_row = QHBoxLayout()
+        xy_toggle_row.setContentsMargins(2, 0, 2, 0)
+        self.zero_show_xy_checkbox = QCheckBox(
+            self._t("work_editor.zeros.show_xy", "Show X/Y columns")
+        )
+        self.zero_show_xy_checkbox.setChecked(False)
+        self.zero_show_xy_checkbox.toggled.connect(self._set_zero_xy_visibility)
+        xy_toggle_row.addWidget(self.zero_show_xy_checkbox)
+        xy_toggle_row.addStretch(1)
+        content_layout.addLayout(xy_toggle_row)
+
         head1_group = self._build_head_zero_group(self._t("work_editor.zeros.head1", "Head 1 Zero Points"), "head1")
         head2_group = self._build_head_zero_group(self._t("work_editor.zeros.head2", "Head 2 Zero Points"), "head2")
 
-        zeros_host = _ResponsiveColumnsHost(switch_width=1320)
-        zeros_host.add_widget(head1_group, 1)
-        zeros_host.add_widget(head2_group, 1)
-        content_layout.addWidget(zeros_host)
+        self.zero_points_host = _ResponsiveColumnsHost(switch_width=1320)
+        self.zero_points_host.add_widget(head1_group, 1)
+        self.zero_points_host.add_widget(head2_group, 1)
+        content_layout.addWidget(self.zero_points_host)
+        self._set_zero_xy_visibility(self.zero_show_xy_checkbox.isChecked())
 
         sub_group = QGroupBox(self._t("setup_page.field.sp2", "SP2"))
         sub_form = QFormLayout(sub_group)

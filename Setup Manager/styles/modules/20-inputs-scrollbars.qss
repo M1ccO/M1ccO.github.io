@@ -41,7 +41,7 @@ QComboBox[modernDropdown="true"] {
 }
 
 QComboBox[modernDropdown="true"]:focus {
-    border: 1px solid #4a90e2;
+    border: 1px solid #c0c4c8;
 }
 
 QComboBox[modernDropdown="true"][hovered="true"] {

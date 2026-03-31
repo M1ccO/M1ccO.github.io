@@ -33,6 +33,48 @@ QToolTip {
     font-size: 10pt;
 }
 
+QMenu[drawingToolsMenu="true"] {
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
+    border: 1px solid #c8d0d8;
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 10.5pt;
+    font-weight: 600;
+    color: #24303c;
+}
+
+QMenu[drawingToolsMenu="true"]::item {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 6px 18px 6px 14px;
+    margin: 1px 2px;
+}
+
+QMenu[drawingToolsMenu="true"]::icon {
+    padding-left: 10px;
+}
+
+QMenu[drawingToolsMenu="true"]::item:selected,
+QMenu[drawingToolsMenu="true"]::item:hover {
+    background-color: #edf5fc;
+    border: 1px solid #c0c4c8;
+    color: #1b2f43;
+}
+
+QMenu[drawingToolsMenu="true"]::item:checked {
+    background-color: #e7f1fb;
+    border: 1px solid #b5c7da;
+    color: #1b2f43;
+}
+
+QMenu[drawingToolsMenu="true"]::separator {
+    height: 1px;
+    background: #d4dbe3;
+    margin: 6px 8px;
+}
+
 /*
     Keep labels transparent so host/card colors remain visible.
 */
@@ -103,6 +145,44 @@ QFrame[editorFieldCard="true"] QLabel[detailFieldKey="true"] {
 
 QFrame[detailCard="true"] QLabel {
     background: transparent;
+}
+
+QFrame[pdfToolbarCard="true"] {
+    background-color: #f6f9fc;
+    border: 1px solid #bcc9d6;
+    border-radius: 8px;
+}
+
+QFrame[pdfToolbarCard="true"] QLabel {
+    background: transparent;
+}
+
+QToolButton[viewerToolbarGlyphButton="true"] {
+    font-size: 18pt;
+    font-weight: 700;
+}
+
+QPdfView#drawingPdfView {
+    background-color: #eef3f8;
+    border: 1px solid #d4dee8;
+    border-radius: 6px;
+}
+
+QFrame[drawingViewerShell="true"] {
+    border: 1px solid #bcc9d6;
+    border-radius: 10px;
+    background-color: #f2f6fb;
+}
+
+QLabel[pdfFloatingZoomStatus="true"] {
+    color: #123454;
+    font-size: 11pt;
+    font-weight: 800;
+    min-width: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.86);
+    padding: 0px 4px;
 }
 
 /* ── Semantic label tokens ──────────────────────────────────────────────── */

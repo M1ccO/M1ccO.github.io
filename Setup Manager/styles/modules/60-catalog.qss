@@ -49,9 +49,9 @@ QListWidget#setupWorkList::item {
 QFrame[toolListCard="true"],
 QFrame[workCard="true"] {
     background-color: #ffffff;
-    border: 1px solid #3e4a56;
+    border: 2px solid #637282;
     border-radius: 8px;
-    padding: 2px;
+    padding: 0px;
 }
 
 QFrame[workRowCard="true"] {
@@ -94,8 +94,8 @@ QFrame[toolListCard="true"][selected="true"],
 QFrame[toolListCard="true"][selected="true"]:hover,
 QFrame[workCard="true"][selected="true"],
 QFrame[workCard="true"][selected="true"]:hover {
-    background-color: #ffffff;
-    border: 3px solid #42a5f5;
+    background-color: #f7fbff;
+    border: 2px solid #42a5f5;
     padding: 0px;
 }
 
@@ -130,8 +130,8 @@ QLabel[toolCardValue="true"] {
 }
 
 QLabel[drawingRowTitle="true"] {
-    font-size: 12.5pt;
-    font-weight: 700;
+    font-size: 14pt;
+    font-weight: 600;
 }
 
 QLabel[drawingRowMeta="true"] {
@@ -279,18 +279,18 @@ QListWidget#toolIdsOrderList::item:selected:!active {
 }
 
 QListWidget#drawingList {
-    background-color: rgba(205, 212, 238, 0.97);
+    background-color: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     outline: none;
-    padding: 2px;
+    padding: 8px;
     font-size: 12pt;
 }
 
 QListWidget#drawingList::viewport {
-    background-color: rgba(205, 212, 238, 0.97);
+    background-color: transparent;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
 }
 
 QListWidget#drawingList::item {

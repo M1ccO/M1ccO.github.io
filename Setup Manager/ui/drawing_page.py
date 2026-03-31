@@ -3,9 +3,10 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QModelIndex, QPoint, QPointF, QSignalBlocker, QSize, Qt, QTimer, Signal
-from PySide6.QtGui import QActionGroup, QColor, QIcon, QPainter, QPainterPath, QPen, QPixmap
+from PySide6.QtGui import QActionGroup, QColor, QIcon, QPainter, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtPdf import QPdfDocument, QPdfSearchModel
 from PySide6.QtPdfWidgets import QPdfView
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -32,6 +33,18 @@ from ui.widgets.common import repolish_widget, styled_list_item_height
 _MAX_WIDGET_SIZE = 16777215
 
 
+def _svg_icon(path: Path, size: int = 24) -> QIcon:
+    renderer = QSvgRenderer(str(path))
+    if not renderer.isValid():
+        return QIcon()
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
+
+
 def _toolbar_icon(name: str) -> QIcon:
     png = ICONS_DIR / "tools" / f"{name}.png"
     if png.exists():
@@ -41,13 +54,11 @@ def _toolbar_icon(name: str) -> QIcon:
         return QIcon(str(shared_png))
     svg = ICONS_DIR / "tools" / f"{name}.svg"
     if svg.exists():
-        return QIcon(str(svg))
+        return _svg_icon(svg)
     shared_svg = TOOL_LIBRARY_TOOL_ICONS_DIR / f"{name}.svg"
     if shared_svg.exists():
-        return QIcon(str(shared_svg))
+        return _svg_icon(shared_svg)
     return QIcon()
-
-
 @dataclass
 class _MarkerStroke:
     color: QColor
@@ -189,6 +200,11 @@ class InteractivePdfView(QPdfView):
         "medium": 16.0,
         "bold": 24.0,
     }
+    _OPACITY_OPTIONS = {
+        "light": 0.35,
+        "medium": 0.55,
+        "strong": 0.75,
+    }
 
     def __init__(self, parent=None, translate: Callable[[str, str | None], str] | None = None):
         super().__init__(parent)
@@ -198,12 +214,23 @@ class InteractivePdfView(QPdfView):
         self._last_drag_pos = QPoint()
         self._marker_color_key = "yellow"
         self._marker_width_key = "medium"
+        self._marker_opacity_key = "medium"
         self._last_markup_zoom: float | None = None
 
+        self.setObjectName("drawingPdfView")
         self.setPageMode(QPdfView.PageMode.MultiPage)
-        self.setZoomMode(QPdfView.ZoomMode.FitToWidth)
+        self.setZoomMode(QPdfView.ZoomMode.FitInView)
         self.viewport().installEventFilter(self)
         self.viewport().setMouseTracking(True)
+        self.viewport().setAutoFillBackground(True)
+
+        palette = self.palette()
+        palette.setColor(QPalette.ColorRole.Base, QColor("#eef3f8"))
+        palette.setColor(QPalette.ColorRole.Window, QColor("#eef3f8"))
+        palette.setColor(QPalette.ColorRole.Highlight, QColor("#ffd95c"))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor("#111111"))
+        self.setPalette(palette)
+        self.viewport().setPalette(palette)
 
         self._overlay = _MarkerOverlay(self, self.viewport())
         self.horizontalScrollBar().valueChanged.connect(self._overlay.update)
@@ -225,10 +252,10 @@ class InteractivePdfView(QPdfView):
 
     def tool_icon(self) -> QIcon:
         if self._tool == self.TOOL_HAND:
-            return _toolbar_icon("import_export")
+            return _toolbar_icon("pan_tool")
         if self._tool == self.TOOL_MARKER:
-            return _toolbar_icon("comment")
-        return _toolbar_icon("select")
+            return _toolbar_icon("ink_highlighter")
+        return _toolbar_icon("arrow_selector")
 
     def clear_markups(self) -> None:
         had_marks = self.has_markups()
@@ -246,7 +273,10 @@ class InteractivePdfView(QPdfView):
         QTimer.singleShot(0, self.sync_markup_zoom_reference)
 
     def marker_color(self) -> QColor:
-        return QColor(self._COLOR_OPTIONS.get(self._marker_color_key, self._COLOR_OPTIONS["yellow"]))
+        color = QColor(self._COLOR_OPTIONS.get(self._marker_color_key, self._COLOR_OPTIONS["yellow"]))
+        opacity = float(self._OPACITY_OPTIONS.get(self._marker_opacity_key, self._OPACITY_OPTIONS["medium"]))
+        color.setAlpha(max(0, min(255, round(opacity * 255))))
+        return color
 
     def marker_width(self) -> float:
         return float(self._WIDTH_OPTIONS.get(self._marker_width_key, self._WIDTH_OPTIONS["medium"]))
@@ -271,6 +301,10 @@ class InteractivePdfView(QPdfView):
         if width_key in self._WIDTH_OPTIONS:
             self._marker_width_key = width_key
 
+    def set_marker_opacity_key(self, opacity_key: str) -> None:
+        if opacity_key in self._OPACITY_OPTIONS:
+            self._marker_opacity_key = opacity_key
+
     def sync_markup_zoom_reference(self) -> None:
         zoom = self._effective_zoom_factor()
         if zoom > 0:
@@ -278,13 +312,14 @@ class InteractivePdfView(QPdfView):
 
     def open_tools_menu(self, global_pos) -> None:
         menu = QMenu(self)
+        menu.setProperty("drawingToolsMenu", True)
         tool_group = QActionGroup(menu)
         tool_group.setExclusive(True)
 
         for tool_name, icon, text in (
-            (self.TOOL_SELECT, _toolbar_icon("select"), self._t("drawing_page.tool.select", "Select")),
-            (self.TOOL_HAND, _toolbar_icon("import_export"), self._t("drawing_page.tool.hand", "Hand")),
-            (self.TOOL_MARKER, _toolbar_icon("comment"), self._t("drawing_page.tool.marker", "Marker")),
+            (self.TOOL_SELECT, _toolbar_icon("arrow_selector"), self._t("drawing_page.tool.select", "Select")),
+            (self.TOOL_HAND, _toolbar_icon("pan_tool"), self._t("drawing_page.tool.hand", "Hand")),
+            (self.TOOL_MARKER, _toolbar_icon("ink_highlighter"), self._t("drawing_page.tool.marker", "Marker")),
         ):
             action = menu.addAction(icon, text)
             action.setCheckable(True)
@@ -295,6 +330,7 @@ class InteractivePdfView(QPdfView):
         menu.addSeparator()
 
         color_menu = menu.addMenu(self._t("drawing_page.tool.color", "Marker Color"))
+        color_menu.setProperty("drawingToolsMenu", True)
         for color_key in ("yellow", "green", "blue", "pink", "red"):
             action = color_menu.addAction(
                 self._color_icon(self._COLOR_OPTIONS[color_key]),
@@ -304,7 +340,18 @@ class InteractivePdfView(QPdfView):
             action.setChecked(color_key == self._marker_color_key)
             action.setData(("color", color_key))
 
+        opacity_menu = menu.addMenu(self._t("drawing_page.tool.opacity", "Marker Opacity"))
+        opacity_menu.setProperty("drawingToolsMenu", True)
+        for opacity_key in ("light", "medium", "strong"):
+            action = opacity_menu.addAction(
+                self._t(f"drawing_page.tool.opacity.{opacity_key}", opacity_key.title())
+            )
+            action.setCheckable(True)
+            action.setChecked(opacity_key == self._marker_opacity_key)
+            action.setData(("opacity", opacity_key))
+
         width_menu = menu.addMenu(self._t("drawing_page.tool.width", "Marker Width"))
+        width_menu.setProperty("drawingToolsMenu", True)
         for width_key in ("thin", "medium", "bold"):
             action = width_menu.addAction(
                 self._t(f"drawing_page.tool.width.{width_key}", width_key.title())
@@ -334,6 +381,9 @@ class InteractivePdfView(QPdfView):
         if action_type == "color":
             self.set_marker_color_key(str(value))
             return
+        if action_type == "opacity":
+            self.set_marker_opacity_key(str(value))
+            return
         if action_type == "width":
             self.set_marker_width_key(str(value))
             return
@@ -341,13 +391,13 @@ class InteractivePdfView(QPdfView):
             self.clear_markups()
 
     def _color_icon(self, color: QColor) -> QIcon:
-        swatch = QPixmap(18, 18)
+        swatch = QPixmap(30, 18)
         swatch.fill(Qt.transparent)
         painter = QPainter(swatch)
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.setPen(QPen(QColor("#2b3640"), 1))
         painter.setBrush(color)
-        painter.drawEllipse(1, 1, 16, 16)
+        painter.drawEllipse(10, 1, 16, 16)
         painter.end()
         return QIcon(swatch)
 
@@ -390,14 +440,35 @@ class InteractivePdfView(QPdfView):
                 self._overlay.scale_strokes(ratio)
         self._last_markup_zoom = zoom
 
+    def set_custom_zoom(self, new_zoom: float, anchor_viewport_pos: QPoint | None = None) -> None:
+        old_zoom = self._effective_zoom_factor()
+        new_zoom = max(0.1, min(8.0, float(new_zoom)))
+        if old_zoom <= 0 or anchor_viewport_pos is None:
+            self.setZoomMode(QPdfView.ZoomMode.Custom)
+            self.setZoomFactor(new_zoom)
+            return
+
+        anchor = QPoint(anchor_viewport_pos)
+        content_x = float(self.horizontalScrollBar().value() + anchor.x())
+        content_y = float(self.verticalScrollBar().value() + anchor.y())
+        scale = new_zoom / old_zoom
+
+        self.setZoomMode(QPdfView.ZoomMode.Custom)
+        self.setZoomFactor(new_zoom)
+
+        def restore_anchor() -> None:
+            self.horizontalScrollBar().setValue(max(0, round(content_x * scale - anchor.x())))
+            self.verticalScrollBar().setValue(max(0, round(content_y * scale - anchor.y())))
+
+        QTimer.singleShot(0, restore_anchor)
+
     def wheelEvent(self, event) -> None:
         if event.modifiers() & Qt.ControlModifier:
             delta = event.angleDelta().y()
             if delta:
                 multiplier = 1.15 if delta > 0 else 1 / 1.15
                 new_zoom = max(0.1, min(8.0, self._effective_zoom_factor() * multiplier))
-                self.setZoomMode(QPdfView.ZoomMode.Custom)
-                self.setZoomFactor(new_zoom)
+                self.set_custom_zoom(new_zoom, event.position().toPoint())
             event.accept()
             return
         super().wheelEvent(event)
@@ -443,6 +514,9 @@ class InteractivePdfView(QPdfView):
 
 
 class _DrawingListCard(QFrame):
+    clicked = Signal()
+    doubleClicked = Signal()
+
     def __init__(self, drawing: dict, parent=None):
         super().__init__(parent)
         self.drawing = dict(drawing or {})
@@ -451,6 +525,7 @@ class _DrawingListCard(QFrame):
         self.setProperty("selected", False)
         self.setMinimumHeight(58)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setCursor(Qt.PointingHandCursor)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 10, 12, 10)
@@ -460,12 +535,29 @@ class _DrawingListCard(QFrame):
         self.title_label = QLabel(str(title))
         self.title_label.setProperty("toolCardValue", True)
         self.title_label.setProperty("drawingRowTitle", True)
-        self.title_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.title_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         layout.addWidget(self.title_label)
 
     def set_selected(self, selected: bool) -> None:
-        self.setProperty("selected", bool(selected))
+        selected = bool(selected)
+        if bool(self.property("selected")) == selected:
+            return
+        self.setProperty("selected", selected)
         repolish_widget(self)
+
+    def mousePressEvent(self, event) -> None:
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+            event.accept()
+            return
+        super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event) -> None:
+        if event.button() == Qt.LeftButton:
+            self.doubleClicked.emit()
+            event.accept()
+            return
+        super().mouseDoubleClickEvent(event)
 
 
 class DrawingPage(QWidget):
@@ -484,6 +576,7 @@ class DrawingPage(QWidget):
         self._current_drawing_path = ""
         self._prefer_context_focus = False
         self._focus_viewer_dismissed = False
+        self._manual_focus_viewer = False
         self._last_layout_signature: tuple[bool, int, int] | None = None
 
         self._pdf_document = QPdfDocument(self)
@@ -555,11 +648,16 @@ class DrawingPage(QWidget):
         root.addWidget(controls_frame)
 
         self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.setObjectName("drawingListSplitter")
         self.splitter.setChildrenCollapsible(False)
-        self.splitter.setHandleWidth(8)
+        self.splitter.setHandleWidth(2)
 
         self._build_list_panel()
         self._build_viewer_panel()
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(1, False)
+        self.splitter.setStretchFactor(0, 2)
+        self.splitter.setStretchFactor(1, 3)
 
         root.addWidget(self.splitter, 1)
 
@@ -586,12 +684,13 @@ class DrawingPage(QWidget):
         tooltip: str,
         fallback_text: str = "",
         icon_size: int = 18,
+        button_size: int = 30,
     ) -> QToolButton:
         button = QToolButton()
         button.setProperty("topBarIconButton", True)
         button.setAutoRaise(True)
         button.setToolTip(tooltip)
-        button.setFixedSize(30, 30)
+        button.setFixedSize(button_size, button_size)
         if not icon.isNull():
             button.setIcon(icon)
             button.setIconSize(QSize(icon_size, icon_size))
@@ -602,37 +701,38 @@ class DrawingPage(QWidget):
     def _build_list_panel(self) -> None:
         self.list_host = QFrame()
         self.list_host.setProperty("catalogShell", True)
+        self.list_host.setMinimumWidth(320)
         list_layout = QVBoxLayout(self.list_host)
-        list_layout.setContentsMargins(8, 8, 8, 8)
-        list_layout.setSpacing(8)
-
-        self.list_title = QLabel(self._t("drawing_page.list.title", "Drawing"))
-        self.list_title.setProperty("sectionTitle", True)
-        list_layout.addWidget(self.list_title)
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.setSpacing(0)
 
         self.list_widget = QListWidget()
         self.list_widget.setObjectName("drawingList")
         self.list_widget.setSelectionMode(QAbstractItemView.SingleSelection)
         self.list_widget.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.list_widget.setSpacing(6)
+        self.list_widget.setSpacing(8)
         self.list_widget.currentItemChanged.connect(self._on_current_item_changed)
-        self.list_widget.itemDoubleClicked.connect(lambda _item: self.open_selected())
+        self.list_widget.itemDoubleClicked.connect(lambda _item: self._focus_selected_in_app())
+        self.list_widget.installEventFilter(self)
+        self.list_widget.viewport().installEventFilter(self)
         list_layout.addWidget(self.list_widget, 1)
 
         self.splitter.addWidget(self.list_host)
 
     def _build_viewer_panel(self) -> None:
-        viewer_host = QWidget()
-        viewer_layout = QVBoxLayout(viewer_host)
-        viewer_layout.setContentsMargins(8, 8, 8, 8)
+        self.viewer_host = QWidget()
+        self.viewer_host.setMinimumWidth(420)
+        viewer_layout = QVBoxLayout(self.viewer_host)
+        viewer_layout.setContentsMargins(0, 0, 0, 0)
         viewer_layout.setSpacing(0)
         self._viewer_host_layout = viewer_layout
 
         self.viewer_surface = QFrame()
         self.viewer_surface.setProperty("catalogShell", True)
+        self.viewer_surface.setProperty("drawingViewerShell", True)
         viewer_surface_layout = QVBoxLayout(self.viewer_surface)
-        viewer_surface_layout.setContentsMargins(10, 10, 10, 10)
+        viewer_surface_layout.setContentsMargins(8, 8, 8, 8)
         viewer_surface_layout.setSpacing(8)
 
         self.pdf_view = InteractivePdfView(translate=self._t)
@@ -669,19 +769,62 @@ class DrawingPage(QWidget):
         self.viewer_stack.addWidget(self.pdf_view)
 
         viewer_surface_layout.addWidget(self.viewer_stack, 1)
+        self._build_viewer_zoom_overlay()
         viewer_layout.addWidget(self.viewer_surface, 1)
-        self.splitter.addWidget(viewer_host)
+        self.splitter.addWidget(self.viewer_host)
+
+    def _build_viewer_zoom_overlay(self) -> None:
+        self.viewer_zoom_overlay = QWidget(self.viewer_surface)
+        overlay_layout = QVBoxLayout(self.viewer_zoom_overlay)
+        overlay_layout.setContentsMargins(0, 0, 0, 0)
+        overlay_layout.setSpacing(2)
+
+        self.zoom_status.setParent(self.viewer_zoom_overlay)
+        self.zoom_status.setProperty("pdfFloatingZoomStatus", True)
+        self.zoom_status.setAlignment(Qt.AlignCenter)
+        overlay_layout.addWidget(self.zoom_status)
+
+        self.zoom_in_btn.setParent(self.viewer_zoom_overlay)
+        self.zoom_in_btn.setFixedSize(32, 32)
+        overlay_layout.addWidget(self.zoom_in_btn, 0, Qt.AlignCenter)
+
+        self.zoom_out_btn.setParent(self.viewer_zoom_overlay)
+        self.zoom_out_btn.setFixedSize(32, 32)
+        overlay_layout.addWidget(self.zoom_out_btn, 0, Qt.AlignCenter)
+
+        self.viewer_zoom_overlay.adjustSize()
+        self.viewer_zoom_overlay.raise_()
+        self._position_viewer_overlays()
+
+    def _position_viewer_overlays(self) -> None:
+        if not hasattr(self, "viewer_zoom_overlay"):
+            return
+        margin = 28
+        top_offset = 74
+        hint = self.viewer_zoom_overlay.sizeHint()
+        width = max(hint.width(), 34)
+        height = hint.height()
+        self.viewer_zoom_overlay.setGeometry(
+            max(margin, self.viewer_surface.width() - width - margin),
+            min(max(margin, top_offset), max(margin, self.viewer_surface.height() - height - margin)),
+            width,
+            height,
+        )
+        self.viewer_zoom_overlay.raise_()
 
     def _build_pdf_toolbar(self, viewer_layout: QVBoxLayout) -> None:
         pdf_toolbar = QFrame()
-        pdf_toolbar.setProperty("detailCard", True)
+        pdf_toolbar.setProperty("pdfToolbarCard", True)
+        pdf_toolbar.setFixedHeight(50)
         pdf_controls = QHBoxLayout(pdf_toolbar)
         pdf_controls.setContentsMargins(8, 6, 8, 6)
-        pdf_controls.setSpacing(6)
+        pdf_controls.setSpacing(4)
 
         self.viewer_tools_btn = self._make_icon_button(
-            _toolbar_icon("select"),
+            _toolbar_icon("menu_icon"),
             self._t("drawing_page.tool.menu_tip", "Viewer tools"),
+            icon_size=22,
+            button_size=36,
         )
         self.viewer_tools_btn.clicked.connect(self._open_viewer_tools_menu_from_button)
         pdf_controls.addWidget(self.viewer_tools_btn)
@@ -689,14 +832,18 @@ class DrawingPage(QWidget):
         self.clear_marks_btn = self._make_icon_button(
             _toolbar_icon("comment_delete"),
             self._t("drawing_page.tool.clear_marks", "Clear Marks"),
+            icon_size=22,
+            button_size=36,
         )
         self.clear_marks_btn.clicked.connect(self.pdf_view.clear_markups)
         pdf_controls.addWidget(self.clear_marks_btn)
 
         self.open_external_btn = self._make_icon_button(
-            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogOpenButton),
+            _toolbar_icon("file_open"),
             self._t("drawing_page.action.open", "Open"),
             fallback_text=self._t("drawing_page.action.open", "Open"),
+            icon_size=22,
+            button_size=36,
         )
         self.open_external_btn.clicked.connect(self.open_selected)
         pdf_controls.addWidget(self.open_external_btn)
@@ -705,6 +852,8 @@ class DrawingPage(QWidget):
             self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack),
             self._t("drawing_page.action.page_prev", "Previous page"),
             fallback_text="<",
+            icon_size=20,
+            button_size=36,
         )
         self.prev_page_btn.clicked.connect(lambda: self._jump_page(-1))
         pdf_controls.addWidget(self.prev_page_btn)
@@ -717,65 +866,100 @@ class DrawingPage(QWidget):
             self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowForward),
             self._t("drawing_page.action.page_next", "Next page"),
             fallback_text=">",
+            icon_size=20,
+            button_size=36,
         )
         self.next_page_btn.clicked.connect(lambda: self._jump_page(1))
         pdf_controls.addWidget(self.next_page_btn)
 
         self.zoom_out_btn = self._make_icon_button(
-            QIcon(),
+            _toolbar_icon("minus"),
             self._t("drawing_page.action.zoom_out", "Zoom out"),
             fallback_text="-",
+            icon_size=20,
+            button_size=38,
         )
+        self.zoom_out_btn.setProperty("panelActionSquareButton", True)
+        self.zoom_out_btn.setProperty("viewerToolbarGlyphButton", True)
         self.zoom_out_btn.clicked.connect(lambda: self._step_zoom(1 / 1.15))
-        pdf_controls.addWidget(self.zoom_out_btn)
 
         self.zoom_status = QLabel(self._t("drawing_page.zoom_status.empty", "Zoom -"))
         self.zoom_status.setProperty("drawingViewerStat", True)
-        pdf_controls.addWidget(self.zoom_status)
 
         self.zoom_in_btn = self._make_icon_button(
-            QIcon(),
+            _toolbar_icon("plus"),
             self._t("drawing_page.action.zoom_in", "Zoom in"),
             fallback_text="+",
+            icon_size=20,
+            button_size=38,
         )
+        self.zoom_in_btn.setProperty("panelActionSquareButton", True)
+        self.zoom_in_btn.setProperty("viewerToolbarGlyphButton", True)
         self.zoom_in_btn.clicked.connect(lambda: self._step_zoom(1.15))
-        pdf_controls.addWidget(self.zoom_in_btn)
 
-        self.fit_width_btn = self._make_text_action_button(self._t("drawing_page.action.fit_width", "Width"), min_width=64)
+        self.fit_width_btn = self._make_icon_button(
+            _toolbar_icon("fit_width"),
+            self._t("drawing_page.action.fit_width", "Fit Width"),
+            icon_size=22,
+            button_size=36,
+        )
         self.fit_width_btn.clicked.connect(self._fit_width)
         pdf_controls.addWidget(self.fit_width_btn)
 
-        self.fit_page_btn = self._make_text_action_button(self._t("drawing_page.action.fit_page", "Page"), min_width=58)
+        self.fit_page_btn = self._make_icon_button(
+            _toolbar_icon("fit_page"),
+            self._t("drawing_page.action.fit_page", "Fit Page"),
+            icon_size=22,
+            button_size=36,
+        )
         self.fit_page_btn.clicked.connect(self._fit_page)
         pdf_controls.addWidget(self.fit_page_btn)
 
         pdf_controls.addStretch(1)
 
+        self.find_trigger_btn = self._make_icon_button(
+            self.search_icon,
+            self._t("drawing_page.action.find", "Find text"),
+            icon_size=22,
+            button_size=36,
+        )
+        self.find_trigger_btn.setCheckable(True)
+        self.find_trigger_btn.clicked.connect(self._toggle_pdf_search)
+        pdf_controls.addWidget(self.find_trigger_btn)
+
         self.find_input = QLineEdit()
         self.find_input.setPlaceholderText(self._t("drawing_page.find.placeholder", "Find text in PDF..."))
-        self.find_input.setMaximumWidth(220)
+        self.find_input.setMaximumWidth(180)
+        self.find_input.setFixedHeight(36)
         self.find_input.textChanged.connect(self._on_find_text_changed)
+        self.find_input.setVisible(False)
         pdf_controls.addWidget(self.find_input)
 
         self.prev_hit_btn = self._make_icon_button(
             self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack),
             self._t("drawing_page.action.find_prev", "Previous hit"),
             fallback_text="<",
+            icon_size=20,
+            button_size=36,
         )
         self.prev_hit_btn.clicked.connect(lambda: self._step_search_result(-1))
+        self.prev_hit_btn.setVisible(False)
         pdf_controls.addWidget(self.prev_hit_btn)
 
         self.next_hit_btn = self._make_icon_button(
             self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowForward),
             self._t("drawing_page.action.find_next", "Next hit"),
             fallback_text=">",
+            icon_size=20,
+            button_size=36,
         )
         self.next_hit_btn.clicked.connect(lambda: self._step_search_result(1))
+        self.next_hit_btn.setVisible(False)
         pdf_controls.addWidget(self.next_hit_btn)
 
         self.search_status = QLabel(self._t("drawing_page.find.status.idle", "Text search"))
         self.search_status.setProperty("drawingViewerStat", True)
-        pdf_controls.addWidget(self.search_status)
+        self.search_status.setVisible(False)
 
         viewer_layout.addWidget(pdf_toolbar)
 
@@ -794,6 +978,22 @@ class DrawingPage(QWidget):
         self.pdf_view.open_tools_menu(anchor)
         self._update_tool_button()
         self._update_markup_buttons()
+
+    def _toggle_pdf_search(self) -> None:
+        visible = self.find_trigger_btn.isChecked()
+        self.find_trigger_btn.setIcon(self.close_icon if visible else self.search_icon)
+        self.find_input.setVisible(visible)
+        self.prev_hit_btn.setVisible(visible)
+        self.next_hit_btn.setVisible(visible)
+        self.search_status.setVisible(False)
+        if visible:
+            self.find_input.setFocus()
+            self.find_input.selectAll()
+            if self.find_input.text().strip():
+                self._focus_first_search_result()
+            return
+        self.find_input.clear()
+        self._update_search_status()
 
     def set_setup_context(self, context: dict | None) -> None:
         new_context = dict(context or {})
@@ -819,12 +1019,25 @@ class DrawingPage(QWidget):
         self.refresh_list()
 
     def _focus_mode_active(self) -> bool:
-        return bool(self._setup_context.get("selected")) and not self._focus_viewer_dismissed
+        return self._manual_focus_viewer or (
+            bool(self._setup_context.get("selected")) and not self._focus_viewer_dismissed
+        )
+
+    def _focus_selected_in_app(self) -> None:
+        drawing = self._selected_drawing() or self._current_drawing
+        if not drawing:
+            return
+        self._manual_focus_viewer = True
+        self._focus_viewer_dismissed = False
+        self._last_layout_signature = None
+        self._update_context_labels()
+        self._apply_splitter_layout()
 
     def _dismiss_focus_viewer(self) -> None:
         if not self._focus_mode_active():
             return
-        self._focus_viewer_dismissed = True
+        self._manual_focus_viewer = False
+        self._focus_viewer_dismissed = bool(self._setup_context.get("selected"))
         self._last_layout_signature = None
         self._update_context_labels()
         self._apply_splitter_layout()
@@ -873,6 +1086,8 @@ class DrawingPage(QWidget):
                 item = QListWidgetItem()
                 item.setData(Qt.UserRole, drawing)
                 card = _DrawingListCard(drawing)
+                card.clicked.connect(lambda list_item=item: self._select_list_item(list_item))
+                card.doubleClicked.connect(lambda list_item=item: self._activate_card_double_click(list_item))
                 item.setSizeHint(QSize(0, styled_list_item_height(card, spacing=2)))
                 self.list_widget.addItem(item)
                 self.list_widget.setItemWidget(item, card)
@@ -919,6 +1134,16 @@ class DrawingPage(QWidget):
                 return str(drawing.get("path") or "")
         return ""
 
+    def _select_list_item(self, item: QListWidgetItem | None) -> None:
+        if item is None:
+            return
+        self.list_widget.setCurrentItem(item)
+        self.list_widget.scrollToItem(item)
+
+    def _activate_card_double_click(self, item: QListWidgetItem | None) -> None:
+        self._select_list_item(item)
+        self._focus_selected_in_app()
+
     def _select_drawing_by_path(self, drawing_path: str) -> bool:
         target = str(drawing_path or "").strip().lower()
         if not target:
@@ -951,6 +1176,51 @@ class DrawingPage(QWidget):
             return None
         drawing = item.data(Qt.UserRole)
         return dict(drawing) if isinstance(drawing, dict) else None
+
+    def eventFilter(self, obj, event):
+        if obj is self.list_widget.viewport() and event.type() == QEvent.MouseButtonPress:
+            if self._is_press_near_splitter_handle(event):
+                return False
+            if not self.list_widget.itemAt(event.pos()):
+                self._clear_selection()
+        if obj is self.list_widget and event.type() == QEvent.MouseButtonPress:
+            if self._is_press_near_splitter_handle(event):
+                return False
+            viewport_pos = self.list_widget.viewport().mapFrom(self.list_widget, event.pos())
+            if not self.list_widget.itemAt(viewport_pos):
+                self._clear_selection()
+        return super().eventFilter(obj, event)
+
+    def _is_press_near_splitter_handle(self, event) -> bool:
+        handle = self.splitter.handle(1) if self.splitter.count() > 1 else None
+        if handle is None or self._focus_mode_active():
+            return False
+        handle_rect = handle.geometry().adjusted(-10, 0, 10, 0)
+        if hasattr(event, "globalPosition"):
+            global_pos = event.globalPosition().toPoint()
+        elif hasattr(event, "globalPos"):
+            global_pos = event.globalPos()
+        else:
+            return False
+        pos_in_splitter = self.splitter.mapFromGlobal(global_pos)
+        return handle_rect.contains(pos_in_splitter)
+
+    def _clear_selection(self) -> None:
+        self.list_widget.clearSelection()
+        self.list_widget.setCurrentItem(None)
+        self._current_drawing = None
+        self._current_drawing_path = ""
+        self._manual_focus_viewer = False
+        self._update_card_selection_states()
+        self._update_context_labels()
+        self._show_empty_state(
+            self._t("drawing_page.empty.title", "No drawing selected"),
+            self._t("drawing_page.empty.body", "Select a drawing to preview it here."),
+        )
+        self._update_page_status()
+        self._update_zoom_status()
+        self._update_search_status()
+        self._update_open_button_state()
 
     def _load_selected_preview(self) -> None:
         drawing = self._selected_drawing()
@@ -993,7 +1263,7 @@ class DrawingPage(QWidget):
     def _on_document_status_changed(self, status) -> None:
         if status == QPdfDocument.Status.Ready:
             self.viewer_stack.setCurrentWidget(self.pdf_view)
-            self._fit_width()
+            self._fit_page()
             self.pdf_view.reset_markup_state(clear_marks=False)
             self._reapply_search_text()
             QTimer.singleShot(0, lambda: self._go_to_page(0))
@@ -1076,16 +1346,9 @@ class DrawingPage(QWidget):
     def _update_zoom_status(self, *_args) -> None:
         ready = self._pdf_document.status() == QPdfDocument.Status.Ready
         if not ready:
-            self.zoom_status.setText(self._t("drawing_page.zoom_status.empty", "Zoom -"))
+            self.zoom_status.setText("-%")
         else:
-            mode = self.pdf_view.zoomMode()
-            if mode == QPdfView.ZoomMode.FitToWidth:
-                prefix = self._t("drawing_page.zoom_status.fit_width", "Fit Width")
-            elif mode == QPdfView.ZoomMode.FitInView:
-                prefix = self._t("drawing_page.zoom_status.fit_page", "Fit Page")
-            else:
-                prefix = self._t("drawing_page.zoom_status.custom", "Zoom")
-            self.zoom_status.setText(f"{prefix} {round(self._effective_zoom_factor() * 100)}%")
+            self.zoom_status.setText(f"{round(self._effective_zoom_factor() * 100)}%")
 
         self.zoom_out_btn.setEnabled(ready)
         self.zoom_in_btn.setEnabled(ready)
@@ -1108,8 +1371,7 @@ class DrawingPage(QWidget):
         if self._pdf_document.status() != QPdfDocument.Status.Ready:
             return
         new_zoom = max(0.1, min(8.0, self._effective_zoom_factor() * float(multiplier)))
-        self.pdf_view.setZoomMode(QPdfView.ZoomMode.Custom)
-        self.pdf_view.setZoomFactor(new_zoom)
+        self.pdf_view.set_custom_zoom(new_zoom, self.pdf_view.viewport().rect().center())
         self._update_zoom_status()
 
     def _jump_page(self, delta: int) -> None:
@@ -1130,6 +1392,15 @@ class DrawingPage(QWidget):
         self._search_model.setSearchString(self.find_input.text().strip())
         self._on_search_model_changed()
 
+    def _focus_first_search_result(self) -> None:
+        self.find_input.setFocus()
+        if self._pdf_document.status() != QPdfDocument.Status.Ready:
+            return
+        if self._search_model.rowCount(QModelIndex()) <= 0:
+            return
+        self.pdf_view.setCurrentSearchResultIndex(0)
+        self._focus_search_result(0)
+
     def _on_find_text_changed(self, text: str) -> None:
         self._search_model.setSearchString((text or "").strip())
         self._on_search_model_changed()
@@ -1142,6 +1413,7 @@ class DrawingPage(QWidget):
         result_count = self._search_model.rowCount(QModelIndex())
         if search_text and result_count > 0 and self.pdf_view.currentSearchResultIndex() < 0:
             self.pdf_view.setCurrentSearchResultIndex(0)
+            self._focus_search_result(0)
         elif not search_text:
             self.pdf_view.setCurrentSearchResultIndex(-1)
         self._update_search_status()
@@ -1158,7 +1430,31 @@ class DrawingPage(QWidget):
         else:
             current = max(0, min(count - 1, current + int(delta)))
         self.pdf_view.setCurrentSearchResultIndex(current)
+        self._focus_search_result(current)
         self._update_search_status()
+
+    def _focus_search_result(self, result_index: int) -> None:
+        if self._pdf_document.status() != QPdfDocument.Status.Ready:
+            return
+        if result_index < 0 or result_index >= self._search_model.rowCount(QModelIndex()):
+            return
+        model_index = self._search_model.index(result_index, 0, QModelIndex())
+        if not model_index.isValid():
+            return
+
+        page_data = model_index.data(QPdfSearchModel.Role.Page.value)
+        location_data = model_index.data(QPdfSearchModel.Role.Location.value)
+        try:
+            page = int(page_data)
+        except (TypeError, ValueError):
+            return
+
+        if isinstance(location_data, QPointF):
+            location = QPointF(float(location_data.x()), float(location_data.y()))
+        else:
+            location = QPointF(0.0, 0.0)
+
+        self.pdf_view.pageNavigator().jump(page, location, 0)
 
     def _update_search_status(self, *_args) -> None:
         ready = self._pdf_document.status() == QPdfDocument.Status.Ready
@@ -1192,21 +1488,12 @@ class DrawingPage(QWidget):
         self.next_hit_btn.setEnabled(current < result_count - 1)
 
     def _apply_viewer_presentation(self, focus_mode: bool, viewer_width: int, panel_height: int) -> None:
-        if focus_mode:
-            self.viewer_surface.setMinimumSize(0, 0)
-            self.viewer_surface.setMaximumSize(_MAX_WIDGET_SIZE, _MAX_WIDGET_SIZE)
-            self.viewer_surface.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            self._viewer_host_layout.setAlignment(self.viewer_surface, Qt.Alignment())
-            return
-
-        available_width = max(300, viewer_width - 24)
-        available_height = max(260, panel_height - 24)
-        preview_width = min(680, max(380, int(viewer_width * 0.78)), available_width)
-        preview_height = min(500, max(320, int(panel_height * 0.58)), available_height)
-
-        self.viewer_surface.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.viewer_surface.setFixedSize(preview_width, preview_height)
-        self._viewer_host_layout.setAlignment(self.viewer_surface, Qt.AlignTop | Qt.AlignRight)
+        del focus_mode, viewer_width, panel_height
+        self.viewer_surface.setMinimumSize(0, 0)
+        self.viewer_surface.setMaximumSize(_MAX_WIDGET_SIZE, _MAX_WIDGET_SIZE)
+        self.viewer_surface.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._viewer_host_layout.setAlignment(self.viewer_surface, Qt.Alignment())
+        self._position_viewer_overlays()
 
     def _apply_splitter_layout(self) -> None:
         focus_mode = self._focus_mode_active()
@@ -1222,7 +1509,7 @@ class DrawingPage(QWidget):
             list_width = 0
         else:
             self.list_host.show()
-            list_width = min(520, max(360, int(total_width * 0.42)))
+            list_width = min(520, max(320, int(total_width * 0.34)))
         viewer_width = max(1, total_width - list_width)
         self.splitter.setSizes([list_width, viewer_width])
         self._apply_viewer_presentation(focus_mode, viewer_width, total_height)
@@ -1230,11 +1517,10 @@ class DrawingPage(QWidget):
             QTimer.singleShot(0, self._apply_splitter_layout)
 
     def _update_tool_button(self) -> None:
-        icon = self.pdf_view.tool_icon()
         label_key = f"drawing_page.tool.{self.pdf_view.tool_name()}"
         label_default = self.pdf_view.tool_name().title()
         label = self._t(label_key, label_default)
-        self.viewer_tools_btn.setIcon(icon)
+        self.viewer_tools_btn.setIcon(_toolbar_icon("menu_icon"))
         self.viewer_tools_btn.setToolTip(
             self._t("drawing_page.tool.menu_tip", "Viewer tools") + f" ({label})"
         )
@@ -1261,6 +1547,7 @@ class DrawingPage(QWidget):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
+        self._position_viewer_overlays()
         QTimer.singleShot(0, self._apply_splitter_layout)
 
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None) -> None:
@@ -1271,7 +1558,6 @@ class DrawingPage(QWidget):
         self.search_toggle_btn.setToolTip(self._t("drawing_page.search_toggle_tip", "Show/hide search"))
         self.search_input.setPlaceholderText(self._t("drawing_page.search_placeholder", "Search drawings..."))
         self.refresh_btn.setText(self._t("drawing_page.action.refresh", "Refresh"))
-        self.list_title.setText(self._t("drawing_page.list.title", "Drawing"))
         self.close_focus_btn.setToolTip(self._t("drawing_page.action.close_focus", "Close focused drawing"))
 
         self.viewer_tools_btn.setToolTip(self._t("drawing_page.tool.menu_tip", "Viewer tools"))
@@ -1281,8 +1567,9 @@ class DrawingPage(QWidget):
         self.next_page_btn.setToolTip(self._t("drawing_page.action.page_next", "Next page"))
         self.zoom_out_btn.setToolTip(self._t("drawing_page.action.zoom_out", "Zoom out"))
         self.zoom_in_btn.setToolTip(self._t("drawing_page.action.zoom_in", "Zoom in"))
-        self.fit_width_btn.setText(self._t("drawing_page.action.fit_width", "Fit Width"))
-        self.fit_page_btn.setText(self._t("drawing_page.action.fit_page", "Fit Page"))
+        self.fit_width_btn.setToolTip(self._t("drawing_page.action.fit_width", "Fit Width"))
+        self.fit_page_btn.setToolTip(self._t("drawing_page.action.fit_page", "Fit Page"))
+        self.find_trigger_btn.setToolTip(self._t("drawing_page.action.find", "Find text"))
         self.find_input.setPlaceholderText(self._t("drawing_page.find.placeholder", "Find text in PDF..."))
         self.prev_hit_btn.setToolTip(self._t("drawing_page.action.find_prev", "Previous hit"))
         self.next_hit_btn.setToolTip(self._t("drawing_page.action.find_next", "Next hit"))

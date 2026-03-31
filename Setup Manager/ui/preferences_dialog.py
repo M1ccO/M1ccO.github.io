@@ -16,7 +16,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style
+from ui.widgets.common import add_shadow, apply_tool_library_combo_style
 
 
 class PreferencesDialog(QDialog):
@@ -26,6 +26,7 @@ class PreferencesDialog(QDialog):
         self._current = dict(current_preferences or {})
 
         self.setObjectName("appRoot")
+        self.setProperty("preferencesDialog", True)
         self.setWindowTitle(self._t("preferences.title", "Preferences"))
         self.setModal(True)
         self.resize(500, 280)
@@ -83,15 +84,13 @@ class PreferencesDialog(QDialog):
         self.language_combo = QComboBox()
         self.language_combo.addItem(self._t("language.english", "English"), "en")
         self.language_combo.addItem(self._t("language.finnish", "Finnish"), "fi")
-        apply_shared_dropdown_style(self.language_combo)
-        add_shadow(self.language_combo)
+        apply_tool_library_combo_style(self.language_combo)
         card_layout.addWidget(self._row(self._t("preferences.language", "Language"), self.language_combo))
 
         self.theme_combo = QComboBox()
         self.theme_combo.addItem(self._t("theme.classic", "Classic"), "classic")
         self.theme_combo.addItem(self._t("theme.graphite", "Graphite"), "graphite")
-        apply_shared_dropdown_style(self.theme_combo)
-        add_shadow(self.theme_combo)
+        apply_tool_library_combo_style(self.theme_combo)
         card_layout.addWidget(self._row(self._t("preferences.color_theme", "Color Theme"), self.theme_combo))
 
         layout.addStretch(1)
