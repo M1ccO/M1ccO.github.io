@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QModelIndex, QPoint, QPointF, QSignalBlocker, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QEvent, QModelIndex, QPoint, QPointF, QRectF, QSignalBlocker, QSize, QSizeF, Qt, QTimer, Signal
 from PySide6.QtGui import QActionGroup, QColor, QIcon, QPainter, QPainterPath, QPalette, QPen, QPixmap
 from PySide6.QtPdf import QPdfDocument, QPdfSearchModel
 from PySide6.QtPdfWidgets import QPdfView
@@ -72,6 +72,7 @@ class _MarkerOverlay(QWidget):
         self._pdf_view = pdf_view
         self._strokes: list[_MarkerStroke] = []
         self._active_stroke: _MarkerStroke | None = None
+        self._text_selection_rects: list[QRectF] = []
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
         self.resize_to_viewport()
@@ -92,6 +93,16 @@ class _MarkerOverlay(QWidget):
             return
         self._strokes.clear()
         self._active_stroke = None
+        self.update()
+
+    def set_text_selection_rects(self, rects: list[QRectF]) -> None:
+        self._text_selection_rects = [QRectF(rect) for rect in (rects or [])]
+        self.update()
+
+    def clear_text_selection(self) -> None:
+        if not self._text_selection_rects:
+            return
+        self._text_selection_rects.clear()
         self.update()
 
     def scale_strokes(self, ratio: float) -> None:
@@ -170,10 +181,26 @@ class _MarkerOverlay(QWidget):
 
     def paintEvent(self, event) -> None:
         del event
-        if not self.has_strokes():
+        if not self.has_strokes() and not self._text_selection_rects:
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
+        if self._text_selection_rects:
+            highlight = QColor("#9fc7ee")
+            highlight.setAlpha(96)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(highlight)
+            for rect in self._text_selection_rects:
+                painter.drawRoundedRect(
+                    QRectF(
+                        rect.left() - self._pdf_view.horizontalScrollBar().value(),
+                        rect.top() - self._pdf_view.verticalScrollBar().value(),
+                        rect.width(),
+                        rect.height(),
+                    ),
+                    2,
+                    2,
+                )
         for stroke in self._strokes:
             self._draw_stroke(painter, stroke)
         if self._active_stroke is not None:
@@ -216,6 +243,8 @@ class InteractivePdfView(QPdfView):
         self._marker_width_key = "medium"
         self._marker_opacity_key = "medium"
         self._last_markup_zoom: float | None = None
+        self._select_drag_active = False
+        self._select_drag_start = QPoint()
 
         self.setObjectName("drawingPdfView")
         self.setPageMode(QPdfView.PageMode.MultiPage)
@@ -289,7 +318,9 @@ class InteractivePdfView(QPdfView):
             return
         self._tool = tool_name
         self._hand_drag_active = False
+        self._select_drag_active = False
         self._overlay.cancel_stroke()
+        self._overlay.clear_text_selection()
         self._apply_cursor()
         self.toolChanged.emit(self._tool)
 
@@ -427,13 +458,164 @@ class InteractivePdfView(QPdfView):
         elif self._tool == self.TOOL_MARKER:
             cursor = Qt.CrossCursor
         else:
-            cursor = Qt.ArrowCursor
+            cursor = Qt.IBeamCursor
         self.viewport().setCursor(cursor)
+
+    def _page_pixel_size(self, page: int) -> QSizeF:
+        document = self.document()
+        if document is None:
+            return QSizeF()
+        try:
+            point_size = document.pagePointSize(page)
+        except Exception:
+            return QSizeF()
+        scale = self._page_view_scale()
+        return QSizeF(float(point_size.width()) * scale, float(point_size.height()) * scale)
+
+    def _page_view_scale(self) -> float:
+        zoom = self._effective_zoom_factor()
+        if zoom <= 0:
+            zoom = 1.0
+        # QPdfDocument page sizes are in points (1/72"). Convert to viewport
+        # pixels using logical DPI so selection mapping stays stable across
+        # scaling and different displays.
+        dpi_scale = float(self.logicalDpiY()) / 72.0
+        if dpi_scale <= 0:
+            dpi_scale = 1.0
+        return zoom * dpi_scale
+
+    def _content_pos_to_page_pos(self, content_pos: QPointF) -> tuple[int, QPointF] | None:
+        document = self.document()
+        if document is None or document.pageCount() <= 0:
+            return None
+
+        page_spacing = float(max(0, self.pageSpacing()))
+        y_cursor = 0.0
+        page_index = 0
+        for idx in range(document.pageCount()):
+            page_size_px = self._page_pixel_size(idx)
+            page_h = float(page_size_px.height())
+            if content_pos.y() < y_cursor + page_h + page_spacing or idx == document.pageCount() - 1:
+                page_index = idx
+                break
+            y_cursor += page_h + page_spacing
+
+        page_size_px = self._page_pixel_size(page_index)
+        page_w = float(page_size_px.width())
+        page_h = float(page_size_px.height())
+        if page_w <= 0 or page_h <= 0:
+            return None
+
+        page_left = max(0.0, (float(self.viewport().width()) - page_w) / 2.0)
+        local_x = min(max(content_pos.x() - page_left, 0.0), page_w)
+        local_y = min(max(content_pos.y() - y_cursor, 0.0), page_h)
+
+        scale = self._page_view_scale()
+        page_point = QPointF(local_x / scale, local_y / scale)
+        return page_index, page_point
+
+    def _selection_rects_for_page(self, page: int, selection) -> list[QRectF]:
+        rects: list[QRectF] = []
+        document = self.document()
+        if document is None:
+            return rects
+
+        page_size_px = self._page_pixel_size(page)
+        page_w = float(page_size_px.width())
+        page_h = float(page_size_px.height())
+        if page_w <= 0 or page_h <= 0:
+            return rects
+
+        page_spacing = float(max(0, self.pageSpacing()))
+        page_top = 0.0
+        for idx in range(page):
+            size_px = self._page_pixel_size(idx)
+            page_top += float(size_px.height()) + page_spacing
+        page_left = max(0.0, (float(self.viewport().width()) - page_w) / 2.0)
+
+        scale = self._page_view_scale()
+
+        for bound in (selection.bounds() or []):
+            if hasattr(bound, "boundingRect"):
+                bound_rect = QRectF(bound.boundingRect())
+            else:
+                bound_rect = QRectF(bound)
+            rects.append(
+                QRectF(
+                    page_left + bound_rect.left() * scale,
+                    page_top + bound_rect.top() * scale,
+                    max(1.0, bound_rect.width() * scale),
+                    max(1.0, bound_rect.height() * scale),
+                )
+            )
+        return rects
+
+    def _update_text_selection(self, viewport_start: QPoint, viewport_end: QPoint) -> None:
+        document = self.document()
+        if document is None or document.pageCount() <= 0:
+            self._overlay.clear_text_selection()
+            return
+
+        start_content = QPointF(
+            float(self.horizontalScrollBar().value() + viewport_start.x()),
+            float(self.verticalScrollBar().value() + viewport_start.y()),
+        )
+        end_content = QPointF(
+            float(self.horizontalScrollBar().value() + viewport_end.x()),
+            float(self.verticalScrollBar().value() + viewport_end.y()),
+        )
+
+        start_hit = self._content_pos_to_page_pos(start_content)
+        end_hit = self._content_pos_to_page_pos(end_content)
+        if not start_hit or not end_hit:
+            self._overlay.clear_text_selection()
+            return
+
+        start_page, start_point = start_hit
+        end_page, end_point = end_hit
+        low_page = min(start_page, end_page)
+        high_page = max(start_page, end_page)
+        low_point = start_point if start_page == low_page else end_point
+        high_point = start_point if start_page == high_page else end_point
+
+        selection_rects: list[QRectF] = []
+        for page in range(low_page, high_page + 1):
+            try:
+                page_size = document.pagePointSize(page)
+            except Exception:
+                continue
+
+            if low_page == high_page:
+                page_start = start_point
+                page_end = end_point
+            elif page == low_page:
+                page_start = low_point
+                page_end = QPointF(float(page_size.width()), float(page_size.height()))
+            elif page == high_page:
+                page_start = QPointF(0.0, 0.0)
+                page_end = high_point
+            else:
+                page_start = QPointF(0.0, 0.0)
+                page_end = QPointF(float(page_size.width()), float(page_size.height()))
+
+            try:
+                selection = document.getSelection(page, page_start, page_end)
+            except Exception:
+                continue
+            if not selection.isValid() or not (selection.text() or "").strip():
+                continue
+            selection_rects.extend(self._selection_rects_for_page(page, selection))
+
+        if not selection_rects:
+            self._overlay.clear_text_selection()
+            return
+        self._overlay.set_text_selection_rects(selection_rects)
 
     def _on_zoom_factor_changed(self, *_args) -> None:
         zoom = self._effective_zoom_factor()
         if zoom <= 0:
             return
+        self._overlay.clear_text_selection()
         if self._last_markup_zoom and self.has_markups():
             ratio = zoom / self._last_markup_zoom
             if abs(ratio - 1.0) > 0.001:
