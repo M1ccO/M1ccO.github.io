@@ -1,15 +1,16 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QModelIndex, QPoint, QPointF, QRectF, QSignalBlocker, QSize, QSizeF, Qt, QTimer, Signal
-from PySide6.QtGui import QActionGroup, QColor, QIcon, QPainter, QPainterPath, QPalette, QPen, QPixmap
+from PySide6.QtCore import QEvent, QModelIndex, QPoint, QPointF, QRectF, QSignalBlocker, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QActionGroup, QColor, QIcon, QPainter, QPalette, QPen, QPixmap
 from PySide6.QtPdf import QPdfDocument, QPdfSearchModel
 from PySide6.QtPdfWidgets import QPdfView
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
+    QGraphicsDropShadowEffect,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -60,19 +61,20 @@ def _toolbar_icon(name: str) -> QIcon:
         return _svg_icon(shared_svg)
     return QIcon()
 @dataclass
-class _MarkerStroke:
+class _TextHighlight:
+    page: int
+    pdf_rects: list[QRectF]  # coordinates in PDF point space — stable across zoom changes
     color: QColor
-    width: float
-    points: list[QPointF] = field(default_factory=list)
 
 
 class _MarkerOverlay(QWidget):
     def __init__(self, pdf_view, parent=None):
         super().__init__(parent)
         self._pdf_view = pdf_view
-        self._strokes: list[_MarkerStroke] = []
-        self._active_stroke: _MarkerStroke | None = None
-        self._text_selection_rects: list[QRectF] = []
+        self._highlights: list[_TextHighlight] = []
+        self._preview_rects: list[QRectF] = []   # content-px space; cleared after each gesture
+        self._preview_color: QColor = QColor("#9fc7ee")
+        self._search_rects: list[tuple[int, QRectF]] = []   # (page, pdf-point rect) for search hits
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         self.setAttribute(Qt.WA_NoSystemBackground, True)
         self.resize_to_viewport()
@@ -86,125 +88,127 @@ class _MarkerOverlay(QWidget):
         self.raise_()
 
     def has_strokes(self) -> bool:
-        return bool(self._strokes or self._active_stroke)
+        return bool(self._highlights)
 
     def clear_strokes(self) -> None:
-        if not self.has_strokes():
+        if not self._highlights and not self._preview_rects:
             return
-        self._strokes.clear()
-        self._active_stroke = None
+        self._highlights.clear()
+        self._preview_rects.clear()
         self.update()
 
-    def set_text_selection_rects(self, rects: list[QRectF]) -> None:
-        self._text_selection_rects = [QRectF(rect) for rect in (rects or [])]
+    def set_preview_rects(self, rects: list[QRectF], color: QColor | None = None) -> None:
+        self._preview_rects = [QRectF(r) for r in (rects or [])]
+        if color is not None:
+            self._preview_color = QColor(color)
         self.update()
 
-    def clear_text_selection(self) -> None:
-        if not self._text_selection_rects:
+    def clear_preview(self) -> None:
+        if not self._preview_rects:
             return
-        self._text_selection_rects.clear()
+        self._preview_rects.clear()
         self.update()
 
-    def scale_strokes(self, ratio: float) -> None:
-        if ratio <= 0:
+    def set_search_rects(self, page_rects: list[tuple[int, QRectF]]) -> None:
+        self._search_rects = list(page_rects or [])
+        self.update()
+
+    def clear_search_rects(self) -> None:
+        if not self._search_rects:
             return
-        for stroke in self._strokes:
-            stroke.width *= ratio
-            stroke.points = [QPointF(point.x() * ratio, point.y() * ratio) for point in stroke.points]
-        if self._active_stroke is not None:
-            self._active_stroke.width *= ratio
-            self._active_stroke.points = [
-                QPointF(point.x() * ratio, point.y() * ratio) for point in self._active_stroke.points
-            ]
+        self._search_rects.clear()
         self.update()
 
-    def begin_stroke(self, viewport_pos: QPoint, color: QColor, width: float) -> None:
-        self._active_stroke = _MarkerStroke(QColor(color), float(width), [self._content_point(viewport_pos)])
-        self.update()
-
-    def append_stroke(self, viewport_pos: QPoint) -> None:
-        if self._active_stroke is None:
+    def add_highlight(self, page: int, pdf_rects: list[QRectF], color: QColor) -> None:
+        if not pdf_rects:
             return
-        point = self._content_point(viewport_pos)
-        if self._active_stroke.points and point == self._active_stroke.points[-1]:
-            return
-        self._active_stroke.points.append(point)
+        self._highlights.append(_TextHighlight(int(page), [QRectF(r) for r in pdf_rects], QColor(color)))
         self.update()
 
-    def finish_stroke(self, viewport_pos: QPoint | None = None) -> bool:
-        if self._active_stroke is None:
-            return False
-        if viewport_pos is not None:
-            self.append_stroke(viewport_pos)
-        if not self._active_stroke.points:
-            self._active_stroke = None
-            self.update()
-            return False
-        self._strokes.append(self._active_stroke)
-        self._active_stroke = None
-        self.update()
-        return True
+    def _project_highlight_rects(self, highlight: _TextHighlight) -> list[QRectF]:
+        """Project PDF-point rects to current viewport (screen) coordinates."""
+        doc = self._pdf_view.document()
+        if doc is None:
+            return []
+        scale = self._pdf_view._compute_actual_scale()
+        margins = self._pdf_view.documentMargins()
+        page_spacing = float(max(0, self._pdf_view.pageSpacing()))
+        page_top = float(margins.top())
+        for idx in range(highlight.page):
+            page_top += float(doc.pagePointSize(idx).height()) * scale + page_spacing
+        page_w = float(doc.pagePointSize(highlight.page).width()) * scale
+        page_left = self._pdf_view._page_left_offset(page_w)
+        scroll_x = float(self._pdf_view.horizontalScrollBar().value())
+        scroll_y = float(self._pdf_view.verticalScrollBar().value())
+        result = []
+        for r in highlight.pdf_rects:
+            result.append(QRectF(
+                page_left + r.left() * scale - scroll_x,
+                page_top + r.top() * scale - scroll_y,
+                max(1.0, r.width() * scale),
+                max(1.0, r.height() * scale),
+            ))
+        return result
 
-    def cancel_stroke(self) -> None:
-        if self._active_stroke is None:
-            return
-        self._active_stroke = None
-        self.update()
-
-    def _content_point(self, viewport_pos: QPoint) -> QPointF:
-        return QPointF(
-            float(viewport_pos.x() + self._pdf_view.horizontalScrollBar().value()),
-            float(viewport_pos.y() + self._pdf_view.verticalScrollBar().value()),
+    def _project_pdf_rect(self, page: int, pdf_rect: QRectF) -> QRectF | None:
+        doc = self._pdf_view.document()
+        if doc is None:
+            return None
+        scale = self._pdf_view._compute_actual_scale()
+        margins = self._pdf_view.documentMargins()
+        page_spacing = float(max(0, self._pdf_view.pageSpacing()))
+        page_top = float(margins.top())
+        for idx in range(page):
+            page_top += float(doc.pagePointSize(idx).height()) * scale + page_spacing
+        page_w = float(doc.pagePointSize(page).width()) * scale
+        page_left = self._pdf_view._page_left_offset(page_w)
+        scroll_x = float(self._pdf_view.horizontalScrollBar().value())
+        scroll_y = float(self._pdf_view.verticalScrollBar().value())
+        return QRectF(
+            page_left + pdf_rect.left() * scale - scroll_x,
+            page_top + pdf_rect.top() * scale - scroll_y,
+            max(1.0, pdf_rect.width() * scale),
+            max(1.0, pdf_rect.height() * scale),
         )
-
-    def _viewport_point(self, content_pos: QPointF) -> QPointF:
-        return QPointF(
-            content_pos.x() - self._pdf_view.horizontalScrollBar().value(),
-            content_pos.y() - self._pdf_view.verticalScrollBar().value(),
-        )
-
-    def _draw_stroke(self, painter: QPainter, stroke: _MarkerStroke) -> None:
-        if not stroke.points:
-            return
-        pen = QPen(stroke.color, stroke.width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        painter.setPen(pen)
-        painter.setBrush(Qt.NoBrush)
-        if len(stroke.points) == 1:
-            point = self._viewport_point(stroke.points[0])
-            radius = stroke.width / 2.0
-            painter.drawEllipse(point, radius, radius)
-            return
-        path = QPainterPath(self._viewport_point(stroke.points[0]))
-        for point in stroke.points[1:]:
-            path.lineTo(self._viewport_point(point))
-        painter.drawPath(path)
 
     def paintEvent(self, event) -> None:
         del event
-        if not self.has_strokes() and not self._text_selection_rects:
+        if not self._highlights and not self._preview_rects and not self._search_rects:
             return
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
-        if self._text_selection_rects:
-            highlight = QColor("#9fc7ee")
-            highlight.setAlpha(96)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(highlight)
-            for rect in self._text_selection_rects:
+        painter.setPen(Qt.NoPen)
+        if self._search_rects:
+            search_color = QColor("#ffd95c")
+            search_color.setAlpha(140)
+            painter.setBrush(search_color)
+            pad = 3.0
+            for page, pdf_rect in self._search_rects:
+                vp = self._project_pdf_rect(page, pdf_rect)
+                if vp is not None:
+                    painter.drawRoundedRect(
+                        QRectF(vp.left() - pad, vp.top() - pad, vp.width() + pad * 2, vp.height() + pad * 2),
+                        3, 3,
+                    )
+        for highlight in self._highlights:
+            painter.setBrush(highlight.color)
+            for rect in self._project_highlight_rects(highlight):
+                painter.drawRoundedRect(rect, 2, 2)
+        if self._preview_rects:
+            painter.setBrush(self._preview_color)
+            scroll_x = float(self._pdf_view.horizontalScrollBar().value())
+            scroll_y = float(self._pdf_view.verticalScrollBar().value())
+            pad = getattr(self, "_preview_pad", 0.0)
+            for rect in self._preview_rects:
                 painter.drawRoundedRect(
                     QRectF(
-                        rect.left() - self._pdf_view.horizontalScrollBar().value(),
-                        rect.top() - self._pdf_view.verticalScrollBar().value(),
-                        rect.width(),
-                        rect.height(),
+                        rect.left() - scroll_x - pad,
+                        rect.top() - scroll_y - pad,
+                        rect.width() + pad * 2,
+                        rect.height() + pad * 2,
                     ),
-                    2,
-                    2,
+                    3, 3,
                 )
-        for stroke in self._strokes:
-            self._draw_stroke(painter, stroke)
-        if self._active_stroke is not None:
-            self._draw_stroke(painter, self._active_stroke)
 
 
 class InteractivePdfView(QPdfView):
@@ -222,11 +226,6 @@ class InteractivePdfView(QPdfView):
         "pink": QColor(236, 134, 198, 165),
         "red": QColor(245, 85, 85, 165),
     }
-    _WIDTH_OPTIONS = {
-        "thin": 10.0,
-        "medium": 16.0,
-        "bold": 24.0,
-    }
     _OPACITY_OPTIONS = {
         "light": 0.35,
         "medium": 0.55,
@@ -240,11 +239,11 @@ class InteractivePdfView(QPdfView):
         self._hand_drag_active = False
         self._last_drag_pos = QPoint()
         self._marker_color_key = "yellow"
-        self._marker_width_key = "medium"
         self._marker_opacity_key = "medium"
         self._last_markup_zoom: float | None = None
         self._select_drag_active = False
         self._select_drag_start = QPoint()
+        self._pending_highlights: list[tuple[int, list[QRectF]]] = []
 
         self.setObjectName("drawingPdfView")
         self.setPageMode(QPdfView.PageMode.MultiPage)
@@ -307,9 +306,6 @@ class InteractivePdfView(QPdfView):
         color.setAlpha(max(0, min(255, round(opacity * 255))))
         return color
 
-    def marker_width(self) -> float:
-        return float(self._WIDTH_OPTIONS.get(self._marker_width_key, self._WIDTH_OPTIONS["medium"]))
-
     def set_tool(self, tool_name: str) -> None:
         tool_name = str(tool_name or "").strip().lower()
         if tool_name not in {self.TOOL_SELECT, self.TOOL_HAND, self.TOOL_MARKER}:
@@ -319,18 +315,14 @@ class InteractivePdfView(QPdfView):
         self._tool = tool_name
         self._hand_drag_active = False
         self._select_drag_active = False
-        self._overlay.cancel_stroke()
-        self._overlay.clear_text_selection()
+        self._pending_highlights.clear()
+        self._overlay.clear_preview()
         self._apply_cursor()
         self.toolChanged.emit(self._tool)
 
     def set_marker_color_key(self, color_key: str) -> None:
         if color_key in self._COLOR_OPTIONS:
             self._marker_color_key = color_key
-
-    def set_marker_width_key(self, width_key: str) -> None:
-        if width_key in self._WIDTH_OPTIONS:
-            self._marker_width_key = width_key
 
     def set_marker_opacity_key(self, opacity_key: str) -> None:
         if opacity_key in self._OPACITY_OPTIONS:
@@ -381,16 +373,6 @@ class InteractivePdfView(QPdfView):
             action.setChecked(opacity_key == self._marker_opacity_key)
             action.setData(("opacity", opacity_key))
 
-        width_menu = menu.addMenu(self._t("drawing_page.tool.width", "Marker Width"))
-        width_menu.setProperty("drawingToolsMenu", True)
-        for width_key in ("thin", "medium", "bold"):
-            action = width_menu.addAction(
-                self._t(f"drawing_page.tool.width.{width_key}", width_key.title())
-            )
-            action.setCheckable(True)
-            action.setChecked(width_key == self._marker_width_key)
-            action.setData(("width", width_key))
-
         menu.addSeparator()
         clear_action = menu.addAction(
             _toolbar_icon("comment_delete"),
@@ -414,9 +396,6 @@ class InteractivePdfView(QPdfView):
             return
         if action_type == "opacity":
             self.set_marker_opacity_key(str(value))
-            return
-        if action_type == "width":
-            self.set_marker_width_key(str(value))
             return
         if action_type == "clear":
             self.clear_markups()
@@ -461,56 +440,57 @@ class InteractivePdfView(QPdfView):
             cursor = Qt.IBeamCursor
         self.viewport().setCursor(cursor)
 
-    def _page_pixel_size(self, page: int) -> QSizeF:
-        document = self.document()
-        if document is None:
-            return QSizeF()
-        try:
-            point_size = document.pagePointSize(page)
-        except Exception:
-            return QSizeF()
-        scale = self._page_view_scale()
-        return QSizeF(float(point_size.width()) * scale, float(point_size.height()) * scale)
+    def _compute_actual_scale(self) -> float:
+        """Derive the actual rendering scale (logical px per PDF point) from the
+        scrollbar range so we don't have to guess Qt's internal DPI conversion."""
+        doc = self.document()
+        if doc is None or doc.pageCount() <= 0:
+            return 1.0
+        n = doc.pageCount()
+        total_pts = sum(float(doc.pagePointSize(i).height()) for i in range(n))
+        if total_pts <= 0:
+            return 1.0
+        margins = self.documentMargins()
+        margin_v = float(margins.top() + margins.bottom())
+        spacing_px = float(max(0, (n - 1) * self.pageSpacing()))
+        content_h_px = float(self.verticalScrollBar().maximum() + self.viewport().height())
+        page_area_px = content_h_px - spacing_px - margin_v
+        return max(0.01, page_area_px / total_pts)
 
-    def _page_view_scale(self) -> float:
-        zoom = self._effective_zoom_factor()
-        if zoom <= 0:
-            zoom = 1.0
-        # QPdfDocument page sizes are in points (1/72"). Convert to viewport
-        # pixels using logical DPI so selection mapping stays stable across
-        # scaling and different displays.
-        dpi_scale = float(self.logicalDpiY()) / 72.0
-        if dpi_scale <= 0:
-            dpi_scale = 1.0
-        return zoom * dpi_scale
+    def _page_left_offset(self, page_w_px: float) -> float:
+        """X offset (in content coordinates) of the page's left edge."""
+        margins = self.documentMargins()
+        h_margins = float(margins.left() + margins.right())
+        content_w = max(page_w_px + h_margins, float(self.viewport().width()))
+        return (content_w - page_w_px) / 2.0
 
     def _content_pos_to_page_pos(self, content_pos: QPointF) -> tuple[int, QPointF] | None:
         document = self.document()
         if document is None or document.pageCount() <= 0:
             return None
 
+        scale = self._compute_actual_scale()
+        margins = self.documentMargins()
         page_spacing = float(max(0, self.pageSpacing()))
-        y_cursor = 0.0
+        y_cursor = float(margins.top())
         page_index = 0
         for idx in range(document.pageCount()):
-            page_size_px = self._page_pixel_size(idx)
-            page_h = float(page_size_px.height())
-            if content_pos.y() < y_cursor + page_h + page_spacing or idx == document.pageCount() - 1:
+            page_h = float(document.pagePointSize(idx).height()) * scale
+            if content_pos.y() < y_cursor + page_h or idx == document.pageCount() - 1:
                 page_index = idx
                 break
             y_cursor += page_h + page_spacing
 
-        page_size_px = self._page_pixel_size(page_index)
-        page_w = float(page_size_px.width())
-        page_h = float(page_size_px.height())
+        pts = document.pagePointSize(page_index)
+        page_w = float(pts.width()) * scale
+        page_h = float(pts.height()) * scale
         if page_w <= 0 or page_h <= 0:
             return None
 
-        page_left = max(0.0, (float(self.viewport().width()) - page_w) / 2.0)
+        page_left = self._page_left_offset(page_w)
         local_x = min(max(content_pos.x() - page_left, 0.0), page_w)
         local_y = min(max(content_pos.y() - y_cursor, 0.0), page_h)
 
-        scale = self._page_view_scale()
         page_point = QPointF(local_x / scale, local_y / scale)
         return page_index, page_point
 
@@ -520,20 +500,18 @@ class InteractivePdfView(QPdfView):
         if document is None:
             return rects
 
-        page_size_px = self._page_pixel_size(page)
-        page_w = float(page_size_px.width())
-        page_h = float(page_size_px.height())
-        if page_w <= 0 or page_h <= 0:
-            return rects
-
+        scale = self._compute_actual_scale()
+        margins = self.documentMargins()
         page_spacing = float(max(0, self.pageSpacing()))
-        page_top = 0.0
-        for idx in range(page):
-            size_px = self._page_pixel_size(idx)
-            page_top += float(size_px.height()) + page_spacing
-        page_left = max(0.0, (float(self.viewport().width()) - page_w) / 2.0)
 
-        scale = self._page_view_scale()
+        page_top = float(margins.top())
+        for idx in range(page):
+            page_top += float(document.pagePointSize(idx).height()) * scale + page_spacing
+
+        page_w = float(document.pagePointSize(page).width()) * scale
+        if page_w <= 0:
+            return rects
+        page_left = self._page_left_offset(page_w)
 
         for bound in (selection.bounds() or []):
             if hasattr(bound, "boundingRect"):
@@ -550,11 +528,13 @@ class InteractivePdfView(QPdfView):
             )
         return rects
 
-    def _update_text_selection(self, viewport_start: QPoint, viewport_end: QPoint) -> None:
+    def _compute_selection(
+        self, viewport_start: QPoint, viewport_end: QPoint
+    ) -> list[tuple[int, list[QRectF], list[QRectF]]]:
+        """Return [(page, pdf_rects, content_px_rects), ...] for text under the drag area."""
         document = self.document()
         if document is None or document.pageCount() <= 0:
-            self._overlay.clear_text_selection()
-            return
+            return []
 
         start_content = QPointF(
             float(self.horizontalScrollBar().value() + viewport_start.x()),
@@ -568,8 +548,7 @@ class InteractivePdfView(QPdfView):
         start_hit = self._content_pos_to_page_pos(start_content)
         end_hit = self._content_pos_to_page_pos(end_content)
         if not start_hit or not end_hit:
-            self._overlay.clear_text_selection()
-            return
+            return []
 
         start_page, start_point = start_hit
         end_page, end_point = end_hit
@@ -578,7 +557,7 @@ class InteractivePdfView(QPdfView):
         low_point = start_point if start_page == low_page else end_point
         high_point = start_point if start_page == high_page else end_point
 
-        selection_rects: list[QRectF] = []
+        results: list[tuple[int, list[QRectF], list[QRectF]]] = []
         for page in range(low_page, high_page + 1):
             try:
                 page_size = document.pagePointSize(page)
@@ -604,22 +583,53 @@ class InteractivePdfView(QPdfView):
                 continue
             if not selection.isValid() or not (selection.text() or "").strip():
                 continue
-            selection_rects.extend(self._selection_rects_for_page(page, selection))
 
-        if not selection_rects:
-            self._overlay.clear_text_selection()
+            pdf_rects: list[QRectF] = []
+            for bound in (selection.bounds() or []):
+                if hasattr(bound, "boundingRect"):
+                    pdf_rects.append(QRectF(bound.boundingRect()))
+                else:
+                    pdf_rects.append(QRectF(bound))
+            if pdf_rects:
+                results.append((page, pdf_rects, self._selection_rects_for_page(page, selection)))
+
+        return results
+
+    def _update_text_selection(self, viewport_start: QPoint, viewport_end: QPoint) -> None:
+        results = self._compute_selection(viewport_start, viewport_end)
+        if not results:
+            self._overlay.clear_preview()
             return
-        self._overlay.set_text_selection_rects(selection_rects)
+        preview = [r for _, _, px_rects in results for r in px_rects]
+        sel_color = QColor("#9fc7ee")
+        sel_color.setAlpha(160)
+        self._overlay.set_preview_rects(preview, sel_color)
+
+    def _update_marker_selection(self, viewport_start: QPoint, viewport_end: QPoint) -> None:
+        results = self._compute_selection(viewport_start, viewport_end)
+        self._pending_highlights = [(page, pdf_rects) for page, pdf_rects, _ in results]
+        if not results:
+            self._overlay.clear_preview()
+            return
+        preview = [r for _, _, px_rects in results for r in px_rects]
+        self._overlay.set_preview_rects(preview, self.marker_color())
+
+    def _commit_marker_highlight(self) -> bool:
+        if not self._pending_highlights:
+            self._overlay.clear_preview()
+            return False
+        color = self.marker_color()
+        for page, pdf_rects in self._pending_highlights:
+            self._overlay.add_highlight(page, pdf_rects, color)
+        self._pending_highlights.clear()
+        self._overlay.clear_preview()
+        return True
 
     def _on_zoom_factor_changed(self, *_args) -> None:
         zoom = self._effective_zoom_factor()
         if zoom <= 0:
             return
-        self._overlay.clear_text_selection()
-        if self._last_markup_zoom and self.has_markups():
-            ratio = zoom / self._last_markup_zoom
-            if abs(ratio - 1.0) > 0.001:
-                self._overlay.scale_strokes(ratio)
+        self._overlay.clear_preview()
         self._last_markup_zoom = zoom
 
     def set_custom_zoom(self, new_zoom: float, anchor_viewport_pos: QPoint | None = None) -> None:
@@ -664,31 +674,46 @@ class InteractivePdfView(QPdfView):
                 self.open_tools_menu(event.globalPos())
                 return True
             if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
+                if self._tool == self.TOOL_SELECT:
+                    self._select_drag_active = True
+                    self._select_drag_start = event.pos()
+                    self._overlay.clear_preview()
+                    return True
                 if self._tool == self.TOOL_HAND:
                     self._hand_drag_active = True
                     self._last_drag_pos = event.pos()
                     self._apply_cursor()
                     return True
                 if self._tool == self.TOOL_MARKER:
-                    self._overlay.begin_stroke(event.pos(), self.marker_color(), self.marker_width())
+                    self._select_drag_active = True
+                    self._select_drag_start = event.pos()
+                    self._overlay.clear_preview()
                     return True
             if event.type() == QEvent.MouseMove:
+                if self._tool == self.TOOL_SELECT and self._select_drag_active:
+                    self._update_text_selection(self._select_drag_start, event.pos())
+                    return True
                 if self._tool == self.TOOL_HAND and self._hand_drag_active:
                     delta = event.pos() - self._last_drag_pos
                     self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
                     self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
                     self._last_drag_pos = event.pos()
                     return True
-                if self._tool == self.TOOL_MARKER and event.buttons() & Qt.LeftButton:
-                    self._overlay.append_stroke(event.pos())
+                if self._tool == self.TOOL_MARKER and self._select_drag_active:
+                    self._update_marker_selection(self._select_drag_start, event.pos())
                     return True
             if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.LeftButton:
+                if self._tool == self.TOOL_SELECT and self._select_drag_active:
+                    self._select_drag_active = False
+                    self._update_text_selection(self._select_drag_start, event.pos())
+                    return True
                 if self._tool == self.TOOL_HAND and self._hand_drag_active:
                     self._hand_drag_active = False
                     self._apply_cursor()
                     return True
-                if self._tool == self.TOOL_MARKER:
-                    created = self._overlay.finish_stroke(event.pos())
+                if self._tool == self.TOOL_MARKER and self._select_drag_active:
+                    self._select_drag_active = False
+                    created = self._commit_marker_highlight()
                     if created:
                         self.markupsChanged.emit(True)
                     return True
@@ -818,11 +843,14 @@ class DrawingPage(QWidget):
         self.context_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         controls.addWidget(self.context_label, 0, Qt.AlignRight)
 
-        self.close_focus_btn = self._make_icon_button(
-            self.close_icon,
-            self._t("drawing_page.action.close_focus", "Close focused drawing"),
-            icon_size=16,
-        )
+        self.close_focus_btn = QToolButton()
+        self.close_focus_btn.setProperty("topBarIconButton", True)
+        self.close_focus_btn.setAutoRaise(True)
+        self.close_focus_btn.setIcon(self.close_icon)
+        self.close_focus_btn.setIconSize(QSize(18, 18))
+        self.close_focus_btn.setText(self._t("drawing_page.action.close_focus", "Close viewer"))
+        self.close_focus_btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.close_focus_btn.setFixedHeight(36)
         self.close_focus_btn.clicked.connect(self._dismiss_focus_viewer)
         self.close_focus_btn.setVisible(False)
         controls.addWidget(self.close_focus_btn, 0, Qt.AlignRight)
@@ -948,6 +976,7 @@ class DrawingPage(QWidget):
         self.pdf_view.zoomModeChanged.connect(self._update_zoom_status)
         self.pdf_view.toolChanged.connect(lambda *_args: self._update_tool_button())
         self.pdf_view.markupsChanged.connect(lambda *_args: self._update_markup_buttons())
+        self.pdf_view.installEventFilter(self)
         self.viewer_stack.addWidget(self.pdf_view)
 
         viewer_surface_layout.addWidget(self.viewer_stack, 1)
@@ -956,7 +985,7 @@ class DrawingPage(QWidget):
         self.splitter.addWidget(self.viewer_host)
 
     def _build_viewer_zoom_overlay(self) -> None:
-        self.viewer_zoom_overlay = QWidget(self.viewer_surface)
+        self.viewer_zoom_overlay = QWidget(self.pdf_view)
         overlay_layout = QVBoxLayout(self.viewer_zoom_overlay)
         overlay_layout.setContentsMargins(0, 0, 0, 0)
         overlay_layout.setSpacing(2)
@@ -964,14 +993,20 @@ class DrawingPage(QWidget):
         self.zoom_status.setParent(self.viewer_zoom_overlay)
         self.zoom_status.setProperty("pdfFloatingZoomStatus", True)
         self.zoom_status.setAlignment(Qt.AlignCenter)
-        overlay_layout.addWidget(self.zoom_status)
+        self.zoom_status.setFixedSize(36, 24)
+        _shadow = QGraphicsDropShadowEffect(self.zoom_status)
+        _shadow.setBlurRadius(3)
+        _shadow.setOffset(0, 0)
+        _shadow.setColor(QColor(0, 0, 0, 200))
+        self.zoom_status.setGraphicsEffect(_shadow)
+        overlay_layout.addWidget(self.zoom_status, 0, Qt.AlignCenter)
 
         self.zoom_in_btn.setParent(self.viewer_zoom_overlay)
-        self.zoom_in_btn.setFixedSize(32, 32)
+        self.zoom_in_btn.setFixedSize(36, 32)
         overlay_layout.addWidget(self.zoom_in_btn, 0, Qt.AlignCenter)
 
         self.zoom_out_btn.setParent(self.viewer_zoom_overlay)
-        self.zoom_out_btn.setFixedSize(32, 32)
+        self.zoom_out_btn.setFixedSize(36, 32)
         overlay_layout.addWidget(self.zoom_out_btn, 0, Qt.AlignCenter)
 
         self.viewer_zoom_overlay.adjustSize()
@@ -981,14 +1016,13 @@ class DrawingPage(QWidget):
     def _position_viewer_overlays(self) -> None:
         if not hasattr(self, "viewer_zoom_overlay"):
             return
-        margin = 28
-        top_offset = 74
+        margin = 18
         hint = self.viewer_zoom_overlay.sizeHint()
         width = max(hint.width(), 34)
         height = hint.height()
         self.viewer_zoom_overlay.setGeometry(
-            max(margin, self.viewer_surface.width() - width - margin),
-            min(max(margin, top_offset), max(margin, self.viewer_surface.height() - height - margin)),
+            max(margin, self.pdf_view.width() - width - margin),
+            margin,
             width,
             height,
         )
@@ -1139,6 +1173,11 @@ class DrawingPage(QWidget):
         self.next_hit_btn.setVisible(False)
         pdf_controls.addWidget(self.next_hit_btn)
 
+        self.search_result_label = QLabel()
+        self.search_result_label.setProperty("drawingViewerStat", True)
+        self.search_result_label.setVisible(False)
+        pdf_controls.addWidget(self.search_result_label)
+
         self.search_status = QLabel(self._t("drawing_page.find.status.idle", "Text search"))
         self.search_status.setProperty("drawingViewerStat", True)
         self.search_status.setVisible(False)
@@ -1167,6 +1206,9 @@ class DrawingPage(QWidget):
         self.find_input.setVisible(visible)
         self.prev_hit_btn.setVisible(visible)
         self.next_hit_btn.setVisible(visible)
+        self.search_result_label.setVisible(visible)
+        self.fit_width_btn.setVisible(not visible)
+        self.fit_page_btn.setVisible(not visible)
         self.search_status.setVisible(False)
         if visible:
             self.find_input.setFocus()
@@ -1175,6 +1217,7 @@ class DrawingPage(QWidget):
                 self._focus_first_search_result()
             return
         self.find_input.clear()
+        self.pdf_view._overlay.clear_search_rects()
         self._update_search_status()
 
     def set_setup_context(self, context: dict | None) -> None:
@@ -1598,6 +1641,7 @@ class DrawingPage(QWidget):
             self._focus_search_result(0)
         elif not search_text:
             self.pdf_view.setCurrentSearchResultIndex(-1)
+        self._refresh_search_overlay()
         self._update_search_status()
 
     def _step_search_result(self, delta: int) -> None:
@@ -1614,6 +1658,30 @@ class DrawingPage(QWidget):
         self.pdf_view.setCurrentSearchResultIndex(current)
         self._focus_search_result(current)
         self._update_search_status()
+
+    def _refresh_search_overlay(self) -> None:
+        overlay = self.pdf_view._overlay
+        count = self._search_model.rowCount(QModelIndex())
+        if count <= 0 or not self.find_input.text().strip():
+            overlay.clear_search_rects()
+            return
+        page_rects: list[tuple[int, QRectF]] = []
+        for i in range(count):
+            idx = self._search_model.index(i, 0, QModelIndex())
+            if not idx.isValid():
+                continue
+            page_data = idx.data(QPdfSearchModel.Role.Page.value)
+            rect_data = idx.data(QPdfSearchModel.Role.Location.value)
+            try:
+                page = int(page_data)
+            except (TypeError, ValueError):
+                continue
+            if rect_data is not None:
+                try:
+                    page_rects.append((page, QRectF(rect_data)))
+                except Exception:
+                    pass
+        overlay.set_search_rects(page_rects)
 
     def _focus_search_result(self, result_index: int) -> None:
         if self._pdf_document.status() != QPdfDocument.Status.Ready:
@@ -1637,6 +1705,7 @@ class DrawingPage(QWidget):
             location = QPointF(0.0, 0.0)
 
         self.pdf_view.pageNavigator().jump(page, location, 0)
+        self.pdf_view.viewport().update()
 
     def _update_search_status(self, *_args) -> None:
         ready = self._pdf_document.status() == QPdfDocument.Status.Ready
@@ -1648,24 +1717,26 @@ class DrawingPage(QWidget):
         if not ready or not search_text:
             self.prev_hit_btn.setEnabled(False)
             self.next_hit_btn.setEnabled(False)
+            self.search_result_label.setText("")
             self.search_status.setText(self._t("drawing_page.find.status.idle", "Text search"))
             return
 
         if result_count <= 0:
             self.prev_hit_btn.setEnabled(False)
             self.next_hit_btn.setEnabled(False)
+            self.search_result_label.setText(self._t("drawing_page.find.status.none", "0 matches"))
             self.search_status.setText(self._t("drawing_page.find.status.none", "0 matches"))
             return
 
         display_index = max(0, current) + 1
-        self.search_status.setText(
-            self._t(
-                "drawing_page.find.status.ready",
-                "Match {current} / {total}",
-                current=display_index,
-                total=result_count,
-            )
+        status_text = self._t(
+            "drawing_page.find.status.ready",
+            "{current} / {total}",
+            current=display_index,
+            total=result_count,
         )
+        self.search_result_label.setText(status_text)
+        self.search_status.setText(status_text)
         self.prev_hit_btn.setEnabled(current > 0)
         self.next_hit_btn.setEnabled(current < result_count - 1)
 
@@ -1691,7 +1762,7 @@ class DrawingPage(QWidget):
             list_width = 0
         else:
             self.list_host.show()
-            list_width = min(520, max(320, int(total_width * 0.34)))
+            list_width = min(520, max(380, int(total_width * 0.42)))
         viewer_width = max(1, total_width - list_width)
         self.splitter.setSizes([list_width, viewer_width])
         self._apply_viewer_presentation(focus_mode, viewer_width, total_height)
@@ -1731,6 +1802,11 @@ class DrawingPage(QWidget):
         super().resizeEvent(event)
         self._position_viewer_overlays()
         QTimer.singleShot(0, self._apply_splitter_layout)
+
+    def eventFilter(self, watched, event) -> bool:
+        if hasattr(self, "pdf_view") and watched is self.pdf_view and event.type() == QEvent.Resize:
+            self._position_viewer_overlays()
+        return False
 
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None) -> None:
         if translate is not None:

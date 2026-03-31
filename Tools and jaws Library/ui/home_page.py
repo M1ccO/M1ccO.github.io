@@ -1479,11 +1479,25 @@ class HomePage(QWidget):
             self._t('tool_library.action.copy_tool_title', 'Copy tool'),
             self._t('tool_library.prompt.new_description_optional', 'New description (optional):'),
         )
+        allow_duplicate = False
+        if self.tool_service.tcode_exists(new_id.strip()):
+            confirm_text = self._t(
+                'tool_library.warning.duplicate_tcode',
+                'This T-code already exists, want to save the tool anyway?\n\n'
+                'This does not overwrite or replace the existing tool.',
+            )
+            if not self._confirm_yes_no(
+                self._t('tool_library.warning.duplicate_tcode_title', 'Duplicate T-code'),
+                confirm_text,
+                danger=False,
+            ):
+                return
+            allow_duplicate = True
         try:
             if self.current_tool_uid is not None:
-                copied = self.tool_service.copy_tool_by_uid(self.current_tool_uid, new_id, new_desc)
+                copied = self.tool_service.copy_tool_by_uid(self.current_tool_uid, new_id, new_desc, allow_duplicate=allow_duplicate)
             else:
-                copied = self.tool_service.copy_tool(self.current_tool_id, new_id, new_desc)
+                copied = self.tool_service.copy_tool(self.current_tool_id, new_id, new_desc, allow_duplicate=allow_duplicate)
             self.current_tool_uid = copied.get('uid') if isinstance(copied, dict) else None
             self.current_tool_id = (copied.get('id') if isinstance(copied, dict) else '') or new_id.strip()
             self.refresh_list()

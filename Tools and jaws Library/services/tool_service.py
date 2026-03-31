@@ -444,30 +444,30 @@ class ToolService:
         with self.db.conn:
             self.db.conn.execute('DELETE FROM tools WHERE uid = ?', (uid,))
 
-    def copy_tool(self, source_id: str, new_id: str, new_description: str = ''):
+    def copy_tool(self, source_id: str, new_id: str, new_description: str = '', allow_duplicate: bool = False):
         tool = self.get_tool(source_id)
         if not tool:
             raise ValueError('Source tool not found.')
-        if self.tcode_exists(new_id):
+        if not allow_duplicate and self.tcode_exists(new_id):
             raise ValueError(f'Tool ID {new_id} already exists.')
         tool.pop('uid', None)
         tool['id'] = new_id.strip()
         if new_description.strip():
             tool['description'] = new_description.strip()
-        new_uid = self.save_tool(tool)
+        new_uid = self.save_tool(tool, allow_duplicate=allow_duplicate)
         copied = self.get_tool_by_uid(new_uid)
         return copied or tool
 
-    def copy_tool_by_uid(self, source_uid: int, new_id: str, new_description: str = ''):
+    def copy_tool_by_uid(self, source_uid: int, new_id: str, new_description: str = '', allow_duplicate: bool = False):
         tool = self.get_tool_by_uid(source_uid)
         if not tool:
             raise ValueError('Source tool not found.')
-        if self.tcode_exists(new_id):
+        if not allow_duplicate and self.tcode_exists(new_id):
             raise ValueError(f'Tool ID {new_id} already exists.')
         tool.pop('uid', None)
         tool['id'] = new_id.strip()
         if new_description.strip():
             tool['description'] = new_description.strip()
-        new_uid = self.save_tool(tool)
+        new_uid = self.save_tool(tool, allow_duplicate=allow_duplicate)
         copied = self.get_tool_by_uid(new_uid)
         return copied or tool
