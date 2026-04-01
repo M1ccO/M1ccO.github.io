@@ -46,7 +46,8 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
                 spare_parts TEXT DEFAULT '',
                 geometry_profiles TEXT DEFAULT '[]',
                 support_parts TEXT DEFAULT '[]',
-                component_items TEXT DEFAULT '[]'
+                component_items TEXT DEFAULT '[]',
+                measurement_overlays TEXT DEFAULT '[]'
             )
             """
         )
@@ -75,6 +76,7 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
         'geometry_profiles': "TEXT DEFAULT '[]'",
         'support_parts': "TEXT DEFAULT '[]'",
         'component_items': "TEXT DEFAULT '[]'",
+        'measurement_overlays': "TEXT DEFAULT '[]'",
         # new column for storing path to an STL file used for 3‑D preview
         'stl_path': "TEXT DEFAULT ''",
     }
@@ -109,6 +111,8 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
             conn.execute('CREATE INDEX IF NOT EXISTS idx_tools_id ON tools(id)')
         return
 
+    has_measurement_overlays = 'measurement_overlays' in cols
+
     with conn:
         conn.execute(
             """
@@ -138,29 +142,33 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
                 geometry_profiles TEXT DEFAULT '[]',
                 support_parts TEXT DEFAULT '[]',
                 component_items TEXT DEFAULT '[]',
+                measurement_overlays TEXT DEFAULT '[]',
                 stl_path TEXT DEFAULT '',
                 default_pot TEXT DEFAULT ''
             )
             """
         )
-        conn.execute(
+        insert_sql = (
             """
             INSERT INTO tools_new (
                 id, tool_head, tool_type, description, geom_x, geom_z, radius,
                 nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                 cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                 notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                geometry_profiles, support_parts, component_items, stl_path
+                geometry_profiles, support_parts, component_items, measurement_overlays, stl_path
             )
             SELECT
                 id, tool_head, tool_type, description, geom_x, geom_z, radius,
                 nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                 cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                 notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                geometry_profiles, support_parts, component_items, stl_path
+                geometry_profiles, support_parts, component_items, {measurement_overlays}, stl_path
             FROM tools
             """
+        ).format(
+            measurement_overlays='measurement_overlays' if has_measurement_overlays else "'[]'"
         )
+        conn.execute(insert_sql)
         conn.execute('DROP TABLE tools')
         conn.execute('ALTER TABLE tools_new RENAME TO tools')
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tools_id ON tools(id)')

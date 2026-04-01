@@ -969,6 +969,185 @@ class AddEditToolDialog(QDialog):
         self.tabs.addTab(models_tab, self._t('tool_editor.tab.models', '3D models'))
 
         # -------------------------
+        # MEASUREMENTS TAB
+        # -------------------------
+        measurements_tab = QWidget()
+        measurements_tab.setProperty('editorPageSurface', True)
+        measurements_layout = QVBoxLayout(measurements_tab)
+        measurements_layout.setContentsMargins(18, 18, 18, 18)
+        measurements_layout.setSpacing(10)
+
+        measurements_hint = QLabel(
+            self._t(
+                'tool_editor.measurements.hint',
+                'Shown only in the detached 3D Preview window. Select a 3D model part or use Assembly coordinates. XYZ format: x, y, z.',
+            )
+        )
+        measurements_hint.setWordWrap(True)
+        measurements_hint.setProperty('detailHint', True)
+        measurements_hint.setStyleSheet('background: transparent; color: #6b7b8e; font-size: 12px;')
+        measurements_layout.addWidget(measurements_hint)
+
+        distance_panel = QFrame()
+        distance_panel.setProperty('editorPartsPanel', True)
+        distance_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        distance_panel_layout = QVBoxLayout(distance_panel)
+        distance_panel_layout.setContentsMargins(10, 10, 10, 8)
+        distance_panel_layout.setSpacing(6)
+
+        distance_title = QLabel(self._t('tool_editor.measurements.distance_title', 'Distance arrows'))
+        distance_title.setProperty('detailSectionTitle', True)
+        distance_panel_layout.addWidget(distance_title)
+
+        self.distance_measurements_table = PartsTable([
+            self._t('tool_editor.measurements.name', 'Name'),
+            self._t('tool_editor.measurements.start_part', 'Start part'),
+            self._t('tool_editor.measurements.start_xyz', 'Start XYZ'),
+            self._t('tool_editor.measurements.end_part', 'End part'),
+            self._t('tool_editor.measurements.end_xyz', 'End XYZ'),
+        ])
+        self.distance_measurements_table.set_column_keys(['name', 'start_part', 'start_xyz', 'end_part', 'end_xyz'])
+        self.distance_measurements_table.setObjectName('editorDistanceMeasurementsTable')
+        self.distance_measurements_table.setSelectionMode(PartsTable.SingleSelection)
+        self.distance_measurements_table.set_read_only_columns(['start_part', 'end_part'])
+        self.distance_measurements_table.verticalHeader().setDefaultSectionSize(40)
+        self.distance_measurements_table.verticalHeader().setMinimumSectionSize(34)
+        self.distance_measurements_table.setMinimumHeight(128)
+        self.distance_measurements_table.setMaximumHeight(220)
+        self.distance_measurements_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.distance_measurements_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Interactive)
+        self.distance_measurements_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.distance_measurements_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Interactive)
+        self.distance_measurements_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Stretch)
+        self.distance_measurements_table.setColumnWidth(0, 180)
+        self.distance_measurements_table.setColumnWidth(1, 130)
+        self.distance_measurements_table.setColumnWidth(3, 130)
+        distance_panel_layout.addWidget(self.distance_measurements_table, 1)
+
+        distance_btn_bar = QFrame()
+        distance_btn_bar.setProperty('editorButtonBar', True)
+        distance_btns = QHBoxLayout(distance_btn_bar)
+        distance_btns.setContentsMargins(0, 0, 0, 0)
+        distance_btns.setSpacing(6)
+        self.add_distance_measurement_btn = QPushButton()
+        self.remove_distance_measurement_btn = QPushButton()
+        self.distance_measurement_up_btn = QPushButton()
+        self.distance_measurement_down_btn = QPushButton()
+        style_icon_action_button(
+            self.add_distance_measurement_btn,
+            TOOL_ICONS_DIR / 'Plus_icon.svg',
+            self._t('tool_editor.measurements.add_distance', 'Add distance arrow'),
+        )
+        style_icon_action_button(
+            self.remove_distance_measurement_btn,
+            TOOL_ICONS_DIR / 'remove.svg',
+            self._t('tool_editor.measurements.remove_distance', 'Remove selected distance arrow'),
+            danger=True,
+        )
+        style_move_arrow_button(
+            self.distance_measurement_up_btn,
+            self._t('work_editor.tools.move_up', '▲'),
+            self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'),
+        )
+        style_move_arrow_button(
+            self.distance_measurement_down_btn,
+            self._t('work_editor.tools.move_down', '▼'),
+            self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'),
+        )
+        self.add_distance_measurement_btn.clicked.connect(self._add_distance_measurement_row)
+        self.remove_distance_measurement_btn.clicked.connect(self.distance_measurements_table.remove_selected_row)
+        self.distance_measurement_up_btn.clicked.connect(lambda: self.distance_measurements_table.move_selected_row(-1))
+        self.distance_measurement_down_btn.clicked.connect(lambda: self.distance_measurements_table.move_selected_row(1))
+        distance_btns.addWidget(self.add_distance_measurement_btn)
+        distance_btns.addWidget(self.remove_distance_measurement_btn)
+        distance_btns.addWidget(self.distance_measurement_up_btn)
+        distance_btns.addWidget(self.distance_measurement_down_btn)
+        distance_btns.addStretch(1)
+        distance_panel_layout.insertWidget(1, distance_btn_bar)
+        measurements_layout.addWidget(distance_panel, 0)
+
+        ring_panel = QFrame()
+        ring_panel.setProperty('editorPartsPanel', True)
+        ring_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        ring_panel_layout = QVBoxLayout(ring_panel)
+        ring_panel_layout.setContentsMargins(10, 10, 10, 8)
+        ring_panel_layout.setSpacing(6)
+
+        ring_title = QLabel(self._t('tool_editor.measurements.ring_title', 'Diameter rings'))
+        ring_title.setProperty('detailSectionTitle', True)
+        ring_panel_layout.addWidget(ring_title)
+
+        self.ring_measurements_table = PartsTable([
+            self._t('tool_editor.measurements.name', 'Name'),
+            self._t('tool_editor.measurements.part', 'Part'),
+            self._t('tool_editor.measurements.center_xyz', 'Center XYZ'),
+            self._t('tool_editor.measurements.axis_xyz', 'Axis XYZ'),
+            self._t('tool_editor.measurements.diameter', 'Diameter'),
+        ])
+        self.ring_measurements_table.set_column_keys(['name', 'part', 'center_xyz', 'axis_xyz', 'diameter'])
+        self.ring_measurements_table.setObjectName('editorRingMeasurementsTable')
+        self.ring_measurements_table.setSelectionMode(PartsTable.SingleSelection)
+        self.ring_measurements_table.set_read_only_columns(['part'])
+        self.ring_measurements_table.verticalHeader().setDefaultSectionSize(40)
+        self.ring_measurements_table.verticalHeader().setMinimumSectionSize(34)
+        self.ring_measurements_table.setMinimumHeight(112)
+        self.ring_measurements_table.setMaximumHeight(200)
+        self.ring_measurements_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.ring_measurements_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Interactive)
+        self.ring_measurements_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+        self.ring_measurements_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Stretch)
+        self.ring_measurements_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Interactive)
+        self.ring_measurements_table.setColumnWidth(0, 180)
+        self.ring_measurements_table.setColumnWidth(1, 130)
+        self.ring_measurements_table.setColumnWidth(4, 110)
+        ring_panel_layout.addWidget(self.ring_measurements_table, 1)
+
+        ring_btn_bar = QFrame()
+        ring_btn_bar.setProperty('editorButtonBar', True)
+        ring_btns = QHBoxLayout(ring_btn_bar)
+        ring_btns.setContentsMargins(0, 0, 0, 0)
+        ring_btns.setSpacing(6)
+        self.add_ring_measurement_btn = QPushButton()
+        self.remove_ring_measurement_btn = QPushButton()
+        self.ring_measurement_up_btn = QPushButton()
+        self.ring_measurement_down_btn = QPushButton()
+        style_icon_action_button(
+            self.add_ring_measurement_btn,
+            TOOL_ICONS_DIR / 'Plus_icon.svg',
+            self._t('tool_editor.measurements.add_ring', 'Add diameter ring'),
+        )
+        style_icon_action_button(
+            self.remove_ring_measurement_btn,
+            TOOL_ICONS_DIR / 'remove.svg',
+            self._t('tool_editor.measurements.remove_ring', 'Remove selected diameter ring'),
+            danger=True,
+        )
+        style_move_arrow_button(
+            self.ring_measurement_up_btn,
+            self._t('work_editor.tools.move_up', '▲'),
+            self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'),
+        )
+        style_move_arrow_button(
+            self.ring_measurement_down_btn,
+            self._t('work_editor.tools.move_down', '▼'),
+            self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'),
+        )
+        self.add_ring_measurement_btn.clicked.connect(self._add_ring_measurement_row)
+        self.remove_ring_measurement_btn.clicked.connect(self.ring_measurements_table.remove_selected_row)
+        self.ring_measurement_up_btn.clicked.connect(lambda: self.ring_measurements_table.move_selected_row(-1))
+        self.ring_measurement_down_btn.clicked.connect(lambda: self.ring_measurements_table.move_selected_row(1))
+        ring_btns.addWidget(self.add_ring_measurement_btn)
+        ring_btns.addWidget(self.remove_ring_measurement_btn)
+        ring_btns.addWidget(self.ring_measurement_up_btn)
+        ring_btns.addWidget(self.ring_measurement_down_btn)
+        ring_btns.addStretch(1)
+        ring_panel_layout.insertWidget(1, ring_btn_bar)
+        measurements_layout.addWidget(ring_panel, 0)
+        measurements_layout.addStretch(1)
+
+        self.tabs.addTab(measurements_tab, self._t('tool_editor.tab.measurements', 'Measurements'))
+
+        # -------------------------
         # BOTTOM BUTTONS
         # -------------------------
         self._dialog_buttons = create_dialog_buttons(
@@ -1845,6 +2024,7 @@ class AddEditToolDialog(QDialog):
 
         self._set_model_row(row, name, stl_file, color_hex)
         self.model_table.setCurrentCell(row, 0)
+        self._refresh_measurement_part_dropdowns()
         self._refresh_models_preview()
 
     def _browse_model_file_for_row(self, row: int):
@@ -1880,6 +2060,7 @@ class AddEditToolDialog(QDialog):
         row = self.model_table.currentRow()
         if row >= 0:
             self.model_table.removeRow(row)
+            self._refresh_measurement_part_dropdowns()
             self._refresh_models_preview()
 
     def _model_table_rows(self):
@@ -1908,6 +2089,7 @@ class AddEditToolDialog(QDialog):
             )
 
         self.model_table.blockSignals(False)
+        self._refresh_measurement_part_dropdowns()
 
         if selected_row is not None and 0 <= selected_row < self.model_table.rowCount():
             self.model_table.selectRow(selected_row)
@@ -1919,6 +2101,7 @@ class AddEditToolDialog(QDialog):
 
         self.model_table.move_selected_row(delta)
         if self.model_table.currentRow() != row:
+            self._refresh_measurement_part_dropdowns()
             self._refresh_models_preview()
 
     def _on_model_table_changed(self, item):
@@ -1930,6 +2113,7 @@ class AddEditToolDialog(QDialog):
             if not current_color or current_color == '#9ea7b3':
                 auto_color = self._default_color_for_part_name(item.text().strip())
                 self._set_color_button(row, auto_color)
+            self._refresh_measurement_part_dropdowns()
         self._refresh_models_preview()
 
     def _model_table_to_parts(self):
@@ -2063,6 +2247,219 @@ class AddEditToolDialog(QDialog):
     def _on_model_table_row_changed(self, current_row, current_col, prev_row, prev_col):
         if current_row >= 0 and self._assembly_transform_enabled:
             self.models_preview.select_part(current_row)
+
+    def _measurement_part_options(self):
+        options = [
+            (
+                self._t('tool_editor.measurements.assembly_coords', 'Assembly coordinates'),
+                '',
+            )
+        ]
+        seen = set()
+        for row in range(self.model_table.rowCount()):
+            item = self.model_table.item(row, 0)
+            name = item.text().strip() if item else ''
+            if not name or name in seen:
+                continue
+            seen.add(name)
+            options.append((name, name))
+        return options
+
+    def _measurement_combo_row(self, table: PartsTable, column_key: str, combo: QComboBox) -> int:
+        column = table.column_index(column_key)
+        if column < 0:
+            return -1
+        for row in range(table.rowCount()):
+            if table.cellWidget(row, column) is combo:
+                return row
+        return -1
+
+    def _on_measurement_part_combo_changed(self, table: PartsTable, column_key: str, combo: QComboBox):
+        row = self._measurement_combo_row(table, column_key, combo)
+        if row < 0:
+            return
+        value = str(combo.currentData() or '').strip()
+        table.set_cell_text(row, column_key, value)
+        combo.setToolTip(
+            value or self._t('tool_editor.measurements.assembly_coords', 'Assembly coordinates')
+        )
+
+    def _ensure_measurement_part_combo(self, table: PartsTable, row: int, column_key: str):
+        column = table.column_index(column_key)
+        if row < 0 or column < 0:
+            return
+
+        item = table.item(row, column)
+        if item is None:
+            item = QTableWidgetItem('')
+            table.setItem(row, column, item)
+
+        combo = table.cellWidget(row, column)
+        if not isinstance(combo, QComboBox):
+            combo = QComboBox(table)
+            combo.setObjectName('measurementPartCombo')
+            combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            combo.setMinimumHeight(28)
+            combo.setMaxVisibleItems(8)
+            self._style_combo(combo)
+            self._configure_combo_popup(combo, max_rows=8, row_height=40)
+            combo.currentIndexChanged.connect(
+                lambda _idx, t=table, key=column_key, c=combo: self._on_measurement_part_combo_changed(t, key, c)
+            )
+            table.setCellWidget(row, column, combo)
+
+        current_value = item.text().strip()
+        options = self._measurement_part_options()
+
+        combo.blockSignals(True)
+        combo.clear()
+        for display, value in options:
+            combo.addItem(display, value)
+
+        target_index = 0
+        for idx in range(combo.count()):
+            if str(combo.itemData(idx) or '').strip() == current_value:
+                target_index = idx
+                break
+        combo.setCurrentIndex(target_index)
+        combo.blockSignals(False)
+
+        resolved_value = str(combo.currentData() or '').strip()
+        table.set_cell_text(row, column_key, resolved_value)
+        combo.setToolTip(
+            resolved_value or self._t('tool_editor.measurements.assembly_coords', 'Assembly coordinates')
+        )
+
+    def _refresh_measurement_part_dropdowns(self):
+        if not hasattr(self, 'distance_measurements_table') or not hasattr(self, 'ring_measurements_table'):
+            return
+
+        for row in range(self.distance_measurements_table.rowCount()):
+            self._ensure_measurement_part_combo(self.distance_measurements_table, row, 'start_part')
+            self._ensure_measurement_part_combo(self.distance_measurements_table, row, 'end_part')
+
+        for row in range(self.ring_measurements_table.rowCount()):
+            self._ensure_measurement_part_combo(self.ring_measurements_table, row, 'part')
+
+    def _add_distance_measurement_row(self, values=None):
+        row_data = {
+            'name': self._t('tool_editor.measurements.default_distance', 'Distance'),
+            'start_part': '',
+            'start_xyz': '0, 0, 0',
+            'end_part': '',
+            'end_xyz': '0, 0, 0',
+        }
+        if isinstance(values, dict):
+            row_data.update(values)
+        self.distance_measurements_table.add_row_dict(row_data)
+        row = self.distance_measurements_table.rowCount() - 1
+        if row >= 0:
+            self._refresh_measurement_part_dropdowns()
+            self.distance_measurements_table.setCurrentCell(row, 0)
+            self.distance_measurements_table.selectRow(row)
+
+    def _add_ring_measurement_row(self, values=None):
+        row_data = {
+            'name': self._t('tool_editor.measurements.default_ring', 'Diameter'),
+            'part': '',
+            'center_xyz': '0, 0, 0',
+            'axis_xyz': '0, 1, 0',
+            'diameter': '0',
+        }
+        if isinstance(values, dict):
+            row_data.update(values)
+        self.ring_measurements_table.add_row_dict(row_data)
+        row = self.ring_measurements_table.rowCount() - 1
+        if row >= 0:
+            self._refresh_measurement_part_dropdowns()
+            self.ring_measurements_table.setCurrentCell(row, 0)
+            self.ring_measurements_table.selectRow(row)
+
+    def _load_measurement_overlays(self, overlays):
+        self.distance_measurements_table.setRowCount(0)
+        self.ring_measurements_table.setRowCount(0)
+
+        raw_overlays = overlays
+        if isinstance(raw_overlays, str):
+            try:
+                raw_overlays = json.loads(raw_overlays or '[]')
+            except Exception:
+                raw_overlays = []
+
+        if not isinstance(raw_overlays, list):
+            return
+
+        for overlay in raw_overlays:
+            if not isinstance(overlay, dict):
+                continue
+            overlay_type = (overlay.get('type') or '').strip().lower()
+            if overlay_type == 'distance':
+                self._add_distance_measurement_row(
+                    {
+                        'name': overlay.get('name', ''),
+                        'start_part': overlay.get('start_part', ''),
+                        'start_xyz': overlay.get('start_xyz', ''),
+                        'end_part': overlay.get('end_part', ''),
+                        'end_xyz': overlay.get('end_xyz', ''),
+                    }
+                )
+            elif overlay_type == 'diameter_ring':
+                self._add_ring_measurement_row(
+                    {
+                        'name': overlay.get('name', ''),
+                        'part': overlay.get('part', ''),
+                        'center_xyz': overlay.get('center_xyz', ''),
+                        'axis_xyz': overlay.get('axis_xyz', ''),
+                        'diameter': overlay.get('diameter', ''),
+                    }
+                )
+
+        self._refresh_measurement_part_dropdowns()
+
+    def _measurement_overlays_from_tables(self):
+        overlays = []
+
+        for entry in self.distance_measurements_table.row_dicts():
+            name = (entry.get('name') or '').strip()
+            start_part = (entry.get('start_part') or '').strip()
+            start_xyz = (entry.get('start_xyz') or '').strip()
+            end_part = (entry.get('end_part') or '').strip()
+            end_xyz = (entry.get('end_xyz') or '').strip()
+            if not (name or start_part or start_xyz or end_part or end_xyz):
+                continue
+            overlays.append(
+                {
+                    'type': 'distance',
+                    'name': name or self._t('tool_editor.measurements.default_distance', 'Distance'),
+                    'start_part': start_part,
+                    'start_xyz': start_xyz,
+                    'end_part': end_part,
+                    'end_xyz': end_xyz,
+                    'order': len(overlays),
+                }
+            )
+
+        for entry in self.ring_measurements_table.row_dicts():
+            name = (entry.get('name') or '').strip()
+            part = (entry.get('part') or '').strip()
+            center_xyz = (entry.get('center_xyz') or '').strip()
+            axis_xyz = (entry.get('axis_xyz') or '').strip()
+            diameter = (entry.get('diameter') or '').strip()
+            if not (name or part or center_xyz or axis_xyz or diameter):
+                continue
+            overlays.append(
+                {
+                    'type': 'diameter_ring',
+                    'name': name or self._t('tool_editor.measurements.default_ring', 'Diameter'),
+                    'part': part,
+                    'center_xyz': center_xyz,
+                    'axis_xyz': axis_xyz,
+                    'diameter': diameter,
+                    'order': len(overlays),
+                }
+            )
+
+        return overlays
 
     # -------------------------
     # EXISTING HELPERS
@@ -2222,6 +2619,8 @@ class AddEditToolDialog(QDialog):
             if t:
                 self._part_transforms[i] = t
 
+        self._load_measurement_overlays(self.tool.get('measurement_overlays', []))
+
         self._update_tool_type_fields()
         self._refresh_models_preview()
 
@@ -2335,6 +2734,7 @@ class AddEditToolDialog(QDialog):
             'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.cutting_edges', 'Cutting edges')) if selected_cutting == 'Mill' else 0,
             'support_parts': support_parts,
             'component_items': component_items,
+            'measurement_overlays': self._measurement_overlays_from_tables(),
             'stl_path': json.dumps(model_parts) if model_parts else '',
             'default_pot': self.default_pot.text().strip(),
         }

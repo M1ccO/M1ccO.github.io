@@ -70,6 +70,55 @@ class ToolService:
             'order': order,
         }
 
+    @staticmethod
+    def _normalize_measurement_overlay(item, default_order=0):
+        if not isinstance(item, dict):
+            return None
+
+        overlay_type = (item.get('type') or '').strip().lower()
+        try:
+            order = int(item.get('order', default_order))
+        except Exception:
+            order = default_order
+
+        if overlay_type == 'distance':
+            name = (item.get('name') or '').strip() or f'Distance {order + 1}'
+            start_xyz = str(item.get('start_xyz') or '').strip()
+            end_xyz = str(item.get('end_xyz') or '').strip()
+            start_part = str(item.get('start_part') or '').strip()
+            end_part = str(item.get('end_part') or '').strip()
+            if not (name or start_part or end_part or start_xyz or end_xyz):
+                return None
+            return {
+                'type': 'distance',
+                'name': name,
+                'start_part': start_part,
+                'start_xyz': start_xyz,
+                'end_part': end_part,
+                'end_xyz': end_xyz,
+                'order': order,
+            }
+
+        if overlay_type == 'diameter_ring':
+            name = (item.get('name') or '').strip() or f'Diameter {order + 1}'
+            part = str(item.get('part') or '').strip()
+            center_xyz = str(item.get('center_xyz') or '').strip()
+            axis_xyz = str(item.get('axis_xyz') or '').strip()
+            diameter = str(item.get('diameter') or '').strip()
+            if not (name or part or center_xyz or axis_xyz or diameter):
+                return None
+            return {
+                'type': 'diameter_ring',
+                'name': name,
+                'part': part,
+                'center_xyz': center_xyz,
+                'axis_xyz': axis_xyz,
+                'diameter': diameter,
+                'order': order,
+            }
+
+        return None
+
     def _component_items_from_legacy(self, tool):
         items = []
 
@@ -175,15 +224,23 @@ class ToolService:
         tool['geometry_profiles'] = self._coerce_json_list(tool.get('geometry_profiles'))
         tool['support_parts'] = self._coerce_json_list(tool.get('support_parts'))
         raw_components = self._coerce_json_list(tool.get('component_items'))
+        raw_measurements = self._coerce_json_list(tool.get('measurement_overlays'))
         normalized_components = []
+        normalized_measurements = []
         for idx, item in enumerate(raw_components):
             normalized = self._normalize_component_item(item, idx)
             if normalized is not None:
                 normalized_components.append(normalized)
+        for idx, item in enumerate(raw_measurements):
+            normalized = self._normalize_measurement_overlay(item, idx)
+            if normalized is not None:
+                normalized_measurements.append(normalized)
         normalized_components.sort(key=lambda entry: int(entry.get('order', 0)))
+        normalized_measurements.sort(key=lambda entry: int(entry.get('order', 0)))
         if not normalized_components:
             normalized_components = self._component_items_from_legacy(tool)
         tool['component_items'] = normalized_components
+        tool['measurement_overlays'] = normalized_measurements
         return tool
 
     def _seed_if_empty(self):
@@ -225,6 +282,7 @@ class ToolService:
             'notes': 'Clamp + screw set',
             'drill_nose_angle': 0,
             'mill_cutting_edges': 0,
+            'measurement_overlays': [],
             'geometry_profiles': [
                 {'variant': 'H1', 'h_code': 'H1', 'b_axis': 'B0', 'spindle': 'Main', 'description': 'Standard main spindle setup'},
                 {'variant': 'H2', 'h_code': 'H2', 'b_axis': 'B90', 'spindle': 'Main', 'description': 'Rotated posture'},
@@ -313,6 +371,13 @@ class ToolService:
         support_parts = self._coerce_json_list(tool.get('support_parts', []))
         if not support_parts:
             support_parts = legacy['support_parts']
+        raw_measurement_overlays = self._coerce_json_list(tool.get('measurement_overlays', []))
+        measurement_overlays = []
+        for idx, item in enumerate(raw_measurement_overlays):
+            normalized = self._normalize_measurement_overlay(item, idx)
+            if normalized is not None:
+                measurement_overlays.append(normalized)
+        measurement_overlays.sort(key=lambda entry: int(entry.get('order', 0)))
         selected_head = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper()
         if selected_head not in {'HEAD1', 'HEAD2'}:
             selected_head = 'HEAD1'
@@ -370,6 +435,7 @@ class ToolService:
             json.dumps(geometry_profiles, ensure_ascii=False),
             json.dumps(support_parts, ensure_ascii=False),
             json.dumps(component_items, ensure_ascii=False),
+            json.dumps(measurement_overlays, ensure_ascii=False),
             normalized_stl_path,
             tool.get('default_pot', '').strip(),
         )
@@ -392,8 +458,8 @@ class ToolService:
                             nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                             cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                             notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                            geometry_profiles, support_parts, component_items, stl_path, default_pot
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            geometry_profiles, support_parts, component_items, measurement_overlays, stl_path, default_pot
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         payload,
                     )
@@ -428,6 +494,7 @@ class ToolService:
                     geometry_profiles=?,
                     support_parts=?,
                     component_items=?,
+                    measurement_overlays=?,
                     stl_path=?,
                     default_pot=?
                 WHERE uid=?

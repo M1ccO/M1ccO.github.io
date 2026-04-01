@@ -261,13 +261,13 @@ class LogbookPage(QWidget):
         detail_layout.setContentsMargins(12, 12, 12, 8)
         detail_layout.setSpacing(6)
 
-        detail_title = QLabel(self._t("logbook_page.detail.title", "Entry Details"))
-        detail_title.setProperty("sectionTitle", True)
-        detail_title_font = QFont(detail_title.font())
+        self.detail_title = QLabel(self._t("logbook_page.detail.title", "Entry Details"))
+        self.detail_title.setProperty("sectionTitle", True)
+        detail_title_font = QFont(self.detail_title.font())
         detail_title_font.setPointSizeF(14.0)
         detail_title_font.setWeight(QFont.DemiBold)
-        detail_title.setFont(detail_title_font)
-        detail_layout.addWidget(detail_title)
+        self.detail_title.setFont(detail_title_font)
+        detail_layout.addWidget(self.detail_title)
 
         self.detail_card = QFrame()
         self.detail_card.setProperty("subCard", True)
@@ -308,6 +308,28 @@ class LogbookPage(QWidget):
             self._update_header_highlight()
             self._update_search_placeholder()
             self.refresh_entries()
+
+    def apply_localization(self, translate: Callable[[str, str | None], str] | None = None) -> None:
+        if translate is not None:
+            self._translate = translate
+
+        self._detail_hint_text = self._t("logbook_page.detail_hint", "Select a logbook row to view details.")
+        self.search_toggle_btn.setToolTip(self._t("logbook_page.search_toggle_tip", "Show/hide filters"))
+        self.delete_btn.setToolTip(self._t("logbook_page.action.delete", "Delete"))
+        self.export_btn.setToolTip(self._t("logbook_page.action.export_excel", "Export Excel"))
+        self.detail_title.setText(self._t("logbook_page.detail.title", "Entry Details"))
+        self.table.setHorizontalHeaderLabels(
+            [
+                self._t("logbook_page.col.date", "Date"),
+                self._t("logbook_page.col.serial", "Serial"),
+                self._t("setup_page.field.work_id", "Work ID"),
+                self._t("logbook_page.col.order", "Order"),
+                self._t("logbook_page.col.qty", "Qty"),
+                self._t("setup_page.field.notes", "Notes"),
+            ]
+        )
+        self._update_search_placeholder()
+        self.refresh_entries()
 
     def eventFilter(self, obj, event):
         if obj is self.table.viewport():

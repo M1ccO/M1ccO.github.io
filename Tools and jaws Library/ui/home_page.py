@@ -63,6 +63,10 @@ class HomePage(QWidget):
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._close_preview_shortcut = None
+        self._measurement_toggle_btn = None
+        self._measurement_filter_combo = None
+        self._detached_measurements_enabled = True
+        self._detached_measurement_filter = None
         self._inline_preview_warmup = None
         self._active_db_name = ''
         self._module_switch_callback = None
@@ -457,21 +461,127 @@ class HomePage(QWidget):
 
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+
+        controls_host = QWidget(dialog)
+        controls_host.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        controls_layout = QHBoxLayout(controls_host)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(8)
+        controls_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+        self._measurement_toggle_btn = QToolButton(controls_host)
+        self._measurement_toggle_btn.setCheckable(True)
+        self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled)
+        self._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'quick_reference_all_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg')))
+        self._measurement_toggle_btn.setIconSize(QSize(20, 20))
+        self._measurement_toggle_btn.setAutoRaise(True)
+        self._measurement_toggle_btn.setProperty('topBarIconButton', True)
+        self._measurement_toggle_btn.setToolTip(self._t('tool_library.preview.measurements_toggle', 'Show measurements'))
+        self._measurement_toggle_btn.clicked.connect(self._on_detached_measurements_toggled)
+        controls_layout.addWidget(self._measurement_toggle_btn)
+
+        measurements_label = QLabel(self._t('tool_library.preview.measurements_label', 'Measurements'))
+        measurements_label.setProperty('pageSubtitle', True)
+        controls_layout.addWidget(measurements_label)
+
+        self._measurement_filter_combo = QComboBox(controls_host)
+        self._measurement_filter_combo.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self._measurement_filter_combo.setMinimumWidth(220)
+        self._measurement_filter_combo.currentIndexChanged.connect(self._on_detached_measurement_filter_changed)
+        apply_shared_dropdown_style(self._measurement_filter_combo)
+        controls_layout.addWidget(self._measurement_filter_combo)
+        controls_layout.addStretch(1)
+        layout.addWidget(controls_host)
 
         if StlPreviewWidget is not None:
             self._detached_preview_widget = StlPreviewWidget()
-            layout.addWidget(self._detached_preview_widget)
+            self._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            layout.addWidget(self._detached_preview_widget, 1)
         else:
             fallback = QLabel(self._t('tool_library.preview.unavailable', 'Preview component not available.'))
             fallback.setWordWrap(True)
             fallback.setAlignment(Qt.AlignCenter)
             self._detached_preview_widget = None
-            layout.addWidget(fallback)
+            fallback.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            layout.addWidget(fallback, 1)
 
         self._detached_preview_dialog = dialog
+        self._refresh_detached_measurement_controls([])
 
     def _on_detached_preview_closed(self, _result):
         self._set_preview_button_checked(False)
+
+    def _refresh_detached_measurement_controls(self, overlays):
+        if self._measurement_toggle_btn is None or self._measurement_filter_combo is None:
+            return
+
+        names = []
+        seen = set()
+        for overlay in overlays or []:
+            if not isinstance(overlay, dict):
+                continue
+            name = str(overlay.get('name') or '').strip()
+            if not name or name in seen:
+                continue
+            names.append(name)
+            seen.add(name)
+
+        self._measurement_filter_combo.blockSignals(True)
+        self._measurement_filter_combo.clear()
+        self._measurement_filter_combo.addItem(
+            self._t('tool_library.preview.measurements_all', 'All measurements'),
+            '__all__',
+        )
+        for name in names:
+            self._measurement_filter_combo.addItem(name, name)
+        self._measurement_filter_combo.blockSignals(False)
+
+        has_measurements = bool(names)
+        self._measurement_toggle_btn.setEnabled(has_measurements)
+        self._measurement_filter_combo.setEnabled(has_measurements and self._detached_measurements_enabled)
+
+        self._measurement_toggle_btn.blockSignals(True)
+        self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled and has_measurements)
+        self._measurement_toggle_btn.blockSignals(False)
+
+        selected_filter = self._detached_measurement_filter
+        target_index = 0
+        if selected_filter:
+            for idx in range(self._measurement_filter_combo.count()):
+                if self._measurement_filter_combo.itemData(idx) == selected_filter:
+                    target_index = idx
+                    break
+        self._measurement_filter_combo.setCurrentIndex(target_index)
+        if self._measurement_filter_combo.currentIndex() >= 0:
+            current_data = self._measurement_filter_combo.currentData()
+            self._detached_measurement_filter = None if current_data == '__all__' else current_data
+        else:
+            self._detached_measurement_filter = None
+
+    def _apply_detached_measurement_state(self, overlays):
+        if self._detached_preview_widget is None:
+            return
+        self._detached_preview_widget.set_measurement_overlays(overlays or [])
+        self._detached_preview_widget.set_measurements_visible(
+            bool(overlays) and self._detached_measurements_enabled
+        )
+        self._detached_preview_widget.set_measurement_filter(self._detached_measurement_filter)
+
+    def _on_detached_measurements_toggled(self, checked: bool):
+        self._detached_measurements_enabled = bool(checked)
+        if self._measurement_filter_combo is not None:
+            self._measurement_filter_combo.setEnabled(self._detached_measurements_enabled and self._measurement_filter_combo.count() > 1)
+        if self._detached_preview_widget is not None:
+            self._detached_preview_widget.set_measurements_visible(self._detached_measurements_enabled)
+
+    def _on_detached_measurement_filter_changed(self, _index: int):
+        if self._measurement_filter_combo is None:
+            return
+        current_data = self._measurement_filter_combo.currentData()
+        self._detached_measurement_filter = None if current_data in (None, '__all__') else str(current_data)
+        if self._detached_preview_widget is not None:
+            self._detached_preview_widget.set_measurement_filter(self._detached_measurement_filter)
 
     def _close_detached_preview(self):
         if self._detached_preview_dialog is not None:
@@ -515,6 +625,10 @@ class HomePage(QWidget):
                 )
             self._close_detached_preview()
             return False
+
+        overlays = tool.get('measurement_overlays', []) if isinstance(tool, dict) else []
+        self._refresh_detached_measurement_controls(overlays)
+        self._apply_detached_measurement_state(overlays)
 
         tool_id = (tool.get('id') or '').strip()
         self._detached_preview_dialog.setWindowTitle(
@@ -1475,6 +1589,9 @@ class HomePage(QWidget):
 
         viewer = StlPreviewWidget() if StlPreviewWidget is not None else None
         loaded = self._load_preview_content(viewer, stl_path, label='Detail Preview') if viewer is not None else False
+        if viewer is not None:
+            viewer.set_measurement_overlays([])
+            viewer.set_measurements_visible(False)
 
         if loaded:
             dlay.addWidget(viewer, 1)

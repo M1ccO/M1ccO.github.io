@@ -1,4 +1,5 @@
 import json
+import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
@@ -87,6 +88,13 @@ class StlPreviewWidget(QWidget):
         self._pending_parts = None
         self._alignment_plane = 'XZ'
         self._rotation_deg = {'x': 0, 'y': 0, 'z': 0}
+        self._transform_edit_enabled = False
+        self._transform_mode = 'translate'
+        self._part_transforms_cache = []
+        self._selected_part_index = -1
+        self._measurement_overlays = []
+        self._measurements_visible = False
+        self._measurement_filter = None
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -135,6 +143,8 @@ class StlPreviewWidget(QWidget):
             self._send_model_to_viewer(self._pending_stl_path, self._pending_label)
 
         self._apply_preview_transform_state()
+        self._apply_transform_editor_state()
+        self._apply_measurement_state()
 
     def _send_model_to_viewer(self, stl_path: Path, label: str | None = None):
         stl_url = QUrl.fromLocalFile(str(stl_path)).toString()
@@ -183,6 +193,8 @@ class StlPreviewWidget(QWidget):
         self._pending_stl_path = None
         self._pending_label = None
         self._pending_parts = None
+        self._part_transforms_cache = []
+        self._selected_part_index = -1
         self._web.reset_wheel_mode()
 
         if self._page_ready:
@@ -190,6 +202,8 @@ class StlPreviewWidget(QWidget):
 
     def load_stl(self, stl_path: str | Path | None, label: str | None = None):
         self._pending_parts = None
+        self._part_transforms_cache = []
+        self._selected_part_index = -1
         self._web.reset_wheel_mode()
 
         if not stl_path:
@@ -225,11 +239,24 @@ class StlPreviewWidget(QWidget):
             return
 
         self._pending_parts = parts
+        self._part_transforms_cache = [
+            {
+                'x': part.get('offset_x', 0),
+                'y': part.get('offset_y', 0),
+                'z': part.get('offset_z', 0),
+                'rx': part.get('rot_x', 0),
+                'ry': part.get('rot_y', 0),
+                'rz': part.get('rot_z', 0),
+            }
+            for part in parts
+        ]
         self._show_web()
 
         if self._page_ready:
             self._send_parts_to_viewer(parts)
             self._apply_preview_transform_state()
+            self._apply_transform_editor_state()
+            self._apply_measurement_state()
 
     def _apply_preview_transform_state(self):
         if not self._page_ready:
@@ -269,28 +296,132 @@ class StlPreviewWidget(QWidget):
         if self._page_ready:
             self._web.page().runJavaScript("window.resetModelRotation && window.resetModelRotation();")
 
+    def _apply_transform_editor_state(self):
+        if not self._page_ready:
+            return
+
+        self._web.page().runJavaScript(
+            f"window.setTransformEditEnabled && window.setTransformEditEnabled({str(self._transform_edit_enabled).lower()});"
+        )
+        self._web.page().runJavaScript(
+            f"window.setTransformMode && window.setTransformMode({self._transform_mode!r});"
+        )
+
+        if self._part_transforms_cache:
+            js_payload = json.dumps(self._part_transforms_cache)
+            self._web.page().runJavaScript(
+                f"window.setPartTransforms && window.setPartTransforms({js_payload});"
+            )
+
+        self._web.page().runJavaScript(
+            f"window.selectPart && window.selectPart({int(self._selected_part_index)});"
+        )
+
+    @staticmethod
+    def _parse_xyz_value(value, default=(0.0, 0.0, 0.0)):
+        if isinstance(value, (list, tuple)) and len(value) >= 3:
+            try:
+                return [float(value[0]), float(value[1]), float(value[2])]
+            except Exception:
+                return [float(default[0]), float(default[1]), float(default[2])]
+
+        text = str(value or '').strip()
+        if not text:
+            return [float(default[0]), float(default[1]), float(default[2])]
+
+        parts = [token for token in re.split(r'[\s,;]+', text.replace(',', ' ')) if token]
+        if len(parts) < 3:
+            return [float(default[0]), float(default[1]), float(default[2])]
+        try:
+            return [float(parts[0]), float(parts[1]), float(parts[2])]
+        except Exception:
+            return [float(default[0]), float(default[1]), float(default[2])]
+
+    @classmethod
+    def _normalize_measurement_overlay(cls, overlay, index: int = 0):
+        if not isinstance(overlay, dict):
+            return None
+
+        overlay_type = str(overlay.get('type') or '').strip().lower()
+        if overlay_type == 'distance':
+            return {
+                'type': 'distance',
+                'name': str(overlay.get('name') or f'Distance {index + 1}').strip() or f'Distance {index + 1}',
+                'start_part': str(overlay.get('start_part') or '').strip(),
+                'start_xyz': cls._parse_xyz_value(overlay.get('start_xyz')),
+                'end_part': str(overlay.get('end_part') or '').strip(),
+                'end_xyz': cls._parse_xyz_value(overlay.get('end_xyz')),
+            }
+
+        if overlay_type == 'diameter_ring':
+            diameter_raw = overlay.get('diameter', 0)
+            try:
+                diameter = float(str(diameter_raw).replace(',', '.'))
+            except Exception:
+                diameter = 0.0
+            return {
+                'type': 'diameter_ring',
+                'name': str(overlay.get('name') or f'Diameter {index + 1}').strip() or f'Diameter {index + 1}',
+                'part': str(overlay.get('part') or '').strip(),
+                'center_xyz': cls._parse_xyz_value(overlay.get('center_xyz')),
+                'axis_xyz': cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 1.0, 0.0)),
+                'diameter': diameter,
+            }
+
+        return None
+
+    def _apply_measurement_state(self):
+        if not self._page_ready:
+            return
+
+        js_payload = json.dumps(self._measurement_overlays)
+        self._web.page().runJavaScript(
+            f"window.setMeasurements && window.setMeasurements({js_payload});"
+        )
+        self._web.page().runJavaScript(
+            f"window.setMeasurementsVisible && window.setMeasurementsVisible({str(self._measurements_visible).lower()});"
+        )
+        filter_value = self._measurement_filter if self._measurement_filter else ''
+        self._web.page().runJavaScript(
+            f"window.setMeasurementFilter && window.setMeasurementFilter({filter_value!r});"
+        )
+
     def _on_title_changed(self, title: str):
         if title.startswith('TRANSFORM:'):
             try:
                 data = json.loads(title[len('TRANSFORM:'):])
+                if (
+                    isinstance(data, dict)
+                    and isinstance(data.get('index'), int)
+                    and isinstance(data.get('transform'), dict)
+                    and data['index'] >= 0
+                ):
+                    while len(self._part_transforms_cache) <= data['index']:
+                        self._part_transforms_cache.append({'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0})
+                    self._part_transforms_cache[data['index']] = data['transform']
                 self.transform_changed.emit(data['index'], data['transform'])
             except (json.JSONDecodeError, KeyError):
                 pass
         elif title.startswith('PART_SELECTED:'):
             try:
                 idx = int(title[len('PART_SELECTED:'):])
+                self._selected_part_index = idx
                 self.part_selected.emit(idx)
             except ValueError:
                 pass
 
     def set_transform_edit_enabled(self, enabled: bool):
+        self._transform_edit_enabled = bool(enabled)
         if self._page_ready:
             self._web.page().runJavaScript(
-                f"window.setTransformEditEnabled && window.setTransformEditEnabled({str(enabled).lower()});"
+                f"window.setTransformEditEnabled && window.setTransformEditEnabled({str(self._transform_edit_enabled).lower()});"
             )
 
     def set_transform_mode(self, mode: str):
-        if mode in ('translate', 'rotate') and self._page_ready:
+        if mode not in ('translate', 'rotate'):
+            return
+        self._transform_mode = mode
+        if self._page_ready:
             self._web.page().runJavaScript(
                 f"window.setTransformMode && window.setTransformMode({mode!r});"
             )
@@ -303,21 +434,64 @@ class StlPreviewWidget(QWidget):
             )
 
     def set_part_transforms(self, transforms: list[dict]):
+        self._part_transforms_cache = [
+            {
+                'x': transform.get('x', 0),
+                'y': transform.get('y', 0),
+                'z': transform.get('z', 0),
+                'rx': transform.get('rx', 0),
+                'ry': transform.get('ry', 0),
+                'rz': transform.get('rz', 0),
+            }
+            for transform in (transforms or [])
+            if isinstance(transform, dict)
+        ]
         if self._page_ready:
-            js_payload = json.dumps(transforms)
+            js_payload = json.dumps(self._part_transforms_cache)
             self._web.page().runJavaScript(
                 f"window.setPartTransforms && window.setPartTransforms({js_payload});"
             )
 
     def select_part(self, index: int):
+        self._selected_part_index = int(index)
         if self._page_ready:
             self._web.page().runJavaScript(
                 f"window.selectPart && window.selectPart({int(index)});"
             )
 
     def reset_selected_part_transform(self):
+        if 0 <= self._selected_part_index < len(self._part_transforms_cache):
+            self._part_transforms_cache[self._selected_part_index] = {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}
         if self._page_ready:
             self._web.page().runJavaScript(
                 "window.resetSelectedPartTransform && window.resetSelectedPartTransform();"
+            )
+
+    def set_measurement_overlays(self, overlays):
+        normalized = []
+        for idx, overlay in enumerate(overlays or []):
+            item = self._normalize_measurement_overlay(overlay, idx)
+            if item is not None:
+                normalized.append(item)
+        self._measurement_overlays = normalized
+        if self._page_ready:
+            js_payload = json.dumps(self._measurement_overlays)
+            self._web.page().runJavaScript(
+                f"window.setMeasurements && window.setMeasurements({js_payload});"
+            )
+
+    def set_measurements_visible(self, visible: bool):
+        self._measurements_visible = bool(visible)
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setMeasurementsVisible && window.setMeasurementsVisible({str(self._measurements_visible).lower()});"
+            )
+
+    def set_measurement_filter(self, name: str | None):
+        value = str(name or '').strip()
+        self._measurement_filter = value or None
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setMeasurementFilter && window.setMeasurementFilter({value!r});"
             )
 

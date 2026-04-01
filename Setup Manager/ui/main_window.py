@@ -610,28 +610,8 @@ class MainWindow(QMainWindow):
             self.setup_page.apply_localization(self._t)
         if hasattr(self, "drawing_page") and hasattr(self.drawing_page, "apply_localization"):
             self.drawing_page.apply_localization(self._t)
-        if hasattr(self, "logbook_page") and hasattr(self.logbook_page, "refresh_entries"):
-            self.logbook_page.title.setText(self._t("setup_manager.nav.logbook", "Logbook"))
-            self.logbook_page.search_toggle_btn.setToolTip(self._t("logbook_page.search_toggle_tip", "Show/hide filters"))
-            self.logbook_page.refresh_btn.setText(self._t("drawing_page.action.refresh", "Refresh"))
-            self.logbook_page.delete_btn.setText(self._t("logbook_page.action.delete", "Delete"))
-            self.logbook_page.export_btn.setText(self._t("logbook_page.action.export_excel", "Export Excel"))
-            self.logbook_page.table.setHorizontalHeaderLabels(
-                [
-                    self._t("logbook_page.col.date", "Date"),
-                    self._t("logbook_page.col.serial", "Serial"),
-                    self._t("setup_page.field.work_id", "Work ID"),
-                    self._t("logbook_page.col.order", "Order"),
-                    self._t("logbook_page.col.qty", "Qty"),
-                    self._t("setup_page.field.notes", "Notes"),
-                ]
-            )
-            self.logbook_page._detail_hint_text = self._t(
-                "logbook_page.detail_hint",
-                "Select a logbook row to view details.",
-            )
-            self.logbook_page._update_search_placeholder()
-            self.logbook_page.refresh_entries()
+        if hasattr(self, "logbook_page") and hasattr(self.logbook_page, "apply_localization"):
+            self.logbook_page.apply_localization(self._t)
         self._update_status_message()
         self._update_launch_actions()
 
