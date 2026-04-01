@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -72,6 +73,72 @@ def create_dialog_buttons(
         buttons.rejected.connect(on_cancel)
 
     return buttons
+
+
+def ask_multi_edit_mode(parent: QDialog, count: int, translate=None) -> str | None:
+    """Ask how to edit multiple selected items.
+
+    Returns:
+        'batch' for sequential batch edit,
+        'group' for shared group edit,
+        None when cancelled.
+    """
+    t = translate or (lambda _key, default=None, **_kwargs: default or '')
+    dialog = QDialog(parent)
+    setup_editor_dialog(dialog)
+    dialog.setModal(True)
+    dialog.setWindowTitle(t('multi_edit.title', 'Multiple items selected'))
+
+    root = QVBoxLayout(dialog)
+    root.setContentsMargins(12, 12, 12, 12)
+    root.setSpacing(10)
+
+    label = QLabel(
+        t(
+            'multi_edit.prompt',
+            'You selected {count} items. Choose edit mode.',
+            count=count,
+        )
+    )
+    label.setWordWrap(True)
+    label.setStyleSheet('background: transparent; border: none;')
+    label.setMaximumWidth(440)
+    root.addWidget(label)
+
+    button_row = QHBoxLayout()
+    button_row.setContentsMargins(0, 0, 0, 0)
+    button_row.setSpacing(8)
+
+    batch_btn = QPushButton(t('multi_edit.batch', 'Batch Edit'))
+    group_btn = QPushButton(t('multi_edit.group', 'Group Edit'))
+    cancel_btn = QPushButton(t('common.cancel', 'Cancel'))
+
+    for btn in (batch_btn, group_btn, cancel_btn):
+        btn.setProperty('panelActionButton', True)
+    batch_btn.setProperty('primaryAction', True)
+    cancel_btn.setProperty('secondaryAction', True)
+
+    result = {'mode': None}
+
+    def _choose(mode: str):
+        result['mode'] = mode
+        dialog.accept()
+
+    batch_btn.clicked.connect(lambda: _choose('batch'))
+    group_btn.clicked.connect(lambda: _choose('group'))
+    cancel_btn.clicked.connect(dialog.reject)
+
+    button_row.addWidget(batch_btn)
+    button_row.addWidget(group_btn)
+    button_row.addWidget(cancel_btn)
+    root.addLayout(button_row)
+
+    apply_secondary_button_theme(dialog, batch_btn)
+    dialog.adjustSize()
+
+    if dialog.exec() != QDialog.Accepted:
+        return None
+    return result['mode']
 
 
 def apply_secondary_button_theme(dialog: QDialog, save_btn=None):

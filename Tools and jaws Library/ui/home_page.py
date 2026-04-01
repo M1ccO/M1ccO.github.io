@@ -1,5 +1,8 @@
 
 import json
+import shutil
+from datetime import datetime
+from pathlib import Path
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QItemSelectionModel
 from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform, QCursor
 # import QtSvg so that SVG image support is initialized early
@@ -22,7 +25,7 @@ from ui.tool_catalog_delegate import (
     ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON, ROLE_TOOL_UID,
 )
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style, repolish_widget
-from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, setup_editor_dialog
+from shared.editor_helpers import apply_secondary_button_theme, ask_multi_edit_mode, create_dialog_buttons, setup_editor_dialog
 
 # the STL preview widget may live in a separate module; import lazily so the
 # rest of the application still runs if the real implementation is missing.
@@ -232,7 +235,7 @@ class HomePage(QWidget):
         self.tool_list.setObjectName('toolCatalog')
         self.tool_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.tool_list.setSelectionMode(QListView.SingleSelection)
+        self.tool_list.setSelectionMode(QListView.ExtendedSelection)
         self.tool_list.setMouseTracking(True)   # needed for hover in delegate
         self.tool_list.setStyleSheet(
             "QListView#toolCatalog { border: none; outline: none; padding: 8px; }"
@@ -248,6 +251,7 @@ class HomePage(QWidget):
         )
         self.tool_list.setItemDelegate(self._tool_delegate)
         self.tool_list.selectionModel().currentChanged.connect(self._on_current_changed)
+        self.tool_list.selectionModel().selectionChanged.connect(self._on_multi_selection_changed)
         self.tool_list.doubleClicked.connect(self._on_double_clicked)
         self.tool_list.installEventFilter(self)
         self.tool_list.viewport().installEventFilter(self)
@@ -322,6 +326,11 @@ class HomePage(QWidget):
         button_layout.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
         button_layout.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
         button_layout.addStretch(1)
+        self.selection_count_label = QLabel('')
+        self.selection_count_label.setProperty('detailHint', True)
+        self.selection_count_label.setStyleSheet('background: transparent; border: none;')
+        self.selection_count_label.hide()
+        button_layout.addWidget(self.selection_count_label, 0, Qt.AlignBottom)
         button_layout.addWidget(self.add_btn)
         button_layout.addWidget(self.edit_btn)
         button_layout.addWidget(self.delete_btn)
@@ -678,11 +687,164 @@ class HomePage(QWidget):
             self.tool_list.setCurrentIndex(QModelIndex())
         self.current_tool_id = None
         self.current_tool_uid = None
+        self._update_selection_count_label()
         self.populate_details(None)
         if details_were_open:
             self.hide_details()
         if hasattr(self, 'preview_window_btn') and self.preview_window_btn.isChecked():
             self._close_detached_preview()
+
+    def _selected_tool_uids(self) -> list[int]:
+        model = self.tool_list.selectionModel()
+        if model is None:
+            return []
+        indexes = sorted(model.selectedIndexes(), key=lambda idx: idx.row())
+        uids: list[int] = []
+        for index in indexes:
+            uid = index.data(ROLE_TOOL_UID)
+            if uid is None:
+                continue
+            try:
+                parsed = int(uid)
+            except Exception:
+                continue
+            if parsed not in uids:
+                uids.append(parsed)
+        return uids
+
+    def _on_multi_selection_changed(self, _selected, _deselected):
+        self._update_selection_count_label()
+
+    def _update_selection_count_label(self):
+        count = len(self._selected_tool_uids())
+        if count > 1:
+            self.selection_count_label.setText(
+                self._t('tool_library.selection.count', '{count} selected', count=count)
+            )
+            self.selection_count_label.show()
+            return
+        self.selection_count_label.hide()
+
+    @staticmethod
+    def _prune_backups(db_path: Path, tag: str, keep: int = 5):
+        prefix = f"{db_path.stem}_{tag}_"
+        backups = sorted(
+            db_path.parent.glob(f"{prefix}*.bak"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+        for stale in backups[keep:]:
+            try:
+                stale.unlink()
+            except Exception:
+                pass
+
+    def _create_db_backup(self, tag: str) -> Path:
+        db_path = Path(self.tool_service.db.path)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_path = db_path.parent / f"{db_path.stem}_{tag}_{timestamp}.bak"
+        shutil.copy2(db_path, backup_path)
+        self._prune_backups(db_path, tag)
+        return backup_path
+
+    def _prompt_batch_cancel_behavior(self) -> str:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(self._t('tool_library.batch.cancel.title', 'Batch edit cancelled'))
+        box.setText(
+            self._t(
+                'tool_library.batch.cancel.body',
+                'You stopped editing partway through the batch. Do you want to keep the changes you\'ve already saved, or undo all of them?',
+            )
+        )
+        keep_btn = box.addButton(
+            self._t('tool_library.batch.cancel.keep', 'Keep'),
+            QMessageBox.AcceptRole,
+        )
+        undo_btn = box.addButton(
+            self._t('tool_library.batch.cancel.undo', 'Undo'),
+            QMessageBox.DestructiveRole,
+        )
+        box.addButton(self._t('common.cancel', 'Cancel'), QMessageBox.RejectRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is undo_btn:
+            return 'undo'
+        if clicked is keep_btn:
+            return 'keep'
+        return 'keep'
+
+    def _batch_edit_tools(self, uids: list[int]):
+        saved_before: list[dict] = []
+        total = len(uids)
+        for idx, uid in enumerate(uids, 1):
+            tool = self.tool_service.get_tool_by_uid(uid)
+            if not tool:
+                continue
+            draft_tool = dict(tool)
+            while True:
+                dlg = AddEditToolDialog(
+                    self,
+                    tool=draft_tool,
+                    tool_service=self.tool_service,
+                    translate=self._t,
+                    batch_label=f"{idx}/{total}",
+                )
+                if dlg.exec() != QDialog.Accepted:
+                    if saved_before:
+                        action = self._prompt_batch_cancel_behavior()
+                        if action == 'undo':
+                            for previous in reversed(saved_before):
+                                self.tool_service.save_tool(previous, allow_duplicate=True)
+                    self.refresh_list()
+                    return
+                result = self._save_from_dialog(dlg)
+                if result == 'saved':
+                    saved_before.append(tool)
+                    break
+                if result == 'retry':
+                    draft_tool = dlg.get_tool_data()
+                    draft_tool['uid'] = uid
+                    continue
+                self.refresh_list()
+                return
+        self.refresh_list()
+
+    def _group_edit_tools(self, uids: list[int]):
+        dlg = AddEditToolDialog(
+            self,
+            tool_service=self.tool_service,
+            translate=self._t,
+            group_edit_mode=True,
+            group_count=len(uids),
+        )
+        baseline = dlg.get_tool_data()
+        if dlg.exec() != QDialog.Accepted:
+            return
+        edited_data = dlg.get_tool_data()
+        changed_fields = {
+            key: value
+            for key, value in edited_data.items()
+            if value != baseline.get(key)
+        }
+        if not changed_fields:
+            QMessageBox.information(
+                self,
+                self._t('tool_library.group_edit.no_changes_title', 'No changes'),
+                self._t('tool_library.group_edit.no_changes_body', 'No fields were changed.'),
+            )
+            return
+
+        self._create_db_backup('group_edit')
+        for uid in uids:
+            existing = self.tool_service.get_tool_by_uid(uid)
+            if not existing:
+                continue
+            merged = dict(existing)
+            merged.update(changed_fields)
+            merged['uid'] = uid
+            self.tool_service.save_tool(merged, allow_duplicate=True)
+        self.refresh_list()
 
     def keyPressEvent(self, event):
         """Handle escape key to deselect any selected tool row."""
@@ -763,12 +925,14 @@ class HomePage(QWidget):
         if not current.isValid():
             self.current_tool_id = None
             self.current_tool_uid = None
+            self._update_selection_count_label()
             self.populate_details(None)
             if self.preview_window_btn.isChecked():
                 self._close_detached_preview()
             return
         self.current_tool_id = current.data(ROLE_TOOL_ID)
         self.current_tool_uid = current.data(ROLE_TOOL_UID)
+        self._update_selection_count_label()
         # if details pane is already visible, refresh its contents
         if not self._details_hidden:
             tool = self._get_selected_tool()
@@ -1435,14 +1599,22 @@ class HomePage(QWidget):
         self._open_tool_editor()
 
     def edit_tool(self):
-        if not self.current_tool_id:
+        selected_uids = self._selected_tool_uids()
+        if not selected_uids:
             QMessageBox.information(
                 self,
                 self._t('tool_library.action.edit_tool_title', 'Edit tool'),
                 self._t('tool_library.message.select_tool_first', 'Select a tool first.'),
             )
             return
-        tool = self._get_selected_tool()
+        if len(selected_uids) > 1:
+            mode = ask_multi_edit_mode(self, len(selected_uids), self._t)
+            if mode == 'batch':
+                self._batch_edit_tools(selected_uids)
+            elif mode == 'group':
+                self._group_edit_tools(selected_uids)
+            return
+        tool = self.tool_service.get_tool_by_uid(selected_uids[0])
         self._open_tool_editor(tool=tool)
 
     def apply_localization(self, translate=None):
@@ -1468,6 +1640,7 @@ class HomePage(QWidget):
             self.preview_window_btn.setToolTip(self._t('tool_library.preview.toggle', 'Toggle detached 3D preview'))
         if hasattr(self, 'type_filter'):
             self._build_tool_type_filter_items()
+        self._update_selection_count_label()
         self.refresh_list()
         if self.current_tool_id or self.current_tool_uid is not None:
             self.populate_details(self._get_selected_tool())

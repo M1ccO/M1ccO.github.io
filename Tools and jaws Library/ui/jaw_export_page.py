@@ -161,7 +161,7 @@ class _JawExportServiceAdapter(ExportService):
 
 
 class JawExportPage(ExportPage):
-    def __init__(self, jaw_service, on_jaw_data_changed=None, on_jaw_database_switched=None, parent=None):
+    def __init__(self, jaw_service, on_jaw_data_changed=None, on_jaw_database_switched=None, parent=None, translate=None):
         self.jaw_service = jaw_service
         self._jaw_tool_adapter = _JawToolServiceAdapter(jaw_service)
         self._jaw_export_adapter = _JawExportServiceAdapter()
@@ -171,6 +171,7 @@ class JawExportPage(ExportPage):
             on_data_changed=on_jaw_data_changed,
             on_database_switched=on_jaw_database_switched,
             parent=parent,
+            translate=translate,
         )
 
     def set_jaw_service(self, jaw_service: JawService):
@@ -178,14 +179,14 @@ class JawExportPage(ExportPage):
         self._jaw_tool_adapter.jaw_service = jaw_service
 
     def import_excel(self):
-        path, _ = QFileDialog.getOpenFileName(self, 'Import from Excel', '', 'Excel (*.xlsx *.xlsm)')
+        path, _ = QFileDialog.getOpenFileName(self, self._t('jaw_library.import.title', 'Import from Excel'), '', self._t('jaw_library.import.filter_excel', 'Excel (*.xlsx *.xlsm)'))
         if not path:
             return
 
         try:
             headers = self.export_service.read_excel_headers(path)
         except Exception as exc:
-            QMessageBox.critical(self, 'Import failed', f'Could not read Excel headers:\n{exc}')
+            QMessageBox.critical(self, self._t('jaw_library.import.failed_title', 'Import failed'), self._t('jaw_library.import.read_headers_failed', 'Could not read Excel headers:\n{error}', error=exc))
             return
 
         if not headers:

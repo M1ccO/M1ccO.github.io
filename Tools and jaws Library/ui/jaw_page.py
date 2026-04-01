@@ -1,4 +1,7 @@
 import numpy as np
+import shutil
+from datetime import datetime
+from pathlib import Path
 
 from typing import Callable
 
@@ -30,7 +33,7 @@ from PySide6.QtWidgets import (
 from config import TOOL_ICONS_DIR
 from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_ICON, ROLE_JAW_ID, jaw_icon_for_row
 from ui.jaw_editor_dialog import AddEditJawDialog
-from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, setup_editor_dialog
+from shared.editor_helpers import apply_secondary_button_theme, ask_multi_edit_mode, create_dialog_buttons, setup_editor_dialog
 
 
 def _load_transparent_icon(path, threshold: int = 220) -> QPixmap:
@@ -264,16 +267,18 @@ class ResponsiveJawRowWidget(QFrame):
         for key, title, value, weight in self._card_columns():
             col = QVBoxLayout()
             col.setContentsMargins(0, 0, 0, 0)
-            col.setSpacing(0)
+            col.setSpacing(-2)
             self._col_layouts.append(col)
 
             head = QLabel(title)
             head.setProperty('toolCardHeader', True)
             head.setProperty('catalogRowHeader', True)
-            head.setAlignment(Qt.AlignCenter)
             head.setWordWrap(True)
             if key in {'diameter', 'length'}:
                 head.setProperty('catalogRowHeaderWrap', True)
+                head.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
+            else:
+                head.setAlignment(Qt.AlignCenter)
 
             val = self._value(value)
 
@@ -564,7 +569,7 @@ class JawPage(QWidget):
         self.jaw_list.setObjectName('toolCatalog')
         self.jaw_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.jaw_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.jaw_list.setSelectionMode(QListView.SingleSelection)
+        self.jaw_list.setSelectionMode(QListView.ExtendedSelection)
         self.jaw_list.setMouseTracking(True)
         self.jaw_list.setStyleSheet(
             "QListView#toolCatalog { border: none; outline: none; padding: 8px; }"
@@ -578,6 +583,7 @@ class JawPage(QWidget):
         self.jaw_list.installEventFilter(self)
         self.jaw_list.viewport().installEventFilter(self)
         self.jaw_list.selectionModel().currentChanged.connect(self.on_current_item_changed)
+        self.jaw_list.selectionModel().selectionChanged.connect(self._on_multi_selection_changed)
         self.jaw_list.doubleClicked.connect(self.on_item_double_clicked)
         list_layout.addWidget(self.jaw_list, 1)
 
@@ -649,6 +655,11 @@ class JawPage(QWidget):
         actions.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
         actions.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
         actions.addStretch(1)
+        self.selection_count_label = QLabel('')
+        self.selection_count_label.setProperty('detailHint', True)
+        self.selection_count_label.setStyleSheet('background: transparent; border: none;')
+        self.selection_count_label.hide()
+        actions.addWidget(self.selection_count_label, 0, Qt.AlignBottom)
         actions.addWidget(self.add_btn)
         actions.addWidget(self.edit_btn)
         actions.addWidget(self.delete_btn)
@@ -782,9 +793,145 @@ class JawPage(QWidget):
             self.jaw_list.selectionModel().clearSelection()
             self.jaw_list.setCurrentIndex(QModelIndex())
         self.current_jaw_id = None
+        self._update_selection_count_label()
         self.populate_details(None)
         if details_were_open:
             self.hide_details()
+
+    def _selected_jaw_ids(self) -> list[str]:
+        model = self.jaw_list.selectionModel()
+        if model is None:
+            return []
+        indexes = sorted(model.selectedIndexes(), key=lambda idx: idx.row())
+        jaw_ids: list[str] = []
+        for index in indexes:
+            jaw_id = (index.data(ROLE_JAW_ID) or '').strip()
+            if jaw_id and jaw_id not in jaw_ids:
+                jaw_ids.append(jaw_id)
+        return jaw_ids
+
+    def _on_multi_selection_changed(self, _selected, _deselected):
+        self._update_selection_count_label()
+
+    def _update_selection_count_label(self):
+        count = len(self._selected_jaw_ids())
+        if count > 1:
+            self.selection_count_label.setText(
+                self._t('jaw_library.selection.count', '{count} selected', count=count)
+            )
+            self.selection_count_label.show()
+            return
+        self.selection_count_label.hide()
+
+    @staticmethod
+    def _prune_backups(db_path: Path, tag: str, keep: int = 5):
+        prefix = f"{db_path.stem}_{tag}_"
+        backups = sorted(
+            db_path.parent.glob(f"{prefix}*.bak"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+        for stale in backups[keep:]:
+            try:
+                stale.unlink()
+            except Exception:
+                pass
+
+    def _create_db_backup(self, tag: str) -> Path:
+        db_path = Path(self.jaw_service.db.path)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_path = db_path.parent / f"{db_path.stem}_{tag}_{timestamp}.bak"
+        shutil.copy2(db_path, backup_path)
+        self._prune_backups(db_path, tag)
+        return backup_path
+
+    def _prompt_batch_cancel_behavior(self) -> str:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(self._t('jaw_library.batch.cancel.title', 'Batch edit cancelled'))
+        box.setText(
+            self._t(
+                'jaw_library.batch.cancel.body',
+                'You stopped editing partway through the batch. Do you want to keep the changes you\'ve already saved, or undo all of them?',
+            )
+        )
+        keep_btn = box.addButton(
+            self._t('jaw_library.batch.cancel.keep', 'Keep'),
+            QMessageBox.AcceptRole,
+        )
+        undo_btn = box.addButton(
+            self._t('jaw_library.batch.cancel.undo', 'Undo'),
+            QMessageBox.DestructiveRole,
+        )
+        box.addButton(self._t('common.cancel', 'Cancel'), QMessageBox.RejectRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is undo_btn:
+            return 'undo'
+        if clicked is keep_btn:
+            return 'keep'
+        return 'keep'
+
+    def _batch_edit_jaws(self, jaw_ids: list[str]):
+        saved_before: list[dict] = []
+        total = len(jaw_ids)
+        for idx, jaw_id in enumerate(jaw_ids, 1):
+            jaw = self.jaw_service.get_jaw(jaw_id)
+            if not jaw:
+                continue
+            dlg = AddEditJawDialog(
+                self,
+                jaw=jaw,
+                translate=self._t,
+                batch_label=f"{idx}/{total}",
+            )
+            if dlg.exec() != QDialog.Accepted:
+                if saved_before:
+                    action = self._prompt_batch_cancel_behavior()
+                    if action == 'undo':
+                        for previous in reversed(saved_before):
+                            self.jaw_service.save_jaw(previous)
+                self.refresh_list()
+                return
+            saved_before.append(dict(jaw))
+            self.jaw_service.save_jaw(dlg.get_jaw_data())
+        self.refresh_list()
+
+    def _group_edit_jaws(self, jaw_ids: list[str]):
+        dlg = AddEditJawDialog(
+            self,
+            translate=self._t,
+            group_edit_mode=True,
+            group_count=len(jaw_ids),
+        )
+        baseline = dlg.get_jaw_data()
+        if dlg.exec() != QDialog.Accepted:
+            return
+        edited_data = dlg.get_jaw_data()
+        changed_fields = {
+            key: value
+            for key, value in edited_data.items()
+            if value != baseline.get(key)
+        }
+        changed_fields.pop('jaw_id', None)
+        if not changed_fields:
+            QMessageBox.information(
+                self,
+                self._t('jaw_library.group_edit.no_changes_title', 'No changes'),
+                self._t('jaw_library.group_edit.no_changes_body', 'No fields were changed.'),
+            )
+            return
+
+        self._create_db_backup('group_edit')
+        for jaw_id in jaw_ids:
+            jaw = self.jaw_service.get_jaw(jaw_id)
+            if not jaw:
+                continue
+            updated = dict(jaw)
+            updated.update(changed_fields)
+            updated['jaw_id'] = jaw_id
+            self.jaw_service.save_jaw(updated)
+        self.refresh_list()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
@@ -1101,10 +1248,12 @@ class JawPage(QWidget):
     def on_current_item_changed(self, current: QModelIndex, previous: QModelIndex):
         if not current.isValid():
             self.current_jaw_id = None
+            self._update_selection_count_label()
             self.populate_details(None)
             return
 
         self.current_jaw_id = current.data(ROLE_JAW_ID)
+        self._update_selection_count_label()
 
         if not self._details_hidden:
             jaw = self.jaw_service.get_jaw(self.current_jaw_id)
@@ -1137,14 +1286,22 @@ class JawPage(QWidget):
             self._save_from_dialog(dlg)
 
     def edit_jaw(self):
-        if not self.current_jaw_id:
+        selected_ids = self._selected_jaw_ids()
+        if not selected_ids:
             QMessageBox.information(
                 self,
                 self._t('jaw_library.action.edit_jaw', 'Edit jaw'),
                 self._t('jaw_library.message.select_jaw_first', 'Select a jaw first.'),
             )
             return
-        jaw = self.jaw_service.get_jaw(self.current_jaw_id)
+        if len(selected_ids) > 1:
+            mode = ask_multi_edit_mode(self, len(selected_ids), self._t)
+            if mode == 'batch':
+                self._batch_edit_jaws(selected_ids)
+            elif mode == 'group':
+                self._group_edit_jaws(selected_ids)
+            return
+        jaw = self.jaw_service.get_jaw(selected_ids[0])
         dlg = AddEditJawDialog(self, jaw=jaw, translate=self._t)
         if dlg.exec() == QDialog.Accepted:
             self._save_from_dialog(dlg)
@@ -1274,6 +1431,7 @@ class JawPage(QWidget):
         self._build_type_filter_items()
         for mode, btn in self.view_buttons:
             btn.setText(self._nav_mode_title(mode))
+        self._update_selection_count_label()
         self.refresh_list()
         if self.current_jaw_id:
             self.populate_details(self.jaw_service.get_jaw(self.current_jaw_id))

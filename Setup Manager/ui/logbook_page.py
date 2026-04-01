@@ -3,7 +3,8 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QDate, QEvent, Qt, QSize, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QPalette
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPalette, QPixmap
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDateEdit,
@@ -30,19 +31,73 @@ from PySide6.QtWidgets import (
 from config import ICONS_DIR, TOOL_LIBRARY_TOOL_ICONS_DIR
 
 
+def _svg_icon(path: Path, size: int = 24) -> QIcon:
+    renderer = QSvgRenderer(str(path))
+    if not renderer.isValid():
+        return QIcon()
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
+
+
+def _svg_icon(path: Path, size: int = 24) -> QIcon:
+    renderer = QSvgRenderer(str(path))
+    if not renderer.isValid():
+        return QIcon()
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
+
+
+def _toolbar_icon_with_svg_render_fallback(name: str, size: int = 28) -> QIcon:
+    """Load toolbar icons robustly even when Qt SVG image plugin is unavailable."""
+    svg_candidates = [
+        ICONS_DIR / 'tools' / f'{name}.svg',
+        TOOL_LIBRARY_TOOL_ICONS_DIR / 'tools' / f'{name}.svg',
+    ]
+    for svg_path in svg_candidates:
+        if not svg_path.exists():
+            continue
+        icon = QIcon(str(svg_path))
+        if not icon.isNull():
+            return icon
+        renderer = QSvgRenderer(str(svg_path))
+        if renderer.isValid():
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.transparent)
+            painter = QPainter(pixmap)
+            renderer.render(painter)
+            painter.end()
+            return QIcon(pixmap)
+    png_candidates = [
+        ICONS_DIR / 'tools' / f'{name}.png',
+        TOOL_LIBRARY_TOOL_ICONS_DIR / 'tools' / f'{name}.png',
+    ]
+    for png_path in png_candidates:
+        if png_path.exists():
+            return QIcon(str(png_path))
+    return QIcon()
+
+
 def _toolbar_icon(name: str) -> QIcon:
+    svg = ICONS_DIR / 'tools' / f'{name}.svg'
+    if svg.exists():
+        return _svg_icon(svg)
+    shared_svg = TOOL_LIBRARY_TOOL_ICONS_DIR / f'{name}.svg'
+    if shared_svg.exists():
+        return _svg_icon(shared_svg)
     png = ICONS_DIR / 'tools' / f'{name}.png'
     if png.exists():
         return QIcon(str(png))
     shared_png = TOOL_LIBRARY_TOOL_ICONS_DIR / f'{name}.png'
     if shared_png.exists():
         return QIcon(str(shared_png))
-    svg = ICONS_DIR / 'tools' / f'{name}.svg'
-    if svg.exists():
-        return QIcon(str(svg))
-    shared_svg = TOOL_LIBRARY_TOOL_ICONS_DIR / f'{name}.svg'
-    if shared_svg.exists():
-        return QIcon(str(shared_svg))
     return QIcon()
 
 
@@ -90,17 +145,16 @@ class LogbookPage(QWidget):
 
         root = QVBoxLayout(self)
 
-        self.title = QLabel(self._t("setup_manager.nav.logbook", "Logbook"))
-        self.title.setProperty("pageTitle", True)
-        root.addWidget(self.title)
-
-        self.search_icon = _toolbar_icon('search_icon')
-        self.close_icon = _toolbar_icon('close_icon')
+        self.search_icon = _toolbar_icon_with_svg_render_fallback('search_icon', 28)
+        self.close_icon = _toolbar_icon_with_svg_render_fallback('close_icon', 28)
+        self.delete_icon = _toolbar_icon_with_svg_render_fallback('delete', 28)
+        self.export_icon = _toolbar_icon_with_svg_render_fallback('import_export', 28)
         self.search_toggle_btn = QToolButton()
         self.search_toggle_btn.setProperty('topBarIconButton', True)
         self.search_toggle_btn.setCheckable(True)
         self.search_toggle_btn.setToolTip(self._t('logbook_page.search_toggle_tip', 'Show/hide filters'))
         self.search_toggle_btn.setIcon(self.search_icon)
+        self.search_toggle_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.search_toggle_btn.setIconSize(QSize(28, 28))
         self.search_toggle_btn.setFixedSize(36, 36)
         self.search_toggle_btn.setAutoRaise(True)
@@ -124,17 +178,25 @@ class LogbookPage(QWidget):
         actions.setSpacing(6)
         actions.addWidget(self.search_toggle_btn)
         actions.addWidget(self.search_input)
-        self.refresh_btn = QPushButton(self._t("drawing_page.action.refresh", "Refresh"))
-        self.refresh_btn.setProperty("panelActionButton", True)
-        self.refresh_btn.clicked.connect(self.refresh_entries)
-        self.delete_btn = QPushButton(self._t("logbook_page.action.delete", "Delete"))
-        self.delete_btn.setProperty("panelActionButton", True)
+        self.delete_btn = QToolButton()
+        self.delete_btn.setProperty('topBarIconButton', True)
+        self.delete_btn.setToolTip(self._t("logbook_page.action.delete", "Delete"))
+        self.delete_btn.setIcon(self.delete_icon)
+        self.delete_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.delete_btn.setIconSize(QSize(28, 28))
+        self.delete_btn.setFixedSize(36, 36)
+        self.delete_btn.setAutoRaise(True)
         self.delete_btn.clicked.connect(self.delete_selected)
-        self.export_btn = QPushButton(self._t("logbook_page.action.export_excel", "Export Excel"))
-        self.export_btn.setProperty("panelActionButton", True)
+        self.export_btn = QToolButton()
+        self.export_btn.setProperty('topBarIconButton', True)
+        self.export_btn.setToolTip(self._t("logbook_page.action.export_excel", "Export Excel"))
+        self.export_btn.setIcon(self.export_icon)
+        self.export_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
+        self.export_btn.setIconSize(QSize(28, 28))
+        self.export_btn.setFixedSize(36, 36)
+        self.export_btn.setAutoRaise(True)
         self.export_btn.clicked.connect(self.export_excel)
         self.result_count = QLabel("")
-        actions.addWidget(self.refresh_btn)
         actions.addWidget(self.delete_btn)
         actions.addWidget(self.export_btn)
         actions.addStretch(1)

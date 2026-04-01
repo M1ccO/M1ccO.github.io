@@ -1043,12 +1043,18 @@ class WorkEditorDialog(QDialog):
         work=None,
         parent=None,
         translate: Callable[[str, str | None], str] | None = None,
+        batch_label: str | None = None,
+        group_edit_mode: bool = False,
+        group_count: int | None = None,
     ):
         super().__init__(parent)
         self.draw_service = draw_service
         self.work = dict(work or {})
         self.is_edit = bool(work)
         self._translate = translate or _noop_translate
+        self._batch_label = (batch_label or "").strip()
+        self._group_edit_mode = bool(group_edit_mode)
+        self._group_count = int(group_count or 0)
 
         self.setWindowTitle(self._dialog_title())
         self.resize(960, 680)
@@ -1126,9 +1132,21 @@ class WorkEditorDialog(QDialog):
         return self._translate(key, default, **kwargs)
 
     def _dialog_title(self) -> str:
+        if self._group_edit_mode:
+            if self._group_count > 1:
+                return self._t(
+                    "work_editor.window_title.group",
+                    "Group Edit ({count} items)",
+                    count=self._group_count,
+                )
+            return self._t("work_editor.window_title.group", "Group Edit")
         if self.is_edit:
-            return self._t("work_editor.window_title.edit", "Edit Work")
-        return self._t("work_editor.window_title.new", "New Work")
+            base = self._t("work_editor.window_title.edit", "Edit Work")
+        else:
+            base = self._t("work_editor.window_title.new", "New Work")
+        if self._batch_label:
+            return f"{base} ({self._batch_label})"
+        return base
 
     def _set_secondary_button_theme(self):
         save_btn = None
@@ -1697,7 +1715,7 @@ class WorkEditorDialog(QDialog):
 
     def _on_save(self):
         work_id = self.work_id_input.text().strip()
-        if not work_id:
+        if not work_id and not self._group_edit_mode:
             QMessageBox.warning(
                 self,
                 self._t("work_editor.message.missing_id_title", "Missing ID"),

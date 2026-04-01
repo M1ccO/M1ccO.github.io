@@ -478,11 +478,13 @@ class MainWindow(QMainWindow):
             export_service,
             on_data_changed=self._refresh_catalog_pages,
             on_database_switched=self._switch_database,
+            translate=self._t,
         )
         self.jaws_export_page = JawExportPage(
             jaw_service,
             on_jaw_data_changed=self._refresh_jaws_page,
             on_jaw_database_switched=self._switch_jaw_database,
+            translate=self._t,
         )
         self.stack.addWidget(self.home_page)
         self.stack.addWidget(self.assemblies_page)

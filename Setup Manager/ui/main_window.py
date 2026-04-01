@@ -141,6 +141,7 @@ class MainWindow(QMainWindow):
 
         self.rail_title_label = QLabel(self._t("setup_manager.rail_title", "Setup Manager"))
         self.rail_title_label.setStyleSheet("color: #000000; font-size: 16pt; font-weight: 700;")
+        self.rail_title_label.setWordWrap(True)
         nav_layout.addWidget(self.rail_title_label)
 
         self.nav_buttons = []

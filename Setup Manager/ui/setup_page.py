@@ -1,6 +1,8 @@
 from html import escape
 from pathlib import Path
 import tempfile
+import shutil
+from datetime import datetime
 from datetime import date
 from typing import Callable
 
@@ -40,6 +42,10 @@ from config import (
 from ui.widgets.common import AutoShrinkLabel, repolish_widget, styled_list_item_height
 from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID, SetupCatalogDelegate
 from ui.work_editor_dialog import WorkEditorDialog
+try:
+    from shared.editor_helpers import ask_multi_edit_mode
+except ModuleNotFoundError:
+    from editor_helpers import ask_multi_edit_mode
 
 
 def _toolbar_icon(name: str) -> QIcon:
@@ -686,7 +692,7 @@ class SetupPage(QWidget):
         self.work_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.work_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.work_list.setSpacing(0)
-        self.work_list.setSelectionMode(QListView.SingleSelection)
+        self.work_list.setSelectionMode(QListView.ExtendedSelection)
         self.work_list.setMouseTracking(True)
         self.work_list.setUniformItemSizes(True)
         self.work_list.setStyleSheet(
@@ -702,6 +708,7 @@ class SetupPage(QWidget):
         self.work_list.setModel(self._work_model)
         self.work_list.setItemDelegate(self._work_delegate)
         self.work_list.selectionModel().currentChanged.connect(self._on_selection_changed)
+        self.work_list.selectionModel().selectionChanged.connect(self._on_multi_selection_changed)
         self.work_list.doubleClicked.connect(self._on_item_double_clicked)
         self.work_list.installEventFilter(self)
         self.work_list.viewport().installEventFilter(self)
@@ -838,6 +845,11 @@ class SetupPage(QWidget):
         self.delete_btn.setProperty("panelActionButton", True)
         self.delete_btn.setProperty("dangerAction", True)
 
+        self.selection_count_label = QLabel("")
+        self.selection_count_label.setProperty("detailHint", True)
+        self.selection_count_label.setStyleSheet("background: transparent; border: none;")
+        self.selection_count_label.hide()
+        button_layout.addWidget(self.selection_count_label, 0, Qt.AlignBottom)
         button_layout.addWidget(self.new_btn, 0, Qt.AlignBottom)
         button_layout.addWidget(self.edit_btn, 0, Qt.AlignBottom)
         button_layout.addWidget(self.delete_btn, 0, Qt.AlignBottom)
@@ -906,6 +918,7 @@ class SetupPage(QWidget):
         self.delete_btn.setText(self._t("setup_page.delete_work", "Delete Work"))
         self.copy_btn.setText(self._t("setup_page.duplicate", "Duplicate"))
         self.print_btn.setText(self._t("setup_page.view_setup_card", "View Setup Card"))
+        self._update_selection_count_label()
         if self._details_open:
             self._refresh_details()
         self.refresh_works()
@@ -999,6 +1012,143 @@ class SetupPage(QWidget):
         index = self.work_list.currentIndex()
         return index.data(ROLE_WORK_ID) if index.isValid() else None
 
+    def _selected_work_ids(self) -> list[str]:
+        model = self.work_list.selectionModel()
+        if model is None:
+            return []
+        indexes = sorted(model.selectedIndexes(), key=lambda idx: idx.row())
+        work_ids: list[str] = []
+        for index in indexes:
+            work_id = (index.data(ROLE_WORK_ID) or "").strip()
+            if work_id and work_id not in work_ids:
+                work_ids.append(work_id)
+        return work_ids
+
+    def _on_multi_selection_changed(self, _selected, _deselected):
+        self._update_selection_count_label()
+
+    def _update_selection_count_label(self):
+        count = len(self._selected_work_ids())
+        if count > 1:
+            self.selection_count_label.setText(
+                self._t("setup_page.selection.count", "{count} selected", count=count)
+            )
+            self.selection_count_label.show()
+            return
+        self.selection_count_label.hide()
+
+    @staticmethod
+    def _prune_backups(db_path: Path, tag: str, keep: int = 5):
+        prefix = f"{db_path.stem}_{tag}_"
+        backups = sorted(
+            db_path.parent.glob(f"{prefix}*.bak"),
+            key=lambda item: item.stat().st_mtime,
+            reverse=True,
+        )
+        for stale in backups[keep:]:
+            try:
+                stale.unlink()
+            except Exception:
+                pass
+
+    def _create_db_backup(self, tag: str) -> Path:
+        db_path = Path(self.work_service.db.path)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = db_path.parent / f"{db_path.stem}_{tag}_{timestamp}.bak"
+        shutil.copy2(db_path, backup_path)
+        self._prune_backups(db_path, tag)
+        return backup_path
+
+    def _prompt_batch_cancel_behavior(self) -> str:
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Question)
+        box.setWindowTitle(self._t("setup_page.batch.cancel.title", "Batch edit cancelled"))
+        box.setText(
+            self._t(
+                "setup_page.batch.cancel.body",
+                "You stopped editing partway through the batch. Do you want to keep the changes you\'ve already saved, or undo all of them?",
+            )
+        )
+        keep_btn = box.addButton(
+            self._t("setup_page.batch.cancel.keep", "Keep"),
+            QMessageBox.AcceptRole,
+        )
+        undo_btn = box.addButton(
+            self._t("setup_page.batch.cancel.undo", "Undo"),
+            QMessageBox.DestructiveRole,
+        )
+        box.addButton(self._t("common.cancel", "Cancel"), QMessageBox.RejectRole)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is undo_btn:
+            return "undo"
+        if clicked is keep_btn:
+            return "keep"
+        return "keep"
+
+    def _batch_edit_works(self, work_ids: list[str]):
+        saved_before: list[dict] = []
+        total = len(work_ids)
+        for idx, work_id in enumerate(work_ids, 1):
+            work = self.work_service.get_work(work_id)
+            if not work:
+                continue
+            dialog = WorkEditorDialog(
+                self.draw_service,
+                work=work,
+                parent=self,
+                translate=self._t,
+                batch_label=f"{idx}/{total}",
+            )
+            if dialog.exec() != QDialog.Accepted:
+                if saved_before:
+                    action = self._prompt_batch_cancel_behavior()
+                    if action == "undo":
+                        for previous in reversed(saved_before):
+                            self.work_service.save_work(previous)
+                self.refresh_works()
+                return
+            saved_before.append(dict(work))
+            self.work_service.save_work(dialog.get_work_data())
+        self.refresh_works()
+
+    def _group_edit_works(self, work_ids: list[str]):
+        baseline_dialog = WorkEditorDialog(
+            self.draw_service,
+            parent=self,
+            translate=self._t,
+            group_edit_mode=True,
+            group_count=len(work_ids),
+        )
+        baseline = baseline_dialog.get_work_data()
+        if baseline_dialog.exec() != QDialog.Accepted:
+            return
+        edited_data = baseline_dialog.get_work_data()
+        changed_fields = {
+            key: value
+            for key, value in edited_data.items()
+            if value != baseline.get(key)
+        }
+        changed_fields.pop("work_id", None)
+        if not changed_fields:
+            QMessageBox.information(
+                self,
+                self._t("setup_page.group_edit.no_changes_title", "No changes"),
+                self._t("setup_page.group_edit.no_changes_body", "No fields were changed."),
+            )
+            return
+
+        self._create_db_backup("group_edit")
+        for work_id in work_ids:
+            work = self.work_service.get_work(work_id)
+            if not work:
+                continue
+            updated = dict(work)
+            updated.update(changed_fields)
+            updated["work_id"] = work_id
+            self.work_service.save_work(updated)
+        self.refresh_works()
+
     def _toggle_search(self):
         show = self.search_toggle_btn.isChecked()
         self._search_visible = show
@@ -1065,6 +1215,7 @@ class SetupPage(QWidget):
         self.work_list.selectionModel().clearSelection()
         self.work_list.setCurrentIndex(QModelIndex())
         self.current_work_id = None
+        self._update_selection_count_label()
         self._set_selected_card(None)
         self._update_open_library_viewer_visibility(None)
         self._emit_library_launch_context(None)
@@ -1073,6 +1224,7 @@ class SetupPage(QWidget):
     def _on_selection_changed(self, current, _previous):
         work_id = current.data(ROLE_WORK_ID) if current and current.isValid() else None
         self.current_work_id = work_id
+        self._update_selection_count_label()
         self._set_selected_card(work_id)
         selected_work = self.work_service.get_work(work_id) if work_id else None
         self._update_open_library_viewer_visibility(selected_work)
@@ -1533,9 +1685,18 @@ class SetupPage(QWidget):
             QMessageBox.critical(self, self._t("setup_page.message.save_failed", "Save failed"), str(exc))
 
     def edit_work(self):
-        work_id = self._selected_work_id()
-        if not work_id:
+        selected_ids = self._selected_work_ids()
+        if not selected_ids:
             return
+        if len(selected_ids) > 1:
+            mode = ask_multi_edit_mode(self, len(selected_ids), self._t)
+            if mode == "batch":
+                self._batch_edit_works(selected_ids)
+            elif mode == "group":
+                self._group_edit_works(selected_ids)
+            return
+
+        work_id = selected_ids[0]
         work = self.work_service.get_work(work_id)
         if not work:
             QMessageBox.warning(

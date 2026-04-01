@@ -38,10 +38,21 @@ class AddEditJawDialog(QDialog):
     JAW_TYPES = ['Soft jaws', 'Hard jaws', 'Spiked jaws', 'Special jaws']
     SPINDLE_SIDES = ['Main spindle', 'Sub spindle', 'Both']
 
-    def __init__(self, parent=None, jaw=None, translate: Callable[[str, str | None], str] | None = None):
+    def __init__(
+        self,
+        parent=None,
+        jaw=None,
+        translate: Callable[[str, str | None], str] | None = None,
+        batch_label: str | None = None,
+        group_edit_mode: bool = False,
+        group_count: int | None = None,
+    ):
         super().__init__(parent)
         self.jaw = jaw or {}
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self._batch_label = (batch_label or '').strip()
+        self._group_edit_mode = bool(group_edit_mode)
+        self._group_count = int(group_count or 0)
         self._general_field_columns = None
         self._preview_rotation_steps = {'x': 0, 'y': 0, 'z': 0}
         self.setWindowTitle(self._dialog_title())
@@ -56,10 +67,22 @@ class AddEditJawDialog(QDialog):
         return self._translate(key, default, **kwargs)
 
     def _dialog_title(self) -> str:
+        if self._group_edit_mode:
+            if self._group_count > 1:
+                return self._t(
+                    'jaw_editor.window_title.group',
+                    'Group Edit ({count} items)',
+                    count=self._group_count,
+                )
+            return self._t('jaw_editor.window_title.group', 'Group Edit')
         jaw_id = self.jaw.get('jaw_id', '').strip()
         if jaw_id:
-            return self._t('jaw_editor.window_title.edit', 'Edit Jaw - {jaw_id}', jaw_id=jaw_id)
-        return self._t('jaw_editor.window_title.add', 'Add Jaw')
+            base = self._t('jaw_editor.window_title.edit', 'Edit Jaw - {jaw_id}', jaw_id=jaw_id)
+        else:
+            base = self._t('jaw_editor.window_title.add', 'Add Jaw')
+        if self._batch_label:
+            return f"{base} ({self._batch_label})"
+        return base
 
     def _localized_jaw_type(self, raw: str) -> str:
         normalized = (raw or '').strip().lower().replace(' ', '_')
@@ -437,7 +460,7 @@ class AddEditJawDialog(QDialog):
             'preview_rot_z': self._preview_rotation_steps.get('z', 0) % 360,
         }
 
-        if not jaw['jaw_id']:
+        if not jaw['jaw_id'] and not self._group_edit_mode:
             raise ValueError(self._t('jaw_editor.error.jaw_id_required', 'Jaw ID is required.'))
 
         if jaw['jaw_type'] not in self.JAW_TYPES:

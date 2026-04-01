@@ -364,39 +364,42 @@ class ImportMappingDialog(QDialog):
 
 
 class ExportPage(QWidget):
-    def __init__(self, tool_service, export_service, on_data_changed=None, on_database_switched=None, parent=None):
+    def __init__(self, tool_service, export_service, on_data_changed=None, on_database_switched=None, parent=None, translate=None):
         super().__init__(parent)
         self.tool_service = tool_service
         self.export_service = export_service
         self.on_data_changed = on_data_changed
         self.on_database_switched = on_database_switched
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or "")
         self._build_ui()
+
+    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
+        return self._translate(key, default, **kwargs)
 
     def _build_ui(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 14, 14, 10)
         root.setSpacing(10)
 
-        title = QLabel('Export / Import')
-        title.setProperty('pageTitle', True)
-        root.addWidget(title)
 
         card = QFrame()
         card.setStyleSheet('QFrame { background: transparent; border: none; }')
         card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(0, 0, 0, 0)
+        # Add extra top space so the group box title sits clearly below the page header.
+        card_layout.setContentsMargins(0, 30, 0, 0)
         card_layout.setSpacing(12)
 
-        db_box = QGroupBox('Active Database')
+        db_box = QGroupBox(self._t('tool_library.export.active_database', 'Active Database'))
+        db_box.setStyleSheet('QGroupBox { background: transparent; }')
         db_box.setStyleSheet('QGroupBox { background: transparent; }')
         db_layout = QVBoxLayout(db_box)
         db_row = QHBoxLayout()
         self.db_path_edit = QLineEdit()
         self.db_path_edit.setReadOnly(True)
         self.db_path_edit.setPlaceholderText('No database selected')
-        self.db_choose_btn = QPushButton('CHOOSE DB')
+        self.db_choose_btn = QPushButton(self._t('tool_library.export.choose_db_button', 'CHOOSE DB'))
         self.db_choose_btn.setProperty('panelActionButton', True)
-        self.db_apply_btn = QPushButton('USE SELECTED DB')
+        self.db_apply_btn = QPushButton(self._t('tool_library.export.use_selected_db_button', 'USE SELECTED DB'))
         self.db_apply_btn.setProperty('panelActionButton', True)
         self.db_choose_btn.clicked.connect(self._choose_database_file)
         self.db_apply_btn.clicked.connect(self._apply_database_file)
@@ -407,11 +410,11 @@ class ExportPage(QWidget):
         card_layout.addWidget(db_box)
 
         btn_row = QHBoxLayout()
-        self.import_btn = QPushButton('IMPORT FROM EXCEL')
+        self.import_btn = QPushButton(self._t('tool_library.export.import_button', 'IMPORT FROM EXCEL'))
         self.import_btn.setProperty('panelActionButton', True)
         self.import_btn.clicked.connect(self.import_excel)
 
-        self.export_btn = QPushButton('EXPORT TO EXCEL')
+        self.export_btn = QPushButton(self._t('tool_library.export.export_button', 'EXPORT TO EXCEL'))
         self.export_btn.setProperty('panelActionButton', True)
         self.export_btn.setProperty('primaryAction', True)
         self.export_btn.clicked.connect(self.export_excel)
@@ -432,25 +435,25 @@ class ExportPage(QWidget):
 
     def _choose_database_file(self):
         current = self.db_path_edit.text().strip() or str(DB_PATH)
-        path, _ = QFileDialog.getOpenFileName(self, 'Choose database file', current, 'Database (*.db)')
+        path, _ = QFileDialog.getOpenFileName(self, self._t('tool_library.export.choose_database', 'Choose database file'), current, self._t('tool_library.export.database_filter', 'Database (*.db)'))
         if path:
             self.db_path_edit.setText(path)
 
     def _apply_database_file(self):
         path = self.db_path_edit.text().strip()
         if not path:
-            QMessageBox.warning(self, 'Database', 'Select a database file first.')
+            QMessageBox.warning(self, self._t('tool_library.export.database', 'Database'), self._t('tool_library.export.select_database_first', 'Select a database file first.'))
             return
         if not callable(self.on_database_switched):
-            QMessageBox.warning(self, 'Database', 'Database switch callback is not configured.')
+            QMessageBox.warning(self, self._t('tool_library.export.database', 'Database'), self._t('tool_library.export.callback_not_configured', 'Database switch callback is not configured.'))
             return
 
         ok, message = self.on_database_switched(path)
         if ok:
-            QMessageBox.information(self, 'Database', message)
+            QMessageBox.information(self, self._t('tool_library.export.database', 'Database'), message)
             self.refresh_database_path_display()
         else:
-            QMessageBox.critical(self, 'Database switch failed', message)
+            QMessageBox.critical(self, self._t('tool_library.export.database_switch_failed', 'Database switch failed'), message)
 
     def _create_database_backup(self) -> Path:
         src = Path(getattr(self.tool_service.db, 'path', ''))
@@ -462,24 +465,24 @@ class ExportPage(QWidget):
         return backup
 
     def export_excel(self):
-        path, _ = QFileDialog.getSaveFileName(self, 'Export to Excel', str(EXPORT_DEFAULT_PATH), 'Excel (*.xlsx)')
+        path, _ = QFileDialog.getSaveFileName(self, self._t('tool_library.export.title', 'Export to Excel'), str(EXPORT_DEFAULT_PATH), self._t('tool_library.export.filter_excel', 'Excel (*.xlsx)'))
         if not path:
             return
         try:
             self.export_service.export_tools(path, self.tool_service.list_tools())
-            QMessageBox.information(self, 'Export', f'Exported to\n{path}')
+            QMessageBox.information(self, self._t('tool_library.export.done_title', 'Export'), self._t('tool_library.export.done_body', 'Exported to\n{path}', path=path))
         except Exception as exc:
-            QMessageBox.critical(self, 'Export failed', str(exc))
+            QMessageBox.critical(self, self._t('tool_library.export.failed_title', 'Export failed'), str(exc))
 
     def import_excel(self):
-        path, _ = QFileDialog.getOpenFileName(self, 'Import from Excel', str(EXPORT_DEFAULT_PATH.parent), 'Excel (*.xlsx *.xlsm)')
+        path, _ = QFileDialog.getOpenFileName(self, self._t('tool_library.import.title', 'Import from Excel'), str(EXPORT_DEFAULT_PATH.parent), self._t('tool_library.import.filter_excel', 'Excel (*.xlsx *.xlsm)'))
         if not path:
             return
 
         try:
             headers = self.export_service.read_excel_headers(path)
         except Exception as exc:
-            QMessageBox.critical(self, 'Import failed', f'Could not read Excel headers:\n{exc}')
+            QMessageBox.critical(self, self._t('tool_library.import.failed_title', 'Import failed'), self._t('tool_library.import.read_headers_failed', 'Could not read Excel headers:\n{error}', error=exc))
             return
 
         if not headers:

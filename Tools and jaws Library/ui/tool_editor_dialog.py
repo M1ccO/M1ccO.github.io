@@ -278,23 +278,25 @@ class AddEditToolDialog(QDialog):
         tool=None,
         tool_service=None,
         translate: Callable[[str, str | None], str] | None = None,
+        batch_label: str | None = None,
+        group_edit_mode: bool = False,
+        group_count: int | None = None,
     ):
         super().__init__(parent)
         self.tool = tool or {}
         self.original_uid = self.tool.get('uid') if isinstance(self.tool, dict) else None
         self.tool_service = tool_service
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self._batch_label = (batch_label or '').strip()
+        self._group_edit_mode = bool(group_edit_mode)
+        self._group_count = int(group_count or 0)
         self._general_field_columns = None
         self._clamping_screen_bounds = False
         self._spare_refresh_timer = QTimer(self)
         self._spare_refresh_timer.setSingleShot(True)
         self._spare_refresh_timer.setInterval(75)
         self._spare_refresh_timer.timeout.connect(self._refresh_spare_component_dropdowns)
-        self.setWindowTitle(
-            self._t('tool_editor.window_title.add', 'Add Tool')
-            if not tool
-            else self._t('tool_editor.window_title.edit', 'Edit Tool - {tool_id}', tool_id=tool['id'])
-        )
+        self.setWindowTitle(self._dialog_title())
         self.resize(920, 600)
         self.setMinimumSize(800, 520)
         self.setModal(True)
@@ -306,6 +308,24 @@ class AddEditToolDialog(QDialog):
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
+
+    def _dialog_title(self) -> str:
+        if self._group_edit_mode:
+            if self._group_count > 1:
+                return self._t(
+                    'tool_editor.window_title.group',
+                    'Group Edit ({count} items)',
+                    count=self._group_count,
+                )
+            return self._t('tool_editor.window_title.group', 'Group Edit')
+        if self.tool:
+            tool_id = (self.tool.get('id') or '').strip() if isinstance(self.tool, dict) else ''
+            base = self._t('tool_editor.window_title.edit', 'Edit Tool - {tool_id}', tool_id=tool_id)
+        else:
+            base = self._t('tool_editor.window_title.add', 'Add Tool')
+        if self._batch_label:
+            return f"{base} ({self._batch_label})"
+        return base
 
     def _localized_tool_type(self, raw_tool_type: str) -> str:
         key = f"tool_library.tool_type.{(raw_tool_type or '').strip().lower().replace('.', '_').replace('/', '_').replace(' ', '_')}"
@@ -2091,7 +2111,7 @@ class AddEditToolDialog(QDialog):
     def get_tool_data(self):
         self._commit_active_edits()
         tool_id = self.tool_id.text().strip()
-        if not tool_id:
+        if not tool_id and not self._group_edit_mode:
             raise ValueError(self._t('tool_editor.error.tool_id_required', 'Tool ID is required.'))
 
         def parse_float(value, field_name):

@@ -285,17 +285,17 @@ class JawCatalogDelegate(QStyledItemDelegate):
                 continue
 
             header_lines = header.split("\n") if "\n" in header else [header]
-            header_h = single_header_h * len(header_lines) + 2
+            header_h = single_header_h * len(header_lines)
             line_count = (
                 self._description_line_count(value_metrics, value, text_rect.width(), stage)
                 if key == "jaw_type" else 1
             )
             wrapped = line_count == 2 and key == "jaw_type"
-            header_value_gap = -2 if wrapped else 0
+            header_value_gap = -2 if key in ("diameter", "length") else (-2 if wrapped else 0)
             effective_value_h = int(round(value_line_h * WRAPPED_LINE_STEP_FACTOR)) if wrapped else value_line_h
             value_h = value_line_h + effective_value_h if wrapped else value_line_h * line_count
             block_h = header_h + header_value_gap + value_h
-            vertical_bias = 3 if wrapped else (1 if len(header_lines) > 1 else 0)
+            vertical_bias = 3 if wrapped else (2 if key in ("diameter", "length") else (1 if len(header_lines) > 1 else 0))
             y_offset = max(0, (text_rect.height() - block_h) // 2 - vertical_bias)
 
             painter.setFont(header_font)
