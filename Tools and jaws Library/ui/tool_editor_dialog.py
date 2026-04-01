@@ -290,6 +290,10 @@ class AddEditToolDialog(QDialog):
         self._batch_label = (batch_label or '').strip()
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
+        self._assembly_transform_enabled = self._is_assembly_transform_enabled()
+        self._part_transforms = {}
+        self._current_transform_mode = 'translate'
+        self._selected_part_index = -1
         self._general_field_columns = None
         self._clamping_screen_bounds = False
         self._spare_refresh_timer = QTimer(self)
@@ -862,6 +866,64 @@ class AddEditToolDialog(QDialog):
 
         self.models_preview = StlPreviewWidget()
         preview_panel_layout.addWidget(self.models_preview, 1)
+
+        # Transform controls (visible only when preference is on)
+        self._transform_frame = QFrame()
+        _tf_layout = QVBoxLayout(self._transform_frame)
+        _tf_layout.setContentsMargins(4, 6, 4, 2)
+        _tf_layout.setSpacing(4)
+
+        self._selected_part_label = QLabel(
+            self._t('tool_editor.transform.no_selection', 'Click a part to select')
+        )
+        self._selected_part_label.setStyleSheet('color: #6b7b8e; font-size: 11px;')
+        _tf_layout.addWidget(self._selected_part_label)
+
+        _mode_row = QHBoxLayout()
+        _mode_row.setSpacing(6)
+        self._move_mode_btn = QPushButton(self._t('tool_editor.transform.move', 'MOVE'))
+        self._rotate_mode_btn = QPushButton(self._t('tool_editor.transform.rotate', 'ROTATE'))
+        self._reset_transform_btn = QPushButton(self._t('tool_editor.transform.reset', 'RESET'))
+        style_panel_action_button(self._move_mode_btn)
+        style_panel_action_button(self._rotate_mode_btn)
+        style_panel_action_button(self._reset_transform_btn)
+        self._move_mode_btn.setCheckable(True)
+        self._rotate_mode_btn.setCheckable(True)
+        self._move_mode_btn.setChecked(True)
+        _mode_row.addWidget(self._move_mode_btn)
+        _mode_row.addWidget(self._rotate_mode_btn)
+        _mode_row.addStretch()
+        _mode_row.addWidget(self._reset_transform_btn)
+        _tf_layout.addLayout(_mode_row)
+
+        _xyz_row = QHBoxLayout()
+        _xyz_row.setSpacing(4)
+        self._transform_x = QLineEdit('0')
+        self._transform_y = QLineEdit('0')
+        self._transform_z = QLineEdit('0')
+        for _lbl_text, _field in [('X:', self._transform_x), ('Y:', self._transform_y), ('Z:', self._transform_z)]:
+            _lbl = QLabel(_lbl_text)
+            _lbl.setStyleSheet('font-weight: bold; font-size: 11px;')
+            _field.setFixedWidth(70)
+            _field.setAlignment(Qt.AlignRight)
+            _xyz_row.addWidget(_lbl)
+            _xyz_row.addWidget(_field)
+        _xyz_row.addStretch()
+        _tf_layout.addLayout(_xyz_row)
+
+        preview_panel_layout.addWidget(self._transform_frame)
+        self._transform_frame.setVisible(self._assembly_transform_enabled)
+
+        if self._assembly_transform_enabled:
+            self.models_preview.transform_changed.connect(self._on_viewer_transform_changed)
+            self.models_preview.part_selected.connect(self._on_viewer_part_selected)
+            self._move_mode_btn.clicked.connect(lambda: self._set_gizmo_mode('translate'))
+            self._rotate_mode_btn.clicked.connect(lambda: self._set_gizmo_mode('rotate'))
+            self._reset_transform_btn.clicked.connect(self._reset_current_part_transform)
+            self._transform_x.editingFinished.connect(self._apply_manual_transform)
+            self._transform_y.editingFinished.connect(self._apply_manual_transform)
+            self._transform_z.editingFinished.connect(self._apply_manual_transform)
+            self.model_table.currentCellChanged.connect(self._on_model_table_row_changed)
 
         splitter.addWidget(models_panel)
         splitter.addWidget(preview_panel)
@@ -1881,11 +1943,20 @@ class AddEditToolDialog(QDialog):
             color = self._get_model_row_color(row)
 
             if name or stl_file:
-                result.append({
+                part = {
                     'name': name,
                     'file': stl_file,
                     'color': color or self._default_color_for_part_name(name),
-                })
+                }
+                t = self._part_transforms.get(row, {})
+                if any(t.get(k, 0) != 0 for k in ('x', 'y', 'z', 'rx', 'ry', 'rz')):
+                    part['offset_x'] = t.get('x', 0)
+                    part['offset_y'] = t.get('y', 0)
+                    part['offset_z'] = t.get('z', 0)
+                    part['rot_x'] = t.get('rx', 0)
+                    part['rot_y'] = t.get('ry', 0)
+                    part['rot_z'] = t.get('rz', 0)
+                result.append(part)
         return result
 
     def _refresh_models_preview(self):
@@ -1902,6 +1973,96 @@ class AddEditToolDialog(QDialog):
             # temporary fallback for current single-model preview
             first_existing = next((p.get('file') for p in parts if p.get('file')), None)
             self.models_preview.load_stl(first_existing)
+
+        if self._assembly_transform_enabled:
+            self.models_preview.set_transform_edit_enabled(True)
+
+    def _is_assembly_transform_enabled(self):
+        try:
+            with open(SHARED_UI_PREFERENCES_PATH, 'r') as f:
+                prefs = json.load(f)
+            return bool(prefs.get('enable_assembly_transform', False))
+        except Exception:
+            return False
+
+    def _on_viewer_transform_changed(self, index: int, transform: dict):
+        self._part_transforms[index] = transform
+        if index == self._selected_part_index:
+            self._update_transform_fields(transform)
+
+    def _on_viewer_part_selected(self, index: int):
+        self._selected_part_index = index
+        if index < 0:
+            self._selected_part_label.setText(
+                self._t('tool_editor.transform.no_selection', 'Click a part to select')
+            )
+            self._transform_x.setText('0')
+            self._transform_y.setText('0')
+            self._transform_z.setText('0')
+            return
+        name_item = self.model_table.item(index, 0)
+        name = name_item.text().strip() if name_item else f'Part {index + 1}'
+        self._selected_part_label.setText(name or f'Part {index + 1}')
+        t = self._part_transforms.get(index, {})
+        self._update_transform_fields(t)
+        self.model_table.selectRow(index)
+
+    def _update_transform_fields(self, t: dict):
+        if self._current_transform_mode == 'translate':
+            self._transform_x.setText(str(t.get('x', 0)))
+            self._transform_y.setText(str(t.get('y', 0)))
+            self._transform_z.setText(str(t.get('z', 0)))
+        else:
+            self._transform_x.setText(str(t.get('rx', 0)))
+            self._transform_y.setText(str(t.get('ry', 0)))
+            self._transform_z.setText(str(t.get('rz', 0)))
+
+    def _set_gizmo_mode(self, mode: str):
+        self._current_transform_mode = mode
+        self._move_mode_btn.setChecked(mode == 'translate')
+        self._rotate_mode_btn.setChecked(mode == 'rotate')
+        self.models_preview.set_transform_mode(mode)
+        t = self._part_transforms.get(self._selected_part_index, {})
+        self._update_transform_fields(t)
+
+    def _reset_current_part_transform(self):
+        if self._selected_part_index < 0:
+            return
+        self.models_preview.reset_selected_part_transform()
+
+    def _apply_manual_transform(self):
+        if self._selected_part_index < 0:
+            return
+        try:
+            vx = float(self._transform_x.text().replace(',', '.'))
+            vy = float(self._transform_y.text().replace(',', '.'))
+            vz = float(self._transform_z.text().replace(',', '.'))
+        except ValueError:
+            return
+        t = dict(self._part_transforms.get(self._selected_part_index, {}))
+        if self._current_transform_mode == 'translate':
+            t['x'] = vx
+            t['y'] = vy
+            t['z'] = vz
+        else:
+            t['rx'] = vx
+            t['ry'] = vy
+            t['rz'] = vz
+        t.setdefault('x', 0)
+        t.setdefault('y', 0)
+        t.setdefault('z', 0)
+        t.setdefault('rx', 0)
+        t.setdefault('ry', 0)
+        t.setdefault('rz', 0)
+        self._part_transforms[self._selected_part_index] = t
+        all_transforms = []
+        for i in range(self.model_table.rowCount()):
+            all_transforms.append(self._part_transforms.get(i, {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}))
+        self.models_preview.set_part_transforms(all_transforms)
+
+    def _on_model_table_row_changed(self, current_row, current_col, prev_row, prev_col):
+        if current_row >= 0 and self._assembly_transform_enabled:
+            self.models_preview.select_part(current_row)
 
     # -------------------------
     # EXISTING HELPERS
@@ -2048,6 +2209,18 @@ class AddEditToolDialog(QDialog):
                 'file': part.get('file', ''),
                 'color': part.get('color', self._default_color_for_part_name(part.get('name', ''))),
             })
+
+        # Load per-part transforms
+        self._part_transforms = {}
+        for i, part in enumerate(model_parts):
+            t = {}
+            for src, dst in [('offset_x', 'x'), ('offset_y', 'y'), ('offset_z', 'z'),
+                             ('rot_x', 'rx'), ('rot_y', 'ry'), ('rot_z', 'rz')]:
+                v = part.get(src, 0)
+                if v:
+                    t[dst] = v
+            if t:
+                self._part_transforms[i] = t
 
         self._update_tool_type_fields()
         self._refresh_models_preview()

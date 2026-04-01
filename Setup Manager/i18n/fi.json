@@ -301,5 +301,7 @@
     "logbook_page.export.filter": "Excel-tiedostot (*.xlsx)",
     "logbook_page.export.done_title": "Viety",
     "logbook_page.export.done_body": "Tallennettu:\n{path}",
-    "logbook_page.export.failed_title": "Vienti epäonnistui"
+    "logbook_page.export.failed_title": "Vienti epäonnistui",
+    "preferences.enable_assembly_transform": "Ota käyttöön kokoonpanon muokkaus (3D-mallit-välilehti)",
+    "preferences.enable_drawings_tab": "Ota piirustukset-välilehti käyttöön"
 }

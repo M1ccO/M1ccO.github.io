@@ -1046,6 +1046,7 @@ class WorkEditorDialog(QDialog):
         batch_label: str | None = None,
         group_edit_mode: bool = False,
         group_count: int | None = None,
+        drawings_enabled: bool = True,
     ):
         super().__init__(parent)
         self.draw_service = draw_service
@@ -1055,6 +1056,7 @@ class WorkEditorDialog(QDialog):
         self._batch_label = (batch_label or "").strip()
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
+        self._drawings_enabled = drawings_enabled
 
         self.setWindowTitle(self._dialog_title())
         self.resize(960, 680)
@@ -1311,7 +1313,10 @@ class WorkEditorDialog(QDialog):
         form.addRow(self._t("setup_page.field.work_id", "Work ID"), self.work_id_input)
         form.addRow(self._t("setup_page.field.drawing_id", "Drawing ID"), self.drawing_id_input)
         form.addRow(self._t("setup_page.field.description", "Description"), self.description_input)
-        form.addRow(self._t("work_editor.field.drawing_path", "Drawing path"), drawing_row)
+        self._drawing_row = drawing_row
+        self._drawing_row_label = self._t("work_editor.field.drawing_path", "Drawing path")
+        if self._drawings_enabled:
+            form.addRow(self._drawing_row_label, drawing_row)
 
     def _build_spindles_tab(self):
         layout = QVBoxLayout(self.spindles_tab)
@@ -1686,7 +1691,7 @@ class WorkEditorDialog(QDialog):
             "work_id": self.work_id_input.text().strip(),
             "drawing_id": self.drawing_id_input.text().strip(),
             "description": self.description_input.text().strip(),
-            "drawing_path": self.drawing_path_input.text().strip(),
+            "drawing_path": self.drawing_path_input.text().strip() if self._drawings_enabled else self.work.get("drawing_path", ""),
             "main_jaw_id": self.main_jaw_selector.get_value(),
             "sub_jaw_id": self.sub_jaw_selector.get_value(),
             "main_stop_screws": self.main_jaw_selector.get_stop_screws(),

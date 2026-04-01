@@ -4,6 +4,7 @@ from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -93,6 +94,14 @@ class PreferencesDialog(QDialog):
         apply_tool_library_combo_style(self.theme_combo)
         card_layout.addWidget(self._row(self._t("preferences.color_theme", "Color Theme"), self.theme_combo))
 
+        self.assembly_transform_cb = QCheckBox(self._t("preferences.enable_assembly_transform", "Enable assembly transform editing (3D Models tab)"))
+        self.assembly_transform_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        card_layout.addWidget(self.assembly_transform_cb)
+
+        self.drawings_tab_cb = QCheckBox(self._t("preferences.enable_drawings_tab", "Enable Drawings tab"))
+        self.drawings_tab_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        card_layout.addWidget(self.drawings_tab_cb)
+
         layout.addStretch(1)
         return tab
 
@@ -152,6 +161,8 @@ class PreferencesDialog(QDialog):
             "color_theme": self.theme_combo.currentData() or "classic",
             "tools_models_root": self.tools_models_root.text().strip(),
             "jaws_models_root": self.jaws_models_root.text().strip(),
+            "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
+            "enable_drawings_tab": self.drawings_tab_cb.isChecked(),
         }
 
     def _load_current_values(self):
@@ -159,6 +170,8 @@ class PreferencesDialog(QDialog):
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
         self.tools_models_root.setText(str(self._current.get("tools_models_root", "")))
         self.jaws_models_root.setText(str(self._current.get("jaws_models_root", "")))
+        self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
+        self.drawings_tab_cb.setChecked(bool(self._current.get("enable_drawings_tab", True)))
 
     def _pick_tools_models_root(self):
         start_dir = self.tools_models_root.text().strip()

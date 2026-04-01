@@ -4,6 +4,7 @@ from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFrame,
@@ -57,6 +58,10 @@ class PreferencesDialog(QDialog):
         add_shadow(self.theme_combo)
         card_layout.addWidget(self._row(self._t("preferences.color_theme", "Color Theme"), self.theme_combo))
 
+        self.assembly_transform_cb = QCheckBox(self._t("preferences.enable_assembly_transform", "Enable assembly transform editing (3D Models tab)"))
+        self.assembly_transform_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        card_layout.addWidget(self.assembly_transform_cb)
+
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 6, 0, 0)
         buttons.setSpacing(8)
@@ -81,11 +86,13 @@ class PreferencesDialog(QDialog):
         return {
             "language": self.language_combo.currentData() or "en",
             "color_theme": self.theme_combo.currentData() or "classic",
+            "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
         }
 
     def _load_current_values(self):
         self._set_combo_by_data(self.language_combo, self._current.get("language", "en"))
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
+        self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
 
     @staticmethod
     def _set_combo_by_data(combo: QComboBox, value: str):

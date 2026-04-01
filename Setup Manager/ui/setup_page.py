@@ -566,6 +566,7 @@ class SetupPage(QWidget):
         self.print_service = print_service
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or "")
 
+        self.drawings_enabled = True  # updated by main_window from preferences
         self.current_work_id = None
         self.latest_entries_by_work = {}
         self._details_open = False
@@ -1099,6 +1100,7 @@ class SetupPage(QWidget):
                 parent=self,
                 translate=self._t,
                 batch_label=f"{idx}/{total}",
+                drawings_enabled=self.drawings_enabled,
             )
             if dialog.exec() != QDialog.Accepted:
                 if saved_before:
@@ -1119,6 +1121,7 @@ class SetupPage(QWidget):
             translate=self._t,
             group_edit_mode=True,
             group_count=len(work_ids),
+            drawings_enabled=self.drawings_enabled,
         )
         baseline = baseline_dialog.get_work_data()
         if baseline_dialog.exec() != QDialog.Accepted:
@@ -1675,7 +1678,7 @@ class SetupPage(QWidget):
     # ------------------------------------------------------------------
 
     def create_work(self):
-        dialog = WorkEditorDialog(self.draw_service, parent=self, translate=self._t)
+        dialog = WorkEditorDialog(self.draw_service, parent=self, translate=self._t, drawings_enabled=self.drawings_enabled)
         if dialog.exec() != QDialog.Accepted:
             return
         try:
@@ -1707,7 +1710,7 @@ class SetupPage(QWidget):
             self.refresh_works()
             return
 
-        dialog = WorkEditorDialog(self.draw_service, work=work, parent=self, translate=self._t)
+        dialog = WorkEditorDialog(self.draw_service, work=work, parent=self, translate=self._t, drawings_enabled=self.drawings_enabled)
         if dialog.exec() != QDialog.Accepted:
             return
         try:

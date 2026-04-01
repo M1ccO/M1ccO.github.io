@@ -323,5 +323,10 @@
     "multi_edit.title": "Multiple items selected",
     "multi_edit.prompt": "You selected {count} items. Choose edit mode.",
     "multi_edit.batch": "Batch Edit",
-    "multi_edit.group": "Group Edit"
+    "multi_edit.group": "Group Edit",
+    "preferences.enable_assembly_transform": "Enable assembly transform editing (3D Models tab)",
+    "tool_editor.transform.no_selection": "Click a part to select",
+    "tool_editor.transform.move": "MOVE",
+    "tool_editor.transform.rotate": "ROTATE",
+    "tool_editor.transform.reset": "RESET"
 }

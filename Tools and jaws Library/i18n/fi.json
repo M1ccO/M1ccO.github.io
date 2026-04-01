@@ -323,5 +323,10 @@
     "multi_edit.title": "Useita kohteita valittu",
     "multi_edit.prompt": "Valitsit {count} kohdetta. Valitse muokkaustapa.",
     "multi_edit.batch": "Erämuokkaus",
-    "multi_edit.group": "Ryhmämuokkaus"
+    "multi_edit.group": "Ryhmämuokkaus",
+    "preferences.enable_assembly_transform": "Ota käyttöön kokoonpanon muokkaus (3D-mallit-välilehti)",
+    "tool_editor.transform.no_selection": "Napsauta osaa valitaksesi",
+    "tool_editor.transform.move": "SIIRRÄ",
+    "tool_editor.transform.rotate": "KIERRÄ",
+    "tool_editor.transform.reset": "NOLLAA"
 }

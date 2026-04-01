@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtWidgets import QAbstractScrollArea, QLabel, QVBoxLayout, QWidget
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from config import (
@@ -73,6 +73,9 @@ class ScrollFriendlyWebView(QWebEngineView):
 
 
 class StlPreviewWidget(QWidget):
+    transform_changed = Signal(int, dict)
+    part_selected = Signal(int)
+
     def __init__(self, stl_path: str | None = None, parent=None):
         super().__init__(parent)
 
@@ -102,6 +105,7 @@ class StlPreviewWidget(QWidget):
             return
 
         self._web.loadFinished.connect(self._on_load_finished)
+        self._web.page().titleChanged.connect(self._on_title_changed)
         self._web.load(QUrl.fromLocalFile(str(self._viewer_html)))
 
         if stl_path:
@@ -163,6 +167,12 @@ class StlPreviewWidget(QWidget):
                 'name': part.get('name', ''),
                 'file': QUrl.fromLocalFile(str(path)).toString(),
                 'color': part.get('color', '#9ea7b3'),
+                'offset_x': part.get('offset_x', 0),
+                'offset_y': part.get('offset_y', 0),
+                'offset_z': part.get('offset_z', 0),
+                'rot_x': part.get('rot_x', 0),
+                'rot_y': part.get('rot_y', 0),
+                'rot_z': part.get('rot_z', 0),
             })
 
         js_payload = json.dumps(payload)
@@ -258,4 +268,56 @@ class StlPreviewWidget(QWidget):
         self._rotation_deg = {'x': 0, 'y': 0, 'z': 0}
         if self._page_ready:
             self._web.page().runJavaScript("window.resetModelRotation && window.resetModelRotation();")
+
+    def _on_title_changed(self, title: str):
+        if title.startswith('TRANSFORM:'):
+            try:
+                data = json.loads(title[len('TRANSFORM:'):])
+                self.transform_changed.emit(data['index'], data['transform'])
+            except (json.JSONDecodeError, KeyError):
+                pass
+        elif title.startswith('PART_SELECTED:'):
+            try:
+                idx = int(title[len('PART_SELECTED:'):])
+                self.part_selected.emit(idx)
+            except ValueError:
+                pass
+
+    def set_transform_edit_enabled(self, enabled: bool):
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setTransformEditEnabled && window.setTransformEditEnabled({str(enabled).lower()});"
+            )
+
+    def set_transform_mode(self, mode: str):
+        if mode in ('translate', 'rotate') and self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setTransformMode && window.setTransformMode({mode!r});"
+            )
+
+    def get_part_transforms(self, callback):
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                "window.getPartTransforms && window.getPartTransforms();",
+                callback,
+            )
+
+    def set_part_transforms(self, transforms: list[dict]):
+        if self._page_ready:
+            js_payload = json.dumps(transforms)
+            self._web.page().runJavaScript(
+                f"window.setPartTransforms && window.setPartTransforms({js_payload});"
+            )
+
+    def select_part(self, index: int):
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.selectPart && window.selectPart({int(index)});"
+            )
+
+    def reset_selected_part_transform(self):
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                "window.resetSelectedPartTransform && window.resetSelectedPartTransform();"
+            )
 

@@ -337,5 +337,7 @@
     "logbook_page.export.filter": "Excel Files (*.xlsx)",
     "logbook_page.export.done_title": "Exported",
     "logbook_page.export.done_body": "Saved:\n{path}",
-    "logbook_page.export.failed_title": "Export failed"
+    "logbook_page.export.failed_title": "Export failed",
+    "preferences.enable_assembly_transform": "Enable assembly transform editing (3D Models tab)",
+    "preferences.enable_drawings_tab": "Enable Drawings tab"
 }

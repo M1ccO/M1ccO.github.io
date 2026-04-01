@@ -1,6 +1,7 @@
 import * as THREE from './three.module.js';
 import { OrbitControls } from './OrbitControls.js';
 import { STLLoader } from './STLLoader.js';
+import { TransformControls } from './TransformControls.js';
 
 const canvas = document.getElementById('viewport');
 const status = document.getElementById('status');
@@ -31,6 +32,23 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.enableZoom = false;
 
+const transformControl = new TransformControls(camera, renderer.domElement);
+transformControl.setSize(0.8);
+transformControl.visible = false;
+scene.add(transformControl);
+
+transformControl.addEventListener('dragging-changed', (event) => {
+  controls.enabled = !event.value;
+  if (!event.value) {
+    _gizmoDragJustEnded = true;
+    setTimeout(() => { _gizmoDragJustEnded = false; }, 100);
+  }
+});
+
+transformControl.addEventListener('objectChange', () => {
+  _syncSelectedTransform();
+});
+
 const hemi = new THREE.HemisphereLight(0xffffff, 0x8c8c8c, 1.1);
 hemi.position.set(0, 200, 0);
 scene.add(hemi);
@@ -56,6 +74,12 @@ let wheelZoomEnabled = false;
 let alignmentPlane = 'XZ';
 const manualRotation = new THREE.Vector3(0, 0, 0);
 const frameDirection = new THREE.Vector3(1, 0.62, 1).normalize();
+let transformEditEnabled = false;
+let selectedMeshIndex = -1;
+let partTransforms = [];
+let _gizmoDragJustEnded = false;
+const _tcRaycaster = new THREE.Raycaster();
+const _tcPointer = new THREE.Vector2();
 
 function showStatus(text) {
   status.textContent = text;
@@ -173,8 +197,61 @@ function applyModelTransformAndFrame(refit = true) {
   }
 }
 
+function _syncSelectedTransform() {
+  if (selectedMeshIndex < 0 || selectedMeshIndex >= currentMeshes.length) return;
+  const mesh = currentMeshes[selectedMeshIndex];
+  if (!mesh) return;
+  partTransforms[selectedMeshIndex] = {
+    x: parseFloat(mesh.position.x.toFixed(4)),
+    y: parseFloat(mesh.position.y.toFixed(4)),
+    z: parseFloat(mesh.position.z.toFixed(4)),
+    rx: parseFloat(THREE.MathUtils.radToDeg(mesh.rotation.x).toFixed(2)),
+    ry: parseFloat(THREE.MathUtils.radToDeg(mesh.rotation.y).toFixed(2)),
+    rz: parseFloat(THREE.MathUtils.radToDeg(mesh.rotation.z).toFixed(2)),
+  };
+  document.title = 'TRANSFORM:' + JSON.stringify({
+    index: selectedMeshIndex,
+    transform: partTransforms[selectedMeshIndex],
+  });
+}
+
+function _highlightMesh(mesh, on) {
+  if (!mesh || !mesh.material) return;
+  if (on) {
+    mesh.material._origEmissive = mesh.material.emissive.clone();
+    mesh.material.emissive.setHex(0x444444);
+  } else if (mesh.material._origEmissive) {
+    mesh.material.emissive.copy(mesh.material._origEmissive);
+    delete mesh.material._origEmissive;
+  }
+}
+
+function _selectPartByIndex(idx) {
+  if (selectedMeshIndex >= 0 && selectedMeshIndex < currentMeshes.length) {
+    _highlightMesh(currentMeshes[selectedMeshIndex], false);
+  }
+  if (idx < 0 || idx >= currentMeshes.length || !currentMeshes[idx]) {
+    transformControl.detach();
+    selectedMeshIndex = -1;
+    document.title = 'PART_SELECTED:-1';
+    return;
+  }
+  selectedMeshIndex = idx;
+  _highlightMesh(currentMeshes[idx], true);
+  transformControl.attach(currentMeshes[idx]);
+  document.title = 'PART_SELECTED:' + idx;
+}
+
 function clearCurrentMeshes() {
+  transformControl.detach();
+  if (selectedMeshIndex >= 0 && selectedMeshIndex < currentMeshes.length) {
+    _highlightMesh(currentMeshes[selectedMeshIndex], false);
+  }
+  selectedMeshIndex = -1;
+  partTransforms = [];
+
   for (const mesh of currentMeshes) {
+    if (!mesh) continue;
     scene.remove(mesh);
 
     if (mesh.geometry) {
@@ -284,6 +361,11 @@ window.loadAssembly = function (parts) {
   currentGroup = new THREE.Group();
   scene.add(currentGroup);
 
+  currentMeshes = new Array(parts.length).fill(null);
+  partTransforms = parts.map((p) => ({
+    x: p.offset_x || 0, y: p.offset_y || 0, z: p.offset_z || 0,
+    rx: p.rot_x || 0, ry: p.rot_y || 0, rz: p.rot_z || 0,
+  }));
   let remaining = parts.length;
   let loadedCount = 0;
 
@@ -303,7 +385,7 @@ window.loadAssembly = function (parts) {
     hideStatus();
   };
 
-  parts.forEach((part) => {
+  parts.forEach((part, index) => {
     const file = part?.file;
     const color = part?.color || '#9ea7b3';
 
@@ -318,7 +400,17 @@ window.loadAssembly = function (parts) {
         geometry.computeVertexNormals();
 
         const mesh = new THREE.Mesh(geometry, makeMaterial(color));
-        currentMeshes.push(mesh);
+        mesh._partIndex = index;
+
+        const t = partTransforms[index];
+        mesh.position.set(t.x, t.y, t.z);
+        mesh.rotation.set(
+          THREE.MathUtils.degToRad(t.rx),
+          THREE.MathUtils.degToRad(t.ry),
+          THREE.MathUtils.degToRad(t.rz)
+        );
+
+        currentMeshes[index] = mesh;
         currentGroup.add(mesh);
         loadedCount += 1;
         finishIfDone();
@@ -331,6 +423,27 @@ window.loadAssembly = function (parts) {
     );
   });
 };
+
+canvas.addEventListener('click', (event) => {
+  if (!transformEditEnabled || _gizmoDragJustEnded) return;
+  if (currentMeshes.length === 0) return;
+
+  const rect = canvas.getBoundingClientRect();
+  _tcPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _tcPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  _tcRaycaster.setFromCamera(_tcPointer, camera);
+  const meshes = currentMeshes.filter((m) => m != null);
+  const intersects = _tcRaycaster.intersectObjects(meshes, false);
+
+  if (intersects.length > 0) {
+    const hit = intersects[0].object;
+    const idx = hit._partIndex != null ? hit._partIndex : currentMeshes.indexOf(hit);
+    _selectPartByIndex(idx);
+  } else {
+    _selectPartByIndex(-1);
+  }
+});
 
 canvas.addEventListener('wheel', (event) => {
   if (!wheelZoomEnabled && !event.ctrlKey) {
@@ -357,6 +470,57 @@ canvas.addEventListener('wheel', (event) => {
   camera.updateProjectionMatrix();
   controls.update();
 }, { passive: false });
+
+window.setTransformEditEnabled = function (enabled) {
+  transformEditEnabled = !!enabled;
+  if (!transformEditEnabled) {
+    _selectPartByIndex(-1);
+  }
+};
+
+window.setTransformMode = function (mode) {
+  if (mode === 'translate' || mode === 'rotate') {
+    transformControl.setMode(mode);
+  }
+};
+
+window.getPartTransforms = function () {
+  return JSON.parse(JSON.stringify(partTransforms));
+};
+
+window.setPartTransforms = function (transforms) {
+  if (!Array.isArray(transforms)) return;
+  for (let i = 0; i < currentMeshes.length && i < transforms.length; i++) {
+    const t = transforms[i];
+    const mesh = currentMeshes[i];
+    if (!t || !mesh) continue;
+    mesh.position.set(t.x || 0, t.y || 0, t.z || 0);
+    mesh.rotation.set(
+      THREE.MathUtils.degToRad(t.rx || 0),
+      THREE.MathUtils.degToRad(t.ry || 0),
+      THREE.MathUtils.degToRad(t.rz || 0)
+    );
+    partTransforms[i] = {
+      x: t.x || 0, y: t.y || 0, z: t.z || 0,
+      rx: t.rx || 0, ry: t.ry || 0, rz: t.rz || 0,
+    };
+  }
+};
+
+window.selectPart = function (index) {
+  if (!transformEditEnabled) return;
+  _selectPartByIndex(typeof index === 'number' ? index : -1);
+};
+
+window.resetSelectedPartTransform = function () {
+  if (selectedMeshIndex < 0 || selectedMeshIndex >= currentMeshes.length) return;
+  const mesh = currentMeshes[selectedMeshIndex];
+  if (!mesh) return;
+  mesh.position.set(0, 0, 0);
+  mesh.rotation.set(0, 0, 0);
+  partTransforms[selectedMeshIndex] = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
+  _syncSelectedTransform();
+};
 
 function animate() {
   requestAnimationFrame(animate);

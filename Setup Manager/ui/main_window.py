@@ -235,6 +235,7 @@ class MainWindow(QMainWindow):
         }
         self.drawing_page.set_setup_context(self._launch_context)
         self._update_launch_actions()
+        self.setup_page.drawings_enabled = self.ui_preferences.get("enable_drawings_tab", True)
 
         self.stack.addWidget(self.setup_page)
         self.stack.addWidget(self.drawing_page)
@@ -488,6 +489,7 @@ class MainWindow(QMainWindow):
         self._update_launch_actions()
 
     def _update_navigation_labels(self):
+        drawings_enabled = self.ui_preferences.get("enable_drawings_tab", True)
         for idx, button in enumerate(getattr(self, "nav_buttons", [])):
             if idx == 0:
                 text = self._t("setup_manager.nav.setups", "SETUPS")
@@ -495,6 +497,8 @@ class MainWindow(QMainWindow):
                 key = "setup_manager.nav.show_drawing" if self._launch_context.get("selected") else "setup_manager.nav.drawings"
                 default = "SHOW DRAWING" if self._launch_context.get("selected") else "DRAWINGS"
                 text = self._t(key, default)
+                button.setEnabled(drawings_enabled)
+                button.setToolTip("" if drawings_enabled else self._t("preferences.drawings_tab_disabled_hint", "Drawings tab is disabled in Preferences."))
             else:
                 text = self._t("setup_manager.nav.logbook", "LOGBOOK")
             button.setText(text)
@@ -571,6 +575,11 @@ class MainWindow(QMainWindow):
             self.print_service.set_translator(self._t)
         self._apply_style()
         self._refresh_localized_labels()
+
+        # If currently on drawings page and it was just disabled, switch away
+        if self.stack.currentIndex() == 1 and not self.ui_preferences.get("enable_drawings_tab", True):
+            self._set_page(0)
+        self.setup_page.drawings_enabled = self.ui_preferences.get("enable_drawings_tab", True)
 
         QMessageBox.information(
             self,
@@ -666,6 +675,9 @@ class MainWindow(QMainWindow):
         )
 
     def _set_page(self, index):
+        # Guard: block navigation to disabled drawings page
+        if index == 1 and not self.ui_preferences.get("enable_drawings_tab", True):
+            return
         self.stack.setCurrentIndex(index)
         for idx, button in enumerate(self.nav_buttons):
             button.setProperty("active", idx == index)
