@@ -63,7 +63,10 @@ def _jaw_icon_pixmap(jaw: dict, icon_target_size: QSize) -> QPixmap:
             pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
         return pixmap.scaled(icon_target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
     return QIcon(str(TOOL_ICONS_DIR / 'jaw_icon.png')).pixmap(icon_target_size)
-from ui.stl_preview import StlPreviewWidget
+try:
+    from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
+except Exception:
+    from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget
 
 

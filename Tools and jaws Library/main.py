@@ -195,11 +195,16 @@ def main():
 
     step(7, 'Warming up 3D preview...')
     try:
-        from ui.stl_preview import StlPreviewWidget
+        from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
         app._preview_warmup_widget = StlPreviewWidget()
         app._preview_warmup_widget.hide()
     except Exception:
-        app._preview_warmup_widget = None
+        try:
+            from ui.stl_preview import StlPreviewWidget
+            app._preview_warmup_widget = StlPreviewWidget()
+            app._preview_warmup_widget.hide()
+        except Exception:
+            app._preview_warmup_widget = None
 
     step(8, 'Opening main window...')
 

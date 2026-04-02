@@ -23,7 +23,10 @@ from PySide6.QtWidgets import (
 
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
 from shared.model_paths import read_model_roots
-from ui.stl_preview import StlPreviewWidget
+try:
+    from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
+except Exception:
+    from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
 from shared.editor_helpers import (
     add_shadow,

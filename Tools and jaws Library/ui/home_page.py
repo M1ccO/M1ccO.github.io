@@ -30,9 +30,9 @@ from shared.editor_helpers import apply_secondary_button_theme, ask_multi_edit_m
 # the STL preview widget may live in a separate module; import lazily so the
 # rest of the application still runs if the real implementation is missing.
 try:
+    from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
+except Exception:  # pragma: no cover - safe fallback
     from ui.stl_preview import StlPreviewWidget
-except ImportError:  # pragma: no cover - safe fallback
-    StlPreviewWidget = None
 
 
 # ==============================
