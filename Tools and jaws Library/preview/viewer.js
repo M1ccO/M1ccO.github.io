@@ -87,6 +87,8 @@ let measurementOverlays = [];
 let measurementsVisible = false;
 let measurementFilter = '';
 let _gizmoDragJustEnded = false;
+let pointPickingEnabled = false;
+let _pickMarker = null;
 const _tcRaycaster = new THREE.Raycaster();
 const _tcPointer = new THREE.Vector2();
 
@@ -374,7 +376,7 @@ function _makeMeasurementLabel(text) {
   const ctx = canvasEl.getContext('2d');
   const paddingX = 22;
   const paddingY = 14;
-  const fontSize = 38;
+  const fontSize = 52;
   const font = `600 ${fontSize}px Segoe UI, Arial, sans-serif`;
   ctx.font = font;
   const metrics = ctx.measureText(text);
@@ -463,6 +465,17 @@ function _measurementOffsetDirection(direction, center) {
   return new THREE.Vector3(0, 1, 0);
 }
 
+function _distanceLabelValue(definition, measuredLength) {
+  const mode = String(definition?.label_value_mode || 'measured').trim().toLowerCase();
+  if (mode === 'custom') {
+    const customValue = String(definition?.label_custom_value || '').trim();
+    if (customValue) {
+      return customValue;
+    }
+  }
+  return `${measuredLength.toFixed(3)} mm`;
+}
+
 function _makeDistanceMeasurement(definition) {
   const start = _resolveAnchorPoint(definition.start_part, definition.start_xyz);
   const end = _resolveAnchorPoint(definition.end_part, definition.end_xyz);
@@ -475,20 +488,96 @@ function _makeDistanceMeasurement(definition) {
     return null;
   }
 
-  const direction = span.clone().normalize();
+  const axisName = String(definition.distance_axis || 'z').trim().toLowerCase();
+  if (axisName === 'direct') {
+    const direction = span.clone().normalize();
+    const measuredLength = length;
+
+    const group = new THREE.Group();
+    const color = 0x00dd00;
+    const headSize = THREE.MathUtils.clamp(measuredLength * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
+    const midpoint = start.clone().lerp(end, 0.5);
+    const offsetDirection = _measurementOffsetDirection(direction, midpoint);
+    const offsetDistance = THREE.MathUtils.clamp(
+      measuredLength * 0.16,
+      Math.max(currentMaxDim * 0.08, 8),
+      Math.max(currentMaxDim * 0.22, 24)
+    );
+    const offsetVector = offsetDirection.clone().multiplyScalar(offsetDistance);
+    const dimensionStart = start.clone().add(offsetVector);
+    const dimensionEnd = end.clone().add(offsetVector);
+
+    const lineMaterial = new THREE.LineBasicMaterial({
+      color,
+      depthTest: false,
+      depthWrite: false,
+    });
+    const extensionMaterial = new THREE.LineBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.7,
+      depthTest: false,
+      depthWrite: false,
+    });
+
+    const startExtension = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([start, dimensionStart]),
+      extensionMaterial
+    );
+    startExtension.renderOrder = 998;
+    group.add(startExtension);
+
+    const endExtension = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([end, dimensionEnd]),
+      extensionMaterial.clone()
+    );
+    endExtension.renderOrder = 998;
+    group.add(endExtension);
+
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([dimensionStart, dimensionEnd]),
+      lineMaterial
+    );
+    line.renderOrder = 999;
+    group.add(line);
+    group.add(_makeArrowCone(dimensionStart, direction.clone().negate(), headSize, color));
+    group.add(_makeArrowCone(dimensionEnd, direction, headSize, color));
+
+    const labelText = `${definition.name}: ${_distanceLabelValue(definition, measuredLength)}`;
+    const label = _makeMeasurementLabel(labelText);
+    const labelOffset = offsetDirection.clone().multiplyScalar(Math.max(currentMaxDim * 0.06, headSize * 2.2));
+    label.position.copy(dimensionStart).lerp(dimensionEnd, 0.5).add(labelOffset);
+    group.add(label);
+    return group;
+  }
+
+  const localAxis = axisName === 'x'
+    ? [1, 0, 0]
+    : (axisName === 'y' ? [0, 1, 0] : [0, 0, 1]);
+  const axisDirection =
+    _resolveAxisDirection(definition.start_part, localAxis)
+    || _resolveAxisDirection(definition.end_part, localAxis)
+    || _resolveAxisDirection('', localAxis);
+  const axialLength = axisDirection ? span.dot(axisDirection) : 0;
+  const hasAxialDirection = Number.isFinite(axialLength) && Math.abs(axialLength) > 1e-6;
+  const direction = hasAxialDirection
+    ? axisDirection.clone().multiplyScalar(axialLength >= 0 ? 1 : -1).normalize()
+    : span.clone().normalize();
+  const measuredLength = hasAxialDirection ? Math.abs(axialLength) : length;
+
   const group = new THREE.Group();
-  const color = 0xf8fbff;
-  const headSize = THREE.MathUtils.clamp(length * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
+  const color = 0x00dd00;
+  const headSize = THREE.MathUtils.clamp(measuredLength * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
   const midpoint = start.clone().lerp(end, 0.5);
   const offsetDirection = _measurementOffsetDirection(direction, midpoint);
   const offsetDistance = THREE.MathUtils.clamp(
-    length * 0.16,
+    measuredLength * 0.16,
     Math.max(currentMaxDim * 0.08, 8),
     Math.max(currentMaxDim * 0.22, 24)
   );
   const offsetVector = offsetDirection.clone().multiplyScalar(offsetDistance);
   const dimensionStart = start.clone().add(offsetVector);
-  const dimensionEnd = end.clone().add(offsetVector);
+  const dimensionEnd = dimensionStart.clone().add(direction.clone().multiplyScalar(measuredLength));
 
   const lineMaterial = new THREE.LineBasicMaterial({
     color,
@@ -526,7 +615,7 @@ function _makeDistanceMeasurement(definition) {
   group.add(_makeArrowCone(dimensionStart, direction.clone().negate(), headSize, color));
   group.add(_makeArrowCone(dimensionEnd, direction, headSize, color));
 
-  const labelText = `${definition.name}: ${length.toFixed(3)} mm`;
+  const labelText = `${definition.name}: ${_distanceLabelValue(definition, measuredLength)}`;
   const label = _makeMeasurementLabel(labelText);
   const labelOffset = offsetDirection.clone().multiplyScalar(Math.max(currentMaxDim * 0.06, headSize * 2.2));
   label.position.copy(dimensionStart).lerp(dimensionEnd, 0.5).add(labelOffset);
@@ -547,7 +636,7 @@ function _makeDiameterRing(definition) {
   }
   const radius = diameter / 2;
   const group = new THREE.Group();
-  const color = 0x5db3ff;
+  const color = 0x00dd00;
 
   const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
     ? new THREE.Vector3(1, 0, 0)
@@ -586,6 +675,112 @@ function _makeDiameterRing(definition) {
   return group;
 }
 
+function _makeRadiusMeasurement(definition) {
+  const radius = Number(definition.radius) || 0;
+  if (!Number.isFinite(radius) || radius <= 0) {
+    return null;
+  }
+  const center = _resolveAnchorPoint(definition.part, definition.center_xyz);
+  const axis = _resolveAxisDirection(definition.part, definition.axis_xyz);
+  if (!center || !axis) {
+    return null;
+  }
+
+  const group = new THREE.Group();
+  const color = 0x00dd00;
+  const radial = _measurementOffsetDirection(axis, center).normalize();
+  const edge = center.clone().add(radial.clone().multiplyScalar(radius));
+
+  const lineMaterial = new THREE.LineBasicMaterial({ color, depthTest: false, depthWrite: false });
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([center, edge]),
+    lineMaterial
+  );
+  line.renderOrder = 999;
+  group.add(line);
+  group.add(_makeArrowCone(edge, radial, Math.max(radius * 0.15, currentMaxDim * 0.02), color));
+
+  const ringDef = {
+    part: definition.part,
+    center_xyz: definition.center_xyz,
+    axis_xyz: definition.axis_xyz,
+    diameter: radius * 2,
+    name: definition.name,
+  };
+  const ring = _makeDiameterRing(ringDef);
+  if (ring) {
+    ring.children.forEach((child) => {
+      if (child instanceof THREE.Sprite) return;
+      group.add(child);
+    });
+  }
+
+  const label = _makeMeasurementLabel(`${definition.name}: R ${radius.toFixed(3)} mm`);
+  label.position.copy(center).add(radial.clone().multiplyScalar(radius * 0.6));
+  group.add(label);
+  return group;
+}
+
+function _makeAngleMeasurement(definition) {
+  const center = _resolveAnchorPoint(definition.part, definition.center_xyz);
+  const start = _resolveAnchorPoint(definition.part, definition.start_xyz);
+  const end = _resolveAnchorPoint(definition.part, definition.end_xyz);
+  if (!center || !start || !end) {
+    return null;
+  }
+
+  const v1 = start.clone().sub(center);
+  const v2 = end.clone().sub(center);
+  const len1 = v1.length();
+  const len2 = v2.length();
+  if (len1 <= 1e-6 || len2 <= 1e-6) {
+    return null;
+  }
+  const d1 = v1.clone().normalize();
+  const d2 = v2.clone().normalize();
+  const dot = THREE.MathUtils.clamp(d1.dot(d2), -1, 1);
+  const angleRad = Math.acos(dot);
+  const angleDeg = THREE.MathUtils.radToDeg(angleRad);
+
+  const normal = new THREE.Vector3().crossVectors(d1, d2);
+  if (normal.lengthSq() <= 1e-8) {
+    return null;
+  }
+  normal.normalize();
+  const tangent = new THREE.Vector3().crossVectors(normal, d1).normalize();
+
+  const group = new THREE.Group();
+  const color = 0x00dd00;
+  const rayLen = Math.max(Math.min(len1, len2), currentMaxDim * 0.15);
+  const rayMaterial = new THREE.LineBasicMaterial({ color, depthTest: false, depthWrite: false });
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([center, center.clone().add(d1.clone().multiplyScalar(rayLen))]), rayMaterial));
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([center, center.clone().add(d2.clone().multiplyScalar(rayLen))]), rayMaterial.clone()));
+
+  const arcRadius = rayLen * 0.45;
+  const arcPoints = [];
+  const segments = 48;
+  for (let i = 0; i <= segments; i += 1) {
+    const t = i / segments;
+    const a = angleRad * t;
+    const p = center.clone()
+      .add(d1.clone().multiplyScalar(Math.cos(a) * arcRadius))
+      .add(tangent.clone().multiplyScalar(Math.sin(a) * arcRadius));
+    arcPoints.push(p);
+  }
+  const arc = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints(arcPoints),
+    new THREE.LineBasicMaterial({ color, depthTest: false, depthWrite: false })
+  );
+  arc.renderOrder = 999;
+  group.add(arc);
+
+  const mid = arcPoints[Math.floor(arcPoints.length / 2)] || center;
+  const label = _makeMeasurementLabel(`${definition.name}: ${angleDeg.toFixed(2)} deg`);
+  label.position.copy(mid).add(normal.clone().multiplyScalar(Math.max(currentMaxDim * 0.05, 6)));
+  group.add(label);
+  return group;
+}
+
 function _renderMeasurements() {
   _clearMeasurements();
   if (!measurementsVisible || !currentGroup || measurementOverlays.length === 0) {
@@ -599,13 +794,37 @@ function _renderMeasurements() {
     }
     const node = overlay.type === 'diameter_ring'
       ? _makeDiameterRing(overlay)
-      : _makeDistanceMeasurement(overlay);
+      : (overlay.type === 'radius'
+        ? _makeRadiusMeasurement(overlay)
+        : (overlay.type === 'angle'
+          ? _makeAngleMeasurement(overlay)
+          : _makeDistanceMeasurement(overlay)));
     if (node) {
       measurementGroup.add(node);
     }
   }
 
   measurementGroup.visible = measurementGroup.children.length > 0;
+}
+
+function _clearPickMarker() {
+  if (_pickMarker) {
+    scene.remove(_pickMarker);
+    if (_pickMarker.geometry) _pickMarker.geometry.dispose();
+    if (_pickMarker.material) _pickMarker.material.dispose();
+    _pickMarker = null;
+  }
+}
+
+function _placePickMarker(position) {
+  _clearPickMarker();
+  const markerSize = Math.max(currentMaxDim * 0.012, 1.5);
+  const geo = new THREE.SphereGeometry(markerSize, 12, 8);
+  const mat = new THREE.MeshBasicMaterial({ color: 0x00ff00, depthTest: false });
+  _pickMarker = new THREE.Mesh(geo, mat);
+  _pickMarker.renderOrder = 2000;
+  _pickMarker.position.copy(position);
+  scene.add(_pickMarker);
 }
 
 function clearCurrentMeshes() {
@@ -617,6 +836,7 @@ function clearCurrentMeshes() {
   requestedSelectedMeshIndex = -1;
   partTransforms = [];
   _clearMeasurements();
+  _clearPickMarker();
 
   for (const mesh of currentMeshes) {
     if (!mesh) continue;
@@ -796,7 +1016,7 @@ window.loadAssembly = function (parts) {
 };
 
 canvas.addEventListener('click', (event) => {
-  if (!transformEditEnabled || _gizmoDragJustEnded) return;
+  if (_gizmoDragJustEnded) return;
   if (currentMeshes.length === 0) return;
 
   const rect = canvas.getBoundingClientRect();
@@ -806,6 +1026,26 @@ canvas.addEventListener('click', (event) => {
   _tcRaycaster.setFromCamera(_tcPointer, camera);
   const meshes = currentMeshes.filter((m) => m != null);
   const intersects = _tcRaycaster.intersectObjects(meshes, false);
+
+  if (pointPickingEnabled) {
+    if (intersects.length > 0) {
+      const hit = intersects[0];
+      const mesh = hit.object;
+      const localPos = mesh.worldToLocal(hit.point.clone());
+      const idx = mesh._partIndex != null ? mesh._partIndex : currentMeshes.indexOf(mesh);
+      _placePickMarker(hit.point.clone());
+      document.title = 'POINT_PICKED:' + JSON.stringify({
+        partIndex: idx,
+        partName: mesh._partName || '',
+        x: parseFloat(localPos.x.toFixed(4)),
+        y: parseFloat(localPos.y.toFixed(4)),
+        z: parseFloat(localPos.z.toFixed(4)),
+      });
+    }
+    return;
+  }
+
+  if (!transformEditEnabled) return;
 
   if (intersects.length > 0) {
     const hit = intersects[0].object;
@@ -841,6 +1081,66 @@ canvas.addEventListener('wheel', (event) => {
   camera.updateProjectionMatrix();
   controls.update();
 }, { passive: false });
+
+// Measurement box dragging
+const _measurementRaycaster = new THREE.Raycaster();
+const _measurementPointer = new THREE.Vector2();
+let _draggedMeasurementSprite = null;
+let _draggedMeasurementOffset = new THREE.Vector3();
+
+canvas.addEventListener('mousedown', (event) => {
+  if (!measurementsVisible || measurementOverlays.length === 0) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  _measurementPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _measurementPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  _measurementRaycaster.setFromCamera(_measurementPointer, camera);
+  const sprites = [];
+  measurementGroup.traverse((child) => {
+    if (child instanceof THREE.Sprite) {
+      sprites.push(child);
+    }
+  });
+  
+  const intersects = _measurementRaycaster.intersectObjects(sprites, false);
+  if (intersects.length > 0) {
+    _draggedMeasurementSprite = intersects[0].object;
+    _draggedMeasurementOffset.copy(_draggedMeasurementSprite.position).sub(camera.position);
+    controls.enabled = false;
+    event.preventDefault();
+  }
+});
+
+canvas.addEventListener('mousemove', (event) => {
+  if (!_draggedMeasurementSprite) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  _measurementPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _measurementPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  
+  _measurementRaycaster.setFromCamera(_measurementPointer, camera);
+  const distance = camera.position.distanceTo(_draggedMeasurementSprite.position);
+  const movePoint = new THREE.Vector3();
+  movePoint.copy(_measurementRaycaster.ray.direction).multiplyScalar(distance).add(camera.position);
+  
+  _draggedMeasurementSprite.position.copy(movePoint);
+  event.preventDefault();
+});
+
+document.addEventListener('mouseup', () => {
+  if (_draggedMeasurementSprite) {
+    controls.enabled = true;
+  }
+  _draggedMeasurementSprite = null;
+});
+
+window.setPointPickingEnabled = function (enabled) {
+  pointPickingEnabled = !!enabled;
+  if (!pointPickingEnabled) {
+    _clearPickMarker();
+  }
+};
 
 window.setTransformEditEnabled = function (enabled) {
   transformEditEnabled = !!enabled;

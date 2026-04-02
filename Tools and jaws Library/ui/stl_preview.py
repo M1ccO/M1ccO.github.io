@@ -76,6 +76,7 @@ class ScrollFriendlyWebView(QWebEngineView):
 class StlPreviewWidget(QWidget):
     transform_changed = Signal(int, dict)
     part_selected = Signal(int)
+    point_picked = Signal(dict)
 
     def __init__(self, stl_path: str | None = None, parent=None):
         super().__init__(parent)
@@ -95,6 +96,7 @@ class StlPreviewWidget(QWidget):
         self._measurement_overlays = []
         self._measurements_visible = False
         self._measurement_filter = None
+        self._point_picking_enabled = False
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -344,6 +346,12 @@ class StlPreviewWidget(QWidget):
 
         overlay_type = str(overlay.get('type') or '').strip().lower()
         if overlay_type == 'distance':
+            distance_axis = str(overlay.get('distance_axis') or 'z').strip().lower()
+            if distance_axis not in {'direct', 'x', 'y', 'z'}:
+                distance_axis = 'z'
+            label_value_mode = str(overlay.get('label_value_mode') or 'measured').strip().lower()
+            if label_value_mode not in {'measured', 'custom'}:
+                label_value_mode = 'measured'
             return {
                 'type': 'distance',
                 'name': str(overlay.get('name') or f'Distance {index + 1}').strip() or f'Distance {index + 1}',
@@ -351,6 +359,9 @@ class StlPreviewWidget(QWidget):
                 'start_xyz': cls._parse_xyz_value(overlay.get('start_xyz')),
                 'end_part': str(overlay.get('end_part') or '').strip(),
                 'end_xyz': cls._parse_xyz_value(overlay.get('end_xyz')),
+                'distance_axis': distance_axis,
+                'label_value_mode': label_value_mode,
+                'label_custom_value': str(overlay.get('label_custom_value') or '').strip(),
             }
 
         if overlay_type == 'diameter_ring':
@@ -366,6 +377,31 @@ class StlPreviewWidget(QWidget):
                 'center_xyz': cls._parse_xyz_value(overlay.get('center_xyz')),
                 'axis_xyz': cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 1.0, 0.0)),
                 'diameter': diameter,
+            }
+
+        if overlay_type == 'radius':
+            radius_raw = overlay.get('radius', 0)
+            try:
+                radius = float(str(radius_raw).replace(',', '.'))
+            except Exception:
+                radius = 0.0
+            return {
+                'type': 'radius',
+                'name': str(overlay.get('name') or f'Radius {index + 1}').strip() or f'Radius {index + 1}',
+                'part': str(overlay.get('part') or '').strip(),
+                'center_xyz': cls._parse_xyz_value(overlay.get('center_xyz')),
+                'axis_xyz': cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 1.0, 0.0)),
+                'radius': radius,
+            }
+
+        if overlay_type == 'angle':
+            return {
+                'type': 'angle',
+                'name': str(overlay.get('name') or f'Angle {index + 1}').strip() or f'Angle {index + 1}',
+                'part': str(overlay.get('part') or '').strip(),
+                'center_xyz': cls._parse_xyz_value(overlay.get('center_xyz')),
+                'start_xyz': cls._parse_xyz_value(overlay.get('start_xyz'), default=(1.0, 0.0, 0.0)),
+                'end_xyz': cls._parse_xyz_value(overlay.get('end_xyz'), default=(0.0, 1.0, 0.0)),
             }
 
         return None
@@ -408,6 +444,13 @@ class StlPreviewWidget(QWidget):
                 self._selected_part_index = idx
                 self.part_selected.emit(idx)
             except ValueError:
+                pass
+        elif title.startswith('POINT_PICKED:'):
+            try:
+                data = json.loads(title[len('POINT_PICKED:'):])
+                if isinstance(data, dict):
+                    self.point_picked.emit(data)
+            except (json.JSONDecodeError, KeyError):
                 pass
 
     def set_transform_edit_enabled(self, enabled: bool):
@@ -493,5 +536,12 @@ class StlPreviewWidget(QWidget):
         if self._page_ready:
             self._web.page().runJavaScript(
                 f"window.setMeasurementFilter && window.setMeasurementFilter({value!r});"
+            )
+
+    def set_point_picking_enabled(self, enabled: bool):
+        self._point_picking_enabled = bool(enabled)
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setPointPickingEnabled && window.setPointPickingEnabled({str(self._point_picking_enabled).lower()});"
             )
 

@@ -11,8 +11,8 @@
   "color_picker_custom_colors": [
     "#5d5d5d",
     "#faf200",
-    "",
-    "",
+    "#e8e8e8",
+    "#a2a2a2",
     "",
     "",
     "",
@@ -23,5 +23,5 @@
     "",
     ""
   ],
-  "color_picker_custom_insert_index": 1
+  "color_picker_custom_insert_index": 4
 }

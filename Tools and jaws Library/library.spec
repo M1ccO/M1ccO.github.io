@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_dynamic_libs
+
 
 # PyInstaller does not define __file__ inside the spec execution context.
 # Resolve paths from the working directory instead; the build script runs
@@ -16,16 +18,20 @@ datas = [
 ]
 
 hiddenimports = [
-    'PySide6.QtWebChannel',
-    'PySide6.QtWebEngineCore',
-    'PySide6.QtWebEngineWidgets',
+    'OCC.Core',
+    'OCC.Display',
 ]
+
+try:
+    occ_binaries = collect_dynamic_libs('OCC')
+except Exception:
+    occ_binaries = []
 
 
 a = Analysis(
     ['main.py'],
     pathex=[str(project_dir)],
-    binaries=[],
+    binaries=occ_binaries,
     datas=datas,
     hiddenimports=hiddenimports,
     hookspath=[],
