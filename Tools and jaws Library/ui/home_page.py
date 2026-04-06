@@ -27,12 +27,7 @@ from ui.tool_catalog_delegate import (
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style, repolish_widget
 from shared.editor_helpers import apply_secondary_button_theme, ask_multi_edit_mode, create_dialog_buttons, setup_editor_dialog
 
-# the STL preview widget may live in a separate module; import lazily so the
-# rest of the application still runs if the real implementation is missing.
-try:
-    from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
-except Exception:  # pragma: no cover - safe fallback
-    from ui.stl_preview import StlPreviewWidget
+from ui.stl_preview import StlPreviewWidget
 
 
 # ==============================
@@ -1582,7 +1577,8 @@ class HomePage(QWidget):
 
         diagram = QFrame()
         diagram.setProperty('diagramPanel', True)
-        diagram.setMinimumHeight(180)
+        diagram.setMinimumHeight(280)
+        diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         dlay = QVBoxLayout(diagram)
         dlay.setContentsMargins(14, 14, 14, 14)
@@ -1590,11 +1586,13 @@ class HomePage(QWidget):
         viewer = StlPreviewWidget() if StlPreviewWidget is not None else None
         loaded = self._load_preview_content(viewer, stl_path, label='Detail Preview') if viewer is not None else False
         if viewer is not None:
+            viewer.setMinimumHeight(240)
             viewer.set_measurement_overlays([])
             viewer.set_measurements_visible(False)
 
         if loaded:
             dlay.addWidget(viewer, 1)
+            viewer.show()
         else:
             txt = QLabel(
                 self._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
@@ -1607,7 +1605,7 @@ class HomePage(QWidget):
             dlay.addWidget(txt)
             dlay.addStretch(1)
 
-        layout.addWidget(diagram)
+        layout.addWidget(diagram, 1)
         return frame
 
     # ==============================
@@ -1692,6 +1690,8 @@ class HomePage(QWidget):
             self.current_tool_id = (saved_tool or {}).get('id', data['id'])
             self.refresh_list()
             self.populate_details(saved_tool)
+            if self.preview_window_btn.isChecked():
+                self._sync_detached_preview(show_errors=False)
             return 'saved'
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))

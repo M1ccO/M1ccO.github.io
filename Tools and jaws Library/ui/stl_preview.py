@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtWidgets import QAbstractScrollArea, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QAbstractScrollArea, QLabel, QVBoxLayout, QWidget
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from config import (
     JAW_MODELS_ROOT_DEFAULT,
@@ -77,6 +77,7 @@ class StlPreviewWidget(QWidget):
     transform_changed = Signal(int, dict)
     part_selected = Signal(int)
     point_picked = Signal(dict)
+    measurement_updated = Signal(dict)
 
     def __init__(self, stl_path: str | None = None, parent=None):
         super().__init__(parent)
@@ -87,6 +88,8 @@ class StlPreviewWidget(QWidget):
         self._pending_stl_path = None
         self._pending_label = None
         self._pending_parts = None
+        self._loaded_part_files = []
+        self._rendering_enabled = True
         self._alignment_plane = 'XZ'
         self._rotation_deg = {'x': 0, 'y': 0, 'z': 0}
         self._transform_edit_enabled = False
@@ -96,6 +99,7 @@ class StlPreviewWidget(QWidget):
         self._measurement_overlays = []
         self._measurements_visible = False
         self._measurement_filter = None
+        self._measurement_drag_enabled = False
         self._point_picking_enabled = False
 
         self._layout = QVBoxLayout(self)
@@ -118,6 +122,11 @@ class StlPreviewWidget(QWidget):
         self._web.page().titleChanged.connect(self._on_title_changed)
         self._web.load(QUrl.fromLocalFile(str(self._viewer_html)))
 
+        app = QApplication.instance()
+        if app is not None:
+            app.applicationStateChanged.connect(self._on_application_state_changed)
+            app.focusWindowChanged.connect(self._on_focus_window_changed)
+
         if stl_path:
             self.load_stl(stl_path)
 
@@ -129,6 +138,41 @@ class StlPreviewWidget(QWidget):
     def _show_web(self):
         self._error_label.hide()
         self._web.show()
+
+    def _sync_rendering_state(self):
+        app = QApplication.instance()
+        app_active = True
+        if app is not None:
+            app_active = app.applicationState() == Qt.ApplicationActive
+
+        host_window = self.window()
+        window_active = True
+        if host_window is not None:
+            window_active = host_window.isActiveWindow()
+
+        should_render = bool(self.isVisible() and app_active and window_active)
+        if should_render == self._rendering_enabled:
+            return
+
+        self._rendering_enabled = should_render
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setRenderingEnabled && window.setRenderingEnabled({str(should_render).lower()});"
+            )
+
+    def _on_application_state_changed(self, _state):
+        self._sync_rendering_state()
+
+    def _on_focus_window_changed(self, _window):
+        self._sync_rendering_state()
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._sync_rendering_state()
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._sync_rendering_state()
 
     def _on_load_finished(self, ok: bool):
         self._page_ready = ok
@@ -147,6 +191,7 @@ class StlPreviewWidget(QWidget):
         self._apply_preview_transform_state()
         self._apply_transform_editor_state()
         self._apply_measurement_state()
+        self._sync_rendering_state()
 
     def _send_model_to_viewer(self, stl_path: Path, label: str | None = None):
         stl_url = QUrl.fromLocalFile(str(stl_path)).toString()
@@ -158,14 +203,14 @@ class StlPreviewWidget(QWidget):
 
         self._web.page().runJavaScript(js)
 
-    def _send_parts_to_viewer(self, parts: list[dict]):
+    def _build_parts_payload(self, parts: list[dict] | None) -> list[dict]:
         tools_root, jaws_root = read_model_roots(
             SHARED_UI_PREFERENCES_PATH,
             TOOL_MODELS_ROOT_DEFAULT,
             JAW_MODELS_ROOT_DEFAULT,
         )
         payload = []
-        for part in parts:
+        for part in (parts or []):
             file_value = (part.get('file') or '').strip()
             if not file_value:
                 continue
@@ -187,14 +232,45 @@ class StlPreviewWidget(QWidget):
                 'rot_z': part.get('rot_z', 0),
             })
 
+        return payload
+
+    def _send_parts_to_viewer(self, payload: list[dict]):
+        self._loaded_part_files = [str(part.get('file') or '') for part in payload]
+
         js_payload = json.dumps(payload)
         js = f"window.loadAssembly && window.loadAssembly({js_payload});"
         self._web.page().runJavaScript(js)
+
+    def _update_parts_in_viewer(self, payload: list[dict]):
+        transforms_payload = [
+            {
+                'x': part.get('offset_x', 0),
+                'y': part.get('offset_y', 0),
+                'z': part.get('offset_z', 0),
+                'rx': part.get('rot_x', 0),
+                'ry': part.get('rot_y', 0),
+                'rz': part.get('rot_z', 0),
+            }
+            for part in payload
+        ]
+        colors_payload = [str(part.get('color') or '#9ea7b3') for part in payload]
+        names_payload = [str(part.get('name') or '') for part in payload]
+
+        self._web.page().runJavaScript(
+            f"window.setPartTransforms && window.setPartTransforms({json.dumps(transforms_payload)});"
+        )
+        self._web.page().runJavaScript(
+            f"window.setPartColors && window.setPartColors({json.dumps(colors_payload)});"
+        )
+        self._web.page().runJavaScript(
+            f"window.setPartNames && window.setPartNames({json.dumps(names_payload)});"
+        )
 
     def clear(self):
         self._pending_stl_path = None
         self._pending_label = None
         self._pending_parts = None
+        self._loaded_part_files = []
         self._part_transforms_cache = []
         self._selected_part_index = -1
         self._web.reset_wheel_mode()
@@ -204,6 +280,7 @@ class StlPreviewWidget(QWidget):
 
     def load_stl(self, stl_path: str | Path | None, label: str | None = None):
         self._pending_parts = None
+        self._loaded_part_files = []
         self._part_transforms_cache = []
         self._selected_part_index = -1
         self._web.reset_wheel_mode()
@@ -236,11 +313,13 @@ class StlPreviewWidget(QWidget):
         self._pending_stl_path = None
         self._pending_label = None
 
-        if not parts:
+        payload = self._build_parts_payload(parts)
+
+        if not payload:
             self.clear()
             return
 
-        self._pending_parts = parts
+        self._pending_parts = payload
         self._part_transforms_cache = [
             {
                 'x': part.get('offset_x', 0),
@@ -250,15 +329,21 @@ class StlPreviewWidget(QWidget):
                 'ry': part.get('rot_y', 0),
                 'rz': part.get('rot_z', 0),
             }
-            for part in parts
+            for part in payload
         ]
         self._show_web()
 
         if self._page_ready:
-            self._send_parts_to_viewer(parts)
-            self._apply_preview_transform_state()
-            self._apply_transform_editor_state()
-            self._apply_measurement_state()
+            part_files = [str(part.get('file') or '') for part in payload]
+            same_files_loaded = part_files == self._loaded_part_files
+
+            if same_files_loaded:
+                self._update_parts_in_viewer(payload)
+            else:
+                self._send_parts_to_viewer(payload)
+                self._apply_preview_transform_state()
+                self._apply_transform_editor_state()
+                self._apply_measurement_state()
 
     def _apply_preview_transform_state(self):
         if not self._page_ready:
@@ -352,16 +437,44 @@ class StlPreviewWidget(QWidget):
             label_value_mode = str(overlay.get('label_value_mode') or 'measured').strip().lower()
             if label_value_mode not in {'measured', 'custom'}:
                 label_value_mode = 'measured'
+            start_part = str(overlay.get('start_part') or '').strip()
+            end_part = str(overlay.get('end_part') or '').strip()
+            try:
+                start_part_index = int(overlay.get('start_part_index', -1) or -1)
+            except Exception:
+                start_part_index = -1
+            try:
+                end_part_index = int(overlay.get('end_part_index', -1) or -1)
+            except Exception:
+                end_part_index = -1
+            start_space = str(overlay.get('start_space') or '').strip().lower()
+            end_space = str(overlay.get('end_space') or '').strip().lower()
+            if start_space not in {'local', 'world'}:
+                start_space = 'local' if start_part else 'world'
+            if end_space not in {'local', 'world'}:
+                end_space = 'local' if end_part else 'world'
+            offset_raw = overlay.get('offset_xyz')
+            offset_text = str(offset_raw or '').strip()
+            offset_xyz = cls._parse_xyz_value(offset_raw) if offset_text else ''
+            start_shift = str(overlay.get('start_shift') or '0').strip() or '0'
+            end_shift = str(overlay.get('end_shift') or '0').strip() or '0'
             return {
                 'type': 'distance',
                 'name': str(overlay.get('name') or f'Distance {index + 1}').strip() or f'Distance {index + 1}',
-                'start_part': str(overlay.get('start_part') or '').strip(),
+                'start_part': start_part,
+                'start_part_index': start_part_index,
                 'start_xyz': cls._parse_xyz_value(overlay.get('start_xyz')),
-                'end_part': str(overlay.get('end_part') or '').strip(),
+                'start_space': start_space,
+                'end_part': end_part,
+                'end_part_index': end_part_index,
                 'end_xyz': cls._parse_xyz_value(overlay.get('end_xyz')),
+                'end_space': end_space,
                 'distance_axis': distance_axis,
                 'label_value_mode': label_value_mode,
                 'label_custom_value': str(overlay.get('label_custom_value') or '').strip(),
+                'offset_xyz': offset_xyz,
+                'start_shift': start_shift,
+                'end_shift': end_shift,
             }
 
         if overlay_type == 'diameter_ring':
@@ -421,6 +534,25 @@ class StlPreviewWidget(QWidget):
         self._web.page().runJavaScript(
             f"window.setMeasurementFilter && window.setMeasurementFilter({filter_value!r});"
         )
+        self._web.page().runJavaScript(
+            f"window.setMeasurementDragEnabled && window.setMeasurementDragEnabled({str(self._measurement_drag_enabled).lower()});"
+        )
+
+    def set_measurement_drag_enabled(self, enabled: bool):
+        self._measurement_drag_enabled = bool(enabled)
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.setMeasurementDragEnabled && window.setMeasurementDragEnabled({str(self._measurement_drag_enabled).lower()});"
+            )
+
+    def get_distance_measured_value(self, index: int, callback):
+        if not self._page_ready:
+            callback(None)
+            return
+        self._web.page().runJavaScript(
+            f"window.getDistanceMeasuredValue && window.getDistanceMeasuredValue({int(index)});",
+            callback,
+        )
 
     def _on_title_changed(self, title: str):
         if title.startswith('TRANSFORM:'):
@@ -450,6 +582,13 @@ class StlPreviewWidget(QWidget):
                 data = json.loads(title[len('POINT_PICKED:'):])
                 if isinstance(data, dict):
                     self.point_picked.emit(data)
+            except (json.JSONDecodeError, KeyError):
+                pass
+        elif title.startswith('MEASUREMENT_UPDATED:'):
+            try:
+                data = json.loads(title[len('MEASUREMENT_UPDATED:'):])
+                if isinstance(data, dict):
+                    self.measurement_updated.emit(data)
             except (json.JSONDecodeError, KeyError):
                 pass
 

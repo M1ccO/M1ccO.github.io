@@ -31,6 +31,8 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.enableZoom = false;
+controls.enablePan = true;
+controls._orbitSnappingMm = 1.0;
 
 const transformControl = new TransformControls(camera, renderer.domElement);
 transformControl.setSize(0.8);
@@ -46,8 +48,24 @@ transformControl.addEventListener('dragging-changed', (event) => {
 });
 
 transformControl.addEventListener('objectChange', () => {
+  const mesh = transformControl.object;
+  if (mesh && typeof mesh._partIndex === 'number') {
+    const index = mesh._partIndex;
+    if (index >= 0 && index < partTransforms.length) {
+      const t = partTransforms[index];
+      if (transformControl.getMode() === 'translate') {
+        t.x = _snapMm(mesh.position.x);
+        t.y = _snapMm(mesh.position.y);
+        t.z = _snapMm(mesh.position.z);
+      } else {
+        t.rx = _snapDegrees(THREE.MathUtils.radToDeg(mesh.rotation.x));
+        t.ry = _snapDegrees(THREE.MathUtils.radToDeg(mesh.rotation.y));
+        t.rz = _snapDegrees(THREE.MathUtils.radToDeg(mesh.rotation.z));
+      }
+    }
+  }
   _syncSelectedTransform();
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
 });
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x8c8c8c, 1.1);
@@ -86,11 +104,32 @@ let partTransforms = [];
 let measurementOverlays = [];
 let measurementsVisible = false;
 let measurementFilter = '';
+let measurementDragEnabled = false;
+let measurementRenderQueued = false;
+let renderingEnabled = true;
 let _gizmoDragJustEnded = false;
 let pointPickingEnabled = false;
 let _pickMarker = null;
 const _tcRaycaster = new THREE.Raycaster();
 const _tcPointer = new THREE.Vector2();
+const _measurementDragRaycaster = new THREE.Raycaster();
+const _measurementDragPointer = new THREE.Vector2();
+let _measurementDragState = null;
+let _measurementDragJustEnded = false;
+
+// Measurement color scheme - distinctive colors for each type
+const measurementColors = {
+  distance: 0x00dd00,      // Green
+  diameter_ring: 0xff6b35,  // Orange
+  radius: 0x004aff,         // Blue
+  angle: 0xff00ff,          // Magenta
+};
+
+// HUD labels container and positioning
+let _hudLabelsContainer = null;
+const _hudLabels = [];
+const HUD_PADDING = 12;
+const HUD_LABEL_HEIGHT = 60;
 
 function showStatus(text) {
   status.textContent = text;
@@ -135,6 +174,7 @@ function _disposeMeasurementNode(node) {
 }
 
 function _clearMeasurements() {
+  _clearHudLabels();
   const children = [...measurementGroup.children];
   for (const child of children) {
     _disposeMeasurementNode(child);
@@ -241,7 +281,16 @@ function applyModelTransformAndFrame(refit = true) {
     controls.update();
   }
 
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
+}
+
+function _scheduleMeasurementsRender() {
+  if (measurementRenderQueued) return;
+  measurementRenderQueued = true;
+  requestAnimationFrame(() => {
+    measurementRenderQueued = false;
+    _renderMeasurements();
+  });
 }
 
 function _syncSelectedTransform() {
@@ -325,40 +374,55 @@ function _findPartMeshByName(partName) {
   return currentMeshes.find((mesh) => mesh && String(mesh._partName || '').trim() === target) || null;
 }
 
-function _resolveAnchorPoint(partName, point) {
-  const targetName = String(partName || '').trim();
-  const localPoint = new THREE.Vector3(
-    Number(point?.[0]) || 0,
-    Number(point?.[1]) || 0,
-    Number(point?.[2]) || 0,
-  );
-
-  const mesh = _findPartMeshByName(targetName);
-  if (mesh) {
-    return mesh.localToWorld(localPoint);
-  }
-  if (targetName) {
+function _findPartMeshByIndex(partIndex) {
+  const idx = Number(partIndex);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= currentMeshes.length) {
     return null;
   }
-  if (currentGroup) {
-    return currentGroup.localToWorld(localPoint);
-  }
-  return localPoint;
+  return currentMeshes[idx] || null;
 }
 
-function _resolveAxisDirection(partName, axis) {
+function _resolveAnchorPoint(partName, point, pointSpace = '', partIndex = null) {
   const targetName = String(partName || '').trim();
-  const localAxis = new THREE.Vector3(
-    Number(axis?.[0]) || 0,
-    Number(axis?.[1]) || 0,
-    Number(axis?.[2]) || 0,
-  );
+  // Use _parseOverlayVector so string coordinates like "10.5, 25.3, 0.0"
+  // (as emitted by Python json.dumps) are correctly parsed.
+  // Direct index access (point[0]) only works for arrays, not strings.
+  const parsed = _parseOverlayVector(point);
+  const coordPoint = parsed ? parsed.clone() : new THREE.Vector3(0, 0, 0);
+  const normalizedSpace = String(pointSpace || '').trim().toLowerCase();
+
+  if (!targetName) {
+    return coordPoint;
+  }
+
+  const mesh = _findPartMeshByIndex(partIndex) || _findPartMeshByName(targetName);
+  if (mesh) {
+    if (normalizedSpace === 'world') {
+      return coordPoint;
+    }
+    return mesh.localToWorld(coordPoint);
+  }
+
+  if (currentGroup) {
+    if (normalizedSpace === 'world') {
+      return coordPoint;
+    }
+    return currentGroup.localToWorld(coordPoint);
+  }
+
+  return coordPoint;
+}
+
+function _resolveAxisDirection(partName, axis, partIndex = null) {
+  const targetName = String(partName || '').trim();
+  const parsedAxis = _parseOverlayVector(axis);
+  const localAxis = parsedAxis ? parsedAxis.clone() : new THREE.Vector3(0, 0, 0);
   if (localAxis.lengthSq() <= 1e-8) {
     localAxis.set(0, 1, 0);
   }
   localAxis.normalize();
 
-  const mesh = _findPartMeshByName(targetName);
+  const mesh = _findPartMeshByIndex(partIndex) || _findPartMeshByName(targetName);
   if (mesh) {
     return localAxis.transformDirection(mesh.matrixWorld).normalize();
   }
@@ -371,64 +435,53 @@ function _resolveAxisDirection(partName, axis) {
   return localAxis;
 }
 
-function _makeMeasurementLabel(text) {
-  const canvasEl = document.createElement('canvas');
-  const ctx = canvasEl.getContext('2d');
-  const paddingX = 22;
-  const paddingY = 14;
-  const fontSize = 52;
-  const font = `600 ${fontSize}px Segoe UI, Arial, sans-serif`;
-  ctx.font = font;
-  const metrics = ctx.measureText(text);
-  const width = Math.ceil(metrics.width + paddingX * 2);
-  const height = Math.ceil(fontSize + paddingY * 2);
-  canvasEl.width = width;
-  canvasEl.height = height;
+function _makeMeasurementLabel(text, colorHex = 0x00dd00) {
+  // Convert hex color to CSS color
+  const colorStr = '#' + colorHex.toString(16).padStart(6, '0').toUpperCase();
+  
+  // Create HTML for HUD overlay instead of 3D sprite
+  const labelEl = document.createElement('div');
+  labelEl.style.position = 'fixed';
+  labelEl.style.background = 'rgba(255,255,255,.9)';
+  labelEl.style.border = `1px solid ${colorStr}`;
+  labelEl.style.borderRadius = '8px';
+  labelEl.style.color = '#4a4a4a';
+  labelEl.style.padding = '6px 10px';
+  labelEl.style.fontSize = '12px';
+  labelEl.style.fontWeight = '400';
+  labelEl.style.fontFamily = 'Segoe UI, Arial, sans-serif';
+  labelEl.style.whiteSpace = 'nowrap';
+  labelEl.style.pointerEvents = 'none';
+  labelEl.style.zIndex = '1000';
+  labelEl.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+  labelEl.textContent = text;
+  
+  // Position in upper right corner with stack layout
+  const yOffset = HUD_PADDING + (_hudLabels.length * HUD_LABEL_HEIGHT);
+  labelEl.style.top = yOffset + 'px';
+  labelEl.style.right = HUD_PADDING + 'px';
+  
+  document.body.appendChild(labelEl);
+  _hudLabels.push(labelEl);
+  
+  return labelEl;
+}
 
-  const draw = canvasEl.getContext('2d');
-  draw.font = font;
-  draw.fillStyle = 'rgba(17, 25, 35, 0.92)';
-  draw.strokeStyle = 'rgba(80, 157, 255, 0.95)';
-  draw.lineWidth = 4;
-  const radius = 14;
-  draw.beginPath();
-  draw.moveTo(radius, 0);
-  draw.lineTo(width - radius, 0);
-  draw.quadraticCurveTo(width, 0, width, radius);
-  draw.lineTo(width, height - radius);
-  draw.quadraticCurveTo(width, height, width - radius, height);
-  draw.lineTo(radius, height);
-  draw.quadraticCurveTo(0, height, 0, height - radius);
-  draw.lineTo(0, radius);
-  draw.quadraticCurveTo(0, 0, radius, 0);
-  draw.closePath();
-  draw.fill();
-  draw.stroke();
-  draw.fillStyle = '#ffffff';
-  draw.textBaseline = 'middle';
-  draw.fillText(text, paddingX, height / 2);
-
-  const texture = new THREE.CanvasTexture(canvasEl);
-  texture.needsUpdate = true;
-  const material = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthTest: false,
-    depthWrite: false,
-  });
-  const sprite = new THREE.Sprite(material);
-  const worldScale = Math.max(currentMaxDim * 0.07, 14);
-  sprite.scale.set((width / 110) * worldScale, (height / 110) * worldScale, 1);
-  sprite.renderOrder = 1000;
-  return sprite;
+function _clearHudLabels() {
+  for (const label of _hudLabels) {
+    if (label && label.parentNode) {
+      label.parentNode.removeChild(label);
+    }
+  }
+  _hudLabels.length = 0;
 }
 
 function _makeArrowCone(tip, direction, size, color) {
   const geometry = new THREE.ConeGeometry(size * 0.32, size, 18);
   const material = new THREE.MeshBasicMaterial({
     color,
-    depthTest: false,
-    depthWrite: false,
+    depthTest: true,
+    depthWrite: true,
   });
   const cone = new THREE.Mesh(geometry, material);
   cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
@@ -476,9 +529,113 @@ function _distanceLabelValue(definition, measuredLength) {
   return `${measuredLength.toFixed(3)} mm`;
 }
 
-function _makeDistanceMeasurement(definition) {
-  const start = _resolveAnchorPoint(definition.start_part, definition.start_xyz);
-  const end = _resolveAnchorPoint(definition.end_part, definition.end_xyz);
+function _parseOverlayVector(value) {
+  if (Array.isArray(value) && value.length >= 3) {
+    return new THREE.Vector3(Number(value[0]) || 0, Number(value[1]) || 0, Number(value[2]) || 0);
+  }
+  const text = String(value || '').trim();
+  if (!text) {
+    return null;
+  }
+  const parts = text.split(/[;,\s]+/).filter(Boolean);
+  if (parts.length < 3) {
+    return null;
+  }
+  return new THREE.Vector3(Number(parts[0]) || 0, Number(parts[1]) || 0, Number(parts[2]) || 0);
+}
+
+function _formatVec3(value) {
+  return `${value.x.toFixed(4)}, ${value.y.toFixed(4)}, ${value.z.toFixed(4)}`;
+}
+
+function _snapMm(value) {
+  return Math.round(Number(value) || 0);
+}
+
+function _snapDegrees(value) {
+  return Math.round(Number(value) || 0);
+}
+
+function _snapVec3Mm(value) {
+  return new THREE.Vector3(_snapMm(value.x), _snapMm(value.y), _snapMm(value.z));
+}
+
+function _distanceDirectionForOverlay(definition) {
+  const start = _resolveAnchorPoint(definition.start_part, definition.start_xyz, definition.start_space, definition.start_part_index);
+  const end = _resolveAnchorPoint(definition.end_part, definition.end_xyz, definition.end_space, definition.end_part_index);
+  if (!start || !end) {
+    return null;
+  }
+  const span = end.clone().sub(start);
+  if (span.lengthSq() <= 1e-10) {
+    return null;
+  }
+  const axisName = String(definition.distance_axis || 'z').trim().toLowerCase();
+  if (axisName === 'direct') {
+    return span.clone().normalize();
+  }
+  const localAxis = axisName === 'x' ? [1, 0, 0] : (axisName === 'y' ? [0, 1, 0] : [0, 0, 1]);
+  const axisDirection =
+    _resolveAxisDirection(definition.start_part, localAxis, definition.start_part_index)
+    || _resolveAxisDirection(definition.end_part, localAxis, definition.end_part_index)
+    || _resolveAxisDirection('', localAxis);
+  if (!axisDirection || axisDirection.lengthSq() <= 1e-10) {
+    return span.clone().normalize();
+  }
+  const axialLength = span.dot(axisDirection);
+  if (!Number.isFinite(axialLength) || Math.abs(axialLength) <= 1e-6) {
+    return span.clone().normalize();
+  }
+  return axisDirection.clone().multiplyScalar(axialLength >= 0 ? 1 : -1).normalize();
+}
+
+function _distanceDragObjects() {
+  const objects = [];
+  measurementGroup.traverse((node) => {
+    if (node?.userData?.dragKind) {
+      objects.push(node);
+    }
+  });
+  return objects;
+}
+
+function _defaultDistanceOffsetForOverlay(definition) {
+  const start = _resolveAnchorPoint(definition.start_part, definition.start_xyz, definition.start_space, definition.start_part_index);
+  const end = _resolveAnchorPoint(definition.end_part, definition.end_xyz, definition.end_space, definition.end_part_index);
+  const direction = _distanceDirectionForOverlay(definition);
+  if (!start || !end || !direction) {
+    return new THREE.Vector3(0, 0, 0);
+  }
+
+  const startShift = Number(definition.start_shift) || 0;
+  const endShift = Number(definition.end_shift) || 0;
+  const shiftedStart = start.clone().add(direction.clone().multiplyScalar(startShift));
+  const shiftedEnd = end.clone().add(direction.clone().multiplyScalar(endShift));
+  const span = shiftedEnd.clone().sub(shiftedStart);
+  const measuredLength = Math.max(span.length(), 1e-6);
+  const midpoint = shiftedStart.clone().lerp(shiftedEnd, 0.5);
+  const offsetDirection = _measurementOffsetDirection(direction, midpoint);
+  const offsetDistance = THREE.MathUtils.clamp(
+    measuredLength * 0.16,
+    Math.max(currentMaxDim * 0.08, 8),
+    Math.max(currentMaxDim * 0.22, 24)
+  );
+  return offsetDirection.multiplyScalar(offsetDistance);
+}
+
+function _emitMeasurementUpdated(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= measurementOverlays.length) {
+    return;
+  }
+  document.title = 'MEASUREMENT_UPDATED:' + JSON.stringify({
+    index,
+    overlay: measurementOverlays[index],
+  });
+}
+
+function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
+  const start = _resolveAnchorPoint(definition.start_part, definition.start_xyz, definition.start_space, definition.start_part_index);
+  const end = _resolveAnchorPoint(definition.end_part, definition.end_xyz, definition.end_space, definition.end_part_index);
   if (!start || !end) {
     return null;
   }
@@ -489,65 +646,87 @@ function _makeDistanceMeasurement(definition) {
   }
 
   const axisName = String(definition.distance_axis || 'z').trim().toLowerCase();
+  const baseColor = measurementColors.distance;
+  const color = measurementDragEnabled ? 0x19f25f : baseColor;
+  const offsetFromDefinition = _parseOverlayVector(definition.offset_xyz);
+  const startShift = Number(definition.start_shift) || 0;
+  const endShift = Number(definition.end_shift) || 0;
+
+  const makeDragHandle = (position, dragKind) => {
+    const handleSize = Math.max(currentMaxDim * 0.018, 1.8);
+    const geometry = new THREE.SphereGeometry(handleSize, 12, 10);
+    const material = new THREE.MeshBasicMaterial({ color, depthTest: true, depthWrite: true });
+    const handle = new THREE.Mesh(geometry, material);
+    handle.position.copy(position);
+    handle.visible = measurementDragEnabled;
+    handle.userData = {
+      dragKind,
+      measurementIndex: measurmentIndex,
+    };
+    return handle;
+  };
+  
   if (axisName === 'direct') {
     const direction = span.clone().normalize();
-    const measuredLength = length;
+    const shiftedStart = start.clone().add(direction.clone().multiplyScalar(startShift));
+    const shiftedEnd = end.clone().add(direction.clone().multiplyScalar(endShift));
+    const measuredLength = shiftedEnd.distanceTo(shiftedStart);
 
     const group = new THREE.Group();
-    const color = 0x00dd00;
     const headSize = THREE.MathUtils.clamp(measuredLength * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
-    const midpoint = start.clone().lerp(end, 0.5);
+    const midpoint = shiftedStart.clone().lerp(shiftedEnd, 0.5);
     const offsetDirection = _measurementOffsetDirection(direction, midpoint);
-    const offsetDistance = THREE.MathUtils.clamp(
+    const defaultOffsetDistance = THREE.MathUtils.clamp(
       measuredLength * 0.16,
       Math.max(currentMaxDim * 0.08, 8),
       Math.max(currentMaxDim * 0.22, 24)
     );
-    const offsetVector = offsetDirection.clone().multiplyScalar(offsetDistance);
-    const dimensionStart = start.clone().add(offsetVector);
-    const dimensionEnd = end.clone().add(offsetVector);
+    const offsetVector = offsetFromDefinition || offsetDirection.clone().multiplyScalar(defaultOffsetDistance);
+    const dimensionStart = shiftedStart.clone().add(offsetVector);
+    const dimensionEnd = shiftedEnd.clone().add(offsetVector);
 
     const lineMaterial = new THREE.LineBasicMaterial({
       color,
-      depthTest: false,
-      depthWrite: false,
+      depthTest: true,
+      depthWrite: true,
     });
     const extensionMaterial = new THREE.LineBasicMaterial({
       color,
       transparent: true,
       opacity: 0.7,
-      depthTest: false,
-      depthWrite: false,
+      depthTest: true,
+      depthWrite: true,
     });
 
     const startExtension = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([start, dimensionStart]),
+      new THREE.BufferGeometry().setFromPoints([shiftedStart, dimensionStart]),
       extensionMaterial
     );
-    startExtension.renderOrder = 998;
     group.add(startExtension);
 
     const endExtension = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([end, dimensionEnd]),
+      new THREE.BufferGeometry().setFromPoints([shiftedEnd, dimensionEnd]),
       extensionMaterial.clone()
     );
-    endExtension.renderOrder = 998;
     group.add(endExtension);
 
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([dimensionStart, dimensionEnd]),
       lineMaterial
     );
-    line.renderOrder = 999;
+    line.userData = {
+      dragKind: 'distance-offset',
+      measurementIndex: measurmentIndex,
+    };
     group.add(line);
     group.add(_makeArrowCone(dimensionStart, direction.clone().negate(), headSize, color));
     group.add(_makeArrowCone(dimensionEnd, direction, headSize, color));
+    group.add(makeDragHandle(dimensionStart, 'distance-start'));
+    group.add(makeDragHandle(dimensionEnd, 'distance-end'));
 
+    definition.measured_value = Number(measuredLength.toFixed(6));
     const labelText = `${definition.name}: ${_distanceLabelValue(definition, measuredLength)}`;
-    const label = _makeMeasurementLabel(labelText);
-    const labelOffset = offsetDirection.clone().multiplyScalar(Math.max(currentMaxDim * 0.06, headSize * 2.2));
-    label.position.copy(dimensionStart).lerp(dimensionEnd, 0.5).add(labelOffset);
-    group.add(label);
+    _makeMeasurementLabel(labelText, color);
     return group;
   }
 
@@ -563,63 +742,66 @@ function _makeDistanceMeasurement(definition) {
   const direction = hasAxialDirection
     ? axisDirection.clone().multiplyScalar(axialLength >= 0 ? 1 : -1).normalize()
     : span.clone().normalize();
-  const measuredLength = hasAxialDirection ? Math.abs(axialLength) : length;
+  const shiftedStart = start.clone().add(direction.clone().multiplyScalar(startShift));
+  const shiftedEnd = end.clone().add(direction.clone().multiplyScalar(endShift));
+  const shiftedSpan = shiftedEnd.clone().sub(shiftedStart);
+  const measuredLength = hasAxialDirection ? Math.abs(shiftedSpan.dot(direction)) : shiftedSpan.length();
 
   const group = new THREE.Group();
-  const color = 0x00dd00;
   const headSize = THREE.MathUtils.clamp(measuredLength * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
-  const midpoint = start.clone().lerp(end, 0.5);
+  const midpoint = shiftedStart.clone().lerp(shiftedEnd, 0.5);
   const offsetDirection = _measurementOffsetDirection(direction, midpoint);
-  const offsetDistance = THREE.MathUtils.clamp(
+  const defaultOffsetDistance = THREE.MathUtils.clamp(
     measuredLength * 0.16,
     Math.max(currentMaxDim * 0.08, 8),
     Math.max(currentMaxDim * 0.22, 24)
   );
-  const offsetVector = offsetDirection.clone().multiplyScalar(offsetDistance);
-  const dimensionStart = start.clone().add(offsetVector);
+  const offsetVector = offsetFromDefinition || offsetDirection.clone().multiplyScalar(defaultOffsetDistance);
+  const dimensionStart = shiftedStart.clone().add(offsetVector);
   const dimensionEnd = dimensionStart.clone().add(direction.clone().multiplyScalar(measuredLength));
 
   const lineMaterial = new THREE.LineBasicMaterial({
     color,
-    depthTest: false,
-    depthWrite: false,
+    depthTest: true,
+    depthWrite: true,
   });
   const extensionMaterial = new THREE.LineBasicMaterial({
     color,
     transparent: true,
     opacity: 0.7,
-    depthTest: false,
-    depthWrite: false,
+    depthTest: true,
+    depthWrite: true,
   });
 
   const startExtension = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([start, dimensionStart]),
+    new THREE.BufferGeometry().setFromPoints([shiftedStart, dimensionStart]),
     extensionMaterial
   );
-  startExtension.renderOrder = 998;
   group.add(startExtension);
 
   const endExtension = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([end, dimensionEnd]),
+    new THREE.BufferGeometry().setFromPoints([shiftedEnd, dimensionEnd]),
     extensionMaterial.clone()
   );
-  endExtension.renderOrder = 998;
   group.add(endExtension);
 
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([dimensionStart, dimensionEnd]),
     lineMaterial
   );
-  line.renderOrder = 999;
+  line.userData = {
+    dragKind: 'distance-offset',
+    measurementIndex: measurmentIndex,
+  };
   group.add(line);
   group.add(_makeArrowCone(dimensionStart, direction.clone().negate(), headSize, color));
   group.add(_makeArrowCone(dimensionEnd, direction, headSize, color));
+  group.add(makeDragHandle(dimensionStart, 'distance-start'));
+  group.add(makeDragHandle(dimensionEnd, 'distance-end'));
 
+  definition.measured_value = Number(measuredLength.toFixed(6));
   const labelText = `${definition.name}: ${_distanceLabelValue(definition, measuredLength)}`;
-  const label = _makeMeasurementLabel(labelText);
-  const labelOffset = offsetDirection.clone().multiplyScalar(Math.max(currentMaxDim * 0.06, headSize * 2.2));
-  label.position.copy(dimensionStart).lerp(dimensionEnd, 0.5).add(labelOffset);
-  group.add(label);
+  _makeMeasurementLabel(labelText, color);
   return group;
 }
 
@@ -636,7 +818,7 @@ function _makeDiameterRing(definition) {
   }
   const radius = diameter / 2;
   const group = new THREE.Group();
-  const color = 0x00dd00;
+  const color = measurementColors.diameter_ring;
 
   const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
     ? new THREE.Vector3(1, 0, 0)
@@ -657,21 +839,13 @@ function _makeDiameterRing(definition) {
   const ringGeometry = new THREE.BufferGeometry().setFromPoints(ringPoints);
   const ringMaterial = new THREE.LineBasicMaterial({
     color,
-    depthTest: false,
-    depthWrite: false,
+    depthTest: true,
+    depthWrite: true,
   });
   const ring = new THREE.Line(ringGeometry, ringMaterial);
-  ring.renderOrder = 999;
   group.add(ring);
 
-  const label = _makeMeasurementLabel(`${definition.name}: ${diameter.toFixed(3)} mm`);
-  const radialToCamera = _measurementOffsetDirection(axis, center);
-  const sideDirection = new THREE.Vector3().crossVectors(axis, radialToCamera).normalize();
-  const labelRadius = radius + Math.max(currentMaxDim * 0.12, diameter * 0.18, 14);
-  label.position.copy(center)
-    .add(radialToCamera.clone().multiplyScalar(labelRadius))
-    .add(sideDirection.multiplyScalar(Math.max(currentMaxDim * 0.04, 6)));
-  group.add(label);
+  _makeMeasurementLabel(`${definition.name}: ${diameter.toFixed(3)} mm`, color);
   return group;
 }
 
@@ -687,16 +861,15 @@ function _makeRadiusMeasurement(definition) {
   }
 
   const group = new THREE.Group();
-  const color = 0x00dd00;
+  const color = measurementColors.radius;
   const radial = _measurementOffsetDirection(axis, center).normalize();
   const edge = center.clone().add(radial.clone().multiplyScalar(radius));
 
-  const lineMaterial = new THREE.LineBasicMaterial({ color, depthTest: false, depthWrite: false });
+  const lineMaterial = new THREE.LineBasicMaterial({ color, depthTest: true, depthWrite: true });
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([center, edge]),
     lineMaterial
   );
-  line.renderOrder = 999;
   group.add(line);
   group.add(_makeArrowCone(edge, radial, Math.max(radius * 0.15, currentMaxDim * 0.02), color));
 
@@ -710,14 +883,13 @@ function _makeRadiusMeasurement(definition) {
   const ring = _makeDiameterRing(ringDef);
   if (ring) {
     ring.children.forEach((child) => {
-      if (child instanceof THREE.Sprite) return;
-      group.add(child);
+      if (!(child instanceof THREE.Sprite) && !(child.style)) {
+        group.add(child);
+      }
     });
   }
 
-  const label = _makeMeasurementLabel(`${definition.name}: R ${radius.toFixed(3)} mm`);
-  label.position.copy(center).add(radial.clone().multiplyScalar(radius * 0.6));
-  group.add(label);
+  _makeMeasurementLabel(`${definition.name}: R ${radius.toFixed(3)} mm`, color);
   return group;
 }
 
@@ -750,9 +922,9 @@ function _makeAngleMeasurement(definition) {
   const tangent = new THREE.Vector3().crossVectors(normal, d1).normalize();
 
   const group = new THREE.Group();
-  const color = 0x00dd00;
+  const color = measurementColors.angle;
   const rayLen = Math.max(Math.min(len1, len2), currentMaxDim * 0.15);
-  const rayMaterial = new THREE.LineBasicMaterial({ color, depthTest: false, depthWrite: false });
+  const rayMaterial = new THREE.LineBasicMaterial({ color, depthTest: true, depthWrite: true });
   group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([center, center.clone().add(d1.clone().multiplyScalar(rayLen))]), rayMaterial));
   group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([center, center.clone().add(d2.clone().multiplyScalar(rayLen))]), rayMaterial.clone()));
 
@@ -769,15 +941,11 @@ function _makeAngleMeasurement(definition) {
   }
   const arc = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints(arcPoints),
-    new THREE.LineBasicMaterial({ color, depthTest: false, depthWrite: false })
+    new THREE.LineBasicMaterial({ color, depthTest: true, depthWrite: true })
   );
-  arc.renderOrder = 999;
   group.add(arc);
 
-  const mid = arcPoints[Math.floor(arcPoints.length / 2)] || center;
-  const label = _makeMeasurementLabel(`${definition.name}: ${angleDeg.toFixed(2)} deg`);
-  label.position.copy(mid).add(normal.clone().multiplyScalar(Math.max(currentMaxDim * 0.05, 6)));
-  group.add(label);
+  _makeMeasurementLabel(`${definition.name}: ${angleDeg.toFixed(2)} deg`, color);
   return group;
 }
 
@@ -788,7 +956,8 @@ function _renderMeasurements() {
     return;
   }
 
-  for (const overlay of measurementOverlays) {
+  for (let overlayIndex = 0; overlayIndex < measurementOverlays.length; overlayIndex += 1) {
+    const overlay = measurementOverlays[overlayIndex];
     if (!overlay || (measurementFilter && String(overlay.name || '') !== measurementFilter)) {
       continue;
     }
@@ -798,7 +967,7 @@ function _renderMeasurements() {
         ? _makeRadiusMeasurement(overlay)
         : (overlay.type === 'angle'
           ? _makeAngleMeasurement(overlay)
-          : _makeDistanceMeasurement(overlay)));
+          : _makeDistanceMeasurement(overlay, overlayIndex)));
     if (node) {
       measurementGroup.add(node);
     }
@@ -1017,6 +1186,7 @@ window.loadAssembly = function (parts) {
 
 canvas.addEventListener('click', (event) => {
   if (_gizmoDragJustEnded) return;
+  if (_measurementDragJustEnded) return;
   if (currentMeshes.length === 0) return;
 
   const rect = canvas.getBoundingClientRect();
@@ -1031,15 +1201,19 @@ canvas.addEventListener('click', (event) => {
     if (intersects.length > 0) {
       const hit = intersects[0];
       const mesh = hit.object;
+      const worldPos = hit.point.clone();
       const localPos = mesh.worldToLocal(hit.point.clone());
       const idx = mesh._partIndex != null ? mesh._partIndex : currentMeshes.indexOf(mesh);
-      _placePickMarker(hit.point.clone());
+      _placePickMarker(worldPos);
       document.title = 'POINT_PICKED:' + JSON.stringify({
         partIndex: idx,
         partName: mesh._partName || '',
-        x: parseFloat(localPos.x.toFixed(4)),
-        y: parseFloat(localPos.y.toFixed(4)),
-        z: parseFloat(localPos.z.toFixed(4)),
+        x: parseFloat(_snapMm(worldPos.x).toFixed(4)),
+        y: parseFloat(_snapMm(worldPos.y).toFixed(4)),
+        z: parseFloat(_snapMm(worldPos.z).toFixed(4)),
+        local_x: parseFloat(localPos.x.toFixed(4)),
+        local_y: parseFloat(localPos.y.toFixed(4)),
+        local_z: parseFloat(localPos.z.toFixed(4)),
       });
     }
     return;
@@ -1054,6 +1228,139 @@ canvas.addEventListener('click', (event) => {
   } else {
     _selectPartByIndex(-1);
   }
+});
+
+canvas.addEventListener('mousedown', (event) => {
+  if (!measurementsVisible || !measurementDragEnabled || event.button !== 0) {
+    return;
+  }
+  const rect = canvas.getBoundingClientRect();
+  _measurementDragPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _measurementDragPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  _measurementDragRaycaster.setFromCamera(_measurementDragPointer, camera);
+
+  const dragTargets = _distanceDragObjects();
+  if (dragTargets.length === 0) {
+    return;
+  }
+
+  const intersects = _measurementDragRaycaster.intersectObjects(dragTargets, false);
+  if (intersects.length === 0) {
+    return;
+  }
+
+  const hit = intersects[0];
+  const dragKind = String(hit.object?.userData?.dragKind || '');
+  const measurementIndex = Number(hit.object?.userData?.measurementIndex);
+  if (!Number.isInteger(measurementIndex) || measurementIndex < 0 || measurementIndex >= measurementOverlays.length) {
+    return;
+  }
+
+  const overlay = measurementOverlays[measurementIndex];
+  if (!overlay || String(overlay.type || '').toLowerCase() !== 'distance') {
+    return;
+  }
+
+  const axisDir = _distanceDirectionForOverlay(overlay);
+  if (!axisDir) {
+    return;
+  }
+
+  const plane = new THREE.Plane();
+  const planeNormal = camera.getWorldDirection(new THREE.Vector3()).normalize();
+  plane.setFromNormalAndCoplanarPoint(planeNormal, hit.point.clone());
+
+  const planeStartPoint = new THREE.Vector3();
+  if (!_measurementDragRaycaster.ray.intersectPlane(plane, planeStartPoint)) {
+    return;
+  }
+
+  _measurementDragState = {
+    dragKind,
+    measurementIndex,
+    axisDir,
+    plane,
+    planeStartPoint,
+    originalOffset: _parseOverlayVector(overlay.offset_xyz) || _defaultDistanceOffsetForOverlay(overlay),
+    originalStartShift: Number(overlay.start_shift) || 0,
+    originalEndShift: Number(overlay.end_shift) || 0,
+  };
+  controls.enabled = false;
+  event.preventDefault();
+});
+
+canvas.addEventListener('mousemove', (event) => {
+  const rect = canvas.getBoundingClientRect();
+  _measurementDragPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  _measurementDragPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  _measurementDragRaycaster.setFromCamera(_measurementDragPointer, camera);
+
+  if (!_measurementDragState) {
+    if (!measurementsVisible || !measurementDragEnabled) {
+      canvas.style.cursor = '';
+      return;
+    }
+    const hoverTargets = _distanceDragObjects();
+    if (hoverTargets.length === 0) {
+      canvas.style.cursor = '';
+      return;
+    }
+    const hoverIntersects = _measurementDragRaycaster.intersectObjects(hoverTargets, false);
+    canvas.style.cursor = hoverIntersects.length > 0 ? 'grab' : '';
+    return;
+  }
+
+  canvas.style.cursor = 'grabbing';
+
+  const currentPoint = new THREE.Vector3();
+  if (!_measurementDragRaycaster.ray.intersectPlane(_measurementDragState.plane, currentPoint)) {
+    return;
+  }
+
+  const delta = currentPoint.clone().sub(_measurementDragState.planeStartPoint);
+  const overlay = measurementOverlays[_measurementDragState.measurementIndex];
+  if (!overlay) {
+    return;
+  }
+
+  // Ctrl held = 0.1 mm precision; normal = 1 mm snap
+  const snap = event.ctrlKey
+    ? (v) => Math.round(Number(v) * 10) / 10
+    : _snapMm;
+  const snapVec = event.ctrlKey
+    ? (v) => new THREE.Vector3(snap(v.x), snap(v.y), snap(v.z))
+    : _snapVec3Mm;
+
+  if (_measurementDragState.dragKind === 'distance-offset') {
+    const alongAxis = _measurementDragState.axisDir.clone().multiplyScalar(delta.dot(_measurementDragState.axisDir));
+    const sidewaysDelta = delta.clone().sub(alongAxis);
+    const newOffset = snapVec(_measurementDragState.originalOffset.clone().add(sidewaysDelta));
+    overlay.offset_xyz = _formatVec3(newOffset);
+  } else if (_measurementDragState.dragKind === 'distance-start') {
+    const shift = delta.dot(_measurementDragState.axisDir);
+    overlay.start_shift = String(snap(_measurementDragState.originalStartShift + shift));
+  } else if (_measurementDragState.dragKind === 'distance-end') {
+    const shift = delta.dot(_measurementDragState.axisDir);
+    overlay.end_shift = String(snap(_measurementDragState.originalEndShift + shift));
+  }
+
+  _scheduleMeasurementsRender();
+  event.preventDefault();
+});
+
+document.addEventListener('mouseup', () => {
+  if (!_measurementDragState) {
+    return;
+  }
+  const updatedIndex = _measurementDragState.measurementIndex;
+  _measurementDragState = null;
+  controls.enabled = true;
+  _emitMeasurementUpdated(updatedIndex);
+  _measurementDragJustEnded = true;
+  canvas.style.cursor = '';
+  setTimeout(() => {
+    _measurementDragJustEnded = false;
+  }, 120);
 });
 
 canvas.addEventListener('wheel', (event) => {
@@ -1082,58 +1389,7 @@ canvas.addEventListener('wheel', (event) => {
   controls.update();
 }, { passive: false });
 
-// Measurement box dragging
-const _measurementRaycaster = new THREE.Raycaster();
-const _measurementPointer = new THREE.Vector2();
-let _draggedMeasurementSprite = null;
-let _draggedMeasurementOffset = new THREE.Vector3();
-
-canvas.addEventListener('mousedown', (event) => {
-  if (!measurementsVisible || measurementOverlays.length === 0) return;
-  
-  const rect = canvas.getBoundingClientRect();
-  _measurementPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  _measurementPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  
-  _measurementRaycaster.setFromCamera(_measurementPointer, camera);
-  const sprites = [];
-  measurementGroup.traverse((child) => {
-    if (child instanceof THREE.Sprite) {
-      sprites.push(child);
-    }
-  });
-  
-  const intersects = _measurementRaycaster.intersectObjects(sprites, false);
-  if (intersects.length > 0) {
-    _draggedMeasurementSprite = intersects[0].object;
-    _draggedMeasurementOffset.copy(_draggedMeasurementSprite.position).sub(camera.position);
-    controls.enabled = false;
-    event.preventDefault();
-  }
-});
-
-canvas.addEventListener('mousemove', (event) => {
-  if (!_draggedMeasurementSprite) return;
-  
-  const rect = canvas.getBoundingClientRect();
-  _measurementPointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  _measurementPointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  
-  _measurementRaycaster.setFromCamera(_measurementPointer, camera);
-  const distance = camera.position.distanceTo(_draggedMeasurementSprite.position);
-  const movePoint = new THREE.Vector3();
-  movePoint.copy(_measurementRaycaster.ray.direction).multiplyScalar(distance).add(camera.position);
-  
-  _draggedMeasurementSprite.position.copy(movePoint);
-  event.preventDefault();
-});
-
-document.addEventListener('mouseup', () => {
-  if (_draggedMeasurementSprite) {
-    controls.enabled = true;
-  }
-  _draggedMeasurementSprite = null;
-});
+// Measurement labels are fixed HUD overlays, while distance helpers are draggable in 3D.
 
 window.setPointPickingEnabled = function (enabled) {
   pointPickingEnabled = !!enabled;
@@ -1179,7 +1435,27 @@ window.setPartTransforms = function (transforms) {
   if (selectedMeshIndex >= 0) {
     _syncSelectedTransform();
   }
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
+};
+
+window.setPartColors = function (colors) {
+  if (!Array.isArray(colors)) return;
+  for (let i = 0; i < currentMeshes.length && i < colors.length; i++) {
+    const mesh = currentMeshes[i];
+    if (!mesh || !mesh.material || !mesh.material.color) continue;
+    const colorValue = colors[i] || '#9ea7b3';
+    mesh.material.color.set(colorValue);
+  }
+};
+
+window.setPartNames = function (names) {
+  if (!Array.isArray(names)) return;
+  for (let i = 0; i < currentMeshes.length && i < names.length; i++) {
+    const mesh = currentMeshes[i];
+    if (!mesh) continue;
+    mesh._partName = String(names[i] || mesh._partName || `Part ${i + 1}`);
+  }
+  _scheduleMeasurementsRender();
 };
 
 window.selectPart = function (index) {
@@ -1196,26 +1472,66 @@ window.resetSelectedPartTransform = function () {
   mesh.rotation.set(0, 0, 0);
   partTransforms[selectedMeshIndex] = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
   _syncSelectedTransform();
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
 };
 
 window.setMeasurements = function (definitions) {
   measurementOverlays = Array.isArray(definitions) ? definitions : [];
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
 };
 
 window.setMeasurementsVisible = function (visible) {
   measurementsVisible = !!visible;
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
+};
+
+window.setMeasurementVisibilityOverride = function (forceHidden) {
+  if (forceHidden) {
+    measurementGroup.visible = false;
+  }
+};
+
+window.setMeasurementVisibilityOverride = function (forceHidden) {
+  if (forceHidden) {
+    measurementGroup.visible = false;
+  }
+};
+
+window.setMeasurementDragEnabled = function (enabled) {
+  measurementDragEnabled = !!enabled;
+  _scheduleMeasurementsRender();
 };
 
 window.setMeasurementFilter = function (name) {
   measurementFilter = String(name || '').trim();
-  _renderMeasurements();
+  _scheduleMeasurementsRender();
+};
+
+window.getDistanceMeasuredValue = function (index) {
+  const idx = Number(index);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= measurementOverlays.length) {
+    return null;
+  }
+  const overlay = measurementOverlays[idx];
+  if (!overlay || String(overlay.type || '').toLowerCase() !== 'distance') {
+    return null;
+  }
+  const measured = Number(overlay.measured_value);
+  return Number.isFinite(measured) ? measured : null;
+};
+
+window.setRenderingEnabled = function (enabled) {
+  renderingEnabled = !!enabled;
+  if (renderingEnabled) {
+    renderer.render(scene, camera);
+  }
 };
 
 function animate() {
   requestAnimationFrame(animate);
+  if (!renderingEnabled) {
+    return;
+  }
   controls.update();
   renderer.render(scene, camera);
 }

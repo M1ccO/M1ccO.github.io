@@ -14,10 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton, QLineEdit, QComboBox, QSplitter, QListWidget, QListWidgetItem,
     QAbstractItemView, QStackedWidget,
 )
-try:
-    from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
-except Exception:
-    from ui.stl_preview import StlPreviewWidget
+from ui.stl_preview import StlPreviewWidget
 from shared.editor_helpers import (
     create_dialog_buttons,
     apply_secondary_button_theme,
@@ -36,7 +33,13 @@ def _xyz_to_tuple(value) -> tuple[float, float, float]:
     if not text:
         return 0.0, 0.0, 0.0
 
-    text = text.replace(';', ',')
+    text = (
+        text.replace('[', ' ')
+        .replace(']', ' ')
+        .replace('(', ' ')
+        .replace(')', ' ')
+        .replace(';', ',')
+    )
     parts = [p.strip() for p in text.split(',') if p.strip()]
     if len(parts) < 3:
         return 0.0, 0.0, 0.0
@@ -48,6 +51,11 @@ def _xyz_to_tuple(value) -> tuple[float, float, float]:
 
 def _fmt_coord(value: float) -> str:
     return f"{float(value):.4g}"
+
+
+def _xyz_to_text(value) -> str:
+    x, y, z = _xyz_to_tuple(value)
+    return f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
 
 
 class MeasurementEditorDialog(QDialog):
@@ -84,7 +92,9 @@ class MeasurementEditorDialog(QDialog):
         if self._parts:
             self._preview_widget.load_parts(self._parts)
         self._preview_widget.set_measurements_visible(True)
+        self._preview_widget.set_measurement_drag_enabled(True)
         self._preview_widget.point_picked.connect(self._on_point_picked)
+        self._preview_widget.measurement_updated.connect(self._on_measurement_updated)
         self._on_measurement_kind_changed()
         self._refresh_preview_measurements()
 
@@ -232,45 +242,17 @@ class MeasurementEditorDialog(QDialog):
         self._dist_name_edit.editingFinished.connect(self._schedule_commit)
         form.addRow(self._t('common.name', 'Name') + ':', self._dist_name_edit)
 
-        target_row = QHBoxLayout()
-        target_row.setSpacing(6)
-        self._dist_target_start_btn = QPushButton(self._t('tool_editor.measurements.start_short', 'START'))
-        self._dist_target_end_btn = QPushButton(self._t('tool_editor.measurements.end_short', 'END'))
-        self._dist_target_start_btn.setCheckable(True)
-        self._dist_target_end_btn.setCheckable(True)
-        self._dist_target_start_btn.clicked.connect(lambda: self._set_distance_target_side('start'))
-        self._dist_target_end_btn.clicked.connect(lambda: self._set_distance_target_side('end'))
-        target_row.addWidget(self._dist_target_start_btn)
-        target_row.addWidget(self._dist_target_end_btn)
-        target_row.addStretch(1)
-        form.addRow(self._t('tool_editor.measurements.target', 'Target') + ':', target_row)
-
-        self._dist_target_part_edit = QLineEdit()
-        self._dist_target_part_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.part_placeholder', '(part name, blank = assembly)'))
-        self._dist_target_part_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('tool_editor.measurements.part', 'Part') + ':',
-                    self._dist_target_part_edit)
-
-        form.addRow('', self._build_xyz_header_row(with_pick=True))
-        xyz_row = QHBoxLayout()
-        self._dist_target_x_edit = QLineEdit('0')
-        self._dist_target_y_edit = QLineEdit('0')
-        self._dist_target_z_edit = QLineEdit('0')
-        for axis_edit in (self._dist_target_x_edit, self._dist_target_y_edit, self._dist_target_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-        self._dist_target_pick_btn = QPushButton(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._dist_target_pick_btn.setFixedWidth(50)
-        self._dist_target_pick_btn.setToolTip(
-            self._t('tool_editor.measurements.pick_tooltip', 'Click a point on the 3D model'))
-        self._dist_target_pick_btn.clicked.connect(self._on_pick_target)
-        xyz_row.addWidget(self._dist_target_x_edit)
-        xyz_row.addWidget(self._dist_target_y_edit)
-        xyz_row.addWidget(self._dist_target_z_edit)
-        xyz_row.addStretch(1)
-        xyz_row.addWidget(self._dist_target_pick_btn)
-        form.addRow(self._t('tool_editor.measurements.xyz', 'XYZ') + ':', xyz_row)
+        pick_row = QHBoxLayout()
+        pick_row.setSpacing(6)
+        self._dist_pick_points_btn = QPushButton(
+            self._t('tool_editor.measurements.pick_two_points', 'Pick start and end points')
+        )
+        self._dist_pick_points_btn.clicked.connect(self._on_pick_target)
+        self._dist_pick_status_label = QLabel('')
+        self._dist_pick_status_label.setStyleSheet('color: #6b7b8e; background: transparent;')
+        pick_row.addWidget(self._dist_pick_points_btn)
+        pick_row.addWidget(self._dist_pick_status_label, 1)
+        form.addRow(self._t('tool_editor.measurements.points', 'Points') + ':', pick_row)
 
         axis_row = QHBoxLayout()
         axis_row.setSpacing(6)
@@ -314,11 +296,32 @@ class MeasurementEditorDialog(QDialog):
         value_row.addWidget(self._dist_custom_value_edit, 1)
         form.addRow(self._t('tool_editor.measurements.display_value', 'Display Value') + ':', value_row)
 
+        self._dist_measured_value_box = QLineEdit()
+        self._dist_measured_value_box.setReadOnly(True)
+        self._dist_measured_value_box.setPlaceholderText(
+            self._t('tool_editor.measurements.measured_value_placeholder', 'Measured value appears after two picks')
+        )
+        form.addRow(self._t('tool_editor.measurements.current_value', 'Current Value') + ':', self._dist_measured_value_box)
+
+        form.addRow('', self._build_xyz_header_row(with_pick=False))
+        offset_row = QHBoxLayout()
+        self._dist_offset_x_edit = QLineEdit('0')
+        self._dist_offset_y_edit = QLineEdit('0')
+        self._dist_offset_z_edit = QLineEdit('0')
+        for _oe in (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit):
+            _oe.setFixedWidth(56)
+            _oe.setToolTip(self._t('tool_editor.measurements.offset_tooltip',
+                                   'Drag the arrow in the preview, or type here to fine-tune'))
+            _oe.editingFinished.connect(self._schedule_commit)
+            offset_row.addWidget(_oe)
+        offset_row.addStretch(1)
+        form.addRow(self._t('tool_editor.measurements.arrow_offset', 'Arrow offset') + ':', offset_row)
+
         self._distance_edit_model = None
-        self._dist_target_side = 'start'
+        self._dist_pick_stage = None
         self._set_distance_axis('z', commit=False)
         self._set_distance_value_mode('measured', commit=False)
-        self._set_distance_target_side('start', commit=False)
+        self._update_distance_pick_status()
 
         return container
 
@@ -563,9 +566,13 @@ class MeasurementEditorDialog(QDialog):
         new_meas = {
             'name': self._t('tool_editor.measurements.new_distance', 'New Distance'),
             'start_part': '',
-            'start_xyz': '0, 0, 0',
+            'start_part_index': -1,
+            'start_xyz': '',
+            'start_space': 'world',
             'end_part': '',
-            'end_xyz': '0, 0, 0',
+            'end_part_index': -1,
+            'end_xyz': '',
+            'end_space': 'world',
             'distance_axis': 'z',
             'label_value_mode': 'measured',
             'label_custom_value': '',
@@ -576,6 +583,7 @@ class MeasurementEditorDialog(QDialog):
         self._distance_list.addItem(item)
         self._distance_list.setCurrentItem(item)
         self._refresh_preview_measurements()
+        self._start_distance_two_point_pick(reset_points=True)
 
     def _remove_distance_measurement(self):
         current = self._distance_list.currentItem()
@@ -717,6 +725,9 @@ class MeasurementEditorDialog(QDialog):
         if current:
             self._populate_distance_form(current.data(Qt.UserRole))
             self._edit_stack.setCurrentIndex(1)
+            meas = dict(current.data(Qt.UserRole) or {})
+            if not str(meas.get('start_xyz') or '').strip() or not str(meas.get('end_xyz') or '').strip():
+                self._start_distance_two_point_pick(reset_points=False)
         else:
             self._edit_stack.setCurrentIndex(0)
 
@@ -753,7 +764,11 @@ class MeasurementEditorDialog(QDialog):
         self._set_distance_axis(str(meas.get('distance_axis', 'z')).lower(), commit=False)
         self._dist_custom_value_edit.setText(str(meas.get('label_custom_value', '')))
         self._set_distance_value_mode(str(meas.get('label_value_mode', 'measured')).lower(), commit=False)
-        self._set_distance_target_side(self._dist_target_side, commit=False)
+        self._set_xyz_edits(
+            (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit),
+            meas.get('offset_xyz', ''),
+        )
+        self._update_distance_pick_status()
 
     def _populate_diameter_form(self, meas: dict):
         self._diam_name_edit.setText(meas.get('name', ''))
@@ -815,69 +830,138 @@ class MeasurementEditorDialog(QDialog):
         elif kind == 'angle':
             self._commit_angle_edit()
 
-    def _set_distance_target_side(self, side: str, commit: bool = True):
-        normalized = 'end' if side == 'end' else 'start'
-        if getattr(self, '_distance_edit_model', None):
-            self._store_distance_target_fields(self._dist_target_side)
-        self._dist_target_side = normalized
-        self._dist_target_start_btn.setChecked(normalized == 'start')
-        self._dist_target_end_btn.setChecked(normalized == 'end')
-        self._load_distance_target_fields(normalized)
-        if commit:
-            self._commit_distance_edit()
-
-    def _store_distance_target_fields(self, side: str):
-        if self._distance_edit_model is None:
-            self._distance_edit_model = {}
-        part_value = self._dist_target_part_edit.text().strip()
-        xyz_value = self._xyz_text_from_edits(
-            (self._dist_target_x_edit, self._dist_target_y_edit, self._dist_target_z_edit)
-        )
-        if side == 'end':
-            self._distance_edit_model['end_part'] = part_value
-            self._distance_edit_model['end_xyz'] = xyz_value
-        else:
-            self._distance_edit_model['start_part'] = part_value
-            self._distance_edit_model['start_xyz'] = xyz_value
-
-    def _load_distance_target_fields(self, side: str):
+    def _update_distance_pick_status(self):
+        if not hasattr(self, '_dist_pick_status_label'):
+            return
         model = self._distance_edit_model or {}
-        if side == 'end':
-            self._dist_target_part_edit.setText(str(model.get('end_part', '')))
-            self._set_xyz_edits(
-                (self._dist_target_x_edit, self._dist_target_y_edit, self._dist_target_z_edit),
-                model.get('end_xyz', '0, 0, 0')
+        has_start = bool(str(model.get('start_xyz') or '').strip())
+        has_end = bool(str(model.get('end_xyz') or '').strip())
+        self._update_distance_measured_value_box()
+        if self._pick_target and self._pick_target.startswith('target_xyz:start'):
+            self._dist_pick_status_label.setText(
+                self._t('tool_editor.measurements.pick_start_status', 'Click start point in preview')
+            )
+        elif self._pick_target and self._pick_target.startswith('target_xyz:end'):
+            self._dist_pick_status_label.setText(
+                self._t('tool_editor.measurements.pick_end_status', 'Click end point in preview')
+            )
+        elif has_start and has_end:
+            self._dist_pick_status_label.setText(
+                self._t('tool_editor.measurements.points_set', 'Start and end points set')
+            )
+        elif has_start:
+            self._dist_pick_status_label.setText(
+                self._t('tool_editor.measurements.start_set', 'Start point set, end point missing')
             )
         else:
-            self._dist_target_part_edit.setText(str(model.get('start_part', '')))
-            self._set_xyz_edits(
-                (self._dist_target_x_edit, self._dist_target_y_edit, self._dist_target_z_edit),
-                model.get('start_xyz', '0, 0, 0')
+            self._dist_pick_status_label.setText(
+                self._t('tool_editor.measurements.points_missing', 'No points set yet')
             )
+
+    def _distance_measured_value_text(self) -> str:
+        model = self._distance_edit_model or {}
+        start_text = str(model.get('start_xyz') or '').strip()
+        end_text = str(model.get('end_xyz') or '').strip()
+        if not start_text or not end_text:
+            return ''
+
+        sx, sy, sz = _xyz_to_tuple(start_text)
+        ex, ey, ez = _xyz_to_tuple(end_text)
+        axis = self._distance_axis_value()
+        if axis == 'x':
+            value = abs(ex - sx)
+        elif axis == 'y':
+            value = abs(ey - sy)
+        elif axis == 'z':
+            value = abs(ez - sz)
+        else:
+            dx = ex - sx
+            dy = ey - sy
+            dz = ez - sz
+            value = (dx * dx + dy * dy + dz * dz) ** 0.5
+        return f"{value:.3f} mm"
+
+    def _update_distance_measured_value_box(self):
+        if not hasattr(self, '_dist_measured_value_box'):
+            return
+        text = self._distance_measured_value_text()
+        self._dist_measured_value_box.setText(text)
+        if self._current_distance_item is None:
+            return
+
+        index = self._distance_list.row(self._current_distance_item)
+        if index < 0:
+            return
+
+        if hasattr(self._preview_widget, 'get_distance_measured_value'):
+            def _apply_measured_value(value):
+                if self._current_distance_item is None:
+                    return
+                if self._distance_list.row(self._current_distance_item) != index:
+                    return
+                try:
+                    measured = float(value)
+                except (TypeError, ValueError):
+                    return
+                self._dist_measured_value_box.setText(f"{measured:.3f} mm")
+
+            self._preview_widget.get_distance_measured_value(index, _apply_measured_value)
+
+    def _start_distance_two_point_pick(self, reset_points: bool):
+        if not self._current_distance_item:
+            return
+        if self._distance_edit_model is None:
+            self._distance_edit_model = dict(self._current_distance_item.data(Qt.UserRole) or {})
+
+        if reset_points:
+            self._distance_edit_model['start_part'] = ''
+            self._distance_edit_model['start_part_index'] = -1
+            self._distance_edit_model['start_xyz'] = ''
+            self._distance_edit_model['start_space'] = 'world'
+            self._distance_edit_model['end_part'] = ''
+            self._distance_edit_model['end_part_index'] = -1
+            self._distance_edit_model['end_xyz'] = ''
+            self._distance_edit_model['end_space'] = 'world'
+
+        self._pick_target = 'target_xyz:start:all'
+        self._dist_pick_stage = 'start'
+        self._preview_widget.set_point_picking_enabled(True)
+        if hasattr(self, '_dist_pick_points_btn'):
+            self._dist_pick_points_btn.setText(self._t('common.cancel', 'Cancel'))
+        self._update_distance_pick_status()
 
     def _commit_distance_edit(self):
         if not self._current_distance_item:
             return
         if self._distance_edit_model is None:
             self._distance_edit_model = dict(self._current_distance_item.data(Qt.UserRole) or {})
-        self._store_distance_target_fields(self._dist_target_side)
         model = self._distance_edit_model
         meas = {
             'name': self._dist_name_edit.text() or self._t(
                 'tool_editor.measurements.new_distance', 'New Distance'),
             'start_part': str(model.get('start_part', '')).strip(),
-            'start_xyz': str(model.get('start_xyz', '0, 0, 0')).strip() or '0, 0, 0',
+            'start_part_index': int(model.get('start_part_index', -1) or -1),
+            'start_xyz': str(model.get('start_xyz', '')).strip(),
+            'start_space': str(model.get('start_space', 'world')).strip() or 'world',
             'end_part': str(model.get('end_part', '')).strip(),
-            'end_xyz': str(model.get('end_xyz', '0, 0, 0')).strip() or '0, 0, 0',
+            'end_part_index': int(model.get('end_part_index', -1) or -1),
+            'end_xyz': str(model.get('end_xyz', '')).strip(),
+            'end_space': str(model.get('end_space', 'world')).strip() or 'world',
             'distance_axis': self._distance_axis_value(),
             'label_value_mode': self._distance_value_mode(),
             'label_custom_value': self._dist_custom_value_edit.text().strip(),
+            'offset_xyz': self._xyz_text_from_edits(
+                (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit)
+            ),
+            'start_shift': str(model.get('start_shift', '0')).strip(),
+            'end_shift': str(model.get('end_shift', '0')).strip(),
             'type': 'distance',
         }
         self._distance_edit_model = dict(meas)
         self._current_distance_item.setData(Qt.UserRole, meas)
         self._current_distance_item.setText(meas['name'])
         self._refresh_preview_measurements()
+        self._update_distance_pick_status()
 
     def _distance_value_mode(self) -> str:
         mode = str(self._dist_value_mode_combo.currentData() or 'measured').strip().lower()
@@ -1006,15 +1090,10 @@ class MeasurementEditorDialog(QDialog):
     # ─────────────────────────────────────────────────────────────────
 
     def _on_pick_target(self):
-        side = self._dist_target_side if self._dist_target_side in {'start', 'end'} else 'start'
-        if self._pick_target and self._pick_target.startswith(f'target_xyz:{side}:'):
+        if self._pick_target and self._pick_target.startswith('target_xyz:'):
             self._cancel_pick()
             return
-        self._cancel_pick()
-        axis = self._focused_axis((self._dist_target_x_edit, self._dist_target_y_edit, self._dist_target_z_edit))
-        self._pick_target = f'target_xyz:{side}:{axis}'
-        self._preview_widget.set_point_picking_enabled(True)
-        self._dist_target_pick_btn.setText('\u2716')
+        self._start_distance_two_point_pick(reset_points=True)
 
     def _on_pick_center(self):
         if self._pick_target and self._pick_target.startswith('center_xyz'):
@@ -1057,11 +1136,14 @@ class MeasurementEditorDialog(QDialog):
 
     def _cancel_pick(self):
         self._pick_target = None
+        self._dist_pick_stage = None
         if hasattr(self, '_preview_widget'):
             self._preview_widget.set_point_picking_enabled(False)
         pick_label = self._t('tool_editor.measurements.pick', 'Pick')
-        if hasattr(self, '_dist_target_pick_btn'):
-            self._dist_target_pick_btn.setText(pick_label)
+        if hasattr(self, '_dist_pick_points_btn'):
+            self._dist_pick_points_btn.setText(
+                self._t('tool_editor.measurements.pick_two_points', 'Pick start and end points')
+            )
         if hasattr(self, '_diam_center_pick_btn'):
             self._diam_center_pick_btn.setText(pick_label)
         if hasattr(self, '_radius_center_pick_btn'):
@@ -1072,17 +1154,26 @@ class MeasurementEditorDialog(QDialog):
             self._angle_start_pick_btn.setText(pick_label)
         if hasattr(self, '_angle_end_pick_btn'):
             self._angle_end_pick_btn.setText(pick_label)
+        self._update_distance_pick_status()
 
     def _on_point_picked(self, data: dict):
-        target = self._pick_target  # save before _cancel_pick clears it
-        self._cancel_pick()
+        target = self._pick_target
         if not target:
             return
         x = data.get('x', 0)
         y = data.get('y', 0)
         z = data.get('z', 0)
         values = {'x': float(x), 'y': float(y), 'z': float(z)}
+        local_values = {
+            'x': float(data.get('local_x', values['x'])),
+            'y': float(data.get('local_y', values['y'])),
+            'z': float(data.get('local_z', values['z'])),
+        }
         part_name = data.get('partName', '')
+        try:
+            part_index = int(data.get('partIndex', -1))
+        except Exception:
+            part_index = -1
 
         target_parts = target.split(':')
         target_name = target_parts[0] if target_parts else ''
@@ -1103,39 +1194,111 @@ class MeasurementEditorDialog(QDialog):
             edits[2].setText(_fmt_coord(values['z']))
 
         if target_name == 'target_xyz':
+            if self._distance_edit_model is None:
+                self._distance_edit_model = dict(self._current_distance_item.data(Qt.UserRole) or {}) if self._current_distance_item else {}
             side = 'start'
-            if ':' in target:
-                parts = target.split(':')
-                if len(parts) >= 2 and parts[1] in {'start', 'end'}:
-                    side = parts[1]
-            if side != self._dist_target_side:
-                self._set_distance_target_side(side, commit=False)
-            apply_pick_to_edits((self._dist_target_x_edit, self._dist_target_y_edit, self._dist_target_z_edit))
-            if part_name:
-                self._dist_target_part_edit.setText(part_name)
-            self._store_distance_target_fields(side)
+            parts = target.split(':')
+            if len(parts) >= 2 and parts[1] in {'start', 'end'}:
+                side = parts[1]
+            if part_index >= 0 or str(part_name or '').strip():
+                picked = local_values
+                side_part = str(part_name or '').strip()
+                side_part_index = part_index
+                side_space = 'local'
+            else:
+                picked = values
+                side_part = ''
+                side_part_index = -1
+                side_space = 'world'
+
+            xyz_value = f"{_fmt_coord(picked['x'])}, {_fmt_coord(picked['y'])}, {_fmt_coord(picked['z'])}"
+            self._distance_edit_model[f'{side}_xyz'] = xyz_value
+            self._distance_edit_model[f'{side}_part'] = side_part
+            self._distance_edit_model[f'{side}_part_index'] = side_part_index
+            self._distance_edit_model[f'{side}_space'] = side_space
+
+            if side == 'start':
+                self._pick_target = 'target_xyz:end:all'
+                self._dist_pick_stage = 'end'
+                self._preview_widget.set_point_picking_enabled(True)
+                self._update_distance_pick_status()
+            else:
+                self._cancel_pick()
+            self._commit_distance_edit()
+            return
         elif target_name == 'center_xyz':
+            self._cancel_pick()
             apply_pick_to_edits((self._diam_center_x_edit, self._diam_center_y_edit, self._diam_center_z_edit))
             if part_name:
                 self._diam_part_edit.setText(part_name)
         elif target_name == 'radius_center_xyz':
+            self._cancel_pick()
             apply_pick_to_edits((self._radius_center_x_edit, self._radius_center_y_edit, self._radius_center_z_edit))
             if part_name:
                 self._radius_part_edit.setText(part_name)
         elif target_name == 'angle_center_xyz':
+            self._cancel_pick()
             apply_pick_to_edits((self._angle_center_x_edit, self._angle_center_y_edit, self._angle_center_z_edit))
             if part_name:
                 self._angle_part_edit.setText(part_name)
         elif target_name == 'angle_start_xyz':
+            self._cancel_pick()
             apply_pick_to_edits((self._angle_start_x_edit, self._angle_start_y_edit, self._angle_start_z_edit))
             if part_name:
                 self._angle_part_edit.setText(part_name)
         elif target_name == 'angle_end_xyz':
+            self._cancel_pick()
             apply_pick_to_edits((self._angle_end_x_edit, self._angle_end_y_edit, self._angle_end_z_edit))
             if part_name:
                 self._angle_part_edit.setText(part_name)
+        else:
+            self._cancel_pick()
 
         self._commit_current_edit()
+
+    def _on_measurement_updated(self, payload: dict):
+        if not isinstance(payload, dict):
+            return
+        index = payload.get('index')
+        overlay = payload.get('overlay')
+        if not isinstance(index, int) or index < 0 or not isinstance(overlay, dict):
+            return
+        if str(overlay.get('type') or '').strip().lower() != 'distance':
+            return
+
+        if index >= self._distance_list.count():
+            return
+        item = self._distance_list.item(index)
+        if item is None:
+            return
+
+        current = dict(item.data(Qt.UserRole) or {})
+        current.update({
+            'start_part': str(overlay.get('start_part', current.get('start_part', ''))),
+            'start_part_index': int(overlay.get('start_part_index', current.get('start_part_index', -1)) or -1),
+            'start_xyz': _xyz_to_text(overlay.get('start_xyz', current.get('start_xyz', ''))),
+            'start_space': str(overlay.get('start_space', current.get('start_space', 'world'))),
+            'end_part': str(overlay.get('end_part', current.get('end_part', ''))),
+            'end_part_index': int(overlay.get('end_part_index', current.get('end_part_index', -1)) or -1),
+            'end_xyz': _xyz_to_text(overlay.get('end_xyz', current.get('end_xyz', ''))),
+            'end_space': str(overlay.get('end_space', current.get('end_space', 'world'))),
+            'distance_axis': str(overlay.get('distance_axis', current.get('distance_axis', 'z'))),
+            'label_value_mode': str(overlay.get('label_value_mode', current.get('label_value_mode', 'measured'))),
+            'label_custom_value': str(overlay.get('label_custom_value', current.get('label_custom_value', ''))),
+            'offset_xyz': _xyz_to_text(overlay.get('offset_xyz', current.get('offset_xyz', ''))),
+            'start_shift': str(overlay.get('start_shift', current.get('start_shift', '0'))),
+            'end_shift': str(overlay.get('end_shift', current.get('end_shift', '0'))),
+            'type': 'distance',
+        })
+        item.setData(Qt.UserRole, current)
+        if item is self._current_distance_item:
+            self._distance_edit_model = dict(current)
+            # Refresh the offset fields so the user sees the dragged position
+            self._set_xyz_edits(
+                (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit),
+                current.get('offset_xyz', ''),
+            )
+            self._update_distance_pick_status()
 
     # ─────────────────────────────────────────────────────────────────
     # PREVIEW REFRESH
@@ -1189,3 +1352,10 @@ class MeasurementEditorDialog(QDialog):
             'radius_measurements': radius_meas,
             'angle_measurements': angle_meas,
         }
+
+    def accept(self):
+        # Flush any delayed editor changes so Save always persists the latest values.
+        if self._commit_timer.isActive():
+            self._commit_timer.stop()
+        self._commit_current_edit()
+        super().accept()

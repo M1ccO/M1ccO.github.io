@@ -40,6 +40,39 @@ class ToolService:
         return parsed if isinstance(parsed, list) else []
 
     @staticmethod
+    def _normalize_xyz_text(value):
+        """Return xyz as 'x, y, z' string, tolerant of list/bracket forms."""
+        if isinstance(value, (list, tuple)) and len(value) >= 3:
+            try:
+                x = float(value[0])
+                y = float(value[1])
+                z = float(value[2])
+                return f'{x:.4g}, {y:.4g}, {z:.4g}'
+            except Exception:
+                return ''
+
+        text = str(value or '').strip()
+        if not text:
+            return ''
+        text = (
+            text.replace('[', ' ')
+            .replace(']', ' ')
+            .replace('(', ' ')
+            .replace(')', ' ')
+            .replace(';', ',')
+        )
+        parts = [p.strip() for p in text.split(',') if p.strip()]
+        if len(parts) < 3:
+            return ''
+        try:
+            x = float(parts[0])
+            y = float(parts[1])
+            z = float(parts[2])
+        except Exception:
+            return ''
+        return f'{x:.4g}, {y:.4g}, {z:.4g}'
+
+    @staticmethod
     def _normalize_component_item(item, default_order=0):
         if not isinstance(item, dict):
             return None
@@ -83,27 +116,51 @@ class ToolService:
 
         if overlay_type == 'distance':
             name = (item.get('name') or '').strip() or f'Distance {order + 1}'
-            start_xyz = str(item.get('start_xyz') or '').strip()
-            end_xyz = str(item.get('end_xyz') or '').strip()
+            start_xyz = ToolService._normalize_xyz_text(item.get('start_xyz'))
+            end_xyz = ToolService._normalize_xyz_text(item.get('end_xyz'))
             start_part = str(item.get('start_part') or '').strip()
             end_part = str(item.get('end_part') or '').strip()
-            if not (name or start_part or end_part or start_xyz or end_xyz):
+            try:
+                start_part_index = int(item.get('start_part_index', -1) or -1)
+            except Exception:
+                start_part_index = -1
+            try:
+                end_part_index = int(item.get('end_part_index', -1) or -1)
+            except Exception:
+                end_part_index = -1
+            start_space = str(item.get('start_space') or '').strip().lower()
+            end_space = str(item.get('end_space') or '').strip().lower()
+            if start_space not in {'local', 'world'}:
+                start_space = 'local' if start_part else 'world'
+            if end_space not in {'local', 'world'}:
+                end_space = 'local' if end_part else 'world'
+            if not (name or start_xyz or end_xyz):
                 return None
             return {
                 'type': 'distance',
                 'name': name,
                 'start_part': start_part,
+                'start_part_index': start_part_index,
                 'start_xyz': start_xyz,
+                'start_space': start_space,
                 'end_part': end_part,
+                'end_part_index': end_part_index,
                 'end_xyz': end_xyz,
+                'end_space': end_space,
+                'distance_axis': str(item.get('distance_axis') or 'z').strip() or 'z',
+                'label_value_mode': str(item.get('label_value_mode') or 'measured').strip() or 'measured',
+                'label_custom_value': str(item.get('label_custom_value') or '').strip(),
+                'offset_xyz': ToolService._normalize_xyz_text(item.get('offset_xyz') or ''),
+                'start_shift': str(item.get('start_shift') or '0').strip(),
+                'end_shift': str(item.get('end_shift') or '0').strip(),
                 'order': order,
             }
 
         if overlay_type == 'diameter_ring':
             name = (item.get('name') or '').strip() or f'Diameter {order + 1}'
             part = str(item.get('part') or '').strip()
-            center_xyz = str(item.get('center_xyz') or '').strip()
-            axis_xyz = str(item.get('axis_xyz') or '').strip()
+            center_xyz = ToolService._normalize_xyz_text(item.get('center_xyz'))
+            axis_xyz = ToolService._normalize_xyz_text(item.get('axis_xyz'))
             diameter = str(item.get('diameter') or '').strip()
             if not (name or part or center_xyz or axis_xyz or diameter):
                 return None
@@ -114,6 +171,42 @@ class ToolService:
                 'center_xyz': center_xyz,
                 'axis_xyz': axis_xyz,
                 'diameter': diameter,
+                'order': order,
+            }
+
+        if overlay_type == 'radius':
+            name = (item.get('name') or '').strip() or f'Radius {order + 1}'
+            part = str(item.get('part') or '').strip()
+            center_xyz = ToolService._normalize_xyz_text(item.get('center_xyz'))
+            axis_xyz = ToolService._normalize_xyz_text(item.get('axis_xyz'))
+            radius = str(item.get('radius') or '').strip()
+            if not (name or part or center_xyz or axis_xyz or radius):
+                return None
+            return {
+                'type': 'radius',
+                'name': name,
+                'part': part,
+                'center_xyz': center_xyz,
+                'axis_xyz': axis_xyz,
+                'radius': radius,
+                'order': order,
+            }
+
+        if overlay_type == 'angle':
+            name = (item.get('name') or '').strip() or f'Angle {order + 1}'
+            part = str(item.get('part') or '').strip()
+            center_xyz = ToolService._normalize_xyz_text(item.get('center_xyz'))
+            start_xyz = ToolService._normalize_xyz_text(item.get('start_xyz'))
+            end_xyz = ToolService._normalize_xyz_text(item.get('end_xyz'))
+            if not (name or part or center_xyz or start_xyz or end_xyz):
+                return None
+            return {
+                'type': 'angle',
+                'name': name,
+                'part': part,
+                'center_xyz': center_xyz,
+                'start_xyz': start_xyz,
+                'end_xyz': end_xyz,
                 'order': order,
             }
 
