@@ -13,10 +13,7 @@ from PySide6.QtWidgets import (
 )
 
 from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, style_panel_action_button
-try:
-    from ui.occt_preview import OcctPreviewWidget as StlPreviewWidget
-except Exception:
-    from ui.stl_preview import StlPreviewWidget
+from ui.stl_preview import StlPreviewWidget
 
 
 class ModelTransformsDialog(QDialog):
