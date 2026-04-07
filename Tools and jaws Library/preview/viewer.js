@@ -6,8 +6,7 @@ import { emitPreviewEvent, getPreviewBridgeStats } from './bridge_adapter.js';
 import { parseOverlayVector, formatVec3 } from './measurement_vectors.js';
 import { createMeasurementFactories } from './measurement_types.js';
 import { createMeasurementDragController } from './measurement_drag_controller.js';
-import { createTransformDragState, createSelectionProxyDragState } from './transform_state.js';
-import { applyTransformDragDamping } from './transform_input_pipeline.js';
+import { createSelectionProxyDragState } from './transform_state.js';
 import { applySelectionProxyTransformDelta } from './transform_delta_engine.js';
 
 const canvas = document.getElementById('viewport');
@@ -47,22 +46,29 @@ transformControl.setSize(0.8);
 transformControl.visible = false;
 scene.add(transformControl);
 
+const TRANSLATE_DRAG_GAIN = 0.35;
+const FINE_DRAG_GAIN = 0.02;
+const ROTATE_DRAG_GAIN = 0.2;
+const FINE_ROTATE_DRAG_GAIN = 0.05;
+
+// Adaptive per-drag translation gains, recomputed at drag start based on camera
+// distance so that the snapping step (1 mm regular / 0.1 mm fine) always
+// corresponds to roughly the same number of screen pixels regardless of zoom.
+let _activeDragFineGain = FINE_DRAG_GAIN;
+let _activeDragRegularGain = TRANSLATE_DRAG_GAIN;
+
 let fineTransformSnapEnabled = false;
-let _fineDragState = null;
 
 function _updateTransformSnap() {
-  if (_fineDragState) {
-    transformControl.setTranslationSnap(null);
-    transformControl.setRotationSnap(null);
-    return;
-  }
-  if (fineTransformSnapEnabled) {
-    transformControl.setTranslationSnap(0.1);
-    transformControl.setRotationSnap(THREE.MathUtils.degToRad(0.1));
-    return;
-  }
-  transformControl.setTranslationSnap(1);
-  transformControl.setRotationSnap(THREE.MathUtils.degToRad(1));
+  const translationStep = fineTransformSnapEnabled ? 0.1 : 1;
+  const rotationStep = fineTransformSnapEnabled ? 0.1 : 1;
+  const translationGain = fineTransformSnapEnabled ? _activeDragFineGain : _activeDragRegularGain;
+  const rotationGain = fineTransformSnapEnabled ? FINE_ROTATE_DRAG_GAIN : ROTATE_DRAG_GAIN;
+
+  transformControl.setTranslationSnap(translationStep);
+  transformControl.setRotationSnap(THREE.MathUtils.degToRad(rotationStep));
+  transformControl.setTranslationGain(translationGain);
+  transformControl.setRotationGain(rotationGain);
 }
 
 _updateTransformSnap();
@@ -81,14 +87,12 @@ transformControl.addEventListener('dragging-changed', (event) => {
     const _targetPxPerStep = 5;
     _activeDragFineGain = 0.1 / (_targetPxPerStep * _wPerPx);
     _activeDragRegularGain = 1.0 / (_targetPxPerStep * _wPerPx);
-    _fineDragState = createTransformDragState(transformControl.object);
     _updateTransformSnap();
   }
   if (event.value && transformControl.object === selectionProxy) {
     _selectionProxyDragState = createSelectionProxyDragState(selectionProxy);
   }
   if (!event.value) {
-    _fineDragState = null;
     _selectionProxyDragState = null;
     _updateTransformSnap();
     _gizmoDragJustEnded = true;
@@ -98,9 +102,6 @@ transformControl.addEventListener('dragging-changed', (event) => {
 
 transformControl.addEventListener('objectChange', () => {
   const mesh = transformControl.object;
-  if (_fineDragState && mesh === _fineDragState.object) {
-    _applyFineDragDamping(mesh);
-  }
   if (mesh === selectionProxy && selectedMeshIndices.length >= 1) {
     _applySelectionProxyTransform();
     return;
@@ -176,17 +177,6 @@ const _measurementDragRaycaster = new THREE.Raycaster();
 const _measurementDragPointer = new THREE.Vector2();
 let _selectionProxyDragState = null;
 const _missingAnchorWarningKeys = new Set();
-
-const TRANSLATE_DRAG_GAIN = 0.35;
-const FINE_DRAG_GAIN = 0.02;
-const ROTATE_DRAG_GAIN = 0.2;
-const FINE_ROTATE_DRAG_GAIN = 0.2;
-
-// Adaptive per-drag translation gains, recomputed at drag start based on camera
-// distance so that the snapping step (1 mm regular / 0.1 mm fine) always
-// corresponds to roughly the same number of screen pixels regardless of zoom.
-let _activeDragFineGain = FINE_DRAG_GAIN;
-let _activeDragRegularGain = TRANSLATE_DRAG_GAIN;
 
 // Measurement color scheme - distinctive colors for each type
 const measurementColors = {
@@ -431,7 +421,8 @@ function _updateSelectionProxyFromSelection() {
     // zoomed in on a tall model whose local origin is at the base.
     const box = new THREE.Box3().setFromObject(mesh);
     box.getCenter(selectionProxy.position);
-    mesh.getWorldQuaternion(selectionProxy.quaternion);
+    const parent = mesh.parent || scene;
+    parent.getWorldQuaternion(selectionProxy.quaternion);
     selectionProxy.visible = true;
     return;
   }
@@ -819,23 +810,6 @@ function _snapFineDegrees(value) {
 
 function _snapVec3Mm(value) {
   return new THREE.Vector3(_snapMm(value.x), _snapMm(value.y), _snapMm(value.z));
-}
-
-function _applyFineDragDamping(object) {
-  applyTransformDragDamping({
-    object,
-    state: _fineDragState,
-    mode: transformControl.getMode(),
-    axis: transformControl.axis,
-    space: transformControl.space,
-    fineEnabled: fineTransformSnapEnabled,
-    gains: {
-      regularTranslate: _activeDragRegularGain,
-      fineTranslate: _activeDragFineGain,
-      regularRotate: ROTATE_DRAG_GAIN,
-      fineRotate: FINE_ROTATE_DRAG_GAIN,
-    },
-  });
 }
 
 function _distanceDirectionForOverlay(definition) {
@@ -1702,7 +1676,7 @@ window.resetSelectedPartTransform = function () {
     mesh.rotation.set(0, 0, 0);
     partTransforms[idx] = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
   }
-  if (selectedMeshIndices.length > 1) {
+  if (selectedMeshIndices.length > 0) {
     _updateSelectionProxyFromSelection();
     if (transformControl.object === selectionProxy) {
       transformControl.attach(selectionProxy);

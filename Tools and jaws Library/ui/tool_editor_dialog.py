@@ -1,6 +1,6 @@
 import json
 from typing import Callable
-from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QItemSelectionModel
+from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QItemSelectionModel, QEventLoop
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -294,6 +294,7 @@ class AddEditToolDialog(QDialog):
         self._group_count = int(group_count or 0)
         self._assembly_transform_enabled = self._is_assembly_transform_enabled()
         self._part_transforms = {}
+        self._saved_part_transforms = {}
         self._measurement_editor_state = self._empty_measurement_editor_state()
         self._current_transform_mode = 'translate'
         self._fine_transform_enabled = False
@@ -891,29 +892,39 @@ class AddEditToolDialog(QDialog):
         _mode_row.setSpacing(2)
         _mode_row.setContentsMargins(0, 0, 0, 0)
         self._mode_toggle_btn = QPushButton('')
-        self._fine_transform_btn = QPushButton(self._t('tool_editor.transform.fine', 'TARKKA'))
+        self._fine_transform_btn = QPushButton('')
         self._reset_transform_btn = QPushButton()
         style_icon_action_button(
             self._mode_toggle_btn,
-            TOOL_ICONS_DIR / 'import_export.svg',
+            TOOL_ICONS_DIR / 'move.svg',
             self._t('tool_editor.transform.move', 'SIIRRÄ'),
         )
         style_icon_action_button(
+            self._fine_transform_btn,
+            TOOL_ICONS_DIR / '1x.svg',
+            self._t('tool_editor.transform.fine_tooltip', 'Toggle fine transform increments'),
+        )
+        style_icon_action_button(
             self._reset_transform_btn,
-            TOOL_ICONS_DIR / 'arrow_circle_left.svg',
+            TOOL_ICONS_DIR / 'reset.svg',
             self._t('tool_editor.transform.reset', 'NOLLAA'),
         )
         self._mode_toggle_btn.setCheckable(True)
         self._mode_toggle_btn.setChecked(True)
         self._fine_transform_btn.setCheckable(True)
         self._fine_transform_btn.setChecked(self._fine_transform_enabled)
-        style_panel_action_button(self._fine_transform_btn)
         self._reset_transform_btn.setFixedWidth(42)
         self._mode_toggle_btn.setFixedWidth(42)
-        self._fine_transform_btn.setFixedWidth(72)
+        self._fine_transform_btn.setFixedWidth(42)
         self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
         self._fine_transform_btn.setToolTip(self._t('tool_editor.transform.fine_tooltip', 'Toggle fine transform increments'))
-        self._reset_transform_btn.setToolTip(self._t('tool_editor.transform.reset', 'NOLLAA'))
+        self._reset_transform_btn.setToolTip(
+            self._t(
+                'tool_editor.transform.reset_tooltip',
+                'Left click: reset to original position. Right click: restore saved position.',
+            )
+        )
+        self._update_fine_transform_button_appearance()
         
         _lbl_x = QLabel('X')
         _lbl_x.setStyleSheet('font-weight: bold; font-size: 14px;')
@@ -1081,6 +1092,12 @@ class AddEditToolDialog(QDialog):
             if event.key() in (Qt.Key_Return, Qt.Key_Enter):
                 self._apply_group_name()
                 return True  # fully consume — prevent dialog default button from firing
+        if obj is getattr(self, '_reset_transform_btn', None):
+            if event.type() == QEvent.MouseButtonPress and event.button() == Qt.RightButton:
+                self._reset_current_part_transform(target='saved')
+                return True
+            if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.RightButton:
+                return True
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
         return super().eventFilter(obj, event)
@@ -1997,13 +2014,19 @@ class AddEditToolDialog(QDialog):
         self._restore_model_rows(reordered_rows, selected_row=target)
 
         old_transforms = dict(self._part_transforms)
+        old_saved_transforms = dict(self._saved_part_transforms)
         new_transforms = {}
+        new_saved_transforms = {}
         for new_idx, entry in enumerate(rows_with_index):
             old_idx = entry['old_index']
             transform = old_transforms.get(old_idx)
             if isinstance(transform, dict):
                 new_transforms[new_idx] = dict(transform)
+            saved_transform = old_saved_transforms.get(old_idx)
+            if isinstance(saved_transform, dict):
+                new_saved_transforms[new_idx] = dict(saved_transform)
         self._part_transforms = new_transforms
+        self._saved_part_transforms = new_saved_transforms
 
         self._selected_part_index = target
         if self._assembly_transform_enabled:
@@ -2171,7 +2194,9 @@ class AddEditToolDialog(QDialog):
             return False
 
     def _on_viewer_transform_changed(self, index: int, transform: dict):
-        self._part_transforms[index] = transform
+        self._part_transforms[index] = self._compact_transform_dict(
+            self._normalized_transform_dict(transform)
+        )
         if index in self._selected_part_indices:
             self._refresh_transform_selection_state()
 
@@ -2180,6 +2205,7 @@ class AddEditToolDialog(QDialog):
         self._selected_part_index = index
         self._refresh_transform_selection_state()
         self._sync_model_table_selection()
+        self._request_preview_transform_snapshot(refresh_selection=True)
 
     def _on_viewer_part_selection_changed(self, indices: list[int]):
         normalized = [idx for idx in indices if isinstance(idx, int) and idx >= 0]
@@ -2187,6 +2213,7 @@ class AddEditToolDialog(QDialog):
         self._selected_part_index = normalized[-1] if normalized else -1
         self._refresh_transform_selection_state()
         self._sync_model_table_selection()
+        self._request_preview_transform_snapshot(refresh_selection=True)
 
     def _sync_model_table_selection(self):
         if not hasattr(self, 'model_table'):
@@ -2212,6 +2239,101 @@ class AddEditToolDialog(QDialog):
         self.model_table.blockSignals(False)
         selection_model.blockSignals(False)
 
+    @staticmethod
+    def _normalized_transform_dict(transform: dict | None) -> dict:
+        src = transform if isinstance(transform, dict) else {}
+        return {
+            'x': float(src.get('x', 0) or 0),
+            'y': float(src.get('y', 0) or 0),
+            'z': float(src.get('z', 0) or 0),
+            'rx': float(src.get('rx', 0) or 0),
+            'ry': float(src.get('ry', 0) or 0),
+            'rz': float(src.get('rz', 0) or 0),
+        }
+
+    def _saved_transform_for_index(self, index: int) -> dict:
+        return self._normalized_transform_dict(self._saved_part_transforms.get(index, {}))
+
+    def _display_transform_for_index(self, index: int, transform: dict) -> dict:
+        _ = index  # keep index arg for future per-part display modes
+        return self._normalized_transform_dict(transform)
+
+    @staticmethod
+    def _compact_transform_dict(transform: dict) -> dict:
+        compact = {}
+        for key in ('x', 'y', 'z', 'rx', 'ry', 'rz'):
+            value = float(transform.get(key, 0) or 0)
+            if abs(value) > 1e-9:
+                compact[key] = value
+        return compact
+
+    def _all_part_transforms_payload(self) -> list[dict]:
+        payload = []
+        for i in range(self.model_table.rowCount()):
+            payload.append(self._normalized_transform_dict(self._part_transforms.get(i, {})))
+        return payload
+
+    def _apply_preview_transforms_snapshot(self, snapshot, *, refresh_selection: bool = False) -> bool:
+        if not isinstance(snapshot, list):
+            return False
+        if len(snapshot) <= 0:
+            return False
+        row_count = self.model_table.rowCount() if hasattr(self, 'model_table') else 0
+        if row_count <= 0:
+            return False
+        transformed = {}
+        upper = min(row_count, len(snapshot))
+        for index in range(upper):
+            raw = snapshot[index]
+            if not isinstance(raw, dict):
+                continue
+            compact = self._compact_transform_dict(self._normalized_transform_dict(raw))
+            if compact:
+                transformed[index] = compact
+        self._part_transforms = transformed
+        if refresh_selection:
+            self._refresh_transform_selection_state()
+        return True
+
+    def _request_preview_transform_snapshot(self, *, refresh_selection: bool = False):
+        if not self._assembly_transform_enabled or not hasattr(self, 'models_preview'):
+            return
+        try:
+            self.models_preview.get_part_transforms(
+                lambda snapshot: self._apply_preview_transforms_snapshot(
+                    snapshot,
+                    refresh_selection=refresh_selection,
+                )
+            )
+        except Exception:
+            return
+
+    def _sync_preview_transform_snapshot_for_save(self, timeout_ms: int = 350):
+        if not self._assembly_transform_enabled or not hasattr(self, 'models_preview'):
+            return
+        result_holder = {'snapshot': None, 'done': False}
+        loop = QEventLoop(self)
+        timer = QTimer(self)
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+
+        def _on_snapshot(snapshot):
+            result_holder['snapshot'] = snapshot
+            result_holder['done'] = True
+            loop.quit()
+
+        try:
+            self.models_preview.get_part_transforms(_on_snapshot)
+        except Exception:
+            return
+
+        timer.start(max(100, int(timeout_ms)))
+        loop.exec()
+        timer.stop()
+
+        if result_holder['done']:
+            self._apply_preview_transforms_snapshot(result_holder['snapshot'])
+
     def _refresh_transform_selection_state(self):
         count = len(self._selected_part_indices)
         single_selected = count == 1 and self._selected_part_index >= 0
@@ -2235,34 +2357,36 @@ class AddEditToolDialog(QDialog):
             name = name_item.text().strip() if name_item else f'Part {index + 1}'
             self._selected_part_label.setText(name or f'Part {index + 1}')
             t = self._part_transforms.get(index, {})
-            self._update_transform_fields(t)
+            self._update_transform_fields(t, index=index)
             return
 
         self._selected_part_label.setText(f'{count} models selected')
         t = self._part_transforms.get(self._selected_part_index, {})
-        self._update_transform_fields(t)
+        self._update_transform_fields(t, index=self._selected_part_index)
 
-    def _update_transform_fields(self, t: dict):
+    def _update_transform_fields(self, t: dict, index: int | None = None):
+        idx = self._selected_part_index if index is None else int(index)
+        view_t = self._display_transform_for_index(idx, t)
         if self._current_transform_mode == 'translate':
-            self._transform_x.setText(str(t.get('x', 0)))
-            self._transform_y.setText(str(t.get('y', 0)))
-            self._transform_z.setText(str(t.get('z', 0)))
+            self._transform_x.setText(str(view_t.get('x', 0)))
+            self._transform_y.setText(str(view_t.get('y', 0)))
+            self._transform_z.setText(str(view_t.get('z', 0)))
         else:
-            self._transform_x.setText(str(t.get('rx', 0)))
-            self._transform_y.setText(str(t.get('ry', 0)))
-            self._transform_z.setText(str(t.get('rz', 0)))
+            self._transform_x.setText(str(view_t.get('rx', 0)))
+            self._transform_y.setText(str(view_t.get('ry', 0)))
+            self._transform_z.setText(str(view_t.get('rz', 0)))
 
     def _on_mode_toggle_clicked(self):
         if self._mode_toggle_btn.isChecked():
             self._set_gizmo_mode('translate')
             self._mode_toggle_btn.setText('')
-            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'import_export.svg')))
+            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'move.svg')))
             self._mode_toggle_btn.setIconSize(QSize(18, 18))
             self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
         else:
             self._set_gizmo_mode('rotate')
             self._mode_toggle_btn.setText('')
-            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'arrow_circle_right.svg')))
+            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'rotate.svg')))
             self._mode_toggle_btn.setIconSize(QSize(18, 18))
             self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.rotate', 'KIERRÄ'))
 
@@ -2273,7 +2397,7 @@ class AddEditToolDialog(QDialog):
             self._mode_toggle_btn.setChecked(is_translate)
             self._mode_toggle_btn.setText('')
             self._mode_toggle_btn.setIcon(
-                QIcon(str(TOOL_ICONS_DIR / ('import_export.svg' if is_translate else 'arrow_circle_right.svg')))
+                QIcon(str(TOOL_ICONS_DIR / ('move.svg' if is_translate else 'rotate.svg')))
             )
             self._mode_toggle_btn.setIconSize(QSize(18, 18))
             self._mode_toggle_btn.setToolTip(
@@ -2283,12 +2407,29 @@ class AddEditToolDialog(QDialog):
         self.models_preview.set_transform_mode(mode)
         self._refresh_transform_selection_state()
 
+    def _update_fine_transform_button_appearance(self):
+        if not hasattr(self, '_fine_transform_btn'):
+            return
+        icon_name = 'fine_tune.svg' if self._fine_transform_enabled else '1x.svg'
+        self._fine_transform_btn.setText('')
+        self._fine_transform_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
+        self._fine_transform_btn.setIconSize(QSize(18, 18))
+
     def _on_fine_transform_toggled(self, checked: bool):
         self._fine_transform_enabled = bool(checked)
+        self._update_fine_transform_button_appearance()
         self.models_preview.set_fine_transform_enabled(self._fine_transform_enabled)
 
-    def _reset_current_part_transform(self):
+    def _reset_current_part_transform(self, target: str = 'origin'):
         if self._selected_part_index < 0:
+            return
+        indices = self._selected_part_indices or [self._selected_part_index]
+        if target == 'saved':
+            for idx in indices:
+                baseline = self._saved_transform_for_index(idx)
+                self._part_transforms[idx] = self._compact_transform_dict(baseline)
+            self.models_preview.set_part_transforms(self._all_part_transforms_payload())
+            self._refresh_transform_selection_state()
             return
         self.models_preview.reset_selected_part_transform()
 
@@ -2301,7 +2442,8 @@ class AddEditToolDialog(QDialog):
             vz = float(self._transform_z.text().replace(',', '.'))
         except ValueError:
             return
-        t = dict(self._part_transforms.get(self._selected_part_index, {}))
+        index = self._selected_part_index
+        t = self._normalized_transform_dict(self._part_transforms.get(index, {}))
         if self._current_transform_mode == 'translate':
             t['x'] = vx
             t['y'] = vy
@@ -2310,17 +2452,8 @@ class AddEditToolDialog(QDialog):
             t['rx'] = vx
             t['ry'] = vy
             t['rz'] = vz
-        t.setdefault('x', 0)
-        t.setdefault('y', 0)
-        t.setdefault('z', 0)
-        t.setdefault('rx', 0)
-        t.setdefault('ry', 0)
-        t.setdefault('rz', 0)
-        self._part_transforms[self._selected_part_index] = t
-        all_transforms = []
-        for i in range(self.model_table.rowCount()):
-            all_transforms.append(self._part_transforms.get(i, {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}))
-        self.models_preview.set_part_transforms(all_transforms)
+        self._part_transforms[index] = self._compact_transform_dict(t)
+        self.models_preview.set_part_transforms(self._all_part_transforms_payload())
 
     def _on_model_table_selection_changed(self):
         if not self._assembly_transform_enabled:
@@ -2784,6 +2917,7 @@ class AddEditToolDialog(QDialog):
 
         # Load per-part transforms
         self._part_transforms = {}
+        self._saved_part_transforms = {}
         for i, part in enumerate(model_parts):
             t = {}
             for src, dst in [('offset_x', 'x'), ('offset_y', 'y'), ('offset_z', 'z'),
@@ -2791,13 +2925,29 @@ class AddEditToolDialog(QDialog):
                 v = part.get(src, 0)
                 if v:
                     t[dst] = v
-            if t:
-                self._part_transforms[i] = t
+            normalized = self._normalized_transform_dict(t)
+            compact = self._compact_transform_dict(normalized)
+            if compact:
+                self._part_transforms[i] = dict(compact)
+                self._saved_part_transforms[i] = dict(compact)
 
         self._load_measurement_overlays(self.tool.get('measurement_overlays', []))
 
         self._update_tool_type_fields()
         self._refresh_models_preview()
+        if self._assembly_transform_enabled:
+            selection_model = self.model_table.selectionModel()
+            if selection_model is not None:
+                rows = sorted(index.row() for index in selection_model.selectedRows())
+                if not rows:
+                    current_row = self.model_table.currentRow()
+                    if current_row >= 0:
+                        rows = [current_row]
+                self._selected_part_indices = rows
+                self._selected_part_index = rows[-1] if rows else -1
+            self._refresh_transform_selection_state()
+            self.models_preview.select_parts(self._selected_part_indices)
+            QTimer.singleShot(0, lambda: self._request_preview_transform_snapshot(refresh_selection=True))
 
     def _component_items_from_table(self):
         items = []
@@ -2857,6 +3007,7 @@ class AddEditToolDialog(QDialog):
 
     def get_tool_data(self):
         self._commit_active_edits()
+        self._sync_preview_transform_snapshot_for_save()
         tool_id = self.tool_id.text().strip()
         if not tool_id and not self._group_edit_mode:
             raise ValueError(self._t('tool_editor.error.tool_id_required', 'Tool ID is required.'))

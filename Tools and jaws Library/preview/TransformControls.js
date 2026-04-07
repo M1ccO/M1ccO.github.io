@@ -120,6 +120,9 @@ class TransformControls extends Object3D {
 		defineProperty( 'showY', true );
 		defineProperty( 'showZ', true );
 
+		this.translationGain = 1;
+		this.rotationGain = 1;
+
 		// Reusable utility variables
 
 		const worldPosition = new Vector3();
@@ -325,6 +328,9 @@ class TransformControls extends Object3D {
 
 			}
 
+			const translationGain = Math.abs( Number( this.translationGain ) );
+			this._offset.multiplyScalar( Number.isFinite( translationGain ) && translationGain > 0 ? translationGain : 1 );
+
 			object.position.copy( this._offset ).add( this._positionStart );
 
 			// Apply translation snap
@@ -333,61 +339,66 @@ class TransformControls extends Object3D {
 
 				if ( space === 'local' ) {
 
-					object.position.applyQuaternion( _tempQuaternion.copy( this._quaternionStart ).invert() );
+					_tempVector.copy( object.position ).sub( this._positionStart );
+					_tempVector.applyQuaternion( _tempQuaternion.copy( this._quaternionStart ).invert() );
 
 					if ( axis.search( 'X' ) !== - 1 ) {
 
-						object.position.x = Math.round( object.position.x / this.translationSnap ) * this.translationSnap;
+						_tempVector.x = Math.round( _tempVector.x / this.translationSnap ) * this.translationSnap;
 
 					}
 
 					if ( axis.search( 'Y' ) !== - 1 ) {
 
-						object.position.y = Math.round( object.position.y / this.translationSnap ) * this.translationSnap;
+						_tempVector.y = Math.round( _tempVector.y / this.translationSnap ) * this.translationSnap;
 
 					}
 
 					if ( axis.search( 'Z' ) !== - 1 ) {
 
-						object.position.z = Math.round( object.position.z / this.translationSnap ) * this.translationSnap;
+						_tempVector.z = Math.round( _tempVector.z / this.translationSnap ) * this.translationSnap;
 
 					}
 
-					object.position.applyQuaternion( this._quaternionStart );
+					_tempVector.applyQuaternion( this._quaternionStart );
+					object.position.copy( this._positionStart ).add( _tempVector );
 
 				}
 
 				if ( space === 'world' ) {
 
+					_tempVector.copy( this._positionStart );
+					_tempVector2.copy( object.position );
+
 					if ( object.parent ) {
 
-						object.position.add( _tempVector.setFromMatrixPosition( object.parent.matrixWorld ) );
+						_tempVector.applyMatrix4( object.parent.matrixWorld );
+						_tempVector2.applyMatrix4( object.parent.matrixWorld );
 
 					}
 
+					_tempVector2.sub( _tempVector );
+
 					if ( axis.search( 'X' ) !== - 1 ) {
 
-						object.position.x = Math.round( object.position.x / this.translationSnap ) * this.translationSnap;
+						_tempVector2.x = Math.round( _tempVector2.x / this.translationSnap ) * this.translationSnap;
 
 					}
 
 					if ( axis.search( 'Y' ) !== - 1 ) {
 
-						object.position.y = Math.round( object.position.y / this.translationSnap ) * this.translationSnap;
+						_tempVector2.y = Math.round( _tempVector2.y / this.translationSnap ) * this.translationSnap;
 
 					}
 
 					if ( axis.search( 'Z' ) !== - 1 ) {
 
-						object.position.z = Math.round( object.position.z / this.translationSnap ) * this.translationSnap;
+						_tempVector2.z = Math.round( _tempVector2.z / this.translationSnap ) * this.translationSnap;
 
 					}
 
-					if ( object.parent ) {
-
-						object.position.sub( _tempVector.setFromMatrixPosition( object.parent.matrixWorld ) );
-
-					}
+					_tempVector2.add( _tempVector );
+					object.position.copy( object.parent ? object.parent.worldToLocal( _tempVector2 ) : _tempVector2 );
 
 				}
 
@@ -512,6 +523,9 @@ class TransformControls extends Object3D {
 
 			}
 
+			const rotationGain = Math.abs( Number( this.rotationGain ) );
+			this.rotationAngle *= Number.isFinite( rotationGain ) && rotationGain > 0 ? rotationGain : 1;
+
 			// Apply rotation snap
 
 			if ( this.rotationSnap ) this.rotationAngle = Math.round( this.rotationAngle / this.rotationSnap ) * this.rotationSnap;
@@ -635,9 +649,21 @@ class TransformControls extends Object3D {
 
 	}
 
+	setTranslationGain( translationGain ) {
+
+		this.translationGain = translationGain;
+
+	}
+
 	setRotationSnap( rotationSnap ) {
 
 		this.rotationSnap = rotationSnap;
+
+	}
+
+	setRotationGain( rotationGain ) {
+
+		this.rotationGain = rotationGain;
 
 	}
 
