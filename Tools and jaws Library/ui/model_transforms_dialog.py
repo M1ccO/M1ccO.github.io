@@ -1,7 +1,8 @@
 import copy
 from typing import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -12,6 +13,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from config import TOOL_ICONS_DIR
 from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, style_panel_action_button
 from ui.stl_preview import StlPreviewWidget
 
@@ -30,6 +32,7 @@ class ModelTransformsDialog(QDialog):
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or "")
         self._parts = copy.deepcopy(parts or [])
         self._selected_part_index = -1
+        self._selected_part_indices: list[int] = []
         self._mode = "translate"
 
         defaults = {"x": 0, "y": 0, "z": 0, "rx": 0, "ry": 0, "rz": 0}
@@ -62,20 +65,31 @@ class ModelTransformsDialog(QDialog):
         self.preview.set_transform_mode("translate")
         self.preview.transform_changed.connect(self._on_viewer_transform_changed)
         self.preview.part_selected.connect(self._on_viewer_part_selected)
+        self.preview.part_selection_changed.connect(self._on_viewer_part_selection_changed)
 
         controls = QHBoxLayout()
         controls.setSpacing(8)
 
-        self.selected_label = QLabel(self._t("tool_editor.transform.no_selection", "Click a part to select"))
+        self.selected_label = QLabel(self._t("tool_editor.transform.no_selection", "Click a part to select. Ctrl+click for multiple"))
         self.selected_label.setStyleSheet("background: transparent;")
         controls.addWidget(self.selected_label, 1)
 
         self.move_btn = QPushButton(self._t("tool_editor.transform.move", "MOVE"))
         self.rotate_btn = QPushButton(self._t("tool_editor.transform.rotate", "ROTATE"))
-        self.reset_btn = QPushButton(self._t("tool_editor.transform.reset", "RESET"))
+        self.reset_btn = QPushButton()
         self.move_btn.setCheckable(True)
         self.rotate_btn.setCheckable(True)
         self.move_btn.setChecked(True)
+        self.move_btn.setIcon(self._icon("import_export.svg"))
+        self.rotate_btn.setIcon(self._icon("arrow_circle_right.svg"))
+        self.reset_btn.setIcon(self._icon("arrow_circle_left.svg"))
+        self.move_btn.setIconSize(QSize(16, 16))
+        self.rotate_btn.setIconSize(QSize(16, 16))
+        self.reset_btn.setIconSize(QSize(16, 16))
+        self.move_btn.setMinimumWidth(96)
+        self.rotate_btn.setMinimumWidth(102)
+        self.reset_btn.setFixedWidth(44)
+        self.reset_btn.setToolTip(self._t("tool_editor.transform.reset", "RESET"))
         style_panel_action_button(self.move_btn)
         style_panel_action_button(self.rotate_btn)
         style_panel_action_button(self.reset_btn)
@@ -90,20 +104,23 @@ class ModelTransformsDialog(QDialog):
         self.y_edit = QLineEdit("0")
         self.z_edit = QLineEdit("0")
         for widget in (self.x_edit, self.y_edit, self.z_edit):
-            widget.setFixedWidth(84)
+            widget.setFixedWidth(96)
             widget.setAlignment(Qt.AlignRight)
             widget.editingFinished.connect(self._apply_manual_transform)
 
-        x_label = QLabel("X:")
+        x_label = QLabel("X")
         x_label.setStyleSheet("background: transparent;")
+        x_label.setMinimumWidth(14)
         controls.addWidget(x_label)
         controls.addWidget(self.x_edit)
-        y_label = QLabel("Y:")
+        y_label = QLabel("Y")
         y_label.setStyleSheet("background: transparent;")
+        y_label.setMinimumWidth(14)
         controls.addWidget(y_label)
         controls.addWidget(self.y_edit)
-        z_label = QLabel("Z:")
+        z_label = QLabel("Z")
         z_label.setStyleSheet("background: transparent;")
+        z_label.setMinimumWidth(14)
         controls.addWidget(z_label)
         controls.addWidget(self.z_edit)
 
@@ -121,6 +138,10 @@ class ModelTransformsDialog(QDialog):
             apply_secondary_button_theme(self, apply_btn)
         root.addWidget(buttons)
 
+    def _icon(self, filename: str) -> QIcon:
+        path = TOOL_ICONS_DIR / filename
+        return QIcon(str(path)) if path.exists() else QIcon()
+
     def _load_preview(self):
         if not self._parts:
             return
@@ -137,17 +158,19 @@ class ModelTransformsDialog(QDialog):
         self.preview.set_part_transforms(self._transforms)
 
     def _on_viewer_part_selected(self, index: int):
+        self._selected_part_indices = [index] if 0 <= index < len(self._parts) else []
         self._selected_part_index = index
         if index < 0 or index >= len(self._parts):
-            self.selected_label.setText(self._t("tool_editor.transform.no_selection", "Click a part to select"))
-            self.x_edit.setText("0")
-            self.y_edit.setText("0")
-            self.z_edit.setText("0")
+            self._refresh_selection_state()
             return
 
-        part_name = str(self._parts[index].get("name") or f"Part {index + 1}")
-        self.selected_label.setText(part_name)
-        self._update_fields(self._transforms[index])
+        self._refresh_selection_state()
+
+    def _on_viewer_part_selection_changed(self, indices: list[int]):
+        normalized = [idx for idx in indices if 0 <= idx < len(self._parts)]
+        self._selected_part_indices = normalized
+        self._selected_part_index = normalized[-1] if normalized else -1
+        self._refresh_selection_state()
 
     def _on_viewer_transform_changed(self, index: int, transform: dict):
         if index < 0 or index >= len(self._transforms):
@@ -161,16 +184,42 @@ class ModelTransformsDialog(QDialog):
             "rz": transform.get("rz", 0),
         }
         self._transforms[index] = normalized
-        if index == self._selected_part_index:
-            self._update_fields(normalized)
+        if index in self._selected_part_indices:
+            self._refresh_selection_state()
 
     def _set_mode(self, mode: str):
         self._mode = mode
         self.move_btn.setChecked(mode == "translate")
         self.rotate_btn.setChecked(mode == "rotate")
         self.preview.set_transform_mode(mode)
-        if 0 <= self._selected_part_index < len(self._transforms):
+        self._refresh_selection_state()
+
+    def _refresh_selection_state(self):
+        count = len(self._selected_part_indices)
+        fields_enabled = count == 1
+        for widget in (self.x_edit, self.y_edit, self.z_edit):
+            widget.setEnabled(fields_enabled)
+
+        if count == 0:
+            self.selected_label.setText(self._t("tool_editor.transform.no_selection", "Click a part to select. Ctrl+click for multiple"))
+            self.x_edit.setText("0")
+            self.y_edit.setText("0")
+            self.z_edit.setText("0")
+            self.reset_btn.setEnabled(False)
+            return
+
+        self.reset_btn.setEnabled(True)
+        if count == 1 and 0 <= self._selected_part_index < len(self._parts):
+            part_name = str(self._parts[self._selected_part_index].get("name") or f"Part {self._selected_part_index + 1}")
+            self.selected_label.setText(part_name)
             self._update_fields(self._transforms[self._selected_part_index])
+            return
+
+        multi_text = self._t("tool_editor.transform.multi_selection", "{count} models selected", count=count)
+        self.selected_label.setText(multi_text.format(count=count) if '{count}' in multi_text else multi_text)
+        self.x_edit.clear()
+        self.y_edit.clear()
+        self.z_edit.clear()
 
     def _update_fields(self, transform: dict):
         if self._mode == "translate":
@@ -183,6 +232,8 @@ class ModelTransformsDialog(QDialog):
             self.z_edit.setText(str(transform.get("rz", 0)))
 
     def _apply_manual_transform(self):
+        if len(self._selected_part_indices) != 1:
+            return
         if self._selected_part_index < 0 or self._selected_part_index >= len(self._transforms):
             return
         try:
@@ -205,11 +256,13 @@ class ModelTransformsDialog(QDialog):
         self.preview.set_part_transforms(self._transforms)
 
     def _reset_current_part_transform(self):
-        if self._selected_part_index < 0 or self._selected_part_index >= len(self._transforms):
+        if not self._selected_part_indices:
             return
-        self._transforms[self._selected_part_index] = {"x": 0, "y": 0, "z": 0, "rx": 0, "ry": 0, "rz": 0}
+        for index in self._selected_part_indices:
+            self._transforms[index] = {"x": 0, "y": 0, "z": 0, "rx": 0, "ry": 0, "rz": 0}
         self.preview.set_part_transforms(self._transforms)
-        self._update_fields(self._transforms[self._selected_part_index])
+        self.preview.reset_selected_part_transform()
+        self._refresh_selection_state()
 
     def get_transforms(self) -> list[dict]:
         return copy.deepcopy(self._transforms)

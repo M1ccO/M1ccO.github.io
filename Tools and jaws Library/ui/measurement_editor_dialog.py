@@ -7,14 +7,17 @@ select anchor points or manually enter coordinates.
 """
 
 from typing import Callable
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import QEvent, Qt, QTimer
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QDialogButtonBox,
+    QCheckBox,
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QWidget, QFrame, QLabel,
     QPushButton, QLineEdit, QComboBox, QSplitter, QListWidget, QListWidgetItem,
-    QAbstractItemView, QStackedWidget,
+    QAbstractItemView, QStackedWidget, QSizePolicy,
 )
 from ui.stl_preview import StlPreviewWidget
+from ui.widgets.common import apply_shared_dropdown_style
 from shared.editor_helpers import (
     create_dialog_buttons,
     apply_secondary_button_theme,
@@ -85,6 +88,9 @@ class MeasurementEditorDialog(QDialog):
         self.setWindowTitle(self._t('tool_editor.measurements.editor_title', 'Measurement Editor'))
         self.resize(1000, 720)
         self.setMinimumSize(700, 520)
+        self.setObjectName('measurementEditorDialog')
+        self.setProperty('workEditorDialog', True)
+        self.setStyleSheet('QDialog#measurementEditorDialog { background-color: #ffffff; border: 1px solid #c8d4e0; }')
 
         self._build_ui()
         self._populate_measurements()
@@ -115,6 +121,13 @@ class MeasurementEditorDialog(QDialog):
 
         # ── LEFT PANEL ──────────────────────────────────────────────
         left_panel = QFrame()
+        left_panel.setObjectName('measurementEditorLeftPanel')
+        left_panel.setStyleSheet('''
+            QFrame#measurementEditorLeftPanel { background-color: #ffffff; }
+            QLabel { background-color: transparent; }
+            QCheckBox { background-color: transparent; }
+            QStackedWidget > QWidget { background-color: #ffffff; }
+        ''')
         left_panel.setMinimumWidth(300)
         left_panel.setMaximumWidth(420)
         left_layout = QVBoxLayout(left_panel)
@@ -130,8 +143,11 @@ class MeasurementEditorDialog(QDialog):
         self._measurement_type_combo.addItem(self._t('tool_editor.measurements.type_diameter', 'Diameter'), 'diameter')
         self._measurement_type_combo.addItem(self._t('tool_editor.measurements.type_radius', 'Radius'), 'radius')
         self._measurement_type_combo.addItem(self._t('tool_editor.measurements.type_angle', 'Angle'), 'angle')
+        self._measurement_type_combo.setMaxVisibleItems(4)
         self._measurement_type_combo.currentIndexChanged.connect(self._on_measurement_kind_changed)
-        type_row.addWidget(self._measurement_type_combo, 1)
+        apply_shared_dropdown_style(self._measurement_type_combo)
+        type_row.addWidget(self._measurement_type_combo)
+        type_row.addStretch(1)
         left_layout.addLayout(type_row)
 
         self._measurement_list_stack = QStackedWidget()
@@ -189,7 +205,27 @@ class MeasurementEditorDialog(QDialog):
         self._remove_measurement_btn.clicked.connect(self._remove_current_measurement)
         list_btn_row.addWidget(self._add_measurement_btn)
         list_btn_row.addWidget(self._remove_measurement_btn)
+        self._distance_detail_mode_lbl = QLabel(
+            self._t('tool_editor.measurements.precise_mode', 'Precise')
+        )
+        self._distance_detail_mode_lbl.setStyleSheet('background: transparent; color: #1f2d3d;')
+        self._distance_detail_mode_btn = QCheckBox('')
+        self._distance_detail_mode_btn.setChecked(False)
+        self._distance_detail_mode_btn.stateChanged.connect(self._on_distance_detail_mode_changed)
+        self._distance_detail_mode_btn.setStyleSheet(
+            'QCheckBox { background: transparent; }'
+            ' QCheckBox::indicator { width: 15px; height: 15px; border: 1px solid #6f8091; border-radius: 2px; background: #ffffff; }'
+        )
+        self._distance_detail_mode_col = QWidget()
+        self._distance_detail_mode_col.setStyleSheet('background: transparent;')
+        _detail_col_layout = QHBoxLayout(self._distance_detail_mode_col)
+        _detail_col_layout.setContentsMargins(0, 0, 0, 0)
+        _detail_col_layout.setSpacing(5)
+        _detail_col_layout.addWidget(self._distance_detail_mode_lbl, 0, Qt.AlignVCenter)
+        _detail_col_layout.addWidget(self._distance_detail_mode_btn, 0, Qt.AlignVCenter)
         list_btn_row.addStretch(1)
+        list_btn_row.addWidget(self._distance_detail_mode_col)
+        list_btn_row.addSpacing(10)
         left_layout.addLayout(list_btn_row)
 
         separator = QFrame()
@@ -213,8 +249,60 @@ class MeasurementEditorDialog(QDialog):
 
         # ── PREVIEW ─────────────────────────────────────────────────
         self._preview_widget = StlPreviewWidget()
+        self._preview_container = QWidget()
+        _preview_layout = QVBoxLayout(self._preview_container)
+        _preview_layout.setContentsMargins(0, 0, 0, 0)
+        _preview_layout.setSpacing(0)
+        _preview_layout.addWidget(self._preview_widget)
+        self._preview_container.installEventFilter(self)
+
+        # Overlay is a direct child (no layout) — positioned via setGeometry in
+        # _position_axis_overlay(). WA_NativeWindow gives it its own HWND so it
+        # renders on top of the QWebEngineView native window on Windows.
+        self._axis_pick_overlay = QFrame(self._preview_container)
+        self._axis_pick_overlay.setAttribute(Qt.WA_NativeWindow)
+        self._axis_pick_overlay.setAttribute(Qt.WA_TranslucentBackground)
+        self._axis_pick_overlay.setAttribute(Qt.WA_NoSystemBackground)
+        self._axis_pick_overlay.setAutoFillBackground(False)
+        self._axis_pick_overlay.setObjectName('axisPickOverlay')
+        self._axis_pick_overlay.setStyleSheet(
+            'QFrame#axisPickOverlay {'
+            '  background: transparent;'
+            '  border: none;'
+            '}'
+        )
+        _overlay_layout = QVBoxLayout(self._axis_pick_overlay)
+        _overlay_layout.setContentsMargins(8, 6, 8, 6)
+        _overlay_layout.setSpacing(4)
+        _axis_lbl = QLabel(self._t('tool_editor.measurements.axis', 'Axis') + ':')
+        _axis_lbl.setStyleSheet('background: transparent; font-weight: 600; color: #3a4a5a;')
+        _axis_lbl.setAlignment(Qt.AlignHCenter)
+        _overlay_layout.addWidget(_axis_lbl)
+        self._axis_overlay_btns = {}
+        for _axis_text, _axis_val in [
+            (self._t('tool_editor.measurements.axis_direct_short', '3D'), 'direct'),
+            (self._t('tool_editor.measurements.axis_x', 'X'), 'x'),
+            (self._t('tool_editor.measurements.axis_y', 'Y'), 'y'),
+            (self._t('tool_editor.measurements.axis_z', 'Z'), 'z'),
+        ]:
+            _btn = QPushButton(_axis_text)
+            _btn.setCheckable(True)
+            _btn.setFixedSize(42, 28)
+            _btn.setProperty('panelActionButton', True)
+            _btn.setStyleSheet(
+                'QPushButton:checked {'
+                '  background-color: #2397e6;'
+                '  border-color: #1680de;'
+                '  color: #ffffff;'
+                '}'
+            )
+            _btn.clicked.connect(lambda _checked, v=_axis_val: self._on_axis_overlay_selected(v))
+            _overlay_layout.addWidget(_btn)
+            self._axis_overlay_btns[_axis_val] = _btn
+        self._axis_pick_overlay.setVisible(False)
+
         splitter.addWidget(left_panel)
-        splitter.addWidget(self._preview_widget)
+        splitter.addWidget(self._preview_container)
         splitter.setSizes([340, 660])
         root.addWidget(splitter, 1)
 
@@ -227,8 +315,8 @@ class MeasurementEditorDialog(QDialog):
             on_cancel=self.reject,
         )
         save_btn = button_box.button(QDialogButtonBox.Save)
-        apply_secondary_button_theme(self, save_btn)
         root.addWidget(button_box)
+        apply_secondary_button_theme(self, save_btn)
 
     def _build_distance_form(self) -> QWidget:
         container = QWidget()
@@ -245,7 +333,7 @@ class MeasurementEditorDialog(QDialog):
         pick_row = QHBoxLayout()
         pick_row.setSpacing(6)
         self._dist_pick_points_btn = QPushButton(
-            self._t('tool_editor.measurements.pick_two_points', 'Pick start and end points')
+            self._t('tool_editor.measurements.pick', 'Pick')
         )
         self._dist_pick_points_btn.clicked.connect(self._on_pick_target)
         self._dist_pick_status_label = QLabel('')
@@ -254,73 +342,125 @@ class MeasurementEditorDialog(QDialog):
         pick_row.addWidget(self._dist_pick_status_label, 1)
         form.addRow(self._t('tool_editor.measurements.points', 'Points') + ':', pick_row)
 
-        axis_row = QHBoxLayout()
-        axis_row.setSpacing(6)
-        self._dist_axis_direct_btn = QPushButton(self._t('tool_editor.measurements.axis_direct_short', '3D'))
-        self._dist_axis_x_btn = QPushButton(self._t('tool_editor.measurements.axis_x', 'X'))
-        self._dist_axis_y_btn = QPushButton(self._t('tool_editor.measurements.axis_y', 'Y'))
-        self._dist_axis_z_btn = QPushButton(self._t('tool_editor.measurements.axis_z', 'Z'))
-        for axis_btn in (self._dist_axis_direct_btn, self._dist_axis_x_btn, self._dist_axis_y_btn, self._dist_axis_z_btn):
-            axis_btn.setCheckable(True)
-            axis_btn.setFixedWidth(42)
-        self._dist_axis_direct_btn.setToolTip(self._t('tool_editor.measurements.axis_direct_tooltip', 'Direct 3D point-to-point'))
-        self._dist_axis_direct_btn.clicked.connect(lambda: self._set_distance_axis('direct'))
-        self._dist_axis_x_btn.clicked.connect(lambda: self._set_distance_axis('x'))
-        self._dist_axis_y_btn.clicked.connect(lambda: self._set_distance_axis('y'))
-        self._dist_axis_z_btn.clicked.connect(lambda: self._set_distance_axis('z'))
-        axis_row.addWidget(self._dist_axis_direct_btn)
-        axis_row.addWidget(self._dist_axis_x_btn)
-        axis_row.addWidget(self._dist_axis_y_btn)
-        axis_row.addWidget(self._dist_axis_z_btn)
-        axis_row.addStretch(1)
-        form.addRow(self._t('tool_editor.measurements.axis', 'Axis') + ':', axis_row)
-
         value_row = QHBoxLayout()
         value_row.setSpacing(6)
-        self._dist_value_mode_combo = QComboBox()
-        self._dist_value_mode_combo.addItem(
-            self._t('tool_editor.measurements.value_mode_measured', 'Measured'),
-            'measured',
+        self._dist_value_mode_btn = QPushButton(self._t('tool_editor.measurements.value_mode_measured', 'Measured'))
+        self._dist_value_mode_btn.setCheckable(True)
+        self._dist_value_mode_btn.setChecked(False)  # checked = custom, unchecked = measured
+        self._dist_value_mode_btn.setFixedWidth(100)
+        self._dist_value_mode_btn.clicked.connect(self._on_distance_value_mode_toggled)
+        self._dist_value_edit = QLineEdit()
+        self._dist_value_edit.setPlaceholderText(
+            self._t('tool_editor.measurements.value_placeholder', 'Measured or custom value')
         )
-        self._dist_value_mode_combo.addItem(
-            self._t('tool_editor.measurements.value_mode_custom', 'Custom'),
-            'custom',
-        )
-        self._dist_value_mode_combo.currentIndexChanged.connect(self._on_distance_value_mode_changed)
-        self._dist_custom_value_edit = QLineEdit()
-        self._dist_custom_value_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.custom_value_placeholder', 'e.g. 180.0 mm')
-        )
-        self._dist_custom_value_edit.editingFinished.connect(self._schedule_commit)
-        value_row.addWidget(self._dist_value_mode_combo)
-        value_row.addWidget(self._dist_custom_value_edit, 1)
-        form.addRow(self._t('tool_editor.measurements.display_value', 'Display Value') + ':', value_row)
+        self._dist_value_edit.editingFinished.connect(self._schedule_commit)
+        value_row.addWidget(self._dist_value_mode_btn)
+        value_row.addWidget(self._dist_value_edit, 1)
+        _display_lbl = QLabel(self._t('tool_editor.measurements.display_value', 'Display\nValue') + ':')
+        _display_lbl.setAlignment(Qt.AlignRight | Qt.AlignTop)
+        form.addRow(_display_lbl, value_row)
 
-        self._dist_measured_value_box = QLineEdit()
-        self._dist_measured_value_box.setReadOnly(True)
-        self._dist_measured_value_box.setPlaceholderText(
-            self._t('tool_editor.measurements.measured_value_placeholder', 'Measured value appears after two picks')
-        )
-        form.addRow(self._t('tool_editor.measurements.current_value', 'Current Value') + ':', self._dist_measured_value_box)
+        self._dist_adjust_section = QFrame()
+        self._dist_adjust_section.setProperty('editorFieldGroup', True)
+        adjust_section_layout = QVBoxLayout(self._dist_adjust_section)
+        adjust_section_layout.setContentsMargins(8, 8, 8, 8)
+        adjust_section_layout.setSpacing(2)
 
-        form.addRow('', self._build_xyz_header_row(with_pick=False))
-        offset_row = QHBoxLayout()
-        self._dist_offset_x_edit = QLineEdit('0')
-        self._dist_offset_y_edit = QLineEdit('0')
-        self._dist_offset_z_edit = QLineEdit('0')
-        for _oe in (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit):
-            _oe.setFixedWidth(56)
-            _oe.setToolTip(self._t('tool_editor.measurements.offset_tooltip',
-                                   'Drag the arrow in the preview, or type here to fine-tune'))
-            _oe.editingFinished.connect(self._schedule_commit)
-            offset_row.addWidget(_oe)
-        offset_row.addStretch(1)
-        form.addRow(self._t('tool_editor.measurements.arrow_offset', 'Arrow offset') + ':', offset_row)
+        # Keep each label in the same column as its value input for stable alignment.
+        self._dist_adjust_x_edit = QLineEdit('0')
+        self._dist_adjust_y_edit = QLineEdit('0')
+        self._dist_adjust_z_edit = QLineEdit('0')
+        self._dist_adjust_axis_by_edit = {
+            self._dist_adjust_x_edit: 'x',
+            self._dist_adjust_y_edit: 'y',
+            self._dist_adjust_z_edit: 'z',
+        }
+        self._dist_adjust_active_axis = 'x'
+        for _ae in (self._dist_adjust_x_edit, self._dist_adjust_y_edit, self._dist_adjust_z_edit):
+            _ae.setFixedWidth(62)
+            _ae.editingFinished.connect(self._schedule_commit)
+            _ae.installEventFilter(self)
+        self._dist_nudge_step_edit = QLineEdit('1.0')
+        self._dist_nudge_step_edit.setFixedWidth(62)
+
+        _adjust_label_style = (
+            'color: #6b7b8e; font-size: 9pt; background: transparent; '
+            'padding: 0px 0px 1px 0px;'
+        )
+        precise_top_row = QHBoxLayout()
+        precise_top_row.setSpacing(4)
+        precise_top_row.setContentsMargins(0, 0, 0, 0)
+        for _hdr_key, _hdr_fallback, _edit in [
+            ('tool_editor.measurements.axis_x', 'X', self._dist_adjust_x_edit),
+            ('tool_editor.measurements.axis_y', 'Y', self._dist_adjust_y_edit),
+            ('tool_editor.measurements.axis_z', 'Z', self._dist_adjust_z_edit),
+            (None, 'mm', self._dist_nudge_step_edit),
+        ]:
+            _col = QVBoxLayout()
+            _col.setSpacing(1)
+            _col.setContentsMargins(0, 0, 0, 0)
+            _hdr_lbl = QLabel(self._t(_hdr_key, _hdr_fallback) if _hdr_key else _hdr_fallback)
+            _hdr_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+            _hdr_lbl.setStyleSheet(_adjust_label_style)
+            _col.addWidget(_hdr_lbl)
+            _col.addWidget(_edit)
+            precise_top_row.addLayout(_col)
+
+        self._dist_nudge_minus_btn = QPushButton('-')
+        self._dist_nudge_minus_btn.setFixedSize(28, 28)
+        self._dist_nudge_minus_btn.setProperty('arrowMoveButton', True)
+        self._dist_nudge_minus_btn.clicked.connect(lambda: self._on_distance_point_nudge('-'))
+        self._dist_nudge_minus_btn.setFocusPolicy(Qt.NoFocus)
+        self._dist_nudge_plus_btn = QPushButton('+')
+        self._dist_nudge_plus_btn.setFixedSize(28, 28)
+        self._dist_nudge_plus_btn.setProperty('arrowMoveButton', True)
+        self._dist_nudge_plus_btn.clicked.connect(lambda: self._on_distance_point_nudge('+'))
+        self._dist_nudge_plus_btn.setFocusPolicy(Qt.NoFocus)
+        _pm_container = QWidget()
+        _pm_layout = QVBoxLayout(_pm_container)
+        _pm_layout.setContentsMargins(0, 0, 0, 0)
+        _pm_layout.setSpacing(2)
+        _pm_layout.addWidget(self._dist_nudge_plus_btn)
+        _pm_layout.addWidget(self._dist_nudge_minus_btn)
+        precise_top_row.addSpacing(4)
+        precise_top_row.addWidget(_pm_container, 0, Qt.AlignBottom)
+        precise_top_row.addStretch(1)
+        adjust_section_layout.addLayout(precise_top_row)
+
+        adjust_bottom_row = QHBoxLayout()
+        adjust_bottom_row.setSpacing(6)
+        self._dist_adjust_mode_btn = QPushButton(self._t('tool_editor.measurements.arrow_offset', 'Arrow offset'))
+        self._dist_adjust_mode_btn.setCheckable(True)
+        self._dist_adjust_mode_btn.setChecked(False)  # checked = nudge, unchecked = arrow offset
+        self._dist_adjust_mode_btn.setMinimumWidth(120)
+        self._dist_adjust_mode_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self._dist_adjust_mode_btn.clicked.connect(self._on_distance_adjust_mode_toggled)
+        self._dist_adjust_mode_btn.setFocusPolicy(Qt.NoFocus)
+        self._dist_nudge_point_btn = QPushButton(self._t('tool_editor.measurements.start', 'Start'))
+        self._dist_nudge_point_btn.setCheckable(True)
+        self._dist_nudge_point_btn.setChecked(False)  # checked = end, unchecked = start
+        self._dist_nudge_point_btn.setFixedWidth(70)
+        self._dist_nudge_point_btn.clicked.connect(self._on_nudge_point_toggled)
+        self._dist_nudge_point_btn.setVisible(False)
+        self._dist_nudge_point_btn.setFocusPolicy(Qt.NoFocus)
+        adjust_bottom_row.addWidget(self._dist_adjust_mode_btn)
+        adjust_bottom_row.addWidget(self._dist_nudge_point_btn)
+        adjust_bottom_row.addStretch(1)
+        adjust_section_layout.addLayout(adjust_bottom_row)
+
+        self._dist_adjust_label = QLabel(self._t('tool_editor.measurements.adjust', 'Adjust') + ':')
+        self._dist_adjust_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        form.addRow(self._dist_adjust_label, self._dist_adjust_section)
+        self._dist_adjust_section.setVisible(False)
 
         self._distance_edit_model = None
         self._dist_pick_stage = None
         self._set_distance_axis('z', commit=False)
+        self._set_distance_nudge_point('start', commit=False)
+        self._set_distance_adjust_mode('offset', commit=False)
         self._set_distance_value_mode('measured', commit=False)
+        self._update_distance_precise_visibility()
+        self._update_distance_measured_value_box()
         self._update_distance_pick_status()
 
         return container
@@ -511,17 +651,18 @@ class MeasurementEditorDialog(QDialog):
 
         return container
 
-    def _build_xyz_header_row(self, with_pick: bool) -> QWidget:
+    def _build_xyz_header_row(self, with_pick: bool, axis_order: list = None) -> QWidget:
+        if axis_order is None:
+            axis_order = ['x', 'y', 'z']
+        
         row_widget = QWidget()
         row_layout = QHBoxLayout(row_widget)
         row_layout.setContentsMargins(0, 0, 0, 0)
         row_layout.setSpacing(6)
 
-        for key, fallback in (
-            ('tool_editor.measurements.axis_x', 'X'),
-            ('tool_editor.measurements.axis_y', 'Y'),
-            ('tool_editor.measurements.axis_z', 'Z'),
-        ):
+        for axis in axis_order:
+            key = f'tool_editor.measurements.axis_{axis}'
+            fallback = axis.upper()
             lbl = QLabel(self._t(key, fallback))
             lbl.setFixedWidth(56)
             lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
@@ -674,6 +815,9 @@ class MeasurementEditorDialog(QDialog):
         self._remove_measurement_btn.setEnabled(is_supported)
         index_map = {'length': 0, 'diameter': 1, 'radius': 2, 'angle': 3}
         self._measurement_list_stack.setCurrentIndex(index_map.get(kind, 0))
+        if hasattr(self, '_distance_detail_mode_col'):
+            self._distance_detail_mode_col.setVisible(kind == 'length')
+        self._update_distance_precise_visibility()
         if kind == 'length':
             if self._distance_list.currentItem():
                 self._edit_stack.setCurrentIndex(1)
@@ -696,6 +840,23 @@ class MeasurementEditorDialog(QDialog):
                 self._edit_stack.setCurrentIndex(0)
         else:
             self._edit_stack.setCurrentIndex(0)
+
+    def _distance_precise_mode_enabled(self) -> bool:
+        if not hasattr(self, '_distance_detail_mode_btn'):
+            return False
+        return self._distance_detail_mode_btn.isChecked()
+
+    def _update_distance_precise_visibility(self):
+        if not hasattr(self, '_dist_adjust_section'):
+            return
+        kind = str(self._measurement_type_combo.currentData() or 'length') if hasattr(self, '_measurement_type_combo') else 'length'
+        show_adjust = kind == 'length' and self._distance_precise_mode_enabled()
+        self._dist_adjust_section.setVisible(show_adjust)
+        if hasattr(self, '_dist_adjust_label'):
+            self._dist_adjust_label.setVisible(show_adjust)
+
+    def _on_distance_detail_mode_changed(self, *_args):
+        self._update_distance_precise_visibility()
 
     def _add_current_measurement(self):
         kind = str(self._measurement_type_combo.currentData() or 'length')
@@ -762,12 +923,11 @@ class MeasurementEditorDialog(QDialog):
         self._distance_edit_model = dict(meas or {})
         self._dist_name_edit.setText(meas.get('name', ''))
         self._set_distance_axis(str(meas.get('distance_axis', 'z')).lower(), commit=False)
-        self._dist_custom_value_edit.setText(str(meas.get('label_custom_value', '')))
         self._set_distance_value_mode(str(meas.get('label_value_mode', 'measured')).lower(), commit=False)
-        self._set_xyz_edits(
-            (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit),
-            meas.get('offset_xyz', ''),
-        )
+        self._set_distance_nudge_point('start', commit=False)
+        self._set_distance_adjust_mode('offset', commit=False)
+        self._load_distance_adjust_edits_from_model()
+        self._update_distance_measured_value_box()
         self._update_distance_pick_status()
 
     def _populate_diameter_form(self, meas: dict):
@@ -882,10 +1042,16 @@ class MeasurementEditorDialog(QDialog):
         return f"{value:.3f} mm"
 
     def _update_distance_measured_value_box(self):
-        if not hasattr(self, '_dist_measured_value_box'):
+        if not hasattr(self, '_dist_value_edit'):
             return
-        text = self._distance_measured_value_text()
-        self._dist_measured_value_box.setText(text)
+        mode = self._distance_value_mode()
+        if mode == 'measured':
+            text = self._distance_measured_value_text()
+            self._dist_value_edit.setText(text)
+        else:
+            custom_text = str(self._distance_edit_model.get('label_custom_value', '') if self._distance_edit_model else '')
+            self._dist_value_edit.setText(custom_text)
+
         if self._current_distance_item is None:
             return
 
@@ -893,7 +1059,7 @@ class MeasurementEditorDialog(QDialog):
         if index < 0:
             return
 
-        if hasattr(self._preview_widget, 'get_distance_measured_value'):
+        if mode == 'measured' and hasattr(self._preview_widget, 'get_distance_measured_value'):
             def _apply_measured_value(value):
                 if self._current_distance_item is None:
                     return
@@ -903,7 +1069,8 @@ class MeasurementEditorDialog(QDialog):
                     measured = float(value)
                 except (TypeError, ValueError):
                     return
-                self._dist_measured_value_box.setText(f"{measured:.3f} mm")
+                if hasattr(self, '_dist_value_edit'):
+                    self._dist_value_edit.setText(f"{measured:.3f} mm")
 
             self._preview_widget.get_distance_measured_value(index, _apply_measured_value)
 
@@ -926,16 +1093,21 @@ class MeasurementEditorDialog(QDialog):
         self._pick_target = 'target_xyz:start:all'
         self._dist_pick_stage = 'start'
         self._preview_widget.set_point_picking_enabled(True)
+        self._show_axis_pick_overlay()
         if hasattr(self, '_dist_pick_points_btn'):
             self._dist_pick_points_btn.setText(self._t('common.cancel', 'Cancel'))
         self._update_distance_pick_status()
 
-    def _commit_distance_edit(self):
+    def _commit_distance_edit(self, sync_adjust_edits: bool = True):
         if not self._current_distance_item:
             return
         if self._distance_edit_model is None:
             self._distance_edit_model = dict(self._current_distance_item.data(Qt.UserRole) or {})
         model = self._distance_edit_model
+        if sync_adjust_edits:
+            self._store_distance_adjust_edits_to_model()
+        mode = self._distance_value_mode()
+        custom_text = self._dist_value_edit.text().strip() if mode == 'custom' else ''
         meas = {
             'name': self._dist_name_edit.text() or self._t(
                 'tool_editor.measurements.new_distance', 'New Distance'),
@@ -948,11 +1120,9 @@ class MeasurementEditorDialog(QDialog):
             'end_xyz': str(model.get('end_xyz', '')).strip(),
             'end_space': str(model.get('end_space', 'world')).strip() or 'world',
             'distance_axis': self._distance_axis_value(),
-            'label_value_mode': self._distance_value_mode(),
-            'label_custom_value': self._dist_custom_value_edit.text().strip(),
-            'offset_xyz': self._xyz_text_from_edits(
-                (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit)
-            ),
+            'label_value_mode': mode,
+            'label_custom_value': custom_text,
+            'offset_xyz': str(model.get('offset_xyz', '')).strip(),
             'start_shift': str(model.get('start_shift', '0')).strip(),
             'end_shift': str(model.get('end_shift', '0')).strip(),
             'type': 'distance',
@@ -964,39 +1134,178 @@ class MeasurementEditorDialog(QDialog):
         self._update_distance_pick_status()
 
     def _distance_value_mode(self) -> str:
-        mode = str(self._dist_value_mode_combo.currentData() or 'measured').strip().lower()
-        return mode if mode in {'measured', 'custom'} else 'measured'
+        if self._dist_value_mode_btn.isChecked():
+            return 'custom'
+        return 'measured'
 
     def _set_distance_value_mode(self, mode: str, commit: bool = True):
         normalized = mode if mode in {'measured', 'custom'} else 'measured'
-        idx = 0 if normalized == 'measured' else 1
-        self._dist_value_mode_combo.blockSignals(True)
-        self._dist_value_mode_combo.setCurrentIndex(idx)
-        self._dist_value_mode_combo.blockSignals(False)
-        self._dist_custom_value_edit.setEnabled(normalized == 'custom')
+        is_custom = normalized == 'custom'
+        self._dist_value_mode_btn.blockSignals(True)
+        self._dist_value_mode_btn.setChecked(is_custom)
+        if is_custom:
+            self._dist_value_mode_btn.setText(self._t('tool_editor.measurements.value_mode_custom', 'Custom'))
+        else:
+            self._dist_value_mode_btn.setText(self._t('tool_editor.measurements.value_mode_measured', 'Measured'))
+        self._dist_value_mode_btn.blockSignals(False)
+        self._dist_value_edit.setReadOnly(not is_custom)
+        self._update_distance_measured_value_box()
         if commit:
             self._commit_distance_edit()
 
-    def _on_distance_value_mode_changed(self, *_args):
-        self._set_distance_value_mode(self._distance_value_mode(), commit=True)
+    def _on_distance_value_mode_toggled(self):
+        """Toggle between measured and custom mode with button text change."""
+        is_custom = self._dist_value_mode_btn.isChecked()
+        if is_custom:
+            self._dist_value_mode_btn.setText(self._t('tool_editor.measurements.value_mode_custom', 'Custom'))
+        else:
+            self._dist_value_mode_btn.setText(self._t('tool_editor.measurements.value_mode_measured', 'Measured'))
+        self._dist_value_edit.setReadOnly(not is_custom)
+        self._update_distance_measured_value_box()
+        self._commit_distance_edit()
+
+    def _distance_adjust_mode(self) -> str:
+        if self._dist_adjust_mode_btn.isChecked():
+            return 'point'
+        return 'offset'
+
+    def _distance_nudge_point(self) -> str:
+        if self._dist_nudge_point_btn.isChecked():
+            return 'end'
+        return 'start'
+
+    def _distance_adjust_edits(self) -> tuple[QLineEdit, QLineEdit, QLineEdit]:
+        return self._dist_adjust_x_edit, self._dist_adjust_y_edit, self._dist_adjust_z_edit
+
+    def _distance_adjust_target_key(self, mode: str | None = None, point: str | None = None) -> str:
+        effective_mode = mode or self._distance_adjust_mode()
+        effective_point = point or self._distance_nudge_point()
+        if effective_mode == 'point':
+            return f'{effective_point}_xyz'
+        return 'offset_xyz'
+
+    def _distance_adjust_active_axis_value(self) -> str:
+        focused_axis = self._focused_axis(self._distance_adjust_edits())
+        if focused_axis in {'x', 'y', 'z'}:
+            self._dist_adjust_active_axis = focused_axis
+            return focused_axis
+        focus_widget = self.focusWidget()
+        if focus_widget in {self._dist_nudge_minus_btn, self._dist_nudge_plus_btn}:
+            return self._dist_adjust_active_axis
+        return 'all'
+
+    def _update_distance_adjust_tooltips(self):
+        if self._distance_adjust_mode() == 'point':
+            tooltip = self._t(
+                'tool_editor.measurements.point_nudge_tooltip',
+                'Edit the selected point coordinates. Focus X, Y, or Z, then use + or -.'
+            )
+        else:
+            tooltip = self._t(
+                'tool_editor.measurements.offset_tooltip',
+                'Drag the arrow in the preview, or type here to fine-tune'
+            )
+        for axis_edit in self._distance_adjust_edits():
+            axis_edit.setToolTip(tooltip)
+
+    def _load_distance_adjust_edits_from_model(self):
+        if not hasattr(self, '_dist_adjust_x_edit'):
+            return
+        model = self._distance_edit_model or {}
+        self._set_xyz_edits(self._distance_adjust_edits(), model.get(self._distance_adjust_target_key(), '0, 0, 0'))
+        self._update_distance_adjust_tooltips()
+
+    def _store_distance_adjust_edits_to_model(self, target_key: str | None = None):
+        if self._distance_edit_model is None or not hasattr(self, '_dist_adjust_x_edit'):
+            return
+        self._distance_edit_model[target_key or self._distance_adjust_target_key()] = self._xyz_text_from_edits(
+            self._distance_adjust_edits()
+        )
+
+    def _update_distance_adjust_controls(self, refresh_values: bool = True):
+        is_point_mode = self._distance_adjust_mode() == 'point'
+        self._dist_adjust_mode_btn.blockSignals(True)
+        self._dist_adjust_mode_btn.setChecked(is_point_mode)
+        self._dist_adjust_mode_btn.setText(
+            self._t('tool_editor.measurements.nudge', 'Nudge')
+            if is_point_mode
+            else self._t('tool_editor.measurements.arrow_offset', 'Arrow offset')
+        )
+        self._dist_adjust_mode_btn.blockSignals(False)
+        self._dist_nudge_point_btn.setVisible(is_point_mode)
+        self._dist_nudge_point_btn.setText(
+            self._t('tool_editor.measurements.end', 'End')
+            if self._distance_nudge_point() == 'end'
+            else self._t('tool_editor.measurements.start', 'Start')
+        )
+        if refresh_values:
+            self._load_distance_adjust_edits_from_model()
+
+    def _set_distance_adjust_mode(self, mode: str, commit: bool = True):
+        normalized = 'point' if mode == 'point' else 'offset'
+        self._dist_adjust_mode_btn.blockSignals(True)
+        self._dist_adjust_mode_btn.setChecked(normalized == 'point')
+        self._dist_adjust_mode_btn.blockSignals(False)
+        self._update_distance_adjust_controls(refresh_values=True)
+        if commit:
+            self._commit_distance_edit()
+
+    def _on_distance_adjust_mode_toggled(self):
+        previous_mode = 'offset' if self._distance_adjust_mode() == 'point' else 'point'
+        previous_target = self._distance_adjust_target_key(mode=previous_mode, point=self._distance_nudge_point())
+        self._store_distance_adjust_edits_to_model(previous_target)
+        self._update_distance_adjust_controls(refresh_values=True)
+        self._commit_distance_edit(sync_adjust_edits=False)
+
+    def _set_distance_nudge_point(self, point: str, commit: bool = True):
+        normalized = 'end' if point == 'end' else 'start'
+        self._dist_nudge_point_btn.blockSignals(True)
+        self._dist_nudge_point_btn.setChecked(normalized == 'end')
+        self._dist_nudge_point_btn.blockSignals(False)
+        self._update_distance_adjust_controls(refresh_values=True)
+        if commit:
+            self._commit_distance_edit()
 
     def _distance_axis_value(self) -> str:
-        if getattr(self, '_dist_axis_direct_btn', None) and self._dist_axis_direct_btn.isChecked():
-            return 'direct'
-        if getattr(self, '_dist_axis_x_btn', None) and self._dist_axis_x_btn.isChecked():
-            return 'x'
-        if getattr(self, '_dist_axis_y_btn', None) and self._dist_axis_y_btn.isChecked():
-            return 'y'
-        return 'z'
+        return getattr(self, '_dist_axis_value', 'z')
 
     def _set_distance_axis(self, axis: str, commit: bool = True):
         normalized = axis if axis in {'direct', 'x', 'y', 'z'} else 'z'
-        self._dist_axis_direct_btn.setChecked(normalized == 'direct')
-        self._dist_axis_x_btn.setChecked(normalized == 'x')
-        self._dist_axis_y_btn.setChecked(normalized == 'y')
-        self._dist_axis_z_btn.setChecked(normalized == 'z')
+        self._dist_axis_value = normalized
+        self._update_axis_overlay_buttons()
         if commit:
             self._commit_distance_edit()
+
+    def _update_axis_overlay_buttons(self):
+        if not hasattr(self, '_axis_overlay_btns'):
+            return
+        active = getattr(self, '_dist_axis_value', 'z')
+        for val, btn in self._axis_overlay_btns.items():
+            btn.setChecked(val == active)
+
+    def _on_axis_overlay_selected(self, axis_val: str):
+        self._set_distance_axis(axis_val, commit=True)
+
+    def _position_axis_overlay(self):
+        """Place the overlay on the left-middle side of the preview container."""
+        if not hasattr(self, '_axis_pick_overlay') or not hasattr(self, '_preview_container'):
+            return
+        self._axis_pick_overlay.adjustSize()
+        sh = self._axis_pick_overlay.sizeHint()
+        margin = 8
+        ow = max(sh.width(), 10)
+        oh = max(sh.height(), 10)
+        ch = self._preview_container.height()
+        target_center_y = int(ch * 0.68)
+        y = max(margin, min(ch - oh - margin, target_center_y - (oh // 2)))
+        self._axis_pick_overlay.setGeometry(margin, y, ow, oh)
+
+    def _show_axis_pick_overlay(self):
+        if hasattr(self, '_axis_pick_overlay'):
+            self._update_axis_overlay_buttons()
+            self._position_axis_overlay()
+            self._axis_pick_overlay.setVisible(True)
+            self._axis_pick_overlay.raise_()
 
     def _commit_diameter_edit(self):
         if not self._current_diameter_item:
@@ -1139,11 +1448,11 @@ class MeasurementEditorDialog(QDialog):
         self._dist_pick_stage = None
         if hasattr(self, '_preview_widget'):
             self._preview_widget.set_point_picking_enabled(False)
+        if hasattr(self, '_axis_pick_overlay'):
+            self._axis_pick_overlay.setVisible(False)
         pick_label = self._t('tool_editor.measurements.pick', 'Pick')
         if hasattr(self, '_dist_pick_points_btn'):
-            self._dist_pick_points_btn.setText(
-                self._t('tool_editor.measurements.pick_two_points', 'Pick start and end points')
-            )
+            self._dist_pick_points_btn.setText(pick_label)
         if hasattr(self, '_diam_center_pick_btn'):
             self._diam_center_pick_btn.setText(pick_label)
         if hasattr(self, '_radius_center_pick_btn'):
@@ -1155,6 +1464,56 @@ class MeasurementEditorDialog(QDialog):
         if hasattr(self, '_angle_end_pick_btn'):
             self._angle_end_pick_btn.setText(pick_label)
         self._update_distance_pick_status()
+
+    def _on_nudge_point_toggled(self):
+        """Switch shared XYZ row between start and end point values."""
+        previous_point = 'start' if self._distance_nudge_point() == 'end' else 'end'
+        previous_target = self._distance_adjust_target_key(mode='point', point=previous_point)
+        self._store_distance_adjust_edits_to_model(previous_target)
+        self._update_distance_adjust_controls(refresh_values=True)
+        self._commit_distance_edit(sync_adjust_edits=False)
+
+    def _on_distance_point_nudge(self, direction: str):
+        """Adjust the focused shared XYZ field for either arrow offset or selected point."""
+        if not self._current_distance_item or self._distance_edit_model is None:
+            return
+
+        nudge_axis = self._distance_adjust_active_axis_value()
+        if nudge_axis not in {'x', 'y', 'z'}:
+            return
+
+        try:
+            step = float(self._dist_nudge_step_edit.text().strip().replace(',', '.')) or 1.0
+        except (ValueError, AttributeError):
+            step = 1.0
+
+        self._store_distance_adjust_edits_to_model()
+        delta = step if direction == '+' else -step
+        point_key = self._distance_adjust_target_key()
+
+        x, y, z = _xyz_to_tuple(self._distance_edit_model.get(point_key, '0, 0, 0'))
+        if nudge_axis == 'x':
+            x += delta
+        elif nudge_axis == 'y':
+            y += delta
+        elif nudge_axis == 'z':
+            z += delta
+
+        self._distance_edit_model[point_key] = f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
+        self._load_distance_adjust_edits_from_model()
+        self._update_distance_measured_value_box()
+        self._commit_distance_edit(sync_adjust_edits=False)
+
+    def eventFilter(self, watched, event):
+        if hasattr(self, '_dist_adjust_axis_by_edit') and watched in self._dist_adjust_axis_by_edit:
+            if event.type() == QEvent.FocusIn:
+                self._dist_adjust_active_axis = self._dist_adjust_axis_by_edit[watched]
+        if (hasattr(self, '_preview_container') and watched is self._preview_container
+                and event.type() == QEvent.Resize
+                and hasattr(self, '_axis_pick_overlay')
+                and self._axis_pick_overlay.isVisible()):
+            self._position_axis_overlay()
+        return super().eventFilter(watched, event)
 
     def _on_point_picked(self, data: dict):
         target = self._pick_target
@@ -1216,6 +1575,8 @@ class MeasurementEditorDialog(QDialog):
             self._distance_edit_model[f'{side}_part'] = side_part
             self._distance_edit_model[f'{side}_part_index'] = side_part_index
             self._distance_edit_model[f'{side}_space'] = side_space
+            if self._distance_adjust_mode() == 'point' and self._distance_nudge_point() == side:
+                self._load_distance_adjust_edits_from_model()
 
             if side == 'start':
                 self._pick_target = 'target_xyz:end:all'
@@ -1224,7 +1585,7 @@ class MeasurementEditorDialog(QDialog):
                 self._update_distance_pick_status()
             else:
                 self._cancel_pick()
-            self._commit_distance_edit()
+            self._commit_distance_edit(sync_adjust_edits=False)
             return
         elif target_name == 'center_xyz':
             self._cancel_pick()
@@ -1293,11 +1654,8 @@ class MeasurementEditorDialog(QDialog):
         item.setData(Qt.UserRole, current)
         if item is self._current_distance_item:
             self._distance_edit_model = dict(current)
-            # Refresh the offset fields so the user sees the dragged position
-            self._set_xyz_edits(
-                (self._dist_offset_x_edit, self._dist_offset_y_edit, self._dist_offset_z_edit),
-                current.get('offset_xyz', ''),
-            )
+            if self._distance_adjust_mode() == 'offset':
+                self._load_distance_adjust_edits_from_model()
             self._update_distance_pick_status()
 
     # ─────────────────────────────────────────────────────────────────

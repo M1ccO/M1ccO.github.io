@@ -1,6 +1,6 @@
 import json
 from typing import Callable
-from PySide6.QtCore import QEvent, Qt, QTimer, QSize
+from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QItemSelectionModel
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
@@ -33,6 +33,7 @@ from shared.editor_helpers import (
     style_move_arrow_button,
     reflow_fields_grid,
     build_picker_row,
+    style_icon_action_button,
 )
 
 
@@ -296,6 +297,7 @@ class AddEditToolDialog(QDialog):
         self._measurement_editor_state = self._empty_measurement_editor_state()
         self._current_transform_mode = 'translate'
         self._selected_part_index = -1
+        self._selected_part_indices = []
         self._general_field_columns = None
         self._clamping_screen_bounds = False
         self._suspend_preview_refresh = False
@@ -855,6 +857,8 @@ class AddEditToolDialog(QDialog):
         self.model_table.setColumnWidth(1, 260)
         self.model_table.setColumnWidth(2, 80)
         self.model_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.model_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.model_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.model_table.itemChanged.connect(self._on_model_table_changed)
 
         models_panel_layout.addWidget(self.model_table, 1)
@@ -877,7 +881,7 @@ class AddEditToolDialog(QDialog):
         _tf_layout.setSpacing(4)
 
         self._selected_part_label = QLabel(
-            self._t('tool_editor.transform.no_selection', 'Click a part to select')
+            self._t('tool_editor.transform.no_selection', 'Click a part to select. Ctrl+click for multiple')
         )
         self._selected_part_label.setStyleSheet('color: #6b7b8e; font-size: 11px;')
         _tf_layout.addWidget(self._selected_part_label)
@@ -885,43 +889,54 @@ class AddEditToolDialog(QDialog):
         _mode_row = QHBoxLayout()
         _mode_row.setSpacing(2)
         _mode_row.setContentsMargins(0, 0, 0, 0)
-        self._mode_toggle_btn = QPushButton(self._t('tool_editor.transform.move', 'MOVE'))
-        self._reset_transform_btn = QPushButton(self._t('tool_editor.transform.reset', 'NOLLAA'))
-        style_panel_action_button(self._mode_toggle_btn)
-        style_panel_action_button(self._reset_transform_btn)
+        self._mode_toggle_btn = QPushButton('')
+        self._reset_transform_btn = QPushButton()
+        style_icon_action_button(
+            self._mode_toggle_btn,
+            TOOL_ICONS_DIR / 'import_export.svg',
+            self._t('tool_editor.transform.move', 'SIIRRÄ'),
+        )
+        style_icon_action_button(
+            self._reset_transform_btn,
+            TOOL_ICONS_DIR / 'arrow_circle_left.svg',
+            self._t('tool_editor.transform.reset', 'NOLLAA'),
+        )
         self._mode_toggle_btn.setCheckable(True)
         self._mode_toggle_btn.setChecked(True)
-        self._mode_toggle_btn.setFixedWidth(60)
+        self._reset_transform_btn.setFixedWidth(42)
+        self._mode_toggle_btn.setFixedWidth(42)
+        self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
+        self._reset_transform_btn.setToolTip(self._t('tool_editor.transform.reset', 'NOLLAA'))
         
-        _lbl_x = QLabel('X:')
+        _lbl_x = QLabel('X')
         _lbl_x.setStyleSheet('font-weight: bold; font-size: 14px;')
-        _lbl_x.setFixedWidth(18)
+        _lbl_x.setFixedWidth(20)
         
         _mode_row.addWidget(self._mode_toggle_btn)
         _mode_row.addSpacing(3)
         _mode_row.addWidget(_lbl_x)
         self._transform_x = QLineEdit('0')
-        self._transform_x.setFixedWidth(70)
+        self._transform_x.setFixedWidth(82)
         self._transform_x.setAlignment(Qt.AlignRight)
         _mode_row.addWidget(self._transform_x)
         
-        _lbl_y = QLabel('Y:')
+        _lbl_y = QLabel('Y')
         _lbl_y.setStyleSheet('font-weight: bold; font-size: 14px;')
-        _lbl_y.setFixedWidth(18)
+        _lbl_y.setFixedWidth(20)
         _mode_row.addSpacing(3)
         _mode_row.addWidget(_lbl_y)
         self._transform_y = QLineEdit('0')
-        self._transform_y.setFixedWidth(70)
+        self._transform_y.setFixedWidth(82)
         self._transform_y.setAlignment(Qt.AlignRight)
         _mode_row.addWidget(self._transform_y)
         
-        _lbl_z = QLabel('Z:')
+        _lbl_z = QLabel('Z')
         _lbl_z.setStyleSheet('font-weight: bold; font-size: 14px;')
-        _lbl_z.setFixedWidth(18)
+        _lbl_z.setFixedWidth(20)
         _mode_row.addSpacing(3)
         _mode_row.addWidget(_lbl_z)
         self._transform_z = QLineEdit('0')
-        self._transform_z.setFixedWidth(70)
+        self._transform_z.setFixedWidth(82)
         self._transform_z.setAlignment(Qt.AlignRight)
         _mode_row.addWidget(self._transform_z)
         
@@ -934,6 +949,7 @@ class AddEditToolDialog(QDialog):
         if self._assembly_transform_enabled:
             self.models_preview.transform_changed.connect(self._on_viewer_transform_changed)
             self.models_preview.part_selected.connect(self._on_viewer_part_selected)
+            self.models_preview.part_selection_changed.connect(self._on_viewer_part_selection_changed)
             self._mode_toggle_btn.clicked.connect(self._on_mode_toggle_clicked)
             self._reset_transform_btn.clicked.connect(self._reset_current_part_transform)
             self._transform_x.editingFinished.connect(self._apply_manual_transform)
@@ -942,7 +958,7 @@ class AddEditToolDialog(QDialog):
             self._transform_x.returnPressed.connect(self._transform_x.editingFinished.emit)
             self._transform_y.returnPressed.connect(self._transform_y.editingFinished.emit)
             self._transform_z.returnPressed.connect(self._transform_z.editingFinished.emit)
-            self.model_table.currentCellChanged.connect(self._on_model_table_row_changed)
+            self.model_table.itemSelectionChanged.connect(self._on_model_table_selection_changed)
 
         splitter.addWidget(models_panel)
         splitter.addWidget(preview_panel)
@@ -2145,25 +2161,75 @@ class AddEditToolDialog(QDialog):
 
     def _on_viewer_transform_changed(self, index: int, transform: dict):
         self._part_transforms[index] = transform
-        if index == self._selected_part_index:
-            self._update_transform_fields(transform)
+        if index in self._selected_part_indices:
+            self._refresh_transform_selection_state()
 
     def _on_viewer_part_selected(self, index: int):
+        self._selected_part_indices = [index] if index >= 0 else []
         self._selected_part_index = index
-        if index < 0:
+        self._refresh_transform_selection_state()
+        self._sync_model_table_selection()
+
+    def _on_viewer_part_selection_changed(self, indices: list[int]):
+        normalized = [idx for idx in indices if isinstance(idx, int) and idx >= 0]
+        self._selected_part_indices = normalized
+        self._selected_part_index = normalized[-1] if normalized else -1
+        self._refresh_transform_selection_state()
+        self._sync_model_table_selection()
+
+    def _sync_model_table_selection(self):
+        if not hasattr(self, 'model_table'):
+            return
+        selection_model = self.model_table.selectionModel()
+        if selection_model is None:
+            return
+        selection_model.blockSignals(True)
+        self.model_table.blockSignals(True)
+        selection_model.clearSelection()
+        for index in self._selected_part_indices:
+            model_index = self.model_table.model().index(index, 0)
+            if not model_index.isValid():
+                continue
+            selection_model.select(
+                model_index,
+                QItemSelectionModel.Select | QItemSelectionModel.Rows,
+            )
+        if self._selected_part_index >= 0:
+            current_item = self.model_table.item(self._selected_part_index, 0)
+            if current_item is not None:
+                self.model_table.setCurrentItem(current_item)
+        self.model_table.blockSignals(False)
+        selection_model.blockSignals(False)
+
+    def _refresh_transform_selection_state(self):
+        count = len(self._selected_part_indices)
+        single_selected = count == 1 and self._selected_part_index >= 0
+        for widget in (self._transform_x, self._transform_y, self._transform_z):
+            widget.setEnabled(single_selected)
+
+        if count == 0:
             self._selected_part_label.setText(
-                self._t('tool_editor.transform.no_selection', 'Click a part to select')
+                self._t('tool_editor.transform.no_selection', 'Click a part to select. Ctrl+click for multiple')
             )
             self._transform_x.setText('0')
             self._transform_y.setText('0')
             self._transform_z.setText('0')
+            self._reset_transform_btn.setEnabled(False)
             return
-        name_item = self.model_table.item(index, 0)
-        name = name_item.text().strip() if name_item else f'Part {index + 1}'
-        self._selected_part_label.setText(name or f'Part {index + 1}')
-        t = self._part_transforms.get(index, {})
+
+        self._reset_transform_btn.setEnabled(True)
+        if single_selected:
+            index = self._selected_part_index
+            name_item = self.model_table.item(index, 0)
+            name = name_item.text().strip() if name_item else f'Part {index + 1}'
+            self._selected_part_label.setText(name or f'Part {index + 1}')
+            t = self._part_transforms.get(index, {})
+            self._update_transform_fields(t)
+            return
+
+        self._selected_part_label.setText(f'{count} models selected')
+        t = self._part_transforms.get(self._selected_part_index, {})
         self._update_transform_fields(t)
-        self.model_table.selectRow(index)
 
     def _update_transform_fields(self, t: dict):
         if self._current_transform_mode == 'translate':
@@ -2178,23 +2244,33 @@ class AddEditToolDialog(QDialog):
     def _on_mode_toggle_clicked(self):
         if self._mode_toggle_btn.isChecked():
             self._set_gizmo_mode('translate')
-            self._mode_toggle_btn.setText(self._t('tool_editor.transform.move', 'MOVE'))
+            self._mode_toggle_btn.setText('')
+            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'import_export.svg')))
+            self._mode_toggle_btn.setIconSize(QSize(18, 18))
+            self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
         else:
             self._set_gizmo_mode('rotate')
-            self._mode_toggle_btn.setText(self._t('tool_editor.transform.rotate', 'ROTATE'))
+            self._mode_toggle_btn.setText('')
+            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'arrow_circle_right.svg')))
+            self._mode_toggle_btn.setIconSize(QSize(18, 18))
+            self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.rotate', 'KIERRÄ'))
 
     def _set_gizmo_mode(self, mode: str):
         self._current_transform_mode = mode
         if hasattr(self, '_mode_toggle_btn'):
             is_translate = mode == 'translate'
             self._mode_toggle_btn.setChecked(is_translate)
-            self._mode_toggle_btn.setText(
-                self._t('tool_editor.transform.move', 'MOVE') if is_translate 
-                else self._t('tool_editor.transform.rotate', 'ROTATE')
+            self._mode_toggle_btn.setText('')
+            self._mode_toggle_btn.setIcon(
+                QIcon(str(TOOL_ICONS_DIR / ('import_export.svg' if is_translate else 'arrow_circle_right.svg')))
+            )
+            self._mode_toggle_btn.setIconSize(QSize(18, 18))
+            self._mode_toggle_btn.setToolTip(
+                self._t('tool_editor.transform.move', 'SIIRRÄ') if is_translate
+                else self._t('tool_editor.transform.rotate', 'KIERRÄ')
             )
         self.models_preview.set_transform_mode(mode)
-        t = self._part_transforms.get(self._selected_part_index, {})
-        self._update_transform_fields(t)
+        self._refresh_transform_selection_state()
 
     def _reset_current_part_transform(self):
         if self._selected_part_index < 0:
@@ -2202,7 +2278,7 @@ class AddEditToolDialog(QDialog):
         self.models_preview.reset_selected_part_transform()
 
     def _apply_manual_transform(self):
-        if self._selected_part_index < 0:
+        if len(self._selected_part_indices) != 1 or self._selected_part_index < 0:
             return
         try:
             vx = float(self._transform_x.text().replace(',', '.'))
@@ -2231,9 +2307,19 @@ class AddEditToolDialog(QDialog):
             all_transforms.append(self._part_transforms.get(i, {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}))
         self.models_preview.set_part_transforms(all_transforms)
 
-    def _on_model_table_row_changed(self, current_row, current_col, prev_row, prev_col):
-        if current_row >= 0 and self._assembly_transform_enabled:
-            self.models_preview.select_part(current_row)
+    def _on_model_table_selection_changed(self):
+        if not self._assembly_transform_enabled:
+            return
+        if not hasattr(self, 'model_table'):
+            return
+        selection_model = self.model_table.selectionModel()
+        if selection_model is None:
+            return
+        rows = sorted(index.row() for index in selection_model.selectedRows())
+        self._selected_part_indices = rows
+        self._selected_part_index = rows[-1] if rows else -1
+        self._refresh_transform_selection_state()
+        self.models_preview.select_parts(rows)
 
     def _measurement_part_options(self):
         options = [

@@ -76,6 +76,7 @@ class ScrollFriendlyWebView(QWebEngineView):
 class StlPreviewWidget(QWidget):
     transform_changed = Signal(int, dict)
     part_selected = Signal(int)
+    part_selection_changed = Signal(list)
     point_picked = Signal(dict)
     measurement_updated = Signal(dict)
 
@@ -96,6 +97,7 @@ class StlPreviewWidget(QWidget):
         self._transform_mode = 'translate'
         self._part_transforms_cache = []
         self._selected_part_index = -1
+        self._selected_part_indices = []
         self._measurement_overlays = []
         self._measurements_visible = False
         self._measurement_filter = None
@@ -570,12 +572,42 @@ class StlPreviewWidget(QWidget):
                 self.transform_changed.emit(data['index'], data['transform'])
             except (json.JSONDecodeError, KeyError):
                 pass
+        elif title.startswith('TRANSFORM_BATCH:'):
+            try:
+                payload = json.loads(title[len('TRANSFORM_BATCH:'):])
+                if not isinstance(payload, list):
+                    return
+                for item in payload:
+                    if not isinstance(item, dict):
+                        continue
+                    index = item.get('index')
+                    transform = item.get('transform')
+                    if not isinstance(index, int) or index < 0 or not isinstance(transform, dict):
+                        continue
+                    while len(self._part_transforms_cache) <= index:
+                        self._part_transforms_cache.append({'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0})
+                    self._part_transforms_cache[index] = transform
+                    self.transform_changed.emit(index, transform)
+            except (json.JSONDecodeError, KeyError, TypeError):
+                pass
         elif title.startswith('PART_SELECTED:'):
             try:
                 idx = int(title[len('PART_SELECTED:'):])
                 self._selected_part_index = idx
                 self.part_selected.emit(idx)
             except ValueError:
+                pass
+        elif title.startswith('PART_SELECTIONS:'):
+            try:
+                indices = json.loads(title[len('PART_SELECTIONS:'):])
+                if not isinstance(indices, list):
+                    return
+                normalized = [int(idx) for idx in indices if isinstance(idx, int) or str(idx).lstrip('-').isdigit()]
+                self._selected_part_indices = normalized
+                self._selected_part_index = normalized[-1] if normalized else -1
+                self.part_selected.emit(self._selected_part_index)
+                self.part_selection_changed.emit(normalized)
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
         elif title.startswith('POINT_PICKED:'):
             try:
@@ -636,14 +668,25 @@ class StlPreviewWidget(QWidget):
 
     def select_part(self, index: int):
         self._selected_part_index = int(index)
+        self._selected_part_indices = [self._selected_part_index] if self._selected_part_index >= 0 else []
         if self._page_ready:
             self._web.page().runJavaScript(
                 f"window.selectPart && window.selectPart({int(index)});"
             )
 
+    def select_parts(self, indices: list[int]):
+        normalized = [int(idx) for idx in (indices or []) if int(idx) >= 0]
+        self._selected_part_indices = normalized
+        self._selected_part_index = normalized[-1] if normalized else -1
+        if self._page_ready:
+            self._web.page().runJavaScript(
+                f"window.selectParts && window.selectParts({json.dumps(normalized)});"
+            )
+
     def reset_selected_part_transform(self):
-        if 0 <= self._selected_part_index < len(self._part_transforms_cache):
-            self._part_transforms_cache[self._selected_part_index] = {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}
+        for index in self._selected_part_indices or ([self._selected_part_index] if self._selected_part_index >= 0 else []):
+            if 0 <= index < len(self._part_transforms_cache):
+                self._part_transforms_cache[index] = {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}
         if self._page_ready:
             self._web.page().runJavaScript(
                 "window.resetSelectedPartTransform && window.resetSelectedPartTransform();"

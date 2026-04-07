@@ -32,6 +32,7 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.enableZoom = false;
 controls.enablePan = true;
+controls.panSpeed = 1.0;
 controls._orbitSnappingMm = 1.0;
 
 const transformControl = new TransformControls(camera, renderer.domElement);
@@ -39,9 +40,42 @@ transformControl.setSize(0.8);
 transformControl.visible = false;
 scene.add(transformControl);
 
+let fineTransformSnapEnabled = false;
+
+function _updateTransformSnap() {
+  if (fineTransformSnapEnabled) {
+    transformControl.setTranslationSnap(0.1);
+    transformControl.setRotationSnap(THREE.MathUtils.degToRad(0.1));
+    return;
+  }
+  transformControl.setTranslationSnap(1);
+  transformControl.setRotationSnap(THREE.MathUtils.degToRad(1));
+}
+
+_updateTransformSnap();
+const selectionProxy = new THREE.Group();
+selectionProxy.visible = false;
+scene.add(selectionProxy);
+
 transformControl.addEventListener('dragging-changed', (event) => {
   controls.enabled = !event.value;
+  if (event.value && transformControl.object) {
+    const object = transformControl.object;
+    _fineDragState = {
+      object,
+      startPosition: object.position.clone(),
+      startRotation: object.rotation.clone(),
+    };
+  }
+  if (event.value && transformControl.object === selectionProxy) {
+    _selectionProxyDragState = {
+      position: selectionProxy.position.clone(),
+      quaternion: selectionProxy.quaternion.clone(),
+    };
+  }
   if (!event.value) {
+    _fineDragState = null;
+    _selectionProxyDragState = null;
     _gizmoDragJustEnded = true;
     setTimeout(() => { _gizmoDragJustEnded = false; }, 100);
   }
@@ -49,6 +83,13 @@ transformControl.addEventListener('dragging-changed', (event) => {
 
 transformControl.addEventListener('objectChange', () => {
   const mesh = transformControl.object;
+  if (_fineDragState && mesh === _fineDragState.object) {
+    _applyFineDragDamping(mesh);
+  }
+  if (mesh === selectionProxy && selectedMeshIndices.length > 1) {
+    _applySelectionProxyTransform();
+    return;
+  }
   if (mesh && typeof mesh._partIndex === 'number') {
     const index = mesh._partIndex;
     if (index >= 0 && index < partTransforms.length) {
@@ -100,6 +141,8 @@ const frameDirection = new THREE.Vector3(1, 0.62, 1).normalize();
 let transformEditEnabled = false;
 let selectedMeshIndex = -1;
 let requestedSelectedMeshIndex = -1;
+let selectedMeshIndices = [];
+let requestedSelectedMeshIndices = [];
 let partTransforms = [];
 let measurementOverlays = [];
 let measurementsVisible = false;
@@ -116,6 +159,48 @@ const _measurementDragRaycaster = new THREE.Raycaster();
 const _measurementDragPointer = new THREE.Vector2();
 let _measurementDragState = null;
 let _measurementDragJustEnded = false;
+let _selectionProxyDragState = null;
+let _fineDragState = null;
+
+const FINE_DRAG_GAIN = 0.005;
+const TRANSFORM_PAN_GAIN = 0.35;
+const TRANSFORM_FINE_PAN_GAIN = 0.015;
+
+function _updateTransformPanGain() {
+  if (!transformEditEnabled) {
+    controls.panSpeed = 1.0;
+    return;
+  }
+  controls.panSpeed = fineTransformSnapEnabled ? TRANSFORM_FINE_PAN_GAIN : TRANSFORM_PAN_GAIN;
+}
+
+_updateTransformPanGain();
+
+window.addEventListener('keydown', (event) => {
+  const ctrlNow = !!event.ctrlKey;
+  if (ctrlNow === fineTransformSnapEnabled) {
+    return;
+  }
+  fineTransformSnapEnabled = ctrlNow;
+  _updateTransformSnap();
+  _updateTransformPanGain();
+});
+
+window.addEventListener('keyup', (event) => {
+  const ctrlNow = !!event.ctrlKey;
+  if (ctrlNow === fineTransformSnapEnabled) {
+    return;
+  }
+  fineTransformSnapEnabled = ctrlNow;
+  _updateTransformSnap();
+  _updateTransformPanGain();
+});
+
+window.addEventListener('blur', () => {
+  fineTransformSnapEnabled = false;
+  _updateTransformSnap();
+  _updateTransformPanGain();
+});
 
 // Measurement color scheme - distinctive colors for each type
 const measurementColors = {
@@ -294,6 +379,24 @@ function _scheduleMeasurementsRender() {
 }
 
 function _syncSelectedTransform() {
+  if (selectedMeshIndices.length > 1) {
+    const payload = selectedMeshIndices
+      .filter((idx) => idx >= 0 && idx < currentMeshes.length && currentMeshes[idx])
+      .map((idx) => {
+        const mesh = currentMeshes[idx];
+        partTransforms[idx] = {
+          x: parseFloat(mesh.position.x.toFixed(4)),
+          y: parseFloat(mesh.position.y.toFixed(4)),
+          z: parseFloat(mesh.position.z.toFixed(4)),
+          rx: parseFloat(THREE.MathUtils.radToDeg(mesh.rotation.x).toFixed(2)),
+          ry: parseFloat(THREE.MathUtils.radToDeg(mesh.rotation.y).toFixed(2)),
+          rz: parseFloat(THREE.MathUtils.radToDeg(mesh.rotation.z).toFixed(2)),
+        };
+        return { index: idx, transform: partTransforms[idx] };
+      });
+    document.title = 'TRANSFORM_BATCH:' + JSON.stringify(payload);
+    return;
+  }
   if (selectedMeshIndex < 0 || selectedMeshIndex >= currentMeshes.length) return;
   const mesh = currentMeshes[selectedMeshIndex];
   if (!mesh) return;
@@ -322,20 +425,153 @@ function _highlightMesh(mesh, on) {
   }
 }
 
+function _emitSelectionChanged() {
+  document.title = 'PART_SELECTIONS:' + JSON.stringify(selectedMeshIndices.slice());
+}
+
+function _updateSelectionProxyFromSelection() {
+  if (selectedMeshIndices.length <= 1) {
+    selectionProxy.visible = false;
+    return;
+  }
+
+  const center = new THREE.Vector3();
+  const worldPos = new THREE.Vector3();
+  let count = 0;
+  for (const idx of selectedMeshIndices) {
+    const mesh = currentMeshes[idx];
+    if (!mesh) continue;
+    mesh.getWorldPosition(worldPos);
+    center.add(worldPos);
+    count += 1;
+  }
+  if (count <= 0) {
+    selectionProxy.visible = false;
+    return;
+  }
+
+  center.multiplyScalar(1 / count);
+  selectionProxy.position.copy(center);
+  selectionProxy.quaternion.identity();
+  selectionProxy.visible = true;
+}
+
+function _applySelectionProxyTransform() {
+  if (!_selectionProxyDragState || selectedMeshIndices.length <= 1) {
+    return;
+  }
+
+  const previousPosition = _selectionProxyDragState.position.clone();
+  const previousQuaternion = _selectionProxyDragState.quaternion.clone();
+  const deltaPosition = selectionProxy.position.clone().sub(previousPosition);
+  const deltaQuaternion = selectionProxy.quaternion.clone().multiply(previousQuaternion.clone().invert());
+
+  if (transformControl.getMode() === 'translate') {
+    const worldPos = new THREE.Vector3();
+    const targetWorldPos = new THREE.Vector3();
+    for (const idx of selectedMeshIndices) {
+      const mesh = currentMeshes[idx];
+      if (!mesh) continue;
+      const parent = mesh.parent || scene;
+      mesh.getWorldPosition(worldPos);
+      targetWorldPos.copy(worldPos).add(deltaPosition);
+      mesh.position.copy(parent.worldToLocal(targetWorldPos.clone()));
+    }
+  } else {
+    const worldPos = new THREE.Vector3();
+    const targetWorldPos = new THREE.Vector3();
+    const worldQuat = new THREE.Quaternion();
+    const targetWorldQuat = new THREE.Quaternion();
+    const parentWorldQuat = new THREE.Quaternion();
+    const parentWorldQuatInv = new THREE.Quaternion();
+    for (const idx of selectedMeshIndices) {
+      const mesh = currentMeshes[idx];
+      if (!mesh) continue;
+      const parent = mesh.parent || scene;
+
+      mesh.getWorldPosition(worldPos);
+      targetWorldPos.copy(worldPos).sub(previousPosition).applyQuaternion(deltaQuaternion).add(previousPosition);
+      mesh.position.copy(parent.worldToLocal(targetWorldPos.clone()));
+
+      mesh.getWorldQuaternion(worldQuat);
+      targetWorldQuat.copy(deltaQuaternion).multiply(worldQuat);
+      parent.getWorldQuaternion(parentWorldQuat);
+      parentWorldQuatInv.copy(parentWorldQuat).invert();
+      mesh.quaternion.copy(parentWorldQuatInv.multiply(targetWorldQuat));
+    }
+  }
+
+  _selectionProxyDragState.position.copy(selectionProxy.position);
+  _selectionProxyDragState.quaternion.copy(selectionProxy.quaternion);
+  _syncSelectedTransform();
+  _scheduleMeasurementsRender();
+}
+
 function _selectPartByIndex(idx) {
-  if (selectedMeshIndex >= 0 && selectedMeshIndex < currentMeshes.length) {
-    _highlightMesh(currentMeshes[selectedMeshIndex], false);
+  for (const selectedIdx of selectedMeshIndices) {
+    if (selectedIdx >= 0 && selectedIdx < currentMeshes.length) {
+      _highlightMesh(currentMeshes[selectedIdx], false);
+    }
   }
   if (idx < 0 || idx >= currentMeshes.length || !currentMeshes[idx]) {
     transformControl.detach();
     selectedMeshIndex = -1;
-    document.title = 'PART_SELECTED:-1';
+    selectedMeshIndices = [];
+    selectionProxy.visible = false;
+    _emitSelectionChanged();
     return;
   }
   selectedMeshIndex = idx;
+  selectedMeshIndices = [idx];
   _highlightMesh(currentMeshes[idx], true);
   transformControl.attach(currentMeshes[idx]);
-  document.title = 'PART_SELECTED:' + idx;
+  selectionProxy.visible = false;
+  _emitSelectionChanged();
+}
+
+function _setSelectedPartIndices(indices) {
+  for (const selectedIdx of selectedMeshIndices) {
+    if (selectedIdx >= 0 && selectedIdx < currentMeshes.length) {
+      _highlightMesh(currentMeshes[selectedIdx], false);
+    }
+  }
+
+  const normalized = Array.from(new Set((indices || [])
+    .map((idx) => Number(idx))
+    .filter((idx) => Number.isInteger(idx) && idx >= 0 && idx < currentMeshes.length && currentMeshes[idx])));
+
+  selectedMeshIndices = normalized;
+  selectedMeshIndex = normalized.length > 0 ? normalized[normalized.length - 1] : -1;
+
+  for (const selectedIdx of selectedMeshIndices) {
+    _highlightMesh(currentMeshes[selectedIdx], true);
+  }
+
+  if (selectedMeshIndices.length <= 0) {
+    selectionProxy.visible = false;
+    transformControl.detach();
+  } else if (selectedMeshIndices.length === 1) {
+    selectionProxy.visible = false;
+    transformControl.attach(currentMeshes[selectedMeshIndex]);
+    transformControl.setSpace('local');
+  } else {
+    _updateSelectionProxyFromSelection();
+    transformControl.attach(selectionProxy);
+    transformControl.setSpace('world');
+  }
+
+  _emitSelectionChanged();
+}
+
+function _togglePartSelection(idx) {
+  if (idx < 0 || idx >= currentMeshes.length || !currentMeshes[idx]) {
+    return;
+  }
+  if (selectedMeshIndices.includes(idx)) {
+    _setSelectedPartIndices(selectedMeshIndices.filter((value) => value !== idx));
+    return;
+  }
+  _setSelectedPartIndices(selectedMeshIndices.concat([idx]));
 }
 
 function _normalizedPartTransform(transform) {
@@ -353,8 +589,12 @@ function _restoreRequestedSelection() {
   if (!transformEditEnabled) {
     return;
   }
+  if (requestedSelectedMeshIndices.length > 0) {
+    _setSelectedPartIndices(requestedSelectedMeshIndices);
+    return;
+  }
   if (requestedSelectedMeshIndex < 0) {
-    _selectPartByIndex(-1);
+    _setSelectedPartIndices([]);
     return;
   }
   if (requestedSelectedMeshIndex >= currentMeshes.length) {
@@ -556,8 +796,43 @@ function _snapDegrees(value) {
   return Math.round(Number(value) || 0);
 }
 
+function _snapFineMm(value) {
+  return Math.round((Number(value) || 0) * 10) / 10;
+}
+
+function _snapFineDegrees(value) {
+  return Math.round((Number(value) || 0) * 10) / 10;
+}
+
 function _snapVec3Mm(value) {
   return new THREE.Vector3(_snapMm(value.x), _snapMm(value.y), _snapMm(value.z));
+}
+
+function _applyFineDragDamping(object) {
+  if (!_fineDragState || _fineDragState.object !== object) {
+    return;
+  }
+
+  if (!fineTransformSnapEnabled) {
+    return;
+  }
+
+  // Apply custom gain only to translation. Rotation stays on native
+  // TransformControls snapping to prevent fine-mode jump artifacts.
+  if (transformControl.getMode() !== 'translate') {
+    return;
+  }
+
+  const gain = FINE_DRAG_GAIN;
+  const snapMm = _snapFineMm;
+  const rawDelta = object.position.clone().sub(_fineDragState.startPosition);
+  rawDelta.multiplyScalar(gain);
+  const snappedDelta = new THREE.Vector3(
+    snapMm(rawDelta.x),
+    snapMm(rawDelta.y),
+    snapMm(rawDelta.z),
+  );
+  object.position.copy(_fineDragState.startPosition.clone().add(snappedDelta));
 }
 
 function _distanceDirectionForOverlay(definition) {
@@ -998,11 +1273,16 @@ function _placePickMarker(position) {
 
 function clearCurrentMeshes() {
   transformControl.detach();
-  if (selectedMeshIndex >= 0 && selectedMeshIndex < currentMeshes.length) {
-    _highlightMesh(currentMeshes[selectedMeshIndex], false);
+  for (const selectedIdx of selectedMeshIndices) {
+    if (selectedIdx >= 0 && selectedIdx < currentMeshes.length) {
+      _highlightMesh(currentMeshes[selectedIdx], false);
+    }
   }
   selectedMeshIndex = -1;
   requestedSelectedMeshIndex = -1;
+  selectedMeshIndices = [];
+  requestedSelectedMeshIndices = [];
+  selectionProxy.visible = false;
   partTransforms = [];
   _clearMeasurements();
   _clearPickMarker();
@@ -1224,9 +1504,13 @@ canvas.addEventListener('click', (event) => {
   if (intersects.length > 0) {
     const hit = intersects[0].object;
     const idx = hit._partIndex != null ? hit._partIndex : currentMeshes.indexOf(hit);
-    _selectPartByIndex(idx);
+    if (event.ctrlKey || event.metaKey) {
+      _togglePartSelection(idx);
+    } else {
+      _selectPartByIndex(idx);
+    }
   } else {
-    _selectPartByIndex(-1);
+    _setSelectedPartIndices([]);
   }
 });
 
@@ -1400,9 +1684,11 @@ window.setPointPickingEnabled = function (enabled) {
 
 window.setTransformEditEnabled = function (enabled) {
   transformEditEnabled = !!enabled;
+  _updateTransformPanGain();
   if (!transformEditEnabled) {
     requestedSelectedMeshIndex = -1;
-    _selectPartByIndex(-1);
+    requestedSelectedMeshIndices = [];
+    _setSelectedPartIndices([]);
     return;
   }
   _restoreRequestedSelection();
@@ -1411,6 +1697,11 @@ window.setTransformEditEnabled = function (enabled) {
 window.setTransformMode = function (mode) {
   if (mode === 'translate' || mode === 'rotate') {
     transformControl.setMode(mode);
+    if (transformControl.object === selectionProxy) {
+      transformControl.setSpace('world');
+    } else {
+      transformControl.setSpace('local');
+    }
   }
 };
 
@@ -1432,7 +1723,16 @@ window.setPartTransforms = function (transforms) {
       THREE.MathUtils.degToRad(t.rz || 0)
     );
   }
-  if (selectedMeshIndex >= 0) {
+  if (selectedMeshIndices.length > 1) {
+    _updateSelectionProxyFromSelection();
+    if (transformControl.object === selectionProxy) {
+      _selectionProxyDragState = {
+        position: selectionProxy.position.clone(),
+        quaternion: selectionProxy.quaternion.clone(),
+      };
+    }
+    _syncSelectedTransform();
+  } else if (selectedMeshIndex >= 0) {
     _syncSelectedTransform();
   }
   _scheduleMeasurementsRender();
@@ -1460,17 +1760,38 @@ window.setPartNames = function (names) {
 
 window.selectPart = function (index) {
   requestedSelectedMeshIndex = typeof index === 'number' ? index : -1;
+  requestedSelectedMeshIndices = requestedSelectedMeshIndex >= 0 ? [requestedSelectedMeshIndex] : [];
+  if (!transformEditEnabled) return;
+  _restoreRequestedSelection();
+};
+
+window.selectParts = function (indices) {
+  requestedSelectedMeshIndices = Array.isArray(indices)
+    ? indices.map((idx) => Number(idx)).filter((idx) => Number.isInteger(idx) && idx >= 0)
+    : [];
+  requestedSelectedMeshIndex = requestedSelectedMeshIndices.length > 0
+    ? requestedSelectedMeshIndices[requestedSelectedMeshIndices.length - 1]
+    : -1;
   if (!transformEditEnabled) return;
   _restoreRequestedSelection();
 };
 
 window.resetSelectedPartTransform = function () {
-  if (selectedMeshIndex < 0 || selectedMeshIndex >= currentMeshes.length) return;
-  const mesh = currentMeshes[selectedMeshIndex];
-  if (!mesh) return;
-  mesh.position.set(0, 0, 0);
-  mesh.rotation.set(0, 0, 0);
-  partTransforms[selectedMeshIndex] = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
+  if (selectedMeshIndices.length <= 0) return;
+  for (const idx of selectedMeshIndices) {
+    if (idx < 0 || idx >= currentMeshes.length) continue;
+    const mesh = currentMeshes[idx];
+    if (!mesh) continue;
+    mesh.position.set(0, 0, 0);
+    mesh.rotation.set(0, 0, 0);
+    partTransforms[idx] = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
+  }
+  if (selectedMeshIndices.length > 1) {
+    _updateSelectionProxyFromSelection();
+    if (transformControl.object === selectionProxy) {
+      transformControl.attach(selectionProxy);
+    }
+  }
   _syncSelectedTransform();
   _scheduleMeasurementsRender();
 };

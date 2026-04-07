@@ -76,6 +76,19 @@ QComboBox#topTypeFilter {
     min-width: 68px;
 }
 
+QComboBox[dropdownSizeProfile="compact"] {
+    min-height: 30px;
+    font-size: 9.5pt;
+    padding: 3px 8px;
+    min-width: 60px;
+}
+
+QComboBox[dropdownSizeProfile="compact"][dropdownWidthProfile="narrow"] {
+    min-width: 42px;
+    max-width: 42px;
+    padding: 3px 4px 3px 8px;
+}
+
 /* Left-rail head selector size profile */
 QComboBox#toolHeadRailFilter {
     min-height: 34px;
@@ -89,6 +102,14 @@ QComboBox#topTypeFilter::drop-down {
     width: 26px;
 }
 
+QComboBox[dropdownSizeProfile="compact"]::drop-down {
+    width: 22px;
+}
+
+QComboBox[dropdownSizeProfile="compact"][dropdownWidthProfile="narrow"]::drop-down {
+    width: 18px;
+}
+
 QComboBox#toolHeadRailFilter::drop-down {
     width: 26px;
 }
@@ -96,6 +117,16 @@ QComboBox#toolHeadRailFilter::drop-down {
 QComboBox#topTypeFilter::down-arrow {
     width: 22px;
     height: 22px;
+}
+
+QComboBox[dropdownSizeProfile="compact"]::down-arrow {
+    width: 18px;
+    height: 18px;
+}
+
+QComboBox[dropdownSizeProfile="compact"][dropdownWidthProfile="narrow"]::down-arrow {
+    width: 16px;
+    height: 16px;
 }
 
 QComboBox#toolHeadRailFilter::down-arrow {

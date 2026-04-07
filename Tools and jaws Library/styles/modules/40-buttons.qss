@@ -105,6 +105,7 @@ QPushButton[panelActionButton="true"]:pressed {
                                       stop:0 #d6dee5, stop:1 #f2f5f8);
 }
 
+/* Measurement editor nudge +/- buttons (compact square variant) */
 /* Destructive action variant */
 QPushButton[dangerAction="true"] {
     color: #7d1f22;
