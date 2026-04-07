@@ -2,6 +2,16 @@ export function createMeasurementDragController(deps) {
   let dragState = null;
   let dragJustEnded = false;
 
+  const getDragObjects = () => {
+    if (typeof deps.getMeasurementDragObjects === 'function') {
+      return deps.getMeasurementDragObjects();
+    }
+    if (typeof deps.getDistanceDragObjects === 'function') {
+      return deps.getDistanceDragObjects();
+    }
+    return [];
+  };
+
   const updatePointerRay = (event) => {
     const rect = deps.canvas.getBoundingClientRect();
     deps.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -27,7 +37,7 @@ export function createMeasurementDragController(deps) {
       }
 
       updatePointerRay(event);
-      const dragTargets = deps.getDistanceDragObjects();
+      const dragTargets = getDragObjects();
       if (dragTargets.length === 0) {
         return false;
       }
@@ -47,12 +57,27 @@ export function createMeasurementDragController(deps) {
       }
 
       const overlay = overlays[measurementIndex];
-      if (!overlay || String(overlay.type || '').toLowerCase() !== 'distance') {
+      const overlayType = String(overlay?.type || '').toLowerCase();
+      if (!overlay || (overlayType !== 'distance' && overlayType !== 'diameter_ring')) {
         return false;
       }
 
-      const axisDir = deps.distanceDirectionForOverlay(overlay);
-      if (!axisDir) {
+      let axisDir = null;
+      let originalOffset = null;
+      if (overlayType === 'distance') {
+        axisDir = deps.distanceDirectionForOverlay(overlay);
+        if (!axisDir) {
+          return false;
+        }
+        originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDistanceOffsetForOverlay(overlay);
+      } else if (overlayType === 'diameter_ring') {
+        if (dragKind !== 'diameter-offset') {
+          return false;
+        }
+        originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDiameterOffsetForOverlay(overlay);
+      }
+
+      if (!originalOffset) {
         return false;
       }
 
@@ -67,11 +92,12 @@ export function createMeasurementDragController(deps) {
 
       dragState = {
         dragKind,
+        overlayType,
         measurementIndex,
         axisDir,
         plane,
         planeStartPoint,
-        originalOffset: deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDistanceOffsetForOverlay(overlay),
+        originalOffset,
         originalStartShift: Number(overlay.start_shift) || 0,
         originalEndShift: Number(overlay.end_shift) || 0,
       };
@@ -90,7 +116,7 @@ export function createMeasurementDragController(deps) {
           return;
         }
 
-        const hoverTargets = deps.getDistanceDragObjects();
+        const hoverTargets = getDragObjects();
         if (hoverTargets.length === 0) {
           deps.setCanvasCursor('');
           return;
@@ -126,6 +152,9 @@ export function createMeasurementDragController(deps) {
         const alongAxis = dragState.axisDir.clone().multiplyScalar(delta.dot(dragState.axisDir));
         const sidewaysDelta = delta.clone().sub(alongAxis);
         const newOffset = snapVec(dragState.originalOffset.clone().add(sidewaysDelta));
+        overlay.offset_xyz = deps.formatVec3(newOffset);
+      } else if (dragState.dragKind === 'diameter-offset') {
+        const newOffset = snapVec(dragState.originalOffset.clone().add(delta));
         overlay.offset_xyz = deps.formatVec3(newOffset);
       } else if (dragState.dragKind === 'distance-start') {
         const shift = delta.dot(dragState.axisDir);

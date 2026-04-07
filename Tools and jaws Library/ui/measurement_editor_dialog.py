@@ -68,6 +68,25 @@ def _xyz_to_text_optional(value) -> str:
     return _xyz_to_text(value)
 
 
+def _axis_xyz_text(axis: str) -> str:
+    return {
+        'x': '1, 0, 0',
+        'y': '0, 1, 0',
+        'z': '0, 0, 1',
+    }.get(str(axis or '').strip().lower(), '0, 0, 1')
+
+
+def _axis_from_xyz(value, default: str = 'z') -> str:
+    x, y, z = _xyz_to_tuple(value)
+    magnitudes = {
+        'x': abs(x),
+        'y': abs(y),
+        'z': abs(z),
+    }
+    axis, magnitude = max(magnitudes.items(), key=lambda item: item[1])
+    return axis if magnitude > 1e-6 else default
+
+
 class MeasurementEditorDialog(QDialog):
     """Dialog for editing measurements with visual 3D feedback and point-picking."""
 
@@ -87,6 +106,12 @@ class MeasurementEditorDialog(QDialog):
         self._current_diameter_item: QListWidgetItem | None = None
         self._current_radius_item: QListWidgetItem | None = None
         self._current_angle_item: QListWidgetItem | None = None
+        self._distance_edit_model: dict | None = None
+        self._diameter_edit_model: dict | None = None
+        self._dist_pick_stage: str | None = None
+        self._diam_pick_stage: str | None = None
+        self._dist_axis_value = 'z'
+        self._diam_axis_value = 'z'
         self._pending_add_return_meta: dict | None = None
         self._measurement_uid_counter = 0
         self._commit_timer = QTimer(self)
@@ -576,57 +601,178 @@ class MeasurementEditorDialog(QDialog):
         container = QWidget()
         form = QFormLayout(container)
         form.setContentsMargins(4, 4, 4, 4)
-        form.setSpacing(6)
+        form.setHorizontalSpacing(6)
+        form.setVerticalSpacing(4)
         form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+
+        self._diam_basic_section = QGroupBox(self._t('tool_editor.measurements.basic_functions', 'Basic functions'))
+        self._diam_basic_section.setStyleSheet(
+            'QGroupBox {'
+            '  background-color: #f0f6fc;'
+            '  border: 1px solid #d0d8e0;'
+            '  border-radius: 6px;'
+            '  margin-top: 10px;'
+            '  padding-top: 8px;'
+            '}'
+            'QGroupBox::title {'
+            '  subcontrol-origin: margin;'
+            '  left: 10px;'
+            '  padding: 0 4px;'
+            '  color: #5a6b7c;'
+            '  font-size: 8pt;'
+            '  font-weight: 600;'
+            '}'
+        )
+        basic_form = QFormLayout(self._diam_basic_section)
+        basic_form.setContentsMargins(8, 6, 8, 6)
+        basic_form.setHorizontalSpacing(6)
+        basic_form.setVerticalSpacing(3)
+        basic_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self._diam_basic_section.setMinimumHeight(160)
+        self._diam_basic_section.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
 
         self._diam_name_edit = QLineEdit()
         self._diam_name_edit.setPlaceholderText('Diameter 1')
         self._diam_name_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('common.name', 'Name') + ':', self._diam_name_edit)
+        basic_form.addRow(self._t('common.name', 'Name') + ':', self._diam_name_edit)
 
-        self._diam_part_edit = QLineEdit()
-        self._diam_part_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.part_placeholder', '(part name, blank = assembly)'))
-        self._diam_part_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('tool_editor.measurements.part', 'Part') + ':', self._diam_part_edit)
+        pick_row = QHBoxLayout()
+        pick_row.setSpacing(6)
+        self._diam_pick_points_btn = QPushButton('')
+        self._diam_pick_points_btn.setIcon(self._icon('points_select.svg'))
+        self._diam_pick_points_btn.setIconSize(QSize(24, 24))
+        self._diam_pick_points_btn.setToolTip(self._t('tool_editor.measurements.pick', 'Pick'))
+        self._diam_pick_points_btn.setFixedWidth(46)
+        self._diam_pick_points_btn.clicked.connect(self._on_pick_diameter_points)
+        self._diam_pick_status_label = QLabel('')
+        self._diam_pick_status_label.setStyleSheet('color: #6b7b8e; background: transparent;')
+        pick_row.addWidget(self._diam_pick_points_btn)
+        pick_row.addWidget(self._diam_pick_status_label, 1)
+        basic_form.addRow(self._t('tool_editor.measurements.points', 'Points') + ':', pick_row)
 
-        form.addRow('', self._build_xyz_header_row(with_pick=True))
-        center_row = QHBoxLayout()
-        self._diam_center_x_edit = QLineEdit('0')
-        self._diam_center_y_edit = QLineEdit('0')
-        self._diam_center_z_edit = QLineEdit('0')
-        for axis_edit in (self._diam_center_x_edit, self._diam_center_y_edit, self._diam_center_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-        self._diam_center_pick_btn = QPushButton(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._diam_center_pick_btn.setFixedWidth(50)
-        self._diam_center_pick_btn.setToolTip(
-            self._t('tool_editor.measurements.pick_tooltip', 'Click a point on the 3D model'))
-        self._diam_center_pick_btn.clicked.connect(self._on_pick_center)
-        center_row.addWidget(self._diam_center_x_edit)
-        center_row.addWidget(self._diam_center_y_edit)
-        center_row.addWidget(self._diam_center_z_edit)
-        center_row.addStretch(1)
-        center_row.addWidget(self._diam_center_pick_btn)
-        form.addRow(self._t('tool_editor.measurements.center_xyz', 'Center XYZ') + ':', center_row)
+        value_row = QHBoxLayout()
+        value_row.setSpacing(6)
+        self._diam_value_mode_btn = QPushButton(self._t('tool_editor.measurements.value_mode_measured', 'Measured'))
+        self._diam_value_mode_btn.setCheckable(True)
+        self._diam_value_mode_btn.setChecked(False)  # checked = manual, unchecked = measured
+        self._diam_value_mode_btn.setFixedWidth(100)
+        self._diam_value_mode_btn.clicked.connect(self._on_diameter_value_mode_toggled)
+        self._diam_value_edit = QLineEdit()
+        self._diam_value_edit.setPlaceholderText(
+            self._t('tool_editor.measurements.diameter_value_placeholder', 'Measured or manual diameter')
+        )
+        self._diam_value_edit.editingFinished.connect(self._schedule_commit)
+        value_row.addWidget(self._diam_value_mode_btn)
+        value_row.addWidget(self._diam_value_edit, 1)
+        basic_form.addRow(self._t('tool_editor.measurements.diameter', 'Diameter (mm)') + ':', value_row)
+        form.addRow(self._diam_basic_section)
 
-        form.addRow('', self._build_xyz_header_row(with_pick=False))
-        axis_row = QHBoxLayout()
-        self._diam_axis_x_edit = QLineEdit('0')
-        self._diam_axis_y_edit = QLineEdit('1')
-        self._diam_axis_z_edit = QLineEdit('0')
-        for axis_edit in (self._diam_axis_x_edit, self._diam_axis_y_edit, self._diam_axis_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-            axis_row.addWidget(axis_edit)
-        axis_row.addStretch(1)
-        form.addRow(self._t('tool_editor.measurements.axis_xyz', 'Axis XYZ') + ':', axis_row)
+        self._diam_adjust_section = QGroupBox('')
+        self._diam_adjust_section.setStyleSheet(
+            'QGroupBox {'
+            '  background-color: #f0f6fc;'
+            '  border: 1px solid #d0d8e0;'
+            '  border-radius: 6px;'
+            '  margin-top: 10px;'
+            '  padding-top: 8px;'
+            '}'
+            'QGroupBox::title {'
+            '  subcontrol-origin: margin;'
+            '  left: 10px;'
+            '  padding: 0 4px;'
+            '  color: #5a6b7c;'
+            '  font-size: 8pt;'
+            '  font-weight: 600;'
+            '}'
+        )
+        adjust_section_layout = QVBoxLayout(self._diam_adjust_section)
+        adjust_section_layout.setContentsMargins(8, 6, 8, 4)
+        adjust_section_layout.setSpacing(2)
 
-        self._diam_diameter_edit = QLineEdit()
-        self._diam_diameter_edit.setPlaceholderText('10.0')
-        self._diam_diameter_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('tool_editor.measurements.diameter', 'Diameter (mm)') + ':',
-                    self._diam_diameter_edit)
+        self._diam_adjust_x_edit = QLineEdit('0')
+        self._diam_adjust_y_edit = QLineEdit('0')
+        self._diam_adjust_z_edit = QLineEdit('0')
+        self._diam_adjust_axis_by_edit = {
+            self._diam_adjust_x_edit: 'x',
+            self._diam_adjust_y_edit: 'y',
+            self._diam_adjust_z_edit: 'z',
+        }
+        self._diam_adjust_active_axis = 'x'
+        for _ae in (self._diam_adjust_x_edit, self._diam_adjust_y_edit, self._diam_adjust_z_edit):
+            _ae.setFixedWidth(74)
+            _ae.editingFinished.connect(self._schedule_commit)
+            _ae.installEventFilter(self)
+        self._diam_nudge_step_edit = QLineEdit('1.0')
+        self._diam_nudge_step_edit.setFixedWidth(74)
+
+        _adjust_label_style = (
+            'color: #6b7b8e; font-size: 9pt; background: transparent; '
+            'padding: 0px 0px 1px 0px;'
+        )
+        precise_top_row = QHBoxLayout()
+        precise_top_row.setSpacing(4)
+        precise_top_row.setContentsMargins(0, 0, 0, 0)
+        for _hdr_key, _hdr_fallback, _edit in [
+            ('tool_editor.measurements.axis_x', 'X', self._diam_adjust_x_edit),
+            ('tool_editor.measurements.axis_y', 'Y', self._diam_adjust_y_edit),
+            ('tool_editor.measurements.axis_z', 'Z', self._diam_adjust_z_edit),
+            (None, 'mm', self._diam_nudge_step_edit),
+        ]:
+            _col = QVBoxLayout()
+            _col.setSpacing(1)
+            _col.setContentsMargins(0, 0, 0, 0)
+            _hdr_lbl = QLabel(self._t(_hdr_key, _hdr_fallback) if _hdr_key else _hdr_fallback)
+            _hdr_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+            _hdr_lbl.setStyleSheet(_adjust_label_style)
+            _col.addWidget(_hdr_lbl)
+            _col.addWidget(_edit)
+            precise_top_row.addLayout(_col)
+
+        self._diam_nudge_minus_btn = QPushButton('-')
+        self._diam_nudge_minus_btn.setText('\u2212')
+        self._diam_nudge_minus_btn.setFixedSize(34, 34)
+        self._diam_nudge_minus_btn.setStyleSheet('font-size: 19px; font-weight: 700; padding: 0px 0px 2px 0px;')
+        self._diam_nudge_minus_btn.setProperty('arrowMoveButton', True)
+        self._diam_nudge_minus_btn.clicked.connect(lambda: self._on_diameter_offset_nudge('-'))
+        self._diam_nudge_minus_btn.setFocusPolicy(Qt.NoFocus)
+        self._diam_nudge_plus_btn = QPushButton('+')
+        self._diam_nudge_plus_btn.setFixedSize(34, 34)
+        self._diam_nudge_plus_btn.setStyleSheet('font-size: 19px; font-weight: 700; padding: 0px 0px 1px 0px;')
+        self._diam_nudge_plus_btn.setProperty('arrowMoveButton', True)
+        self._diam_nudge_plus_btn.clicked.connect(lambda: self._on_diameter_offset_nudge('+'))
+        self._diam_nudge_plus_btn.setFocusPolicy(Qt.NoFocus)
+        _pm_container = QWidget()
+        _pm_layout = QVBoxLayout(_pm_container)
+        _pm_layout.setContentsMargins(0, 0, 0, 0)
+        _pm_layout.setSpacing(2)
+        _pm_layout.addWidget(self._diam_nudge_plus_btn)
+        _pm_layout.addWidget(self._diam_nudge_minus_btn)
+        precise_top_row.addSpacing(4)
+        precise_top_row.addWidget(_pm_container, 0, Qt.AlignBottom)
+        precise_top_row.addStretch(1)
+        adjust_section_layout.addLayout(precise_top_row)
+
+        adjust_bottom_row = QHBoxLayout()
+        adjust_bottom_row.setSpacing(6)
+        adjust_bottom_row.setContentsMargins(0, 0, 0, 0)
+        self._diam_adjust_mode_btn = QPushButton('')
+        self._diam_adjust_mode_btn.setFixedWidth(46)
+        self._diam_adjust_mode_btn.setIconSize(QSize(24, 24))
+        self._diam_adjust_mode_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self._diam_adjust_mode_btn.setFocusPolicy(Qt.NoFocus)
+        self._diam_adjust_mode_btn.setEnabled(False)
+        adjust_bottom_row.addWidget(self._diam_adjust_mode_btn)
+        adjust_bottom_row.addStretch(1)
+        adjust_section_layout.addLayout(adjust_bottom_row)
+
+        form.addRow(self._diam_adjust_section)
+        self._diam_adjust_section.setVisible(False)
+
+        self._update_diameter_adjust_controls(refresh_values=True)
+        self._set_diameter_axis('z', commit=False)
+        self._set_diameter_value_mode('measured', commit=False)
+        self._update_diameter_measured_value_box()
+        self._update_diameter_pick_status()
 
         return container
 
@@ -875,6 +1021,7 @@ class MeasurementEditorDialog(QDialog):
         self._current_radius_item = None
         self._current_angle_item = None
         self._distance_edit_model = None
+        self._diameter_edit_model = None
 
     def _rebuild_measurement_all_list(self, preferred_kind: str | None = None, preferred_uid: str | None = None):
         preferred_kind = str(preferred_kind or '').strip().lower()
@@ -974,6 +1121,7 @@ class MeasurementEditorDialog(QDialog):
             self._current_diameter_item = src_item
             self._populate_diameter_form(src_item.data(Qt.UserRole))
             self._edit_stack.setCurrentIndex(2)
+            self._auto_start_diameter_pick_if_needed()
         elif kind == 'radius':
             self._current_radius_item = src_item
             self._populate_radius_form(src_item.data(Qt.UserRole))
@@ -1067,12 +1215,25 @@ class MeasurementEditorDialog(QDialog):
     def _normalize_diameter_measurement(self, meas: dict | None) -> dict:
         data = dict(meas or {})
         uid = self._ensure_measurement_uid(data)
+        edge_text = _xyz_to_text_optional(data.get('edge_xyz', ''))
+        diameter_text = str(data.get('diameter', '')).strip()
+        mode = str(data.get('diameter_mode', '')).strip().lower()
+        if mode not in {'measured', 'manual'}:
+            mode = 'measured' if (edge_text or not diameter_text) else 'manual'
+        try:
+            part_index = int(data.get('part_index', -1) or -1)
+        except Exception:
+            part_index = -1
         return {
             'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_diameter', 'New Diameter'),
             'part': str(data.get('part', '')).strip(),
-            'center_xyz': _xyz_to_text(data.get('center_xyz', '0, 0, 0')),
-            'axis_xyz': _xyz_to_text(data.get('axis_xyz', '0, 1, 0')),
-            'diameter': str(data.get('diameter', '10')).strip() or '10',
+            'part_index': part_index,
+            'center_xyz': _xyz_to_text_optional(data.get('center_xyz', '')),
+            'edge_xyz': edge_text,
+            'axis_xyz': _xyz_to_text(data.get('axis_xyz', '0, 0, 1')),
+            'offset_xyz': _xyz_to_text_optional(data.get('offset_xyz', '')),
+            'diameter_mode': mode,
+            'diameter': diameter_text,
             'type': 'diameter_ring',
             '_uid': uid,
         }
@@ -1171,9 +1332,13 @@ class MeasurementEditorDialog(QDialog):
         new_meas = {
             'name': self._t('tool_editor.measurements.new_diameter', 'New Diameter'),
             'part': '',
-            'center_xyz': '0, 0, 0',
-            'axis_xyz': '0, 1, 0',
-            'diameter': '10',
+            'part_index': -1,
+            'center_xyz': '',
+            'edge_xyz': '',
+            'axis_xyz': '0, 0, 1',
+            'offset_xyz': '',
+            'diameter_mode': 'measured',
+            'diameter': '',
             'type': 'diameter_ring',
             '_uid': self._ensure_measurement_uid({}),
         }
@@ -1256,34 +1421,301 @@ class MeasurementEditorDialog(QDialog):
         has_active = kind in {'length', 'diameter', 'radius', 'angle'}
         self._remove_measurement_btn.setEnabled(bool(has_active))
         if hasattr(self, '_distance_detail_mode_col'):
-            self._distance_detail_mode_col.setVisible(kind == 'length')
+            self._distance_detail_mode_col.setVisible(kind in {'length', 'diameter'})
         self._update_distance_precise_visibility()
+        self._sync_axis_pick_overlay_visibility()
 
     def _update_distance_edit_mode_title(self):
-        if not hasattr(self, '_dist_adjust_section'):
+        kind = self._active_measurement_kind()
+        if kind == 'diameter' and hasattr(self, '_diam_adjust_section'):
+            mode_text = self._t('tool_editor.measurements.edit_mode_callout', 'Callout move')
+            self._diam_adjust_section.setTitle(
+                f"{self._t('tool_editor.measurements.edit_mode', 'Edit mode')}: {mode_text}"
+            )
             return
-        if not self._distance_precise_mode_enabled():
-            mode_text = self._t('tool_editor.measurements.edit_mode_helpers', 'Helpers move')
-        elif self._distance_adjust_mode() == 'point':
-            mode_text = self._t('tool_editor.measurements.edit_mode_points', 'Points')
-        else:
-            mode_text = self._t('tool_editor.measurements.edit_mode_arrow', 'Arrow move')
-        self._dist_adjust_section.setTitle(
-            f"{self._t('tool_editor.measurements.edit_mode', 'Edit mode')}: {mode_text}"
-        )
+        if hasattr(self, '_dist_adjust_section'):
+            if not self._distance_precise_mode_enabled():
+                mode_text = self._t('tool_editor.measurements.edit_mode_helpers', 'Helpers move')
+            elif self._distance_adjust_mode() == 'point':
+                mode_text = self._t('tool_editor.measurements.edit_mode_points', 'Points')
+            else:
+                mode_text = self._t('tool_editor.measurements.edit_mode_arrow', 'Arrow move')
+            self._dist_adjust_section.setTitle(
+                f"{self._t('tool_editor.measurements.edit_mode', 'Edit mode')}: {mode_text}"
+            )
 
     def _update_distance_precise_visibility(self):
-        if not hasattr(self, '_dist_adjust_section'):
-            return
         kind = self._active_measurement_kind()
-        show_adjust = kind == 'length' and self._distance_precise_mode_enabled()
-        self._dist_adjust_section.setVisible(show_adjust)
+        show_precise = self._distance_precise_mode_enabled()
+        if hasattr(self, '_dist_adjust_section'):
+            self._dist_adjust_section.setVisible(kind == 'length' and show_precise)
+        if hasattr(self, '_diam_adjust_section'):
+            self._diam_adjust_section.setVisible(kind == 'diameter' and show_precise)
         self._update_distance_edit_mode_title()
         self._update_axis_hint_overlay_visibility()
+        self._sync_axis_pick_overlay_visibility()
 
     def _on_distance_detail_mode_changed(self, *_args):
         self._update_distance_precise_visibility()
         self._refresh_preview_measurements()
+
+    def _diameter_value_mode(self) -> str:
+        if hasattr(self, '_diam_value_mode_btn') and self._diam_value_mode_btn.isChecked():
+            return 'manual'
+        return 'measured'
+
+    def _set_diameter_value_mode(self, mode: str, commit: bool = True):
+        normalized = 'manual' if mode == 'manual' else 'measured'
+        is_manual = normalized == 'manual'
+        if hasattr(self, '_diam_value_mode_btn'):
+            self._diam_value_mode_btn.blockSignals(True)
+            self._diam_value_mode_btn.setChecked(is_manual)
+            self._diam_value_mode_btn.setText(
+                self._t('tool_editor.measurements.value_mode_manual', 'Manual')
+                if is_manual else
+                self._t('tool_editor.measurements.value_mode_measured', 'Measured')
+            )
+            self._diam_value_mode_btn.blockSignals(False)
+        if hasattr(self, '_diam_value_edit'):
+            self._diam_value_edit.setReadOnly(not is_manual)
+        if is_manual and self._pick_target == 'diameter_edge:all':
+            self._cancel_pick()
+        self._update_diameter_measured_value_box()
+        self._update_diameter_pick_status()
+        if commit:
+            self._commit_diameter_edit()
+            if not is_manual:
+                self._auto_start_diameter_pick_if_needed()
+
+    def _on_diameter_value_mode_toggled(self):
+        self._set_diameter_value_mode('manual' if self._diam_value_mode_btn.isChecked() else 'measured', commit=True)
+
+    def _diameter_axis_value(self) -> str:
+        return getattr(self, '_diam_axis_value', 'z')
+
+    def _set_diameter_axis(self, axis: str, commit: bool = True):
+        normalized = axis if axis in {'x', 'y', 'z'} else 'z'
+        self._diam_axis_value = normalized
+        if self._diameter_edit_model is not None:
+            self._diameter_edit_model['axis_xyz'] = _axis_xyz_text(normalized)
+        self._update_axis_overlay_buttons()
+        self._update_diameter_pick_status()
+        self._update_diameter_measured_value_box()
+        if commit:
+            self._commit_diameter_edit()
+
+    def _diameter_overlay_index(self) -> int:
+        if self._current_diameter_item is None:
+            return -1
+        row = self._diameter_list.row(self._current_diameter_item)
+        if row < 0:
+            return -1
+        return self._distance_list.count() + row
+
+    def _diameter_adjust_edits(self) -> tuple[QLineEdit, QLineEdit, QLineEdit]:
+        return self._diam_adjust_x_edit, self._diam_adjust_y_edit, self._diam_adjust_z_edit
+
+    def _diameter_adjust_active_axis_value(self) -> str:
+        focused_axis = self._focused_axis(self._diameter_adjust_edits())
+        if focused_axis in {'x', 'y', 'z'}:
+            self._diam_adjust_active_axis = focused_axis
+            return focused_axis
+        focus_widget = self.focusWidget()
+        if focus_widget in {self._diam_nudge_minus_btn, self._diam_nudge_plus_btn}:
+            return self._diam_adjust_active_axis
+        return 'all'
+
+    def _load_diameter_adjust_edits_from_model(self):
+        if self._diameter_edit_model is None or not hasattr(self, '_diam_adjust_x_edit'):
+            return
+        self._set_xyz_edits(self._diameter_adjust_edits(), self._diameter_edit_model.get('offset_xyz', '0, 0, 0'))
+        tooltip = self._t(
+            'tool_editor.measurements.callout_tooltip',
+            'Drag the callout in the preview, or type here to fine-tune'
+        )
+        for axis_edit in self._diameter_adjust_edits():
+            axis_edit.setToolTip(tooltip)
+
+    def _store_diameter_adjust_edits_to_model(self):
+        if self._diameter_edit_model is None or not hasattr(self, '_diam_adjust_x_edit'):
+            return
+        offset_text = self._xyz_text_from_edits(self._diameter_adjust_edits())
+        if not str(self._diameter_edit_model.get('offset_xyz') or '').strip():
+            ox, oy, oz = _xyz_to_tuple(offset_text)
+            if abs(ox) <= 1e-6 and abs(oy) <= 1e-6 and abs(oz) <= 1e-6:
+                self._diameter_edit_model['offset_xyz'] = ''
+                return
+        self._diameter_edit_model['offset_xyz'] = offset_text
+
+    def _update_diameter_adjust_controls(self, refresh_values: bool = True):
+        if not hasattr(self, '_diam_adjust_mode_btn'):
+            return
+        self._diam_adjust_mode_btn.setText('')
+        self._diam_adjust_mode_btn.setIcon(self._icon('edit_arrow.svg'))
+        self._diam_adjust_mode_btn.setToolTip(
+            self._t('tool_editor.measurements.callout_offset', 'Callout offset')
+        )
+        if refresh_values:
+            self._load_diameter_adjust_edits_from_model()
+        self._update_distance_edit_mode_title()
+
+    def _diameter_measured_numeric(self) -> float | None:
+        model = self._diameter_edit_model or {}
+        center_text = str(model.get('center_xyz') or '').strip()
+        edge_text = str(model.get('edge_xyz') or '').strip()
+        if not center_text or not edge_text:
+            return None
+        cx, cy, cz = _xyz_to_tuple(center_text)
+        ex, ey, ez = _xyz_to_tuple(edge_text)
+        dx = ex - cx
+        dy = ey - cy
+        dz = ez - cz
+        axis = self._diameter_axis_value()
+        if axis == 'x':
+            radius = (dy * dy + dz * dz) ** 0.5
+        elif axis == 'y':
+            radius = (dx * dx + dz * dz) ** 0.5
+        else:
+            radius = (dx * dx + dy * dy) ** 0.5
+        return radius * 2 if radius > 1e-6 else None
+
+    def _update_diameter_measured_value_box(self):
+        if not hasattr(self, '_diam_value_edit'):
+            return
+        mode = self._diameter_value_mode()
+        if mode == 'measured':
+            measured = self._diameter_measured_numeric()
+            self._diam_value_edit.setText(f"{measured:.3f} mm" if measured is not None else '')
+        else:
+            custom_text = str(self._diameter_edit_model.get('diameter', '') if self._diameter_edit_model else '')
+            self._diam_value_edit.setText(custom_text)
+
+        if self._current_diameter_item is None or mode != 'measured':
+            return
+
+        index = self._diameter_overlay_index()
+        if index < 0 or not hasattr(self._preview_widget, 'get_measurement_resolved_value'):
+            return
+
+        def _apply_measured_value(value):
+            if self._current_diameter_item is None:
+                return
+            if self._diameter_overlay_index() != index:
+                return
+            try:
+                measured = float(value)
+            except (TypeError, ValueError):
+                return
+            if hasattr(self, '_diam_value_edit'):
+                self._diam_value_edit.setText(f"{measured:.3f} mm")
+
+        self._preview_widget.get_measurement_resolved_value(index, _apply_measured_value)
+
+    def _update_diameter_pick_status(self):
+        if not hasattr(self, '_diam_pick_status_label'):
+            return
+        model = self._diameter_edit_model or {}
+        has_center = bool(str(model.get('center_xyz') or '').strip())
+        has_edge = bool(str(model.get('edge_xyz') or '').strip())
+        has_value = bool(str(model.get('diameter') or '').strip())
+        self._update_diameter_measured_value_box()
+        if self._pick_target == 'diameter_center':
+            self._diam_pick_status_label.setText(
+                self._t('tool_editor.measurements.pick_center_status', 'Click center point on selected axis')
+            )
+        elif self._pick_target == 'diameter_edge:all':
+            self._diam_pick_status_label.setText(
+                self._t('tool_editor.measurements.pick_edge_status', 'Click edge point in preview')
+            )
+        elif not has_center:
+            self._diam_pick_status_label.setText(
+                self._t('tool_editor.measurements.center_missing', 'No center point set yet')
+            )
+        elif self._diameter_value_mode() == 'measured':
+            self._diam_pick_status_label.setText(
+                self._t('tool_editor.measurements.center_set_edge_missing', 'Center point set, edge point missing')
+                if not has_edge else
+                self._t('tool_editor.measurements.center_and_diameter_set', 'Center and diameter set')
+            )
+        else:
+            self._diam_pick_status_label.setText(
+                self._t('tool_editor.measurements.center_and_diameter_set', 'Center and diameter set')
+                if has_value else
+                self._t('tool_editor.measurements.center_set_manual', 'Center point set, enter diameter')
+            )
+
+    def _start_diameter_edge_pick(self):
+        if not self._current_diameter_item:
+            return
+        self._pick_target = 'diameter_edge:all'
+        self._diam_pick_stage = 'edge'
+        self._preview_widget.set_point_picking_enabled(True)
+        self._show_axis_pick_overlay()
+        if hasattr(self, '_diam_pick_points_btn'):
+            self._diam_pick_points_btn.setText('')
+            self._diam_pick_points_btn.setIcon(self._icon('cancel.svg'))
+            self._diam_pick_points_btn.setIconSize(QSize(24, 24))
+            self._diam_pick_points_btn.setToolTip(self._t('common.cancel', 'Cancel'))
+        self._update_diameter_pick_status()
+
+    def _start_diameter_pick(self, reset_points: bool):
+        if not self._current_diameter_item:
+            return
+        if self._diameter_edit_model is None:
+            self._diameter_edit_model = dict(self._current_diameter_item.data(Qt.UserRole) or {})
+        if reset_points:
+            self._diameter_edit_model['part'] = ''
+            self._diameter_edit_model['part_index'] = -1
+            self._diameter_edit_model['center_xyz'] = ''
+            self._diameter_edit_model['edge_xyz'] = ''
+            self._diameter_edit_model['offset_xyz'] = ''
+        self._pick_target = 'diameter_center'
+        self._diam_pick_stage = 'center'
+        self._preview_widget.set_point_picking_enabled(True)
+        self._show_axis_pick_overlay()
+        if hasattr(self, '_diam_pick_points_btn'):
+            self._diam_pick_points_btn.setText('')
+            self._diam_pick_points_btn.setIcon(self._icon('cancel.svg'))
+            self._diam_pick_points_btn.setIconSize(QSize(24, 24))
+            self._diam_pick_points_btn.setToolTip(self._t('common.cancel', 'Cancel'))
+        self._update_diameter_pick_status()
+
+    def _auto_start_diameter_pick_if_needed(self):
+        if not self._current_diameter_item:
+            return
+        model = self._diameter_edit_model or {}
+        has_center = bool(str(model.get('center_xyz') or '').strip())
+        has_edge = bool(str(model.get('edge_xyz') or '').strip())
+        mode = self._diameter_value_mode()
+        if not has_center:
+            self._start_diameter_pick(reset_points=False)
+        elif mode == 'measured' and not has_edge:
+            self._start_diameter_edge_pick()
+        else:
+            self._update_diameter_pick_status()
+
+    def _on_pick_diameter_points(self):
+        if self._pick_target in {'diameter_center', 'diameter_edge:all'}:
+            self._cancel_pick()
+            return
+        self._start_diameter_pick(reset_points=True)
+
+    def _sync_axis_pick_overlay_visibility(self):
+        if not hasattr(self, '_axis_pick_overlay'):
+            return
+        show = False
+        kind = self._active_measurement_kind()
+        if kind == 'diameter' and self._current_diameter_item is not None:
+            show = True
+        elif self._pick_target and self._pick_target.startswith('target_xyz:'):
+            show = True
+        self._update_axis_overlay_buttons()
+        if show:
+            self._position_axis_overlay()
+            self._axis_pick_overlay.setVisible(True)
+            self._axis_pick_overlay.raise_()
+        else:
+            self._axis_pick_overlay.setVisible(False)
 
     def _add_current_measurement(self):
         self._show_add_measurement_type_picker()
@@ -1343,6 +1775,7 @@ class MeasurementEditorDialog(QDialog):
         if current:
             self._populate_diameter_form(current.data(Qt.UserRole))
             self._edit_stack.setCurrentIndex(2)
+            self._auto_start_diameter_pick_if_needed()
         else:
             self._edit_stack.setCurrentIndex(0)
         self._update_distance_mode_controls_visibility()
@@ -1379,17 +1812,14 @@ class MeasurementEditorDialog(QDialog):
         self._update_distance_pick_status()
 
     def _populate_diameter_form(self, meas: dict):
-        self._diam_name_edit.setText(meas.get('name', ''))
-        self._diam_part_edit.setText(meas.get('part', ''))
-        self._set_xyz_edits(
-            (self._diam_center_x_edit, self._diam_center_y_edit, self._diam_center_z_edit),
-            meas.get('center_xyz', '0, 0, 0')
-        )
-        self._set_xyz_edits(
-            (self._diam_axis_x_edit, self._diam_axis_y_edit, self._diam_axis_z_edit),
-            meas.get('axis_xyz', '0, 1, 0')
-        )
-        self._diam_diameter_edit.setText(str(meas.get('diameter', '10')))
+        self._diameter_edit_model = dict(self._normalize_diameter_measurement(meas))
+        self._diam_name_edit.setText(self._diameter_edit_model.get('name', ''))
+        self._set_diameter_axis(_axis_from_xyz(self._diameter_edit_model.get('axis_xyz', '0, 0, 1'), default='z'), commit=False)
+        self._set_diameter_value_mode(str(self._diameter_edit_model.get('diameter_mode', 'measured')).lower(), commit=False)
+        self._load_diameter_adjust_edits_from_model()
+        self._update_diameter_adjust_controls(refresh_values=False)
+        self._update_diameter_measured_value_box()
+        self._update_diameter_pick_status()
 
     def _populate_radius_form(self, meas: dict):
         self._radius_name_edit.setText(meas.get('name', ''))
@@ -1731,6 +2161,8 @@ class MeasurementEditorDialog(QDialog):
     def _set_distance_axis(self, axis: str, commit: bool = True):
         normalized = axis if axis in {'direct', 'x', 'y', 'z'} else 'z'
         self._dist_axis_value = normalized
+        if self._distance_edit_model is not None:
+            self._distance_edit_model['distance_axis'] = normalized
         self._update_axis_overlay_buttons()
         if commit:
             self._commit_distance_edit()
@@ -1738,11 +2170,20 @@ class MeasurementEditorDialog(QDialog):
     def _update_axis_overlay_buttons(self):
         if not hasattr(self, '_axis_overlay_btns'):
             return
+        kind = self._active_measurement_kind()
         active = getattr(self, '_dist_axis_value', 'z')
+        allowed = {'direct', 'x', 'y', 'z'}
+        if kind == 'diameter':
+            active = self._diameter_axis_value()
+            allowed = {'x', 'y', 'z'}
         for val, btn in self._axis_overlay_btns.items():
-            btn.setChecked(val == active)
+            btn.setVisible(val in allowed)
+            btn.setChecked(val == active and val in allowed)
 
     def _on_axis_overlay_selected(self, axis_val: str):
+        if self._active_measurement_kind() == 'diameter':
+            self._set_diameter_axis(axis_val, commit=True)
+            return
         self._set_distance_axis(axis_val, commit=True)
 
     def _position_axis_overlay(self):
@@ -1781,35 +2222,43 @@ class MeasurementEditorDialog(QDialog):
             self._axis_hint_overlay.setVisible(False)
 
     def _show_axis_pick_overlay(self):
-        if hasattr(self, '_axis_pick_overlay'):
-            self._update_axis_overlay_buttons()
-            self._position_axis_overlay()
-            self._axis_pick_overlay.setVisible(True)
-            self._axis_pick_overlay.raise_()
+        self._sync_axis_pick_overlay_visibility()
 
-    def _commit_diameter_edit(self):
+    def _commit_diameter_edit(self, sync_adjust_edits: bool = True):
         if not self._current_diameter_item:
             return
-        current_data = dict(self._current_diameter_item.data(Qt.UserRole) or {})
-        uid = self._ensure_measurement_uid(current_data)
+        if self._diameter_edit_model is None:
+            self._diameter_edit_model = dict(self._current_diameter_item.data(Qt.UserRole) or {})
+        model = self._diameter_edit_model
+        uid = self._ensure_measurement_uid(model)
+        if sync_adjust_edits:
+            self._store_diameter_adjust_edits_to_model()
+        mode = self._diameter_value_mode()
+        measured_value = self._diameter_measured_numeric() if mode == 'measured' else None
+        diameter_text = (
+            f"{measured_value:.6g}" if measured_value is not None else ''
+        ) if mode == 'measured' else self._diam_value_edit.text().strip()
         meas = {
             'name': self._diam_name_edit.text() or self._t(
                 'tool_editor.measurements.new_diameter', 'New Diameter'),
-            'part': self._diam_part_edit.text().strip(),
-            'center_xyz': self._xyz_text_from_edits(
-                (self._diam_center_x_edit, self._diam_center_y_edit, self._diam_center_z_edit)
-            ),
-            'axis_xyz': self._xyz_text_from_edits(
-                (self._diam_axis_x_edit, self._diam_axis_y_edit, self._diam_axis_z_edit)
-            ),
-            'diameter': self._diam_diameter_edit.text().strip() or '10',
+            'part': str(model.get('part', '')).strip(),
+            'part_index': int(model.get('part_index', -1) or -1),
+            'center_xyz': str(model.get('center_xyz', '')).strip(),
+            'edge_xyz': str(model.get('edge_xyz', '')).strip(),
+            'axis_xyz': _axis_xyz_text(self._diameter_axis_value()),
+            'offset_xyz': str(model.get('offset_xyz', '')).strip(),
+            'diameter_mode': mode,
+            'diameter': diameter_text,
             'type': 'diameter_ring',
             '_uid': uid,
         }
+        self._diameter_edit_model = dict(meas)
         self._current_diameter_item.setData(Qt.UserRole, meas)
         self._current_diameter_item.setText(meas['name'])
         self._update_selected_measurement_name_in_all_list('diameter', uid, meas['name'])
         self._refresh_preview_measurements()
+        self._update_diameter_measured_value_box()
+        self._update_diameter_pick_status()
 
     def _commit_radius_edit(self):
         if not self._current_radius_item:
@@ -1897,14 +2346,7 @@ class MeasurementEditorDialog(QDialog):
         self._start_distance_two_point_pick(reset_points=True)
 
     def _on_pick_center(self):
-        if self._pick_target and self._pick_target.startswith('center_xyz'):
-            self._cancel_pick()
-            return
-        self._cancel_pick()
-        axis = self._focused_axis((self._diam_center_x_edit, self._diam_center_y_edit, self._diam_center_z_edit))
-        self._pick_target = f'center_xyz:{axis}'
-        self._preview_widget.set_point_picking_enabled(True)
-        self._diam_center_pick_btn.setText('\u2716')
+        self._on_pick_diameter_points()
 
     def _on_pick_radius_center(self):
         if self._pick_target and self._pick_target.startswith('radius_center_xyz'):
@@ -1938,18 +2380,20 @@ class MeasurementEditorDialog(QDialog):
     def _cancel_pick(self):
         self._pick_target = None
         self._dist_pick_stage = None
+        self._diam_pick_stage = None
         if hasattr(self, '_preview_widget'):
             self._preview_widget.set_point_picking_enabled(False)
-        if hasattr(self, '_axis_pick_overlay'):
-            self._axis_pick_overlay.setVisible(False)
         pick_label = self._t('tool_editor.measurements.pick', 'Pick')
         if hasattr(self, '_dist_pick_points_btn'):
             self._dist_pick_points_btn.setText('')
             self._dist_pick_points_btn.setIcon(self._icon('points_select.svg'))
             self._dist_pick_points_btn.setIconSize(QSize(24, 24))
             self._dist_pick_points_btn.setToolTip(pick_label)
-        if hasattr(self, '_diam_center_pick_btn'):
-            self._diam_center_pick_btn.setText(pick_label)
+        if hasattr(self, '_diam_pick_points_btn'):
+            self._diam_pick_points_btn.setText('')
+            self._diam_pick_points_btn.setIcon(self._icon('points_select.svg'))
+            self._diam_pick_points_btn.setIconSize(QSize(24, 24))
+            self._diam_pick_points_btn.setToolTip(pick_label)
         if hasattr(self, '_radius_center_pick_btn'):
             self._radius_center_pick_btn.setText(pick_label)
         if hasattr(self, '_angle_center_pick_btn'):
@@ -1959,6 +2403,8 @@ class MeasurementEditorDialog(QDialog):
         if hasattr(self, '_angle_end_pick_btn'):
             self._angle_end_pick_btn.setText(pick_label)
         self._update_distance_pick_status()
+        self._update_diameter_pick_status()
+        self._sync_axis_pick_overlay_visibility()
 
     def _on_nudge_point_toggled(self):
         """Switch shared XYZ row between start and end point values."""
@@ -1999,10 +2445,40 @@ class MeasurementEditorDialog(QDialog):
         self._update_distance_measured_value_box()
         self._commit_distance_edit(sync_adjust_edits=False)
 
+    def _on_diameter_offset_nudge(self, direction: str):
+        if not self._current_diameter_item or self._diameter_edit_model is None:
+            return
+
+        nudge_axis = self._diameter_adjust_active_axis_value()
+        if nudge_axis not in {'x', 'y', 'z'}:
+            return
+
+        try:
+            step = float(self._diam_nudge_step_edit.text().strip().replace(',', '.')) or 1.0
+        except (ValueError, AttributeError):
+            step = 1.0
+
+        self._store_diameter_adjust_edits_to_model()
+        delta = step if direction == '+' else -step
+        x, y, z = _xyz_to_tuple(self._diameter_edit_model.get('offset_xyz', '0, 0, 0'))
+        if nudge_axis == 'x':
+            x += delta
+        elif nudge_axis == 'y':
+            y += delta
+        else:
+            z += delta
+
+        self._diameter_edit_model['offset_xyz'] = f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
+        self._load_diameter_adjust_edits_from_model()
+        self._commit_diameter_edit(sync_adjust_edits=False)
+
     def eventFilter(self, watched, event):
         if hasattr(self, '_dist_adjust_axis_by_edit') and watched in self._dist_adjust_axis_by_edit:
             if event.type() == QEvent.FocusIn:
                 self._dist_adjust_active_axis = self._dist_adjust_axis_by_edit[watched]
+        if hasattr(self, '_diam_adjust_axis_by_edit') and watched in self._diam_adjust_axis_by_edit:
+            if event.type() == QEvent.FocusIn:
+                self._diam_adjust_active_axis = self._diam_adjust_axis_by_edit[watched]
         if (hasattr(self, '_preview_container') and watched is self._preview_container
                 and event.type() == QEvent.Resize):
             if hasattr(self, '_axis_pick_overlay') and self._axis_pick_overlay.isVisible():
@@ -2033,6 +2509,8 @@ class MeasurementEditorDialog(QDialog):
         target_parts = target.split(':')
         target_name = target_parts[0] if target_parts else ''
         axis = target_parts[-1] if len(target_parts) >= 2 else 'all'
+        if target_name == 'diameter_center':
+            axis = self._diameter_axis_value()
 
         def apply_pick_to_edits(edits: tuple[QLineEdit, QLineEdit, QLineEdit]):
             if axis == 'x':
@@ -2083,11 +2561,80 @@ class MeasurementEditorDialog(QDialog):
                 self._cancel_pick()
             self._commit_distance_edit(sync_adjust_edits=False)
             return
+        elif target_name == 'diameter_center':
+            if self._diameter_edit_model is None:
+                self._diameter_edit_model = dict(self._current_diameter_item.data(Qt.UserRole) or {}) if self._current_diameter_item else {}
+            picked = local_values if (part_index >= 0 or str(part_name or '').strip()) else values
+            center_x, center_y, center_z = _xyz_to_tuple(self._diameter_edit_model.get('center_xyz', '0, 0, 0'))
+            if axis == 'x':
+                center_x = picked['x']
+            elif axis == 'y':
+                center_y = picked['y']
+            else:
+                center_z = picked['z']
+            self._diameter_edit_model['center_xyz'] = (
+                f"{_fmt_coord(center_x)}, {_fmt_coord(center_y)}, {_fmt_coord(center_z)}"
+            )
+            if part_index >= 0 or str(part_name or '').strip():
+                self._diameter_edit_model['part'] = str(part_name or '').strip()
+                self._diameter_edit_model['part_index'] = part_index
+            else:
+                self._diameter_edit_model['part'] = ''
+                self._diameter_edit_model['part_index'] = -1
+            if self._diameter_value_mode() == 'measured':
+                self._start_diameter_edge_pick()
+            else:
+                self._cancel_pick()
+            self._commit_diameter_edit(sync_adjust_edits=False)
+            return
+        elif target_name == 'diameter_edge':
+            if self._diameter_edit_model is None:
+                self._diameter_edit_model = dict(self._current_diameter_item.data(Qt.UserRole) or {}) if self._current_diameter_item else {}
+            expected_part = str(self._diameter_edit_model.get('part') or '').strip()
+            try:
+                expected_part_index = int(self._diameter_edit_model.get('part_index', -1) or -1)
+            except Exception:
+                expected_part_index = -1
+            if expected_part_index >= 0 or expected_part:
+                same_part = (
+                    part_index == expected_part_index
+                    if expected_part_index >= 0 and part_index >= 0
+                    else str(part_name or '').strip() == expected_part
+                )
+                if not same_part:
+                    return
+                picked = local_values
+            else:
+                picked = values
+            self._diameter_edit_model['edge_xyz'] = (
+                f"{_fmt_coord(picked['x'])}, {_fmt_coord(picked['y'])}, {_fmt_coord(picked['z'])}"
+            )
+            self._cancel_pick()
+            self._commit_diameter_edit(sync_adjust_edits=False)
+            return
         elif target_name == 'center_xyz':
             self._cancel_pick()
-            apply_pick_to_edits((self._diam_center_x_edit, self._diam_center_y_edit, self._diam_center_z_edit))
-            if part_name:
-                self._diam_part_edit.setText(part_name)
+            if self._diameter_edit_model is None:
+                self._diameter_edit_model = dict(self._current_diameter_item.data(Qt.UserRole) or {}) if self._current_diameter_item else {}
+            picked = local_values if (part_index >= 0 or str(part_name or '').strip()) else values
+            if axis == 'x':
+                current_x, current_y, current_z = _xyz_to_tuple(self._diameter_edit_model.get('center_xyz', '0, 0, 0'))
+                current_x = picked['x']
+                self._diameter_edit_model['center_xyz'] = f"{_fmt_coord(current_x)}, {_fmt_coord(current_y)}, {_fmt_coord(current_z)}"
+            elif axis == 'y':
+                current_x, current_y, current_z = _xyz_to_tuple(self._diameter_edit_model.get('center_xyz', '0, 0, 0'))
+                current_y = picked['y']
+                self._diameter_edit_model['center_xyz'] = f"{_fmt_coord(current_x)}, {_fmt_coord(current_y)}, {_fmt_coord(current_z)}"
+            elif axis == 'z':
+                current_x, current_y, current_z = _xyz_to_tuple(self._diameter_edit_model.get('center_xyz', '0, 0, 0'))
+                current_z = picked['z']
+                self._diameter_edit_model['center_xyz'] = f"{_fmt_coord(current_x)}, {_fmt_coord(current_y)}, {_fmt_coord(current_z)}"
+            else:
+                self._diameter_edit_model['center_xyz'] = (
+                    f"{_fmt_coord(picked['x'])}, {_fmt_coord(picked['y'])}, {_fmt_coord(picked['z'])}"
+                )
+            self._diameter_edit_model['part'] = str(part_name or '').strip() if (part_index >= 0 or str(part_name or '').strip()) else ''
+            self._diameter_edit_model['part_index'] = part_index if (part_index >= 0 or str(part_name or '').strip()) else -1
         elif target_name == 'radius_center_xyz':
             self._cancel_pick()
             apply_pick_to_edits((self._radius_center_x_edit, self._radius_center_y_edit, self._radius_center_z_edit))
@@ -2120,39 +2667,66 @@ class MeasurementEditorDialog(QDialog):
         overlay = payload.get('overlay')
         if not isinstance(index, int) or index < 0 or not isinstance(overlay, dict):
             return
-        if str(overlay.get('type') or '').strip().lower() != 'distance':
+        overlay_type = str(overlay.get('type') or '').strip().lower()
+        if overlay_type == 'distance':
+            if index >= self._distance_list.count():
+                return
+            item = self._distance_list.item(index)
+            if item is None:
+                return
+
+            current = dict(item.data(Qt.UserRole) or {})
+            current.update({
+                'start_part': str(overlay.get('start_part', current.get('start_part', ''))),
+                'start_part_index': int(overlay.get('start_part_index', current.get('start_part_index', -1)) or -1),
+                'start_xyz': _xyz_to_text(overlay.get('start_xyz', current.get('start_xyz', ''))),
+                'start_space': str(overlay.get('start_space', current.get('start_space', 'world'))),
+                'end_part': str(overlay.get('end_part', current.get('end_part', ''))),
+                'end_part_index': int(overlay.get('end_part_index', current.get('end_part_index', -1)) or -1),
+                'end_xyz': _xyz_to_text(overlay.get('end_xyz', current.get('end_xyz', ''))),
+                'end_space': str(overlay.get('end_space', current.get('end_space', 'world'))),
+                'distance_axis': str(overlay.get('distance_axis', current.get('distance_axis', 'z'))),
+                'label_value_mode': str(overlay.get('label_value_mode', current.get('label_value_mode', 'measured'))),
+                'label_custom_value': str(overlay.get('label_custom_value', current.get('label_custom_value', ''))),
+                'offset_xyz': _xyz_to_text(overlay.get('offset_xyz', current.get('offset_xyz', ''))),
+                'start_shift': str(overlay.get('start_shift', current.get('start_shift', '0'))),
+                'end_shift': str(overlay.get('end_shift', current.get('end_shift', '0'))),
+                'type': 'distance',
+            })
+            item.setData(Qt.UserRole, current)
+            if item is self._current_distance_item:
+                self._distance_edit_model = dict(current)
+                if self._distance_adjust_mode() == 'offset':
+                    self._load_distance_adjust_edits_from_model()
+                self._update_distance_pick_status()
             return
 
-        if index >= self._distance_list.count():
-            return
-        item = self._distance_list.item(index)
-        if item is None:
-            return
+        if overlay_type == 'diameter_ring':
+            diameter_index = index - self._distance_list.count()
+            if diameter_index < 0 or diameter_index >= self._diameter_list.count():
+                return
+            item = self._diameter_list.item(diameter_index)
+            if item is None:
+                return
 
-        current = dict(item.data(Qt.UserRole) or {})
-        current.update({
-            'start_part': str(overlay.get('start_part', current.get('start_part', ''))),
-            'start_part_index': int(overlay.get('start_part_index', current.get('start_part_index', -1)) or -1),
-            'start_xyz': _xyz_to_text(overlay.get('start_xyz', current.get('start_xyz', ''))),
-            'start_space': str(overlay.get('start_space', current.get('start_space', 'world'))),
-            'end_part': str(overlay.get('end_part', current.get('end_part', ''))),
-            'end_part_index': int(overlay.get('end_part_index', current.get('end_part_index', -1)) or -1),
-            'end_xyz': _xyz_to_text(overlay.get('end_xyz', current.get('end_xyz', ''))),
-            'end_space': str(overlay.get('end_space', current.get('end_space', 'world'))),
-            'distance_axis': str(overlay.get('distance_axis', current.get('distance_axis', 'z'))),
-            'label_value_mode': str(overlay.get('label_value_mode', current.get('label_value_mode', 'measured'))),
-            'label_custom_value': str(overlay.get('label_custom_value', current.get('label_custom_value', ''))),
-            'offset_xyz': _xyz_to_text(overlay.get('offset_xyz', current.get('offset_xyz', ''))),
-            'start_shift': str(overlay.get('start_shift', current.get('start_shift', '0'))),
-            'end_shift': str(overlay.get('end_shift', current.get('end_shift', '0'))),
-            'type': 'distance',
-        })
-        item.setData(Qt.UserRole, current)
-        if item is self._current_distance_item:
-            self._distance_edit_model = dict(current)
-            if self._distance_adjust_mode() == 'offset':
-                self._load_distance_adjust_edits_from_model()
-            self._update_distance_pick_status()
+            current = dict(item.data(Qt.UserRole) or {})
+            current.update({
+                'part': str(overlay.get('part', current.get('part', ''))),
+                'part_index': int(overlay.get('part_index', current.get('part_index', -1)) or -1),
+                'center_xyz': _xyz_to_text_optional(overlay.get('center_xyz', current.get('center_xyz', ''))),
+                'edge_xyz': _xyz_to_text_optional(overlay.get('edge_xyz', current.get('edge_xyz', ''))),
+                'axis_xyz': _xyz_to_text(overlay.get('axis_xyz', current.get('axis_xyz', '0, 0, 1'))),
+                'offset_xyz': _xyz_to_text_optional(overlay.get('offset_xyz', current.get('offset_xyz', ''))),
+                'diameter_mode': str(overlay.get('diameter_mode', current.get('diameter_mode', 'manual'))),
+                'diameter': str(overlay.get('diameter', current.get('diameter', ''))),
+                'type': 'diameter_ring',
+            })
+            item.setData(Qt.UserRole, current)
+            if item is self._current_diameter_item:
+                self._diameter_edit_model = dict(current)
+                self._load_diameter_adjust_edits_from_model()
+                self._update_diameter_measured_value_box()
+                self._update_diameter_pick_status()
 
     # ─────────────────────────────────────────────────────────────────
     # PREVIEW REFRESH

@@ -925,14 +925,13 @@ class AddEditToolDialog(QDialog):
         self._reset_transform_btn.setFixedWidth(42)
         self._mode_toggle_btn.setFixedWidth(42)
         self._fine_transform_btn.setFixedWidth(42)
-        self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
-        self._fine_transform_btn.setToolTip(self._t('tool_editor.transform.fine_tooltip', 'Toggle fine transform increments'))
         self._reset_transform_btn.setToolTip(
             self._t(
                 'tool_editor.transform.reset_tooltip',
                 'Left click: reset to original position. Right click: restore saved position.',
             )
         )
+        self._update_mode_toggle_button_appearance()
         self._update_fine_transform_button_appearance()
 
         _lbl_x = QLabel('X')
@@ -2384,7 +2383,13 @@ class AddEditToolDialog(QDialog):
             return
 
         if hasattr(self, 'models_preview'):
-            self.models_preview.set_selection_caption(None)
+            self.models_preview.set_selection_caption(
+                self._t(
+                    'tool_editor.preview.selection_count',
+                    '{count} models selected',
+                    count=count,
+                )
+            )
         t = self._part_transforms.get(self._selected_part_index, {})
         self._update_transform_fields(t, index=self._selected_part_index)
 
@@ -2419,45 +2424,44 @@ class AddEditToolDialog(QDialog):
         self._transform_z.setFixedWidth(edit_w)
 
     def _on_mode_toggle_clicked(self):
-        if self._mode_toggle_btn.isChecked():
-            self._set_gizmo_mode('translate')
-            self._mode_toggle_btn.setText('')
-            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'move.svg')))
-            self._mode_toggle_btn.setIconSize(QSize(18, 18))
-            self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
-        else:
-            self._set_gizmo_mode('rotate')
-            self._mode_toggle_btn.setText('')
-            self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'rotate.svg')))
-            self._mode_toggle_btn.setIconSize(QSize(18, 18))
-            self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.rotate', 'KIERRÄ'))
-
-        self._update_transform_row_sizes()
+        self._set_gizmo_mode('translate' if self._mode_toggle_btn.isChecked() else 'rotate')
 
     def _set_gizmo_mode(self, mode: str):
         self._current_transform_mode = mode
-        if hasattr(self, '_mode_toggle_btn'):
-            is_translate = mode == 'translate'
-            self._mode_toggle_btn.setChecked(is_translate)
-            self._mode_toggle_btn.setText('')
-            self._mode_toggle_btn.setIcon(
-                QIcon(str(TOOL_ICONS_DIR / ('move.svg' if is_translate else 'rotate.svg')))
-            )
-            self._mode_toggle_btn.setIconSize(QSize(18, 18))
-            self._mode_toggle_btn.setToolTip(
-                self._t('tool_editor.transform.move', 'SIIRRÄ') if is_translate
-                else self._t('tool_editor.transform.rotate', 'KIERRÄ')
-            )
+        self._update_mode_toggle_button_appearance()
         self.models_preview.set_transform_mode(mode)
         self._refresh_transform_selection_state()
+
+    def _update_mode_toggle_button_appearance(self):
+        if not hasattr(self, '_mode_toggle_btn'):
+            return
+        is_translate = self._current_transform_mode == 'translate'
+        next_icon = 'rotate.svg' if is_translate else 'move.svg'
+        next_tooltip = (
+            self._t('tool_editor.transform.switch_to_rotate', 'Click to rotate')
+            if is_translate else
+            self._t('tool_editor.transform.switch_to_move', 'Click to move')
+        )
+        self._mode_toggle_btn.setChecked(is_translate)
+        self._mode_toggle_btn.setText('')
+        self._mode_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / next_icon)))
+        self._mode_toggle_btn.setIconSize(QSize(18, 18))
+        self._mode_toggle_btn.setToolTip(next_tooltip)
+        self._update_transform_row_sizes()
 
     def _update_fine_transform_button_appearance(self):
         if not hasattr(self, '_fine_transform_btn'):
             return
-        icon_name = 'fine_tune.svg' if self._fine_transform_enabled else '1x.svg'
+        icon_name = '1x.svg' if self._fine_transform_enabled else 'fine_tune.svg'
+        tooltip = (
+            self._t('tool_editor.transform.disable_fine', 'Click for 1x step')
+            if self._fine_transform_enabled else
+            self._t('tool_editor.transform.enable_fine', 'Click to fine tune')
+        )
         self._fine_transform_btn.setText('')
         self._fine_transform_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
         self._fine_transform_btn.setIconSize(QSize(18, 18))
+        self._fine_transform_btn.setToolTip(tooltip)
         self._update_transform_row_sizes()
 
     def _on_fine_transform_toggled(self, checked: bool):
@@ -2686,8 +2690,12 @@ class AddEditToolDialog(QDialog):
                     {
                         'name': overlay.get('name', ''),
                         'part': overlay.get('part', ''),
+                        'part_index': overlay.get('part_index', -1),
                         'center_xyz': self._normalize_xyz_text(overlay.get('center_xyz', '')),
-                        'axis_xyz': self._normalize_xyz_text(overlay.get('axis_xyz', '')),
+                        'edge_xyz': self._normalize_xyz_text(overlay.get('edge_xyz', '')),
+                        'axis_xyz': self._normalize_xyz_text(overlay.get('axis_xyz', '0, 0, 1')),
+                        'offset_xyz': self._normalize_xyz_text(overlay.get('offset_xyz', '')),
+                        'diameter_mode': overlay.get('diameter_mode', 'manual'),
                         'diameter': overlay.get('diameter', ''),
                     }
                 )
@@ -2752,17 +2760,26 @@ class AddEditToolDialog(QDialog):
             name = (entry.get('name') or '').strip()
             part = (entry.get('part') or '').strip()
             center_xyz = self._normalize_xyz_text(entry.get('center_xyz') or '')
-            axis_xyz = self._normalize_xyz_text(entry.get('axis_xyz') or '')
+            edge_xyz = self._normalize_xyz_text(entry.get('edge_xyz') or '')
+            axis_xyz = self._normalize_xyz_text(entry.get('axis_xyz') or '0, 0, 1')
+            offset_xyz = self._normalize_xyz_text(entry.get('offset_xyz') or '')
+            diameter_mode = str(entry.get('diameter_mode') or ('measured' if edge_xyz else 'manual')).strip().lower()
+            if diameter_mode not in {'measured', 'manual'}:
+                diameter_mode = 'manual'
             diameter = (entry.get('diameter') or '').strip()
-            if not (name or part or center_xyz or axis_xyz or diameter):
+            if not (name or part or center_xyz or edge_xyz or axis_xyz or offset_xyz or diameter):
                 continue
             overlays.append(
                 {
                     'type': 'diameter_ring',
                     'name': name or self._t('tool_editor.measurements.default_ring', 'Diameter'),
                     'part': part,
+                    'part_index': int(entry.get('part_index', -1) or -1),
                     'center_xyz': center_xyz,
+                    'edge_xyz': edge_xyz,
                     'axis_xyz': axis_xyz,
+                    'offset_xyz': offset_xyz,
+                    'diameter_mode': diameter_mode,
                     'diameter': diameter,
                     'order': len(overlays),
                 }

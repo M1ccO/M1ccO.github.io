@@ -988,6 +988,10 @@ function _measurementValueText(overlay, index) {
     return `${Number(index) + 1}`;
   }
   if (overlayType === 'diameter_ring') {
+    const measured = Number(overlay?.measured_value);
+    if (Number.isFinite(measured) && measured > 0) {
+      return `${measured.toFixed(3)} mm`;
+    }
     const diameter = Number(overlay?.diameter);
     return Number.isFinite(diameter) && diameter > 0 ? `${diameter.toFixed(3)} mm` : `${Number(index) + 1}`;
   }
@@ -1278,10 +1282,11 @@ const _measurementDragController = createMeasurementDragController({
   raycaster: _measurementDragRaycaster,
   pointer: _measurementDragPointer,
   getMeasurementOverlays: () => measurementOverlays,
-  getDistanceDragObjects: _distanceDragObjects,
+  getMeasurementDragObjects: _distanceDragObjects,
   distanceDirectionForOverlay: _distanceDirectionForOverlay,
   parseOverlayVector: _parseOverlayVector,
   defaultDistanceOffsetForOverlay: _defaultDistanceOffsetForOverlay,
+  defaultDiameterOffsetForOverlay: _defaultDiameterOffsetForOverlay,
   snapMm: _snapMm,
   snapVec3Mm: _snapVec3Mm,
   formatVec3: _formatVec3,
@@ -1319,6 +1324,80 @@ function _defaultDistanceOffsetForOverlay(definition) {
     Math.max(currentMaxDim * 0.22, 24)
   );
   return offsetDirection.multiplyScalar(offsetDistance);
+}
+
+function _resolveDiameterGeometry(definition) {
+  const centerValue = _parseOverlayVector(definition?.center_xyz);
+  if (!centerValue) {
+    return null;
+  }
+
+  const partName = definition?.part;
+  const partIndex = definition?.part_index;
+  const center = _resolveAnchorPoint(partName, definition.center_xyz, '', partIndex);
+  const axis = _resolveAxisDirection(partName, definition.axis_xyz, partIndex);
+  if (!center || !axis) {
+    return null;
+  }
+
+  const rawMode = String(definition?.diameter_mode || '').trim().toLowerCase();
+  const mode = rawMode === 'measured' ? 'measured' : 'manual';
+  let diameter = Number(definition?.diameter) || 0;
+  if (mode === 'measured') {
+    const edgeValue = _parseOverlayVector(definition?.edge_xyz);
+    if (!edgeValue) {
+      return null;
+    }
+    const edge = _resolveAnchorPoint(partName, definition.edge_xyz, '', partIndex);
+    if (!edge) {
+      return null;
+    }
+    const radialVector = edge.clone().sub(center);
+    const axialComponent = axis.clone().multiplyScalar(radialVector.dot(axis));
+    const projected = radialVector.clone().sub(axialComponent);
+    const radius = projected.length();
+    if (!Number.isFinite(radius) || radius <= 1e-6) {
+      return null;
+    }
+    diameter = radius * 2;
+  }
+
+  if (!Number.isFinite(diameter) || diameter <= 0) {
+    return null;
+  }
+
+  const radius = diameter / 2;
+  const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
+    ? new THREE.Vector3(1, 0, 0)
+    : new THREE.Vector3(0, 1, 0);
+  const tangent = new THREE.Vector3().crossVectors(axis, reference);
+  if (tangent.lengthSq() <= 1e-8) {
+    return null;
+  }
+  tangent.normalize();
+  const bitangent = new THREE.Vector3().crossVectors(axis, tangent);
+  if (bitangent.lengthSq() <= 1e-8) {
+    return null;
+  }
+  bitangent.normalize();
+
+  return {
+    center,
+    axis,
+    radius,
+    diameter,
+    tangent,
+    bitangent,
+  };
+}
+
+function _defaultDiameterOffsetForOverlay(definition) {
+  const geometry = _resolveDiameterGeometry(definition);
+  if (!geometry) {
+    return new THREE.Vector3(0, 0, 0);
+  }
+  return _measurementOffsetDirection(geometry.axis, geometry.center)
+    .multiplyScalar(Math.max(geometry.radius * 0.12, currentMaxDim * 0.02));
 }
 
 function _emitMeasurementUpdated(index) {
@@ -1525,27 +1604,23 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
   return group;
 }
 
-function _makeDiameterRing(definition, options = {}) {
-  const diameter = Number(definition.diameter) || 0;
-  if (!Number.isFinite(diameter) || diameter <= 0) {
-    return null;
-  }
+function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
   const includeLabel = options.includeLabel !== false;
-
-  const center = _resolveAnchorPoint(definition.part, definition.center_xyz);
-  const axis = _resolveAxisDirection(definition.part, definition.axis_xyz);
-  if (!center || !axis) {
+  const geometry = _resolveDiameterGeometry(definition);
+  if (!geometry) {
     return null;
   }
-  const radius = diameter / 2;
+  const {
+    center,
+    axis,
+    radius,
+    diameter,
+    tangent,
+    bitangent,
+  } = geometry;
   const group = new THREE.Group();
-  const color = measurementColors.diameter_ring;
-
-  const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
-    ? new THREE.Vector3(1, 0, 0)
-    : new THREE.Vector3(0, 1, 0);
-  const tangent = new THREE.Vector3().crossVectors(axis, reference).normalize();
-  const bitangent = new THREE.Vector3().crossVectors(axis, tangent).normalize();
+  const baseColor = measurementColors.diameter_ring;
+  const color = measurementDragEnabled ? 0x19f25f : baseColor;
 
   const ringPoints = [];
   for (let i = 0; i <= 64; i += 1) {
@@ -1565,14 +1640,37 @@ function _makeDiameterRing(definition, options = {}) {
   });
   const ring = new THREE.Line(ringGeometry, ringMaterial);
   group.add(ring);
+  definition.diameter = Number(diameter.toFixed(6));
   definition.measured_value = Number(diameter.toFixed(6));
 
   if (includeLabel) {
-    const labelOffset = _measurementOffsetDirection(axis, center)
-      .multiplyScalar(Math.max(radius * 0.12, currentMaxDim * 0.02));
-    const labelAnchor = center.clone().add(tangent.clone().multiplyScalar(radius)).add(labelOffset);
+    const ringAnchor = center.clone().add(tangent.clone().multiplyScalar(radius));
+    const labelOffset = _parseOverlayVector(definition.offset_xyz) || _defaultDiameterOffsetForOverlay(definition);
+    const labelAnchor = ringAnchor.clone().add(labelOffset);
+    if (labelOffset.lengthSq() > 1e-8) {
+      const leaderLine = new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([ringAnchor, labelAnchor]),
+        new THREE.LineBasicMaterial({
+          color,
+          transparent: true,
+          opacity: 0.7,
+          depthTest: true,
+          depthWrite: true,
+        })
+      );
+      leaderLine.userData = {
+        dragKind: 'diameter-offset',
+        measurementIndex,
+      };
+      group.add(leaderLine);
+    }
     const labelSprite = _makeMeasurementLabel(`${diameter.toFixed(3)}`, color, labelAnchor);
     if (labelSprite) {
+      labelSprite.userData = {
+        ...(labelSprite.userData || {}),
+        dragKind: 'diameter-offset',
+        measurementIndex,
+      };
       group.add(labelSprite);
     }
   }
@@ -2244,6 +2342,19 @@ window.getDistanceMeasuredValue = function (index) {
   }
   const overlay = measurementOverlays[idx];
   if (!overlay || String(overlay.type || '').toLowerCase() !== 'distance') {
+    return null;
+  }
+  const measured = Number(overlay.measured_value);
+  return Number.isFinite(measured) ? measured : null;
+};
+
+window.getMeasurementResolvedValue = function (index) {
+  const idx = Number(index);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= measurementOverlays.length) {
+    return null;
+  }
+  const overlay = measurementOverlays[idx];
+  if (!overlay) {
     return null;
   }
   const measured = Number(overlay.measured_value);

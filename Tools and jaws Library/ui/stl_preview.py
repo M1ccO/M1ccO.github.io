@@ -138,7 +138,7 @@ class StlPreviewWidget(QWidget):
         self._selection_caption_wrap.setStyleSheet('background: transparent;')
         self._selection_caption_wrap.hide()
         self._selection_caption_layout = QVBoxLayout(self._selection_caption_wrap)
-        self._selection_caption_layout.setContentsMargins(10, 10, 0, 0)
+        self._selection_caption_layout.setContentsMargins(4, 4, 0, 0)
         self._selection_caption_layout.setSpacing(0)
         self._selection_caption_label = QLabel('')
         self._selection_caption_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -536,12 +536,29 @@ class StlPreviewWidget(QWidget):
                 diameter = float(str(diameter_raw).replace(',', '.'))
             except Exception:
                 diameter = 0.0
+            center_raw = overlay.get('center_xyz', '')
+            center_text = str(center_raw or '').strip()
+            edge_raw = overlay.get('edge_xyz', '')
+            edge_text = str(edge_raw or '').strip()
+            offset_raw = overlay.get('offset_xyz', '')
+            offset_text = str(offset_raw or '').strip()
+            try:
+                part_index = int(overlay.get('part_index', -1) or -1)
+            except Exception:
+                part_index = -1
+            diameter_mode = str(overlay.get('diameter_mode') or '').strip().lower()
+            if diameter_mode not in {'measured', 'manual'}:
+                diameter_mode = 'measured' if edge_text else 'manual'
             return {
                 'type': 'diameter_ring',
                 'name': str(overlay.get('name') or f'Diameter {index + 1}').strip() or f'Diameter {index + 1}',
                 'part': str(overlay.get('part') or '').strip(),
-                'center_xyz': cls._parse_xyz_value(overlay.get('center_xyz')),
-                'axis_xyz': cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 1.0, 0.0)),
+                'part_index': part_index,
+                'center_xyz': cls._parse_xyz_value(center_raw) if center_text else '',
+                'edge_xyz': cls._parse_xyz_value(edge_raw) if edge_text else '',
+                'axis_xyz': cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 0.0, 1.0)),
+                'offset_xyz': cls._parse_xyz_value(offset_raw) if offset_text else '',
+                'diameter_mode': diameter_mode,
                 'diameter': diameter,
             }
 
@@ -600,6 +617,15 @@ class StlPreviewWidget(QWidget):
             return
         self._web.page().runJavaScript(
             f"window.getDistanceMeasuredValue && window.getDistanceMeasuredValue({json.dumps(int(index))});",
+            callback,
+        )
+
+    def get_measurement_resolved_value(self, index: int, callback):
+        if not self._page_ready:
+            callback(None)
+            return
+        self._web.page().runJavaScript(
+            f"window.getMeasurementResolvedValue && window.getMeasurementResolvedValue({json.dumps(int(index))});",
             callback,
         )
 
