@@ -112,6 +112,7 @@ class StlPreviewWidget(QWidget):
         self._measurement_filter = None
         self._measurement_drag_enabled = False
         self._point_picking_enabled = False
+        self._control_hint_text = ''
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -162,6 +163,11 @@ class StlPreviewWidget(QWidget):
             return
         self._web.page().runJavaScript(js)
 
+    def _apply_hint_text(self):
+        if not self._page_ready:
+            return
+        self._call_js('setControlHintText', str(self._control_hint_text or ''))
+
     def _sync_rendering_state(self):
         app = QApplication.instance()
         app_active = True
@@ -169,11 +175,16 @@ class StlPreviewWidget(QWidget):
             app_active = app.applicationState() == Qt.ApplicationActive
 
         host_window = self.window()
-        window_active = True
+        window_ready = True
         if host_window is not None:
-            window_active = host_window.isActiveWindow()
+            # Detached 3D preview should keep rendering while visible even when
+            # the main Tool Library window is the active one.
+            if bool(host_window.property('detachedPreviewDialog')):
+                window_ready = host_window.isVisible()
+            else:
+                window_ready = host_window.isActiveWindow()
 
-        should_render = bool(self.isVisible() and app_active and window_active)
+        should_render = bool(self.isVisible() and app_active and window_ready)
         if should_render == self._rendering_enabled:
             return
 
@@ -202,6 +213,7 @@ class StlPreviewWidget(QWidget):
             return
 
         self._show_web()
+        self._apply_hint_text()
 
         if self._pending_parts:
             self._send_parts_to_viewer(self._pending_parts)
@@ -525,7 +537,10 @@ class StlPreviewWidget(QWidget):
         self._call_js('setMeasurementDragEnabled', bool(self._measurement_drag_enabled))
 
     def set_measurement_drag_enabled(self, enabled: bool):
-        self._measurement_drag_enabled = bool(enabled)
+        normalized = bool(enabled)
+        if normalized == self._measurement_drag_enabled:
+            return
+        self._measurement_drag_enabled = normalized
         self._call_js('setMeasurementDragEnabled', bool(self._measurement_drag_enabled))
 
     def get_distance_measured_value(self, index: int, callback):
@@ -654,17 +669,33 @@ class StlPreviewWidget(QWidget):
             item = self._normalize_measurement_overlay(overlay, idx)
             if item is not None:
                 normalized.append(item)
+        if normalized == self._measurement_overlays:
+            return
         self._measurement_overlays = normalized
         self._call_js('setMeasurements', self._measurement_overlays)
 
     def set_measurements_visible(self, visible: bool):
-        self._measurements_visible = bool(visible)
+        normalized = bool(visible)
+        if normalized == self._measurements_visible:
+            return
+        self._measurements_visible = normalized
         self._call_js('setMeasurementsVisible', bool(self._measurements_visible))
 
     def set_measurement_filter(self, name: str | None):
         value = str(name or '').strip()
-        self._measurement_filter = value or None
+        normalized = value or None
+        if normalized == self._measurement_filter:
+            return
+        self._measurement_filter = normalized
         self._call_js('setMeasurementFilter', value)
+
+    def set_measurement_focus_index(self, index: int | None):
+        value = int(index) if isinstance(index, int) else -1
+        self._call_js('setMeasurementFocusIndex', value)
+
+    def set_control_hint_text(self, text: str | None):
+        self._control_hint_text = str(text or '').strip()
+        self._apply_hint_text()
 
     def set_point_picking_enabled(self, enabled: bool):
         self._point_picking_enabled = bool(enabled)

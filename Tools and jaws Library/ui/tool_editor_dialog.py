@@ -871,13 +871,21 @@ class AddEditToolDialog(QDialog):
         preview_panel.setMinimumWidth(360)
         preview_panel_layout = QVBoxLayout(preview_panel)
         preview_panel_layout.setContentsMargins(8, 8, 8, 8)
-        preview_panel_layout.setSpacing(0)
+        preview_panel_layout.setSpacing(8)
 
         self.models_preview = StlPreviewWidget()
+        self.models_preview.set_control_hint_text(
+            self._t(
+                'tool_editor.hint.rotate_pan_zoom',
+                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            )
+        )
         preview_panel_layout.addWidget(self.models_preview, 1)
 
         # Transform controls (visible only when preference is on)
         self._transform_frame = QFrame()
+        self._transform_frame.setProperty('editorFieldCard', True)
+        self._transform_frame.setProperty('editorFieldGroup', True)
         _tf_layout = QVBoxLayout(self._transform_frame)
         _tf_layout.setContentsMargins(4, 6, 4, 2)
         _tf_layout.setSpacing(4)
@@ -885,11 +893,14 @@ class AddEditToolDialog(QDialog):
         self._selected_part_label = QLabel(
             self._t('tool_editor.transform.no_selection', 'Click a part to select. Ctrl+click for multiple')
         )
-        self._selected_part_label.setStyleSheet('color: #6b7b8e; font-size: 11px;')
+        self._selected_part_label.setProperty('detailHint', True)
+        self._selected_part_label.setStyleSheet(
+            'background: transparent; border: none; font-size: 9.5pt; font-weight: 500;'
+        )
         _tf_layout.addWidget(self._selected_part_label)
 
         _mode_row = QHBoxLayout()
-        _mode_row.setSpacing(2)
+        _mode_row.setSpacing(0)
         _mode_row.setContentsMargins(0, 0, 0, 0)
         self._mode_toggle_btn = QPushButton('')
         self._fine_transform_btn = QPushButton('')
@@ -927,43 +938,55 @@ class AddEditToolDialog(QDialog):
         self._update_fine_transform_button_appearance()
         
         _lbl_x = QLabel('X')
-        _lbl_x.setStyleSheet('font-weight: bold; font-size: 14px;')
-        _lbl_x.setFixedWidth(20)
+        _lbl_x.setProperty('detailFieldKey', True)
+        _lbl_x.setFixedWidth(16)
+        _lbl_x.setAlignment(Qt.AlignCenter)
         
         _mode_row.addWidget(self._mode_toggle_btn)
         _mode_row.addSpacing(3)
         _mode_row.addWidget(self._fine_transform_btn)
-        _mode_row.addSpacing(3)
+        _mode_row.addSpacing(4)
         _mode_row.addWidget(_lbl_x)
         self._transform_x = QLineEdit('0')
-        self._transform_x.setFixedWidth(82)
+        self._transform_x.setFixedWidth(80)
         self._transform_x.setAlignment(Qt.AlignRight)
         _mode_row.addWidget(self._transform_x)
         
         _lbl_y = QLabel('Y')
-        _lbl_y.setStyleSheet('font-weight: bold; font-size: 14px;')
-        _lbl_y.setFixedWidth(20)
-        _mode_row.addSpacing(3)
+        _lbl_y.setProperty('detailFieldKey', True)
+        _lbl_y.setFixedWidth(16)
+        _lbl_y.setAlignment(Qt.AlignCenter)
+        _mode_row.addSpacing(4)
         _mode_row.addWidget(_lbl_y)
         self._transform_y = QLineEdit('0')
-        self._transform_y.setFixedWidth(82)
+        self._transform_y.setFixedWidth(80)
         self._transform_y.setAlignment(Qt.AlignRight)
         _mode_row.addWidget(self._transform_y)
         
         _lbl_z = QLabel('Z')
-        _lbl_z.setStyleSheet('font-weight: bold; font-size: 14px;')
-        _lbl_z.setFixedWidth(20)
-        _mode_row.addSpacing(3)
+        _lbl_z.setProperty('detailFieldKey', True)
+        _lbl_z.setFixedWidth(16)
+        _lbl_z.setAlignment(Qt.AlignCenter)
+        _mode_row.addSpacing(4)
         _mode_row.addWidget(_lbl_z)
         self._transform_z = QLineEdit('0')
-        self._transform_z.setFixedWidth(82)
+        self._transform_z.setFixedWidth(80)
         self._transform_z.setAlignment(Qt.AlignRight)
         _mode_row.addWidget(self._transform_z)
         
         _mode_row.addWidget(self._reset_transform_btn)
         _tf_layout.addLayout(_mode_row)
 
+        self._preview_controls_separator = QFrame()
+        self._preview_controls_separator.setProperty('jawColumnSeparator', True)
+        self._preview_controls_separator.setFrameShape(QFrame.HLine)
+        self._preview_controls_separator.setFrameShadow(QFrame.Plain)
+        self._preview_controls_separator.setLineWidth(1)
+        self._preview_controls_separator.setFixedHeight(1)
+        preview_panel_layout.addWidget(self._preview_controls_separator)
+
         preview_panel_layout.addWidget(self._transform_frame)
+        self._preview_controls_separator.setVisible(self._assembly_transform_enabled)
         self._transform_frame.setVisible(self._assembly_transform_enabled)
 
         if self._assembly_transform_enabled:
@@ -1016,10 +1039,12 @@ class AddEditToolDialog(QDialog):
         self.remove_model_btn.clicked.connect(self._remove_model_row)
         self.model_up_btn.clicked.connect(lambda: self._move_model_row(-1))
         self.model_down_btn.clicked.connect(lambda: self._move_model_row(1))
-        self.edit_measurements_btn = QPushButton(
-            self._t('tool_editor.measurements.open_editor', 'EDIT MEASUREMENTS')
+        self.edit_measurements_btn = QPushButton('')
+        style_icon_action_button(
+            self.edit_measurements_btn,
+            TOOL_ICONS_DIR / 'measure.svg',
+            self._t('tool_editor.measurements.open_editor', 'Edit measurements'),
         )
-        style_panel_action_button(self.edit_measurements_btn)
         self.edit_measurements_btn.clicked.connect(self._open_measurement_editor)
         self.measurement_summary_label = QLabel()
         self.measurement_summary_label.setProperty('detailHint', True)
@@ -2233,9 +2258,9 @@ class AddEditToolDialog(QDialog):
                 QItemSelectionModel.Select | QItemSelectionModel.Rows,
             )
         if self._selected_part_index >= 0:
-            current_item = self.model_table.item(self._selected_part_index, 0)
-            if current_item is not None:
-                self.model_table.setCurrentItem(current_item)
+            current_index = self.model_table.model().index(self._selected_part_index, 0)
+            if current_index.isValid():
+                selection_model.setCurrentIndex(current_index, QItemSelectionModel.NoUpdate)
         self.model_table.blockSignals(False)
         selection_model.blockSignals(False)
 

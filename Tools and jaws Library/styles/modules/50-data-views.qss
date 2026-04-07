@@ -143,6 +143,12 @@ QDialog[workEditorDialog="true"] QFrame[modelsContainerCard="true"] {
     background: transparent;
 }
 
+QDialog[workEditorDialog="true"] QFrame[jawColumnSeparator="true"] {
+    color: #c8d4e0;
+    background: #c8d4e0;
+    border: none;
+}
+
 QDialog[workEditorDialog="true"] QTableWidget#editorPartsTable {
     background-color: transparent;
     border: none;
@@ -303,4 +309,19 @@ QDialog QListWidget {
 QMessageBox,
 QDialog {
     background: #f4f7fb;
+}
+
+QDialog[detachedPreviewDialog="true"] {
+    background: #ffffff;
+}
+
+QDialog[detachedPreviewDialog="true"] QWidget[detachedPreviewToolbar="true"] {
+    background: transparent;
+    border: none;
+}
+
+QDialog[detachedPreviewDialog="true"] QLabel[detachedPreviewToolbarLabel="true"] {
+    background: transparent;
+    margin: 0px;
+    padding: 0px;
 }

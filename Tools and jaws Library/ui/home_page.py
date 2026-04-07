@@ -62,6 +62,7 @@ class HomePage(QWidget):
         self._measurement_filter_combo = None
         self._detached_measurements_enabled = True
         self._detached_measurement_filter = None
+        self._detached_preview_last_model_key = None
         self._inline_preview_warmup = None
         self._active_db_name = ''
         self._module_switch_callback = None
@@ -81,6 +82,12 @@ class HomePage(QWidget):
         if StlPreviewWidget is None:
             return
         self._inline_preview_warmup = StlPreviewWidget(parent=self)
+        self._inline_preview_warmup.set_control_hint_text(
+            self._t(
+                'tool_editor.hint.rotate_pan_zoom',
+                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            )
+        )
         self._inline_preview_warmup.hide()
 
         def _drop_warmup():
@@ -447,8 +454,9 @@ class HomePage(QWidget):
             return
 
         dialog = QDialog(self)
+        dialog.setProperty('detachedPreviewDialog', True)
         dialog.setWindowTitle(self._t('tool_library.preview.window_title', '3D Preview'))
-        dialog.resize(900, 650)
+        dialog.resize(620, 820)
         dialog.finished.connect(self._on_detached_preview_closed)
         self._close_preview_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), dialog)
         self._close_preview_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
@@ -459,6 +467,7 @@ class HomePage(QWidget):
         layout.setSpacing(8)
 
         controls_host = QWidget(dialog)
+        controls_host.setProperty('detachedPreviewToolbar', True)
         controls_host.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         controls_layout = QHBoxLayout(controls_host)
         controls_layout.setContentsMargins(0, 0, 0, 0)
@@ -468,29 +477,32 @@ class HomePage(QWidget):
         self._measurement_toggle_btn = QToolButton(controls_host)
         self._measurement_toggle_btn.setCheckable(True)
         self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled)
-        self._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'quick_reference_all_24dp_1F1F1F_FILL0_wght400_GRAD0_opsz24.svg')))
-        self._measurement_toggle_btn.setIconSize(QSize(20, 20))
+        self._measurement_toggle_btn.setIconSize(QSize(28, 28))
         self._measurement_toggle_btn.setAutoRaise(True)
         self._measurement_toggle_btn.setProperty('topBarIconButton', True)
-        self._measurement_toggle_btn.setToolTip(self._t('tool_library.preview.measurements_toggle', 'Show measurements'))
+        self._measurement_toggle_btn.setFixedSize(36, 36)
+        self._update_detached_measurement_toggle_icon(self._measurement_toggle_btn.isChecked())
         self._measurement_toggle_btn.clicked.connect(self._on_detached_measurements_toggled)
         controls_layout.addWidget(self._measurement_toggle_btn)
 
-        measurements_label = QLabel(self._t('tool_library.preview.measurements_label', 'Measurements'))
-        measurements_label.setProperty('pageSubtitle', True)
+        measurements_label = QLabel(self._t('tool_library.preview.measurements_label', 'Mittaukset'))
+        measurements_label.setProperty('detailHint', True)
+        measurements_label.setProperty('detachedPreviewToolbarLabel', True)
+        measurements_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         controls_layout.addWidget(measurements_label)
 
-        self._measurement_filter_combo = QComboBox(controls_host)
-        self._measurement_filter_combo.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self._measurement_filter_combo.setMinimumWidth(220)
-        self._measurement_filter_combo.currentIndexChanged.connect(self._on_detached_measurement_filter_changed)
-        apply_shared_dropdown_style(self._measurement_filter_combo)
-        controls_layout.addWidget(self._measurement_filter_combo)
+        self._measurement_filter_combo = None
         controls_layout.addStretch(1)
         layout.addWidget(controls_host)
 
         if StlPreviewWidget is not None:
             self._detached_preview_widget = StlPreviewWidget()
+            self._detached_preview_widget.set_control_hint_text(
+                self._t(
+                    'tool_editor.hint.rotate_pan_zoom',
+                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                )
+            )
             self._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             layout.addWidget(self._detached_preview_widget, 1)
         else:
@@ -504,11 +516,51 @@ class HomePage(QWidget):
         self._detached_preview_dialog = dialog
         self._refresh_detached_measurement_controls([])
 
+    def _apply_detached_preview_default_bounds(self):
+        if self._detached_preview_dialog is None:
+            return
+        host_window = self.window()
+        if host_window is None:
+            return
+
+        host_frame = host_window.frameGeometry()
+        if host_frame.width() <= 0 or host_frame.height() <= 0:
+            return
+
+        width = max(520, int(host_frame.width() * 0.37))
+        width = min(width, 700)
+        max_height = max(420, host_frame.height() - 30)
+        height = max(600, int(host_frame.height() * 0.86))
+        height = min(height, max_height)
+
+        x = host_frame.right() - width + 1
+        y = host_frame.bottom() - height + 1
+        min_y = host_frame.top() + 30
+        if y < min_y:
+            y = min_y
+
+        self._detached_preview_dialog.setGeometry(x, y, width, height)
+
+    def _update_detached_measurement_toggle_icon(self, enabled: bool):
+        if self._measurement_toggle_btn is None:
+            return
+        is_enabled = bool(enabled)
+        icon_name = 'comment_disable.svg' if is_enabled else 'comment.svg'
+        self._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
+        tooltip = self._t(
+            'tool_library.preview.measurements_hide' if is_enabled else 'tool_library.preview.measurements_show',
+            'Piilota mittaukset' if is_enabled else 'Näytä mittaukset',
+        )
+        self._measurement_toggle_btn.setToolTip(tooltip)
+
     def _on_detached_preview_closed(self, _result):
+        if self._detached_preview_widget is not None:
+            self._detached_preview_widget.set_measurement_focus_index(-1)
+        self._detached_preview_last_model_key = None
         self._set_preview_button_checked(False)
 
     def _refresh_detached_measurement_controls(self, overlays):
-        if self._measurement_toggle_btn is None or self._measurement_filter_combo is None:
+        if self._measurement_toggle_btn is None:
             return
 
         names = []
@@ -522,37 +574,14 @@ class HomePage(QWidget):
             names.append(name)
             seen.add(name)
 
-        self._measurement_filter_combo.blockSignals(True)
-        self._measurement_filter_combo.clear()
-        self._measurement_filter_combo.addItem(
-            self._t('tool_library.preview.measurements_all', 'All measurements'),
-            '__all__',
-        )
-        for name in names:
-            self._measurement_filter_combo.addItem(name, name)
-        self._measurement_filter_combo.blockSignals(False)
-
         has_measurements = bool(names)
         self._measurement_toggle_btn.setEnabled(has_measurements)
-        self._measurement_filter_combo.setEnabled(has_measurements and self._detached_measurements_enabled)
 
         self._measurement_toggle_btn.blockSignals(True)
         self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled and has_measurements)
         self._measurement_toggle_btn.blockSignals(False)
-
-        selected_filter = self._detached_measurement_filter
-        target_index = 0
-        if selected_filter:
-            for idx in range(self._measurement_filter_combo.count()):
-                if self._measurement_filter_combo.itemData(idx) == selected_filter:
-                    target_index = idx
-                    break
-        self._measurement_filter_combo.setCurrentIndex(target_index)
-        if self._measurement_filter_combo.currentIndex() >= 0:
-            current_data = self._measurement_filter_combo.currentData()
-            self._detached_measurement_filter = None if current_data == '__all__' else current_data
-        else:
-            self._detached_measurement_filter = None
+        self._update_detached_measurement_toggle_icon(self._measurement_toggle_btn.isChecked())
+        self._detached_measurement_filter = None
 
     def _apply_detached_measurement_state(self, overlays):
         if self._detached_preview_widget is None:
@@ -565,8 +594,7 @@ class HomePage(QWidget):
 
     def _on_detached_measurements_toggled(self, checked: bool):
         self._detached_measurements_enabled = bool(checked)
-        if self._measurement_filter_combo is not None:
-            self._measurement_filter_combo.setEnabled(self._detached_measurements_enabled and self._measurement_filter_combo.count() > 1)
+        self._update_detached_measurement_toggle_icon(self._detached_measurements_enabled)
         if self._detached_preview_widget is not None:
             self._detached_preview_widget.set_measurements_visible(self._detached_measurements_enabled)
 
@@ -609,8 +637,20 @@ class HomePage(QWidget):
             return False
 
         self._ensure_detached_preview_dialog()
+        was_visible = bool(self._detached_preview_dialog and self._detached_preview_dialog.isVisible())
         label = tool.get('description', '').strip() or tool.get('id', '3D Preview')
-        loaded = self._load_preview_content(self._detached_preview_widget, stl_path, label=label)
+        raw_model_key = stl_path if isinstance(stl_path, str) else json.dumps(stl_path, ensure_ascii=False, sort_keys=True)
+        model_key = (
+            int(tool.get('uid')) if str(tool.get('uid', '')).strip().isdigit() else str(tool.get('id') or '').strip(),
+            str(raw_model_key or ''),
+        )
+        loaded = True
+        if self._detached_preview_last_model_key != model_key:
+            loaded = self._load_preview_content(self._detached_preview_widget, stl_path, label=label)
+            if loaded:
+                self._detached_preview_last_model_key = model_key
+            else:
+                self._detached_preview_last_model_key = None
         if not loaded:
             if show_errors:
                 QMessageBox.information(
@@ -629,9 +669,11 @@ class HomePage(QWidget):
         self._detached_preview_dialog.setWindowTitle(
             self._t('tool_library.preview.window_title_tool', '3D Preview - {tool_id}', tool_id=tool_id).rstrip(' -')
         )
-        self._detached_preview_dialog.show()
-        self._detached_preview_dialog.raise_()
-        self._detached_preview_dialog.activateWindow()
+        if not was_visible:
+            self._apply_detached_preview_default_bounds()
+            self._detached_preview_dialog.show()
+            self._detached_preview_dialog.raise_()
+            self._detached_preview_dialog.activateWindow()
         self._set_preview_button_checked(True)
         return True
 
@@ -1584,6 +1626,13 @@ class HomePage(QWidget):
         dlay.setContentsMargins(14, 14, 14, 14)
 
         viewer = StlPreviewWidget() if StlPreviewWidget is not None else None
+        if viewer is not None:
+            viewer.set_control_hint_text(
+                self._t(
+                    'tool_editor.hint.rotate_pan_zoom',
+                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                )
+            )
         loaded = self._load_preview_content(viewer, stl_path, label='Detail Preview') if viewer is not None else False
         if viewer is not None:
             viewer.setMinimumHeight(240)
@@ -1617,6 +1666,12 @@ class HomePage(QWidget):
         layout = QVBoxLayout(dlg)
         if StlPreviewWidget is not None:
             viewer = StlPreviewWidget()
+            viewer.set_control_hint_text(
+                self._t(
+                    'tool_editor.hint.rotate_pan_zoom',
+                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                )
+            )
             if self._load_preview_content(viewer, path, label='3D Preview'):
                 layout.addWidget(viewer)
             else:

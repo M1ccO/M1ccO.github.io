@@ -11,6 +11,14 @@ import { applySelectionProxyTransformDelta } from './transform_delta_engine.js';
 
 const canvas = document.getElementById('viewport');
 const status = document.getElementById('status');
+const hintElement = document.getElementById('hint');
+const defaultControlHintText = hintElement ? hintElement.textContent : '';
+
+function _setControlHintText(text) {
+  if (!hintElement) return;
+  const normalized = typeof text === 'string' ? text.trim() : '';
+  hintElement.textContent = normalized || defaultControlHintText;
+}
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -167,8 +175,15 @@ let measurementsVisible = false;
 let measurementFilter = '';
 let measurementDragEnabled = false;
 let measurementRenderQueued = false;
+let measurementFocusIndex = -1;
+let _measurementListContainer = null;
+let _measurementListSignature = '';
 let renderingEnabled = true;
 let _gizmoDragJustEnded = false;
+let _cameraDragJustEnded = false;
+let _cameraPointerDown = null;
+let _cameraPointerMoved = false;
+const _CAMERA_DRAG_THRESHOLD_PX = 3;
 let pointPickingEnabled = false;
 let _pickMarker = null;
 const _tcRaycaster = new THREE.Raycaster();
@@ -178,6 +193,11 @@ const _measurementDragPointer = new THREE.Vector2();
 let _selectionProxyDragState = null;
 const _missingAnchorWarningKeys = new Set();
 
+function _markCameraDragJustEnded() {
+  _cameraDragJustEnded = true;
+  setTimeout(() => { _cameraDragJustEnded = false; }, 120);
+}
+
 // Measurement color scheme - distinctive colors for each type
 const measurementColors = {
   distance: 0x00dd00,      // Green
@@ -186,11 +206,17 @@ const measurementColors = {
   angle: 0xff00ff,          // Magenta
 };
 
-// HUD labels container and positioning
-let _hudLabelsContainer = null;
-const _hudLabels = [];
-const HUD_PADDING = 12;
-const HUD_LABEL_HEIGHT = 60;
+// 3D measurement value label styling (rendered as depth-tested sprites)
+const MEAS_LABEL_FONT_PX = 16;
+const MEAS_LABEL_TARGET_PX_HEIGHT = 18;
+const MEAS_LABEL_MIN_PX_HEIGHT = 14;
+const MEAS_LABEL_MAX_PX_HEIGHT = 28;
+const MEAS_LABEL_PADDING_X = 10;
+const MEAS_LABEL_PADDING_Y = 5;
+const MEAS_LABEL_RADIUS = 8;
+const MEAS_LABEL_BORDER_PX = 1.5;
+const MEAS_LABEL_LINE_CLEARANCE_PX = 4;
+const _measurementLabelWorldPos = new THREE.Vector3();
 
 function showStatus(text) {
   status.textContent = text;
@@ -235,7 +261,6 @@ function _disposeMeasurementNode(node) {
 }
 
 function _clearMeasurements() {
-  _clearHudLabels();
   const children = [...measurementGroup.children];
   for (const child of children) {
     _disposeMeasurementNode(child);
@@ -417,8 +442,8 @@ function _updateSelectionProxyFromSelection() {
       selectionProxy.visible = false;
       return;
     }
-    // Place gizmo at the bounding-box centre so it stays visible when
-    // zoomed in on a tall model whose local origin is at the base.
+    // Keep gizmo at the visible part center in single selection so it stays
+    // on the part in both translate and rotate modes.
     const box = new THREE.Box3().setFromObject(mesh);
     box.getCenter(selectionProxy.position);
     const parent = mesh.parent || scene;
@@ -690,45 +715,299 @@ function _resolveAxisDirection(partName, axis, partIndex = null) {
   return localAxis;
 }
 
-function _makeMeasurementLabel(text, colorHex = 0x00dd00) {
-  // Convert hex color to CSS color
-  const colorStr = '#' + colorHex.toString(16).padStart(6, '0').toUpperCase();
-  
-  // Create HTML for HUD overlay instead of 3D sprite
-  const labelEl = document.createElement('div');
-  labelEl.style.position = 'fixed';
-  labelEl.style.background = 'rgba(255,255,255,.9)';
-  labelEl.style.border = `1px solid ${colorStr}`;
-  labelEl.style.borderRadius = '8px';
-  labelEl.style.color = '#4a4a4a';
-  labelEl.style.padding = '6px 10px';
-  labelEl.style.fontSize = '12px';
-  labelEl.style.fontWeight = '400';
-  labelEl.style.fontFamily = 'Segoe UI, Arial, sans-serif';
-  labelEl.style.whiteSpace = 'nowrap';
-  labelEl.style.pointerEvents = 'none';
-  labelEl.style.zIndex = '1000';
-  labelEl.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-  labelEl.textContent = text;
-  
-  // Position in upper right corner with stack layout
-  const yOffset = HUD_PADDING + (_hudLabels.length * HUD_LABEL_HEIGHT);
-  labelEl.style.top = yOffset + 'px';
-  labelEl.style.right = HUD_PADDING + 'px';
-  
-  document.body.appendChild(labelEl);
-  _hudLabels.push(labelEl);
-  
-  return labelEl;
+function _traceRoundedRectPath(ctx, x, y, width, height, radius) {
+  const r = Math.max(0, Math.min(radius, Math.min(width, height) * 0.5));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + width - r, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+  ctx.lineTo(x + width, y + height - r);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+  ctx.lineTo(x + r, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
 }
 
-function _clearHudLabels() {
-  for (const label of _hudLabels) {
-    if (label && label.parentNode) {
-      label.parentNode.removeChild(label);
-    }
+function _createMeasurementLabelTexture(text, colorHex = 0x00dd00) {
+  const colorStr = '#' + colorHex.toString(16).padStart(6, '0').toUpperCase();
+  const valueText = String(text || '').trim();
+  if (!valueText) {
+    return null;
   }
-  _hudLabels.length = 0;
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    return null;
+  }
+
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  const fontPx = MEAS_LABEL_FONT_PX * dpr;
+  ctx.font = `600 ${fontPx}px "Segoe UI", Arial, sans-serif`;
+  const metrics = ctx.measureText(valueText);
+  const textWidth = Math.ceil(metrics.width);
+  const textHeight = Math.ceil(fontPx * 1.05);
+  const padX = Math.round(MEAS_LABEL_PADDING_X * dpr);
+  const padY = Math.round(MEAS_LABEL_PADDING_Y * dpr);
+  const border = Math.max(1, Math.round(MEAS_LABEL_BORDER_PX * dpr));
+  const width = Math.max(8, textWidth + (padX * 2));
+  const height = Math.max(8, textHeight + (padY * 2));
+
+  canvas.width = width;
+  canvas.height = height;
+
+  ctx.clearRect(0, 0, width, height);
+  const radius = Math.round(MEAS_LABEL_RADIUS * dpr);
+  _traceRoundedRectPath(ctx, border * 0.5, border * 0.5, width - border, height - border, radius);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fill();
+  ctx.strokeStyle = colorStr;
+  ctx.lineWidth = border;
+  ctx.stroke();
+
+  ctx.font = `600 ${fontPx}px "Segoe UI", Arial, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#2e3a46';
+  ctx.fillText(valueText, width * 0.5, height * 0.5);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.needsUpdate = true;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
+  return {
+    texture,
+    aspect: width / Math.max(height, 1),
+    cssHeight: height / dpr,
+  };
+}
+
+function _updateMeasurementLabelScale(sprite) {
+  if (!sprite?.userData?.measurementLabel) return;
+  sprite.getWorldPosition(_measurementLabelWorldPos);
+  const distance = Math.max(camera.position.distanceTo(_measurementLabelWorldPos), 0.001);
+  const worldPerPixel =
+    (2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5))
+    / Math.max(renderer.domElement.clientHeight, 1);
+  const targetPx = THREE.MathUtils.clamp(
+    Number(sprite.userData.cssHeight || MEAS_LABEL_TARGET_PX_HEIGHT),
+    MEAS_LABEL_MIN_PX_HEIGHT,
+    MEAS_LABEL_MAX_PX_HEIGHT
+  );
+  const worldHeight = targetPx * worldPerPixel;
+  const aspect = Math.max(Number(sprite.userData.aspect || 1), 0.1);
+  sprite.scale.set(worldHeight * aspect, worldHeight, 1);
+
+  const midpoint = sprite.userData.distanceMidpoint;
+  const lineDirection = sprite.userData.distanceDirection;
+  if (midpoint instanceof THREE.Vector3 && lineDirection instanceof THREE.Vector3 && lineDirection.lengthSq() > 1e-8) {
+    const sideDirection = _measurementOffsetDirection(lineDirection, midpoint);
+    const clearancePx = Number(sprite.userData.lineClearancePx || MEAS_LABEL_LINE_CLEARANCE_PX);
+    const clearanceWorld = (worldHeight * 0.5) + (Math.max(1, clearancePx) * worldPerPixel);
+    sprite.position.copy(midpoint).add(sideDirection.multiplyScalar(clearanceWorld));
+  }
+}
+
+function _updateMeasurementLabelScales() {
+  measurementGroup.traverse((node) => {
+    if (node?.isSprite && node.userData?.measurementLabel) {
+      _updateMeasurementLabelScale(node);
+    }
+  });
+}
+
+function _normalizeMeasurementFocusIndex(index) {
+  const numeric = Number(index);
+  if (!Number.isInteger(numeric)) {
+    return -1;
+  }
+  if (numeric < 0 || numeric >= measurementOverlays.length) {
+    return -1;
+  }
+  return numeric;
+}
+
+function _measurementColorForOverlay(overlay) {
+  const overlayType = String(overlay?.type || 'distance').trim().toLowerCase();
+  return measurementColors[overlayType] || measurementColors.distance;
+}
+
+function _measurementValueText(overlay, index) {
+  const overlayType = String(overlay?.type || 'distance').trim().toLowerCase();
+  if (overlayType === 'distance') {
+    const measured = Number(overlay?.measured_value);
+    if (Number.isFinite(measured)) {
+      return `${measured.toFixed(3)} mm`;
+    }
+    return `${Number(index) + 1}`;
+  }
+  if (overlayType === 'diameter_ring') {
+    const diameter = Number(overlay?.diameter);
+    return Number.isFinite(diameter) && diameter > 0 ? `${diameter.toFixed(3)} mm` : `${Number(index) + 1}`;
+  }
+  if (overlayType === 'radius') {
+    const radius = Number(overlay?.radius);
+    return Number.isFinite(radius) && radius > 0 ? `R ${radius.toFixed(3)} mm` : `${Number(index) + 1}`;
+  }
+  if (overlayType === 'angle') {
+    const deg = Number(overlay?.measured_value);
+    return Number.isFinite(deg) && deg >= 0 ? `${deg.toFixed(2)} deg` : `${Number(index) + 1}`;
+  }
+  return `${Number(index) + 1}`;
+}
+
+function _measurementChipText(overlay, index) {
+  const name = String(overlay?.name || '').trim();
+  const value = _measurementValueText(overlay, index);
+  return name ? `${name}: ${value}` : value;
+}
+
+function _ensureMeasurementListContainer() {
+  if (_measurementListContainer && _measurementListContainer.isConnected) {
+    return _measurementListContainer;
+  }
+  const host = document.createElement('div');
+  host.style.position = 'absolute';
+  host.style.top = '10px';
+  host.style.right = '12px';
+  host.style.display = 'none';
+  host.style.flexDirection = 'column';
+  host.style.gap = '8px';
+  host.style.alignItems = 'flex-end';
+  host.style.pointerEvents = 'none';
+  host.style.zIndex = '60';
+  document.body.appendChild(host);
+  _measurementListContainer = host;
+  return host;
+}
+
+function _clearMeasurementListContainer() {
+  if (!_measurementListContainer) return;
+  _measurementListContainer.replaceChildren();
+  _measurementListContainer.style.display = 'none';
+  _measurementListSignature = '';
+}
+
+function _setMeasurementFocusIndex(index) {
+  const nextIndex = _normalizeMeasurementFocusIndex(index);
+  const currentlyFocused = _normalizeMeasurementFocusIndex(measurementFocusIndex);
+  const shouldToggleOff = currentlyFocused >= 0 && nextIndex === currentlyFocused;
+
+  measurementFocusIndex = shouldToggleOff ? -1 : nextIndex;
+  _scheduleMeasurementsRender();
+}
+
+function _renderMeasurementList(items) {
+  const host = _ensureMeasurementListContainer();
+  if (!measurementsVisible || !Array.isArray(items) || items.length <= 0) {
+    host.style.display = 'none';
+    _measurementListSignature = '';
+    return;
+  }
+
+  const focused = _normalizeMeasurementFocusIndex(measurementFocusIndex);
+  const renderedItems = focused >= 0
+    ? items.filter((item) => item.index === focused)
+    : items;
+
+  if (!renderedItems.length) {
+    host.style.display = 'none';
+    _measurementListSignature = '';
+    return;
+  }
+
+  const signature = JSON.stringify({
+    focused,
+    items: renderedItems.map((item) => ({
+      index: item.index,
+      text: _measurementChipText(item.overlay, item.index),
+      color: item.color,
+    })),
+  });
+  if (_measurementListSignature === signature && host.childElementCount === renderedItems.length) {
+    host.style.display = 'flex';
+    return;
+  }
+  _measurementListSignature = signature;
+  host.replaceChildren();
+
+  for (const item of renderedItems) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = _measurementChipText(item.overlay, item.index);
+    btn.title = focused >= 0
+      ? 'Click again to show all measurements'
+      : 'Click to isolate this measurement';
+    btn.style.pointerEvents = 'auto';
+    btn.style.cursor = 'pointer';
+    btn.style.whiteSpace = 'nowrap';
+    btn.style.background = 'rgba(255, 255, 255, 0.96)';
+    btn.style.color = '#2f3a45';
+    btn.style.border = `1px solid #${item.color.toString(16).padStart(6, '0')}`;
+    btn.style.borderRadius = '9px';
+    btn.style.padding = '9px 14px';
+    btn.style.fontFamily = '"Segoe UI", Arial, sans-serif';
+    btn.style.fontSize = '14px';
+    btn.style.fontWeight = focused >= 0 ? '700' : '650';
+    btn.style.boxShadow = focused >= 0
+      ? '0 2px 8px rgba(0, 0, 0, 0.12)'
+      : '0 1px 6px rgba(0, 0, 0, 0.10)';
+    btn.style.transition = 'transform 90ms ease, box-shadow 120ms ease, opacity 120ms ease';
+    btn.style.opacity = focused >= 0 ? '1' : '0.96';
+
+    btn.addEventListener('mouseenter', () => {
+      btn.style.transform = 'translateY(-1px)';
+      btn.style.boxShadow = '0 3px 10px rgba(0, 0, 0, 0.16)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = 'translateY(0px)';
+      btn.style.boxShadow = focused >= 0
+        ? '0 2px 8px rgba(0, 0, 0, 0.12)'
+        : '0 1px 6px rgba(0, 0, 0, 0.10)';
+    });
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      _setMeasurementFocusIndex(item.index);
+    });
+    host.appendChild(btn);
+  }
+
+  host.style.display = 'flex';
+}
+
+function _makeMeasurementLabel(text, colorHex = 0x00dd00, anchorPoint = null, options = null) {
+  if (!anchorPoint) {
+    return null;
+  }
+  const labelTexture = _createMeasurementLabelTexture(text, colorHex);
+  if (!labelTexture) {
+    return null;
+  }
+  const material = new THREE.SpriteMaterial({
+    map: labelTexture.texture,
+    transparent: true,
+    depthTest: true,
+    depthWrite: false,
+    sizeAttenuation: true,
+  });
+  const sprite = new THREE.Sprite(material);
+  sprite.position.copy(anchorPoint);
+  sprite.userData.measurementLabel = true;
+  sprite.userData.aspect = labelTexture.aspect;
+  sprite.userData.cssHeight = labelTexture.cssHeight;
+  if (options && options.distanceMidpoint instanceof THREE.Vector3 && options.distanceDirection instanceof THREE.Vector3) {
+    sprite.userData.distanceMidpoint = options.distanceMidpoint.clone();
+    sprite.userData.distanceDirection = options.distanceDirection.clone().normalize();
+    sprite.userData.lineClearancePx = Number(options.lineClearancePx || MEAS_LABEL_LINE_CLEARANCE_PX);
+  }
+  _updateMeasurementLabelScale(sprite);
+  return sprite;
 }
 
 function _makeArrowCone(tip, direction, size, color) {
@@ -781,7 +1060,7 @@ function _distanceLabelValue(definition, measuredLength) {
       return customValue;
     }
   }
-  return `${measuredLength.toFixed(3)} mm`;
+  return `${measuredLength.toFixed(3)}`;
 }
 
 function _parseOverlayVector(value) {
@@ -1003,8 +1282,16 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
     group.add(makeDragHandle(dimensionEnd, 'distance-end'));
 
     definition.measured_value = Number(measuredLength.toFixed(6));
-    const labelText = `${definition.name}: ${_distanceLabelValue(definition, measuredLength)}`;
-    _makeMeasurementLabel(labelText, color);
+    const labelValue = _distanceLabelValue(definition, measuredLength);
+    const labelAnchor = dimensionStart.clone().lerp(dimensionEnd, 0.5);
+    const labelSprite = _makeMeasurementLabel(labelValue, color, labelAnchor, {
+      distanceMidpoint: labelAnchor,
+      distanceDirection: direction,
+      lineClearancePx: 4,
+    });
+    if (labelSprite) {
+      group.add(labelSprite);
+    }
     return group;
   }
 
@@ -1078,16 +1365,25 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
   group.add(makeDragHandle(dimensionEnd, 'distance-end'));
 
   definition.measured_value = Number(measuredLength.toFixed(6));
-  const labelText = `${definition.name}: ${_distanceLabelValue(definition, measuredLength)}`;
-  _makeMeasurementLabel(labelText, color);
+  const labelValue = _distanceLabelValue(definition, measuredLength);
+  const labelAnchor = dimensionStart.clone().lerp(dimensionEnd, 0.5);
+  const labelSprite = _makeMeasurementLabel(labelValue, color, labelAnchor, {
+    distanceMidpoint: labelAnchor,
+    distanceDirection: direction,
+    lineClearancePx: 4,
+  });
+  if (labelSprite) {
+    group.add(labelSprite);
+  }
   return group;
 }
 
-function _makeDiameterRing(definition) {
+function _makeDiameterRing(definition, options = {}) {
   const diameter = Number(definition.diameter) || 0;
   if (!Number.isFinite(diameter) || diameter <= 0) {
     return null;
   }
+  const includeLabel = options.includeLabel !== false;
 
   const center = _resolveAnchorPoint(definition.part, definition.center_xyz);
   const axis = _resolveAxisDirection(definition.part, definition.axis_xyz);
@@ -1122,8 +1418,17 @@ function _makeDiameterRing(definition) {
   });
   const ring = new THREE.Line(ringGeometry, ringMaterial);
   group.add(ring);
+  definition.measured_value = Number(diameter.toFixed(6));
 
-  _makeMeasurementLabel(`${definition.name}: ${diameter.toFixed(3)} mm`, color);
+  if (includeLabel) {
+    const labelOffset = _measurementOffsetDirection(axis, center)
+      .multiplyScalar(Math.max(radius * 0.12, currentMaxDim * 0.02));
+    const labelAnchor = center.clone().add(tangent.clone().multiplyScalar(radius)).add(labelOffset);
+    const labelSprite = _makeMeasurementLabel(`${diameter.toFixed(3)}`, color, labelAnchor);
+    if (labelSprite) {
+      group.add(labelSprite);
+    }
+  }
   return group;
 }
 
@@ -1140,6 +1445,7 @@ function _makeRadiusMeasurement(definition) {
 
   const group = new THREE.Group();
   const color = measurementColors.radius;
+  definition.measured_value = Number(radius.toFixed(6));
   const radial = _measurementOffsetDirection(axis, center).normalize();
   const edge = center.clone().add(radial.clone().multiplyScalar(radius));
 
@@ -1158,7 +1464,7 @@ function _makeRadiusMeasurement(definition) {
     diameter: radius * 2,
     name: definition.name,
   };
-  const ring = _makeDiameterRing(ringDef);
+  const ring = _makeDiameterRing(ringDef, { includeLabel: false });
   if (ring) {
     ring.children.forEach((child) => {
       if (!(child instanceof THREE.Sprite) && !(child.style)) {
@@ -1167,7 +1473,13 @@ function _makeRadiusMeasurement(definition) {
     });
   }
 
-  _makeMeasurementLabel(`${definition.name}: R ${radius.toFixed(3)} mm`, color);
+  const labelAnchor = center.clone()
+    .lerp(edge, 0.66)
+    .add(radial.clone().multiplyScalar(Math.max(currentMaxDim * 0.014, 1.4)));
+  const labelSprite = _makeMeasurementLabel(`R ${radius.toFixed(3)}`, color, labelAnchor);
+  if (labelSprite) {
+    group.add(labelSprite);
+  }
   return group;
 }
 
@@ -1191,6 +1503,7 @@ function _makeAngleMeasurement(definition) {
   const dot = THREE.MathUtils.clamp(d1.dot(d2), -1, 1);
   const angleRad = Math.acos(dot);
   const angleDeg = THREE.MathUtils.radToDeg(angleRad);
+  definition.measured_value = Number(angleDeg.toFixed(6));
 
   const normal = new THREE.Vector3().crossVectors(d1, d2);
   if (normal.lengthSq() <= 1e-8) {
@@ -1223,7 +1536,19 @@ function _makeAngleMeasurement(definition) {
   );
   group.add(arc);
 
-  _makeMeasurementLabel(`${definition.name}: ${angleDeg.toFixed(2)} deg`, color);
+  const bisector = d1.clone()
+    .multiplyScalar(Math.cos(angleRad * 0.5))
+    .add(tangent.clone().multiplyScalar(Math.sin(angleRad * 0.5)));
+  if (bisector.lengthSq() > 1e-8) {
+    bisector.normalize();
+  } else {
+    bisector.copy(_measurementOffsetDirection(normal, center));
+  }
+  const labelAnchor = center.clone().add(bisector.multiplyScalar(arcRadius * 1.1));
+  const labelSprite = _makeMeasurementLabel(`${angleDeg.toFixed(2)} deg`, color, labelAnchor);
+  if (labelSprite) {
+    group.add(labelSprite);
+  }
   return group;
 }
 
@@ -1238,23 +1563,42 @@ function _renderMeasurements() {
   _clearMeasurements();
   if (!measurementsVisible || !currentGroup || measurementOverlays.length === 0) {
     measurementGroup.visible = false;
+    _clearMeasurementListContainer();
     return;
   }
+
+  const focusedIndex = _normalizeMeasurementFocusIndex(measurementFocusIndex);
+  if (measurementFocusIndex !== focusedIndex) {
+    measurementFocusIndex = focusedIndex;
+  }
+
+  const measurementListItems = [];
 
   for (let overlayIndex = 0; overlayIndex < measurementOverlays.length; overlayIndex += 1) {
     const overlay = measurementOverlays[overlayIndex];
     if (!overlay || (measurementFilter && String(overlay.name || '') !== measurementFilter)) {
       continue;
     }
+    if (focusedIndex >= 0 && overlayIndex !== focusedIndex) {
+      continue;
+    }
     const overlayType = String(overlay.type || 'distance').trim().toLowerCase();
     const factory = _measurementFactories[overlayType] || _measurementFactories.distance;
     const node = factory(overlay, overlayIndex);
     if (node) {
+      node.userData = node.userData || {};
+      node.userData.measurementIndex = overlayIndex;
       measurementGroup.add(node);
+      measurementListItems.push({
+        index: overlayIndex,
+        overlay,
+        color: _measurementColorForOverlay(overlay),
+      });
     }
   }
 
   measurementGroup.visible = measurementGroup.children.length > 0;
+  _renderMeasurementList(measurementListItems);
 }
 
 function _clearPickMarker() {
@@ -1326,6 +1670,10 @@ window.clearModel = function () {
 
 window.setWheelZoomEnabled = function (enabled) {
   wheelZoomEnabled = !!enabled;
+};
+
+window.setControlHintText = function (text) {
+  _setControlHintText(text);
 };
 
 window.setAlignmentPlane = function (plane) {
@@ -1473,6 +1821,7 @@ window.loadAssembly = function (parts) {
 
 canvas.addEventListener('click', (event) => {
   if (_gizmoDragJustEnded) return;
+  if (_cameraDragJustEnded) return;
   if (_measurementDragController.didJustEnd()) return;
   if (currentMeshes.length === 0) return;
 
@@ -1522,14 +1871,32 @@ canvas.addEventListener('click', (event) => {
 });
 
 canvas.addEventListener('mousedown', (event) => {
+  if (event.button === 0 || event.button === 2) {
+    _cameraPointerDown = { x: event.clientX, y: event.clientY };
+    _cameraPointerMoved = false;
+  }
   _measurementDragController.onMouseDown(event);
 });
 
 canvas.addEventListener('mousemove', (event) => {
+  if (_cameraPointerDown && !_cameraPointerMoved) {
+    const dx = event.clientX - _cameraPointerDown.x;
+    const dy = event.clientY - _cameraPointerDown.y;
+    if ((dx * dx + dy * dy) >= (_CAMERA_DRAG_THRESHOLD_PX * _CAMERA_DRAG_THRESHOLD_PX)) {
+      _cameraPointerMoved = true;
+    }
+  }
   _measurementDragController.onMouseMove(event);
 });
 
 document.addEventListener('mouseup', () => {
+  if (_cameraPointerDown) {
+    if (_cameraPointerMoved) {
+      _markCameraDragJustEnded();
+    }
+    _cameraPointerDown = null;
+    _cameraPointerMoved = false;
+  }
   _measurementDragController.onMouseUp();
 });
 
@@ -1559,7 +1926,7 @@ canvas.addEventListener('wheel', (event) => {
   controls.update();
 }, { passive: false });
 
-// Measurement labels are fixed HUD overlays, while distance helpers are draggable in 3D.
+// Measurement labels are depth-tested 3D sprites attached to their helpers.
 
 window.setPointPickingEnabled = function (enabled) {
   pointPickingEnabled = !!enabled;
@@ -1583,6 +1950,9 @@ window.setTransformMode = function (mode) {
   if (mode === 'translate' || mode === 'rotate') {
     transformControl.setMode(mode);
     if (transformControl.object === selectionProxy) {
+      if (selectedMeshIndices.length <= 1) {
+        _updateSelectionProxyFromSelection();
+      }
       transformControl.setSpace(selectedMeshIndices.length > 1 ? 'world' : 'local');
     } else {
       transformControl.setSpace('local');
@@ -1688,11 +2058,15 @@ window.resetSelectedPartTransform = function () {
 
 window.setMeasurements = function (definitions) {
   measurementOverlays = Array.isArray(definitions) ? definitions : [];
+  measurementFocusIndex = -1;
   _scheduleMeasurementsRender();
 };
 
 window.setMeasurementsVisible = function (visible) {
   measurementsVisible = !!visible;
+  if (!measurementsVisible) {
+    measurementFocusIndex = -1;
+  }
   _scheduleMeasurementsRender();
 };
 
@@ -1710,6 +2084,10 @@ window.setMeasurementDragEnabled = function (enabled) {
 window.setMeasurementFilter = function (name) {
   measurementFilter = String(name || '').trim();
   _scheduleMeasurementsRender();
+};
+
+window.setMeasurementFocusIndex = function (index) {
+  _setMeasurementFocusIndex(index);
 };
 
 window.getDistanceMeasuredValue = function (index) {
@@ -1742,6 +2120,7 @@ function animate() {
     return;
   }
   controls.update();
+  _updateMeasurementLabelScales();
   renderer.render(scene, camera);
 }
 animate();

@@ -346,6 +346,12 @@ class AddEditJawDialog(QDialog):
         layout.addLayout(controls_row)
 
         self.preview_widget = StlPreviewWidget()
+        self.preview_widget.set_control_hint_text(
+            self._t(
+                'tool_editor.hint.rotate_pan_zoom',
+                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            )
+        )
         layout.addWidget(self.preview_widget, 1)
 
         self.browse_btn.clicked.connect(self._pick_stl_file)

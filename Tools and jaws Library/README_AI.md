@@ -274,6 +274,9 @@ Note: **Tool type is NOT shown as a separate field box** — it appears as the b
 - `_build_preview_panel()` creates `StlPreviewWidget`
 - `_load_preview_content()` detects single-path vs JSON array in `stl_path`
 - Detached preview window tracks current selection
+- Detached preview toolbar uses a single measurements toggle button + label (no filter dropdown)
+- Measurements toggle icon state: `comment.svg` (enabled) / `comment_disable.svg` (disabled)
+- Detached preview dialog/toolbar use dedicated style properties: `detachedPreviewDialog` and `detachedPreviewToolbar`
 
 ### `ui/jaw_page.py`
 
@@ -331,6 +334,8 @@ Add/Edit dialog for tool records. Three tabs: **General**, **Additional Parts**,
 - General tab: tool fields + holder/cutting picker buttons + drill/mill conditional fields
 - Additional Parts tab: `PartsTable` widget storing `[{name, code, link}, ...]`
 - 3D Models tab: `PartsTable` storing `[{name, file, color}, ...]`; live preview via `StlPreviewWidget.load_parts()`
+- 3D Models tab also includes a transform row below the preview (mode toggle, fine toggle, XYZ values, reset)
+- Transform snapshots are synchronized from the preview before save to avoid stale zero-value saves
 
 Component picker scans all existing tool records and deduplicates `(kind, name, code, link)` tuples.
 
@@ -400,6 +405,8 @@ preview/
 - State vars: `alignmentPlane` (string), `manualRotation` (THREE.Vector3)
 - `applyAlignmentPlane(object)` — applies extra rotation based on plane: XZ=default, XY=rotateX(-90°), YZ=rotateZ(90°)
 - `applyModelTransformAndFrame(refit)` — consolidated: orient + plane + manual rotation + grid fit + optional camera reframe
+- Camera drag/click separation guards selection so orbit/pan drags do not clear selected parts
+- Fine/regular transform modes use snapped increments (translation: 1.0 mm / 0.1 mm, rotation: 1.0° / 0.1°)
 
 **Window API (callable from Python via `runJavaScript`):**
 - `window.setAlignmentPlane(plane)` — change alignment plane and re-apply
@@ -798,6 +805,8 @@ Additional Parts tab:
 - also uses `PartsTable`
 - stores rows as `[{name, file, color}, ...]`
 - updates preview live through `StlPreviewWidget.load_parts()`
+- includes a transform row for gizmo editing (move/rotate mode, fine toggle, XYZ fields, reset)
+- transform values are pulled from viewer snapshots before serialization on save
 
 Component picker behavior:
 
@@ -893,6 +902,7 @@ Viewer behavior in `viewer.js`:
 - detached preview is tied to current selection
 - if no valid model data exists, the detached preview closes itself
 - inline detail preview and detached preview both use the same loader logic
+- camera drag for orbit/pan should not clear current 3D part selection
 
 ### Editor rules
 
@@ -998,6 +1008,11 @@ This means `stl_path` is overloaded:
 - current multi-part JSON array
 
 That overload is important and fragile. Preserve it unless you are deliberately migrating the format everywhere.
+
+Detached preview measurement controls (TOOLS):
+- top-left toolbar contains icon toggle + "Measurements" label only
+- icon reflects state (`comment.svg` / `comment_disable.svg`)
+- measurement filter dropdown has been removed
 
 ## How Records Link to Each Other
 

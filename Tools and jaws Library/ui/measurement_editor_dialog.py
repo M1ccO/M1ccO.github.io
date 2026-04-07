@@ -256,6 +256,12 @@ class MeasurementEditorDialog(QDialog):
 
         # ── PREVIEW ─────────────────────────────────────────────────
         self._preview_widget = StlPreviewWidget()
+        self._preview_widget.set_control_hint_text(
+            self._t(
+                'tool_editor.hint.rotate_pan_zoom',
+                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            )
+        )
         self._preview_container = QWidget()
         _preview_layout = QVBoxLayout(self._preview_container)
         _preview_layout.setContentsMargins(0, 0, 0, 0)

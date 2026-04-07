@@ -130,6 +130,9 @@ Both modules use a shared self-contained 3D viewer built on [Three.js](https://t
 - Controls: left-drag to orbit, right-drag to pan, scroll wheel to zoom
 - The JAWS module supports saving a specific alignment plane and rotation per jaw
 - The TOOLS module supports multi-part assembly preview (multiple STL files loaded together)
+- In the TOOLS editor, the `3D Models` tab supports gizmo-based move/rotate editing with numeric X/Y/Z fields, fine-tune mode, and transform reset controls
+- Detached TOOLS preview has a top-left measurements toggle with state icons (`comment.svg` = visible, `comment_disable.svg` = hidden)
+- Detached TOOLS preview no longer includes a measurement filter dropdown (show/hide only)
 
 ---
 
@@ -481,6 +484,7 @@ The application supports STL preview for individual tools and multi-part assembl
 - The detail panel can show an inline preview.
 - A detached preview window can also be opened.
 - The tool editor has a `3D Models` tab for assigning one or more STL files.
+- Detached preview measurement visibility is controlled from a single icon toggle in the toolbar.
 
 If more than one STL part is stored, the preview behaves like an assembly preview.
 

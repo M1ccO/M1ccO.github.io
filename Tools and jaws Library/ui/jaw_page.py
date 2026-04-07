@@ -1139,6 +1139,12 @@ class JawPage(QWidget):
         stl_path = jaw.get('stl_path', '')
         if stl_path:
             viewer = StlPreviewWidget()
+            viewer.set_control_hint_text(
+                self._t(
+                    'tool_editor.hint.rotate_pan_zoom',
+                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                )
+            )
             viewer.load_stl(stl_path, label=jaw.get('jaw_id', self._t('jaw_library.preview.jaw_label', 'Jaw')))
             # Apply jaw-specific saved preview orientation
             plane = (jaw.get('preview_plane', '') or 'XZ').strip()

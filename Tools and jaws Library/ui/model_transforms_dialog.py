@@ -60,6 +60,12 @@ class ModelTransformsDialog(QDialog):
         root.setSpacing(8)
 
         self.preview = StlPreviewWidget()
+        self.preview.set_control_hint_text(
+            self._t(
+                "tool_editor.hint.rotate_pan_zoom",
+                "Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel",
+            )
+        )
         root.addWidget(self.preview, 1)
 
         self.preview.set_transform_edit_enabled(True)
