@@ -61,6 +61,13 @@ def _xyz_to_text(value) -> str:
     return f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
 
 
+def _xyz_to_text_optional(value) -> str:
+    text = str(value or '').strip()
+    if not text:
+        return ''
+    return _xyz_to_text(value)
+
+
 class MeasurementEditorDialog(QDialog):
     """Dialog for editing measurements with visual 3D feedback and point-picking."""
 
@@ -678,29 +685,93 @@ class MeasurementEditorDialog(QDialog):
     # MEASUREMENT LIST MANAGEMENT
     # ─────────────────────────────────────────────────────────────────
 
+    def _normalize_distance_measurement(self, meas: dict | None) -> dict:
+        data = dict(meas or {})
+        axis = str(data.get('distance_axis', 'z')).strip().lower()
+        if axis not in {'direct', 'x', 'y', 'z'}:
+            axis = 'z'
+        value_mode = str(data.get('label_value_mode', 'measured')).strip().lower()
+        if value_mode not in {'measured', 'custom'}:
+            value_mode = 'measured'
+        return {
+            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_distance', 'New Distance'),
+            'start_part': str(data.get('start_part', '')).strip(),
+            'start_part_index': int(data.get('start_part_index', -1) or -1),
+            'start_xyz': _xyz_to_text_optional(data.get('start_xyz', '')),
+            'start_space': str(data.get('start_space', 'world')).strip() or 'world',
+            'end_part': str(data.get('end_part', '')).strip(),
+            'end_part_index': int(data.get('end_part_index', -1) or -1),
+            'end_xyz': _xyz_to_text_optional(data.get('end_xyz', '')),
+            'end_space': str(data.get('end_space', 'world')).strip() or 'world',
+            'distance_axis': axis,
+            'label_value_mode': value_mode,
+            'label_custom_value': str(data.get('label_custom_value', '')).strip(),
+            'offset_xyz': _xyz_to_text_optional(data.get('offset_xyz', '')),
+            'start_shift': str(data.get('start_shift', '0')).strip() or '0',
+            'end_shift': str(data.get('end_shift', '0')).strip() or '0',
+            'type': 'distance',
+        }
+
+    def _normalize_diameter_measurement(self, meas: dict | None) -> dict:
+        data = dict(meas or {})
+        return {
+            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_diameter', 'New Diameter'),
+            'part': str(data.get('part', '')).strip(),
+            'center_xyz': _xyz_to_text(data.get('center_xyz', '0, 0, 0')),
+            'axis_xyz': _xyz_to_text(data.get('axis_xyz', '0, 1, 0')),
+            'diameter': str(data.get('diameter', '10')).strip() or '10',
+            'type': 'diameter_ring',
+        }
+
+    def _normalize_radius_measurement(self, meas: dict | None) -> dict:
+        data = dict(meas or {})
+        return {
+            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_radius', 'New Radius'),
+            'part': str(data.get('part', '')).strip(),
+            'center_xyz': _xyz_to_text(data.get('center_xyz', '0, 0, 0')),
+            'axis_xyz': _xyz_to_text(data.get('axis_xyz', '0, 1, 0')),
+            'radius': str(data.get('radius', '5')).strip() or '5',
+            'type': 'radius',
+        }
+
+    def _normalize_angle_measurement(self, meas: dict | None) -> dict:
+        data = dict(meas or {})
+        return {
+            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_angle', 'New Angle'),
+            'part': str(data.get('part', '')).strip(),
+            'center_xyz': _xyz_to_text(data.get('center_xyz', '0, 0, 0')),
+            'start_xyz': _xyz_to_text(data.get('start_xyz', '1, 0, 0')),
+            'end_xyz': _xyz_to_text(data.get('end_xyz', '0, 1, 0')),
+            'type': 'angle',
+        }
+
     def _populate_measurements(self):
         self._distance_list.clear()
         for meas in self._tool_data.get('distance_measurements', []):
-            item = QListWidgetItem(meas.get('name', 'Unnamed'))
-            item.setData(Qt.UserRole, dict(meas))
+            normalized = self._normalize_distance_measurement(meas)
+            item = QListWidgetItem(normalized.get('name', 'Unnamed'))
+            item.setData(Qt.UserRole, normalized)
             self._distance_list.addItem(item)
 
         self._diameter_list.clear()
         for meas in self._tool_data.get('diameter_measurements', []):
-            item = QListWidgetItem(meas.get('name', 'Unnamed'))
-            item.setData(Qt.UserRole, dict(meas))
+            normalized = self._normalize_diameter_measurement(meas)
+            item = QListWidgetItem(normalized.get('name', 'Unnamed'))
+            item.setData(Qt.UserRole, normalized)
             self._diameter_list.addItem(item)
 
         self._radius_list.clear()
         for meas in self._tool_data.get('radius_measurements', []):
-            item = QListWidgetItem(meas.get('name', 'Unnamed'))
-            item.setData(Qt.UserRole, dict(meas))
+            normalized = self._normalize_radius_measurement(meas)
+            item = QListWidgetItem(normalized.get('name', 'Unnamed'))
+            item.setData(Qt.UserRole, normalized)
             self._radius_list.addItem(item)
 
         self._angle_list.clear()
         for meas in self._tool_data.get('angle_measurements', []):
-            item = QListWidgetItem(meas.get('name', 'Unnamed'))
-            item.setData(Qt.UserRole, dict(meas))
+            normalized = self._normalize_angle_measurement(meas)
+            item = QListWidgetItem(normalized.get('name', 'Unnamed'))
+            item.setData(Qt.UserRole, normalized)
             self._angle_list.addItem(item)
 
     def _add_distance_measurement(self):
@@ -1665,21 +1736,13 @@ class MeasurementEditorDialog(QDialog):
     def _refresh_preview_measurements(self):
         overlays = []
         for i in range(self._distance_list.count()):
-            meas = dict(self._distance_list.item(i).data(Qt.UserRole))
-            meas['type'] = 'distance'
-            overlays.append(meas)
+            overlays.append(self._normalize_distance_measurement(self._distance_list.item(i).data(Qt.UserRole)))
         for i in range(self._diameter_list.count()):
-            meas = dict(self._diameter_list.item(i).data(Qt.UserRole))
-            meas['type'] = 'diameter_ring'
-            overlays.append(meas)
+            overlays.append(self._normalize_diameter_measurement(self._diameter_list.item(i).data(Qt.UserRole)))
         for i in range(self._radius_list.count()):
-            meas = dict(self._radius_list.item(i).data(Qt.UserRole))
-            meas['type'] = 'radius'
-            overlays.append(meas)
+            overlays.append(self._normalize_radius_measurement(self._radius_list.item(i).data(Qt.UserRole)))
         for i in range(self._angle_list.count()):
-            meas = dict(self._angle_list.item(i).data(Qt.UserRole))
-            meas['type'] = 'angle'
-            overlays.append(meas)
+            overlays.append(self._normalize_angle_measurement(self._angle_list.item(i).data(Qt.UserRole)))
         self._preview_widget.set_measurement_overlays(overlays)
 
     # ─────────────────────────────────────────────────────────────────
@@ -1689,19 +1752,19 @@ class MeasurementEditorDialog(QDialog):
     def get_measurements(self) -> dict:
         """Return all measurements from the dialog."""
         distance_meas = [
-            self._distance_list.item(i).data(Qt.UserRole)
+            self._normalize_distance_measurement(self._distance_list.item(i).data(Qt.UserRole))
             for i in range(self._distance_list.count())
         ]
         diameter_meas = [
-            self._diameter_list.item(i).data(Qt.UserRole)
+            self._normalize_diameter_measurement(self._diameter_list.item(i).data(Qt.UserRole))
             for i in range(self._diameter_list.count())
         ]
         radius_meas = [
-            self._radius_list.item(i).data(Qt.UserRole)
+            self._normalize_radius_measurement(self._radius_list.item(i).data(Qt.UserRole))
             for i in range(self._radius_list.count())
         ]
         angle_meas = [
-            self._angle_list.item(i).data(Qt.UserRole)
+            self._normalize_angle_measurement(self._angle_list.item(i).data(Qt.UserRole))
             for i in range(self._angle_list.count())
         ]
         return {

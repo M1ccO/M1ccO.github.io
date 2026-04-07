@@ -4,6 +4,7 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
 from PySide6.QtWidgets import QApplication, QAbstractScrollArea, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from config import (
     JAW_MODELS_ROOT_DEFAULT,
@@ -11,6 +12,7 @@ from config import (
     SHARED_UI_PREFERENCES_PATH,
     TOOL_MODELS_ROOT_DEFAULT,
 )
+from ui.preview_bridge_adapter import build_js_call, normalize_index_list, parse_title_event
 from shared.model_paths import read_model_roots, resolve_model_path
 
 
@@ -73,6 +75,12 @@ class ScrollFriendlyWebView(QWebEngineView):
         return None
 
 
+class PreviewWebPage(QWebEnginePage):
+    def javaScriptConsoleMessage(self, level, message, line_number, source_id):
+        print(f"[Preview JS] {source_id}:{line_number}: {message}")
+        super().javaScriptConsoleMessage(level, message, line_number, source_id)
+
+
 class StlPreviewWidget(QWidget):
     transform_changed = Signal(int, dict)
     part_selected = Signal(int)
@@ -95,6 +103,7 @@ class StlPreviewWidget(QWidget):
         self._rotation_deg = {'x': 0, 'y': 0, 'z': 0}
         self._transform_edit_enabled = False
         self._transform_mode = 'translate'
+        self._fine_transform_enabled = False
         self._part_transforms_cache = []
         self._selected_part_index = -1
         self._selected_part_indices = []
@@ -113,6 +122,7 @@ class StlPreviewWidget(QWidget):
         self._error_label.hide()
 
         self._web = ScrollFriendlyWebView()
+        self._web.setPage(PreviewWebPage(self._web))
         self._layout.addWidget(self._web)
         self._layout.addWidget(self._error_label)
 
@@ -141,6 +151,17 @@ class StlPreviewWidget(QWidget):
         self._error_label.hide()
         self._web.show()
 
+    def _call_js(self, function_name: str, *args):
+        if not self._page_ready:
+            return
+        js = build_js_call(function_name, *args)
+        self._web.page().runJavaScript(js)
+
+    def _call_js_raw(self, js: str):
+        if not self._page_ready:
+            return
+        self._web.page().runJavaScript(js)
+
     def _sync_rendering_state(self):
         app = QApplication.instance()
         app_active = True
@@ -157,10 +178,7 @@ class StlPreviewWidget(QWidget):
             return
 
         self._rendering_enabled = should_render
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setRenderingEnabled && window.setRenderingEnabled({str(should_render).lower()});"
-            )
+        self._call_js('setRenderingEnabled', bool(should_render))
 
     def _on_application_state_changed(self, _state):
         self._sync_rendering_state()
@@ -199,9 +217,9 @@ class StlPreviewWidget(QWidget):
         stl_url = QUrl.fromLocalFile(str(stl_path)).toString()
 
         if label:
-            js = f"window.loadModel && window.loadModel({stl_url!r}, {label!r});"
+            js = f"window.loadModel && window.loadModel({json.dumps(stl_url)}, {json.dumps(label)});"
         else:
-            js = f"window.loadModel && window.loadModel({stl_url!r});"
+            js = f"window.loadModel && window.loadModel({json.dumps(stl_url)});"
 
         self._web.page().runJavaScript(js)
 
@@ -241,7 +259,7 @@ class StlPreviewWidget(QWidget):
 
         js_payload = json.dumps(payload)
         js = f"window.loadAssembly && window.loadAssembly({js_payload});"
-        self._web.page().runJavaScript(js)
+        self._call_js_raw(js)
 
     def _update_parts_in_viewer(self, payload: list[dict]):
         transforms_payload = [
@@ -258,15 +276,9 @@ class StlPreviewWidget(QWidget):
         colors_payload = [str(part.get('color') or '#9ea7b3') for part in payload]
         names_payload = [str(part.get('name') or '') for part in payload]
 
-        self._web.page().runJavaScript(
-            f"window.setPartTransforms && window.setPartTransforms({json.dumps(transforms_payload)});"
-        )
-        self._web.page().runJavaScript(
-            f"window.setPartColors && window.setPartColors({json.dumps(colors_payload)});"
-        )
-        self._web.page().runJavaScript(
-            f"window.setPartNames && window.setPartNames({json.dumps(names_payload)});"
-        )
+        self._call_js('setPartTransforms', transforms_payload)
+        self._call_js('setPartColors', colors_payload)
+        self._call_js('setPartNames', names_payload)
 
     def clear(self):
         self._pending_stl_path = None
@@ -278,7 +290,7 @@ class StlPreviewWidget(QWidget):
         self._web.reset_wheel_mode()
 
         if self._page_ready:
-            self._web.page().runJavaScript("window.clearModel && window.clearModel();")
+            self._call_js('clearModel')
 
     def load_stl(self, stl_path: str | Path | None, label: str | None = None):
         self._pending_parts = None
@@ -350,61 +362,42 @@ class StlPreviewWidget(QWidget):
     def _apply_preview_transform_state(self):
         if not self._page_ready:
             return
-        self._web.page().runJavaScript(
-            f"window.setAlignmentPlane && window.setAlignmentPlane({self._alignment_plane!r});"
-        )
-        self._web.page().runJavaScript("window.resetModelRotation && window.resetModelRotation();")
+        self._call_js('setAlignmentPlane', self._alignment_plane)
+        self._call_js('resetModelRotation')
         for axis, deg in self._rotation_deg.items():
             if deg:
-                self._web.page().runJavaScript(
-                    f"window.rotateModel && window.rotateModel({axis!r}, {float(deg)});"
-                )
+                self._call_js('rotateModel', axis, float(deg))
 
     def set_alignment_plane(self, plane: str):
         normalized = (plane or 'XZ').strip().upper()
         if normalized not in {'XZ', 'XY', 'YZ'}:
             normalized = 'XZ'
         self._alignment_plane = normalized
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setAlignmentPlane && window.setAlignmentPlane({self._alignment_plane!r});"
-            )
+        self._call_js('setAlignmentPlane', self._alignment_plane)
 
     def rotate_model(self, axis: str, degrees: float = 90.0):
         key = (axis or '').strip().lower()
         if key not in {'x', 'y', 'z'}:
             return
         self._rotation_deg[key] += float(degrees)
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.rotateModel && window.rotateModel({key!r}, {float(degrees)});"
-            )
+        self._call_js('rotateModel', key, float(degrees))
 
     def reset_model_rotation(self):
         self._rotation_deg = {'x': 0, 'y': 0, 'z': 0}
-        if self._page_ready:
-            self._web.page().runJavaScript("window.resetModelRotation && window.resetModelRotation();")
+        self._call_js('resetModelRotation')
 
     def _apply_transform_editor_state(self):
         if not self._page_ready:
             return
 
-        self._web.page().runJavaScript(
-            f"window.setTransformEditEnabled && window.setTransformEditEnabled({str(self._transform_edit_enabled).lower()});"
-        )
-        self._web.page().runJavaScript(
-            f"window.setTransformMode && window.setTransformMode({self._transform_mode!r});"
-        )
+        self._call_js('setTransformEditEnabled', bool(self._transform_edit_enabled))
+        self._call_js('setTransformMode', self._transform_mode)
+        self._call_js('setFineTransformEnabled', bool(self._fine_transform_enabled))
 
         if self._part_transforms_cache:
-            js_payload = json.dumps(self._part_transforms_cache)
-            self._web.page().runJavaScript(
-                f"window.setPartTransforms && window.setPartTransforms({js_payload});"
-            )
+            self._call_js('setPartTransforms', self._part_transforms_cache)
 
-        self._web.page().runJavaScript(
-            f"window.selectPart && window.selectPart({int(self._selected_part_index)});"
-        )
+        self._call_js('selectPart', int(self._selected_part_index))
 
     @staticmethod
     def _parse_xyz_value(value, default=(0.0, 0.0, 0.0)):
@@ -525,120 +518,96 @@ class StlPreviewWidget(QWidget):
         if not self._page_ready:
             return
 
-        js_payload = json.dumps(self._measurement_overlays)
-        self._web.page().runJavaScript(
-            f"window.setMeasurements && window.setMeasurements({js_payload});"
-        )
-        self._web.page().runJavaScript(
-            f"window.setMeasurementsVisible && window.setMeasurementsVisible({str(self._measurements_visible).lower()});"
-        )
+        self._call_js('setMeasurements', self._measurement_overlays)
+        self._call_js('setMeasurementsVisible', bool(self._measurements_visible))
         filter_value = self._measurement_filter if self._measurement_filter else ''
-        self._web.page().runJavaScript(
-            f"window.setMeasurementFilter && window.setMeasurementFilter({filter_value!r});"
-        )
-        self._web.page().runJavaScript(
-            f"window.setMeasurementDragEnabled && window.setMeasurementDragEnabled({str(self._measurement_drag_enabled).lower()});"
-        )
+        self._call_js('setMeasurementFilter', filter_value)
+        self._call_js('setMeasurementDragEnabled', bool(self._measurement_drag_enabled))
 
     def set_measurement_drag_enabled(self, enabled: bool):
         self._measurement_drag_enabled = bool(enabled)
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setMeasurementDragEnabled && window.setMeasurementDragEnabled({str(self._measurement_drag_enabled).lower()});"
-            )
+        self._call_js('setMeasurementDragEnabled', bool(self._measurement_drag_enabled))
 
     def get_distance_measured_value(self, index: int, callback):
         if not self._page_ready:
             callback(None)
             return
         self._web.page().runJavaScript(
-            f"window.getDistanceMeasuredValue && window.getDistanceMeasuredValue({int(index)});",
+            f"window.getDistanceMeasuredValue && window.getDistanceMeasuredValue({json.dumps(int(index))});",
             callback,
         )
 
     def _on_title_changed(self, title: str):
-        if title.startswith('TRANSFORM:'):
-            try:
-                data = json.loads(title[len('TRANSFORM:'):])
-                if (
-                    isinstance(data, dict)
-                    and isinstance(data.get('index'), int)
-                    and isinstance(data.get('transform'), dict)
-                    and data['index'] >= 0
-                ):
-                    while len(self._part_transforms_cache) <= data['index']:
-                        self._part_transforms_cache.append({'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0})
-                    self._part_transforms_cache[data['index']] = data['transform']
-                self.transform_changed.emit(data['index'], data['transform'])
-            except (json.JSONDecodeError, KeyError):
-                pass
-        elif title.startswith('TRANSFORM_BATCH:'):
-            try:
-                payload = json.loads(title[len('TRANSFORM_BATCH:'):])
-                if not isinstance(payload, list):
-                    return
-                for item in payload:
-                    if not isinstance(item, dict):
-                        continue
-                    index = item.get('index')
-                    transform = item.get('transform')
-                    if not isinstance(index, int) or index < 0 or not isinstance(transform, dict):
-                        continue
-                    while len(self._part_transforms_cache) <= index:
-                        self._part_transforms_cache.append({'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0})
-                    self._part_transforms_cache[index] = transform
-                    self.transform_changed.emit(index, transform)
-            except (json.JSONDecodeError, KeyError, TypeError):
-                pass
-        elif title.startswith('PART_SELECTED:'):
-            try:
-                idx = int(title[len('PART_SELECTED:'):])
-                self._selected_part_index = idx
-                self.part_selected.emit(idx)
-            except ValueError:
-                pass
-        elif title.startswith('PART_SELECTIONS:'):
-            try:
-                indices = json.loads(title[len('PART_SELECTIONS:'):])
-                if not isinstance(indices, list):
-                    return
-                normalized = [int(idx) for idx in indices if isinstance(idx, int) or str(idx).lstrip('-').isdigit()]
-                self._selected_part_indices = normalized
-                self._selected_part_index = normalized[-1] if normalized else -1
-                self.part_selected.emit(self._selected_part_index)
-                self.part_selection_changed.emit(normalized)
-            except (json.JSONDecodeError, TypeError, ValueError):
-                pass
-        elif title.startswith('POINT_PICKED:'):
-            try:
-                data = json.loads(title[len('POINT_PICKED:'):])
-                if isinstance(data, dict):
-                    self.point_picked.emit(data)
-            except (json.JSONDecodeError, KeyError):
-                pass
-        elif title.startswith('MEASUREMENT_UPDATED:'):
-            try:
-                data = json.loads(title[len('MEASUREMENT_UPDATED:'):])
-                if isinstance(data, dict):
-                    self.measurement_updated.emit(data)
-            except (json.JSONDecodeError, KeyError):
-                pass
+        parsed = parse_title_event(title)
+        if not parsed:
+            return
+
+        event_name, payload = parsed
+
+        if event_name == 'TRANSFORM':
+            if (
+                isinstance(payload, dict)
+                and isinstance(payload.get('index'), int)
+                and isinstance(payload.get('transform'), dict)
+                and payload['index'] >= 0
+            ):
+                index = payload['index']
+                transform = payload['transform']
+                while len(self._part_transforms_cache) <= index:
+                    self._part_transforms_cache.append({'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0})
+                self._part_transforms_cache[index] = transform
+                self.transform_changed.emit(index, transform)
+            return
+
+        if event_name == 'TRANSFORM_BATCH':
+            if not isinstance(payload, list):
+                return
+            for item in payload:
+                if not isinstance(item, dict):
+                    continue
+                index = item.get('index')
+                transform = item.get('transform')
+                if not isinstance(index, int) or index < 0 or not isinstance(transform, dict):
+                    continue
+                while len(self._part_transforms_cache) <= index:
+                    self._part_transforms_cache.append({'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0})
+                self._part_transforms_cache[index] = transform
+                self.transform_changed.emit(index, transform)
+            return
+
+        if event_name == 'PART_SELECTED':
+            self._selected_part_index = int(payload)
+            self.part_selected.emit(self._selected_part_index)
+            return
+
+        if event_name == 'PART_SELECTIONS':
+            normalized = normalize_index_list(payload)
+            self._selected_part_indices = normalized
+            self._selected_part_index = normalized[-1] if normalized else -1
+            self.part_selected.emit(self._selected_part_index)
+            self.part_selection_changed.emit(normalized)
+            return
+
+        if event_name == 'POINT_PICKED' and isinstance(payload, dict):
+            self.point_picked.emit(payload)
+            return
+
+        if event_name == 'MEASUREMENT_UPDATED' and isinstance(payload, dict):
+            self.measurement_updated.emit(payload)
 
     def set_transform_edit_enabled(self, enabled: bool):
         self._transform_edit_enabled = bool(enabled)
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setTransformEditEnabled && window.setTransformEditEnabled({str(self._transform_edit_enabled).lower()});"
-            )
+        self._call_js('setTransformEditEnabled', bool(self._transform_edit_enabled))
 
     def set_transform_mode(self, mode: str):
         if mode not in ('translate', 'rotate'):
             return
         self._transform_mode = mode
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setTransformMode && window.setTransformMode({mode!r});"
-            )
+        self._call_js('setTransformMode', mode)
+
+    def set_fine_transform_enabled(self, enabled: bool):
+        self._fine_transform_enabled = bool(enabled)
+        self._call_js('setFineTransformEnabled', bool(self._fine_transform_enabled))
 
     def get_part_transforms(self, callback):
         if self._page_ready:
@@ -660,37 +629,24 @@ class StlPreviewWidget(QWidget):
             for transform in (transforms or [])
             if isinstance(transform, dict)
         ]
-        if self._page_ready:
-            js_payload = json.dumps(self._part_transforms_cache)
-            self._web.page().runJavaScript(
-                f"window.setPartTransforms && window.setPartTransforms({js_payload});"
-            )
+        self._call_js('setPartTransforms', self._part_transforms_cache)
 
     def select_part(self, index: int):
         self._selected_part_index = int(index)
         self._selected_part_indices = [self._selected_part_index] if self._selected_part_index >= 0 else []
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.selectPart && window.selectPart({int(index)});"
-            )
+        self._call_js('selectPart', int(index))
 
     def select_parts(self, indices: list[int]):
         normalized = [int(idx) for idx in (indices or []) if int(idx) >= 0]
         self._selected_part_indices = normalized
         self._selected_part_index = normalized[-1] if normalized else -1
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.selectParts && window.selectParts({json.dumps(normalized)});"
-            )
+        self._call_js('selectParts', normalized)
 
     def reset_selected_part_transform(self):
         for index in self._selected_part_indices or ([self._selected_part_index] if self._selected_part_index >= 0 else []):
             if 0 <= index < len(self._part_transforms_cache):
                 self._part_transforms_cache[index] = {'x': 0, 'y': 0, 'z': 0, 'rx': 0, 'ry': 0, 'rz': 0}
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                "window.resetSelectedPartTransform && window.resetSelectedPartTransform();"
-            )
+        self._call_js('resetSelectedPartTransform')
 
     def set_measurement_overlays(self, overlays):
         normalized = []
@@ -699,31 +655,18 @@ class StlPreviewWidget(QWidget):
             if item is not None:
                 normalized.append(item)
         self._measurement_overlays = normalized
-        if self._page_ready:
-            js_payload = json.dumps(self._measurement_overlays)
-            self._web.page().runJavaScript(
-                f"window.setMeasurements && window.setMeasurements({js_payload});"
-            )
+        self._call_js('setMeasurements', self._measurement_overlays)
 
     def set_measurements_visible(self, visible: bool):
         self._measurements_visible = bool(visible)
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setMeasurementsVisible && window.setMeasurementsVisible({str(self._measurements_visible).lower()});"
-            )
+        self._call_js('setMeasurementsVisible', bool(self._measurements_visible))
 
     def set_measurement_filter(self, name: str | None):
         value = str(name or '').strip()
         self._measurement_filter = value or None
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setMeasurementFilter && window.setMeasurementFilter({value!r});"
-            )
+        self._call_js('setMeasurementFilter', value)
 
     def set_point_picking_enabled(self, enabled: bool):
         self._point_picking_enabled = bool(enabled)
-        if self._page_ready:
-            self._web.page().runJavaScript(
-                f"window.setPointPickingEnabled && window.setPointPickingEnabled({str(self._point_picking_enabled).lower()});"
-            )
+        self._call_js('setPointPickingEnabled', bool(self._point_picking_enabled))
 

@@ -34,6 +34,7 @@ class ModelTransformsDialog(QDialog):
         self._selected_part_index = -1
         self._selected_part_indices: list[int] = []
         self._mode = "translate"
+        self._fine_transform_enabled = False
 
         defaults = {"x": 0, "y": 0, "z": 0, "rx": 0, "ry": 0, "rz": 0}
         self._transforms = []
@@ -63,6 +64,7 @@ class ModelTransformsDialog(QDialog):
 
         self.preview.set_transform_edit_enabled(True)
         self.preview.set_transform_mode("translate")
+        self.preview.set_fine_transform_enabled(self._fine_transform_enabled)
         self.preview.transform_changed.connect(self._on_viewer_transform_changed)
         self.preview.part_selected.connect(self._on_viewer_part_selected)
         self.preview.part_selection_changed.connect(self._on_viewer_part_selection_changed)
@@ -76,10 +78,13 @@ class ModelTransformsDialog(QDialog):
 
         self.move_btn = QPushButton(self._t("tool_editor.transform.move", "MOVE"))
         self.rotate_btn = QPushButton(self._t("tool_editor.transform.rotate", "ROTATE"))
+        self.fine_btn = QPushButton(self._t("tool_editor.transform.fine", "FINE"))
         self.reset_btn = QPushButton()
         self.move_btn.setCheckable(True)
         self.rotate_btn.setCheckable(True)
+        self.fine_btn.setCheckable(True)
         self.move_btn.setChecked(True)
+        self.fine_btn.setChecked(self._fine_transform_enabled)
         self.move_btn.setIcon(self._icon("import_export.svg"))
         self.rotate_btn.setIcon(self._icon("arrow_circle_right.svg"))
         self.reset_btn.setIcon(self._icon("arrow_circle_left.svg"))
@@ -88,16 +93,21 @@ class ModelTransformsDialog(QDialog):
         self.reset_btn.setIconSize(QSize(16, 16))
         self.move_btn.setMinimumWidth(96)
         self.rotate_btn.setMinimumWidth(102)
+        self.fine_btn.setMinimumWidth(82)
         self.reset_btn.setFixedWidth(44)
+        self.fine_btn.setToolTip(self._t("tool_editor.transform.fine_tooltip", "Toggle fine transform increments"))
         self.reset_btn.setToolTip(self._t("tool_editor.transform.reset", "RESET"))
         style_panel_action_button(self.move_btn)
         style_panel_action_button(self.rotate_btn)
+        style_panel_action_button(self.fine_btn)
         style_panel_action_button(self.reset_btn)
         self.move_btn.clicked.connect(lambda: self._set_mode("translate"))
         self.rotate_btn.clicked.connect(lambda: self._set_mode("rotate"))
+        self.fine_btn.toggled.connect(self._set_fine_transform_enabled)
         self.reset_btn.clicked.connect(self._reset_current_part_transform)
         controls.addWidget(self.move_btn)
         controls.addWidget(self.rotate_btn)
+        controls.addWidget(self.fine_btn)
         controls.addWidget(self.reset_btn)
 
         self.x_edit = QLineEdit("0")
@@ -193,6 +203,12 @@ class ModelTransformsDialog(QDialog):
         self.rotate_btn.setChecked(mode == "rotate")
         self.preview.set_transform_mode(mode)
         self._refresh_selection_state()
+
+    def _set_fine_transform_enabled(self, enabled: bool):
+        self._fine_transform_enabled = bool(enabled)
+        if hasattr(self, 'fine_btn') and self.fine_btn.isChecked() != self._fine_transform_enabled:
+            self.fine_btn.setChecked(self._fine_transform_enabled)
+        self.preview.set_fine_transform_enabled(self._fine_transform_enabled)
 
     def _refresh_selection_state(self):
         count = len(self._selected_part_indices)

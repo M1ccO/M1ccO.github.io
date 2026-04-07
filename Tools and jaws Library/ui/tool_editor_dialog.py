@@ -296,6 +296,7 @@ class AddEditToolDialog(QDialog):
         self._part_transforms = {}
         self._measurement_editor_state = self._empty_measurement_editor_state()
         self._current_transform_mode = 'translate'
+        self._fine_transform_enabled = False
         self._selected_part_index = -1
         self._selected_part_indices = []
         self._general_field_columns = None
@@ -890,6 +891,7 @@ class AddEditToolDialog(QDialog):
         _mode_row.setSpacing(2)
         _mode_row.setContentsMargins(0, 0, 0, 0)
         self._mode_toggle_btn = QPushButton('')
+        self._fine_transform_btn = QPushButton(self._t('tool_editor.transform.fine', 'TARKKA'))
         self._reset_transform_btn = QPushButton()
         style_icon_action_button(
             self._mode_toggle_btn,
@@ -903,9 +905,14 @@ class AddEditToolDialog(QDialog):
         )
         self._mode_toggle_btn.setCheckable(True)
         self._mode_toggle_btn.setChecked(True)
+        self._fine_transform_btn.setCheckable(True)
+        self._fine_transform_btn.setChecked(self._fine_transform_enabled)
+        style_panel_action_button(self._fine_transform_btn)
         self._reset_transform_btn.setFixedWidth(42)
         self._mode_toggle_btn.setFixedWidth(42)
+        self._fine_transform_btn.setFixedWidth(72)
         self._mode_toggle_btn.setToolTip(self._t('tool_editor.transform.move', 'SIIRRÄ'))
+        self._fine_transform_btn.setToolTip(self._t('tool_editor.transform.fine_tooltip', 'Toggle fine transform increments'))
         self._reset_transform_btn.setToolTip(self._t('tool_editor.transform.reset', 'NOLLAA'))
         
         _lbl_x = QLabel('X')
@@ -913,6 +920,8 @@ class AddEditToolDialog(QDialog):
         _lbl_x.setFixedWidth(20)
         
         _mode_row.addWidget(self._mode_toggle_btn)
+        _mode_row.addSpacing(3)
+        _mode_row.addWidget(self._fine_transform_btn)
         _mode_row.addSpacing(3)
         _mode_row.addWidget(_lbl_x)
         self._transform_x = QLineEdit('0')
@@ -947,10 +956,12 @@ class AddEditToolDialog(QDialog):
         self._transform_frame.setVisible(self._assembly_transform_enabled)
 
         if self._assembly_transform_enabled:
+            self.models_preview.set_fine_transform_enabled(self._fine_transform_enabled)
             self.models_preview.transform_changed.connect(self._on_viewer_transform_changed)
             self.models_preview.part_selected.connect(self._on_viewer_part_selected)
             self.models_preview.part_selection_changed.connect(self._on_viewer_part_selection_changed)
             self._mode_toggle_btn.clicked.connect(self._on_mode_toggle_clicked)
+            self._fine_transform_btn.toggled.connect(self._on_fine_transform_toggled)
             self._reset_transform_btn.clicked.connect(self._reset_current_part_transform)
             self._transform_x.editingFinished.connect(self._apply_manual_transform)
             self._transform_y.editingFinished.connect(self._apply_manual_transform)
@@ -2271,6 +2282,10 @@ class AddEditToolDialog(QDialog):
             )
         self.models_preview.set_transform_mode(mode)
         self._refresh_transform_selection_state()
+
+    def _on_fine_transform_toggled(self, checked: bool):
+        self._fine_transform_enabled = bool(checked)
+        self.models_preview.set_fine_transform_enabled(self._fine_transform_enabled)
 
     def _reset_current_part_transform(self):
         if self._selected_part_index < 0:

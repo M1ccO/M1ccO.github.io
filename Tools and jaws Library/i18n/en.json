@@ -356,5 +356,7 @@
     "tool_editor.transform.no_selection": "Click a part to select",
     "tool_editor.transform.move": "MOVE",
     "tool_editor.transform.rotate": "ROTATE",
+    "tool_editor.transform.fine": "FINE",
+    "tool_editor.transform.fine_tooltip": "Toggle fine transform increments",
     "tool_editor.transform.reset": "RESET"
 }

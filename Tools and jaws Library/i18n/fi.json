@@ -356,5 +356,7 @@
     "tool_editor.transform.no_selection": "Napsauta osaa valitaksesi",
     "tool_editor.transform.move": "SIIRRÄ",
     "tool_editor.transform.rotate": "KIERRÄ",
+    "tool_editor.transform.fine": "TARKKA",
+    "tool_editor.transform.fine_tooltip": "Vaihda tarkat muunnosaskelmat päälle tai pois",
     "tool_editor.transform.reset": "NOLLAA"
 }
