@@ -4,7 +4,7 @@ from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QItemSelectionModel, QEven
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
-    QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+    QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
     QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
     QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QTreeWidget, QTreeWidgetItem
 )
@@ -25,6 +25,7 @@ from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_sha
 from shared.editor_helpers import (
     add_shadow,
     setup_editor_dialog,
+    create_titled_section,
     create_dialog_buttons,
     apply_secondary_button_theme,
     make_arrow_button,
@@ -33,7 +34,6 @@ from shared.editor_helpers import (
     style_move_arrow_button,
     reflow_fields_grid,
     build_picker_row,
-    style_icon_action_button,
 )
 
 
@@ -309,7 +309,7 @@ class AddEditToolDialog(QDialog):
         self._spare_refresh_timer.timeout.connect(self._refresh_spare_component_dropdowns)
         self.setWindowTitle(self._dialog_title())
         self.resize(1120, 760)
-        self.setMinimumSize(960, 660)
+        self.setMinimumSize(900, 660)
         self.setModal(True)
         setup_editor_dialog(self)
         self._build_ui()
@@ -822,6 +822,11 @@ class AddEditToolDialog(QDialog):
         models_layout.setContentsMargins(18, 18, 18, 18)
         models_layout.setSpacing(8)
 
+        models_columns_spacing = 8
+        models_bottom_left_width = 340
+        models_bottom_left_box_width = 320
+        models_bottom_right_width = 488
+
         splitter = QSplitter(Qt.Horizontal)
         splitter.setProperty('editorTransparentPanel', True)
         splitter.setHandleWidth(8)
@@ -829,14 +834,17 @@ class AddEditToolDialog(QDialog):
         # Left side: table in panel frame (same structure as spare parts tab)
         models_panel = QFrame()
         models_panel.setProperty('editorPartsPanel', True)
-        models_panel.setMinimumWidth(360)
+        models_panel.setMinimumWidth(260)
+        models_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         models_panel_layout = QVBoxLayout(models_panel)
         models_panel_layout.setContentsMargins(8, 10, 8, 8)
         models_panel_layout.setSpacing(0)
 
         self.model_table = PartsTable(['Part Name', 'STL File', 'Color'])
         self.model_table.setObjectName('editorModelsTable')
-        self.model_table.setMinimumHeight(320)
+        self.model_table.setMinimumHeight(240)
+        self.model_table.setMaximumHeight(420)
+        self.model_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.model_table.verticalHeader().setDefaultSectionSize(44)
         self.model_table.verticalHeader().setMinimumSectionSize(28)
         self.model_table.setColumnCount(3)
@@ -850,20 +858,21 @@ class AddEditToolDialog(QDialog):
         model_header.setSectionResizeMode(1, QHeaderView.Stretch)
         model_header.setSectionResizeMode(2, QHeaderView.Interactive)
         model_header.setStretchLastSection(False)
-        self.model_table.setColumnWidth(0, 120)
-        self.model_table.setColumnWidth(1, 260)
-        self.model_table.setColumnWidth(2, 80)
+        self.model_table.setColumnWidth(0, 100)
+        self.model_table.setColumnWidth(1, 170)
+        self.model_table.setColumnWidth(2, 70)
         self.model_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.model_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.model_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.model_table.itemChanged.connect(self._on_model_table_changed)
 
-        models_panel_layout.addWidget(self.model_table, 1)
+        models_panel_layout.addWidget(self.model_table, 0)
+        models_panel_layout.addStretch(1)
 
         # Right side: preview panel
         preview_panel = QFrame()
         preview_panel.setProperty('editorPartsPanel', True)
-        preview_panel.setMinimumWidth(420)
+        preview_panel.setMinimumWidth(300)
         preview_panel_layout = QVBoxLayout(preview_panel)
         preview_panel_layout.setContentsMargins(8, 8, 8, 8)
         preview_panel_layout.setSpacing(8)
@@ -878,22 +887,15 @@ class AddEditToolDialog(QDialog):
         preview_panel_layout.addWidget(self.models_preview, 1)
 
         # Transform controls (visible only when preference is on)
-        self._transform_frame = QFrame()
-        self._transform_frame.setProperty('editorFieldCard', True)
-        self._transform_frame.setProperty('editorFieldGroup', True)
-        self._transform_frame.setMinimumWidth(0)
+        self._transform_frame = create_titled_section(
+            self._t('tool_editor.transform.toolbar_title', 'Muunnos')
+        )
+        self._transform_frame.setMinimumWidth(models_bottom_right_width)
+        self._transform_frame.setMaximumWidth(models_bottom_right_width)
+        self._transform_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         _tf_layout = QVBoxLayout(self._transform_frame)
-        _tf_layout.setContentsMargins(6, 6, 6, 2)
+        _tf_layout.setContentsMargins(8, 4, 8, 6)
         _tf_layout.setSpacing(4)
-
-        self._selected_part_label = QLabel(
-            self._t('tool_editor.transform.no_selection', 'Click a part to select. Ctrl+click for multiple')
-        )
-        self._selected_part_label.setProperty('detailHint', True)
-        self._selected_part_label.setStyleSheet(
-            'background: transparent; border: none; font-size: 9.5pt; font-weight: 500;'
-        )
-        _tf_layout.addWidget(self._selected_part_label)
 
         _mode_row = QHBoxLayout()
         _mode_row.setSpacing(0)
@@ -977,16 +979,6 @@ class AddEditToolDialog(QDialog):
         _mode_row.addWidget(self._reset_transform_btn)
         _tf_layout.addLayout(_mode_row)
 
-        self._preview_controls_separator = QFrame()
-        self._preview_controls_separator.setProperty('jawColumnSeparator', True)
-        self._preview_controls_separator.setFrameShape(QFrame.HLine)
-        self._preview_controls_separator.setFrameShadow(QFrame.Plain)
-        self._preview_controls_separator.setLineWidth(1)
-        self._preview_controls_separator.setFixedHeight(1)
-        preview_panel_layout.addWidget(self._preview_controls_separator)
-
-        preview_panel_layout.addWidget(self._transform_frame)
-        self._preview_controls_separator.setVisible(self._assembly_transform_enabled)
         self._transform_frame.setVisible(self._assembly_transform_enabled)
 
         if self._assembly_transform_enabled:
@@ -1004,21 +996,21 @@ class AddEditToolDialog(QDialog):
             self._transform_y.returnPressed.connect(self._transform_y.editingFinished.emit)
             self._transform_z.returnPressed.connect(self._transform_z.editingFinished.emit)
             self.model_table.itemSelectionChanged.connect(self._on_model_table_selection_changed)
-            self._transform_frame.installEventFilter(self)
             QTimer.singleShot(0, self._update_transform_row_sizes)
 
-        splitter.addWidget(models_panel)
-        splitter.addWidget(preview_panel)
-        splitter.setCollapsible(0, False)
-        splitter.setCollapsible(1, False)
-        splitter.setSizes([520, 560])
+        model_btn_bar = create_titled_section(
+            self._t('tool_editor.models.actions_title', 'Mallien toiminnot')
+        )
+        model_btn_bar_layout = QVBoxLayout(model_btn_bar)
+        model_btn_bar_layout.setContentsMargins(8, 4, 8, 6)
+        model_btn_bar_layout.setSpacing(4)
 
-        models_layout.addWidget(splitter, 1)
+        model_meta_row = QHBoxLayout()
+        model_meta_row.setContentsMargins(0, 0, 0, 0)
+        model_meta_row.setSpacing(6)
 
-        model_btn_bar = QFrame()
-        model_btn_bar.setProperty('editorButtonBar', True)
-        model_btns = QHBoxLayout(model_btn_bar)
-        model_btns.setContentsMargins(2, 6, 2, 2)
+        model_btns = QHBoxLayout()
+        model_btns.setContentsMargins(0, 0, 0, 0)
         model_btns.setSpacing(8)
         self.add_model_btn = QPushButton(self._t('tool_editor.action.add_model', 'ADD MODEL'))
         self.remove_model_btn = QPushButton(self._t('tool_editor.action.remove_selected_model', 'REMOVE SELECTED MODEL'))
@@ -1051,16 +1043,49 @@ class AddEditToolDialog(QDialog):
         self.measurement_summary_label = QLabel()
         self.measurement_summary_label.setProperty('detailHint', True)
         self.measurement_summary_label.setStyleSheet(
-            'background: transparent; color: #6b7b8e; font-size: 12px;'
+            'background: transparent; color: #6b7b8e; font-size: 11px;'
         )
+        self.measurement_summary_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        model_meta_row.addWidget(self.measurement_summary_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        model_meta_row.addStretch(1)
+        model_btn_bar_layout.addLayout(model_meta_row)
         model_btns.addWidget(self.add_model_btn)
         model_btns.addWidget(self.remove_model_btn)
         model_btns.addWidget(self.model_up_btn)
         model_btns.addWidget(self.model_down_btn)
         model_btns.addWidget(self.edit_measurements_btn)
-        model_btns.addWidget(self.measurement_summary_label)
         model_btns.addStretch(1)
-        models_layout.addWidget(model_btn_bar)
+        model_btn_bar_layout.addLayout(model_btns)
+        splitter.addWidget(models_panel)
+        splitter.addWidget(preview_panel)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setSizes([420, 540])
+        models_layout.addWidget(splitter, 1)
+
+        bottom_row = QHBoxLayout()
+        bottom_row.setContentsMargins(0, 0, 0, 0)
+        bottom_row.setSpacing(models_columns_spacing)
+        left_toolbar_host = QWidget()
+        left_toolbar_host.setObjectName('leftToolbarHost')
+        left_toolbar_host.setFixedWidth(models_bottom_left_width)
+        left_toolbar_host.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        left_toolbar_host.setAutoFillBackground(False)
+        left_toolbar_host.setStyleSheet(
+            '#leftToolbarHost { background: transparent; border: none; }'
+        )
+        left_toolbar_host_layout = QHBoxLayout(left_toolbar_host)
+        left_toolbar_host_layout.setContentsMargins(0, 0, 0, 0)
+        left_toolbar_host_layout.setSpacing(0)
+        model_btn_bar.setFixedWidth(models_bottom_left_box_width)
+        left_toolbar_host_layout.addStretch(1)
+        left_toolbar_host_layout.addWidget(model_btn_bar, 0, Qt.AlignTop)
+        left_toolbar_host_layout.addStretch(1)
+        bottom_row.addWidget(left_toolbar_host, 0, Qt.AlignLeft | Qt.AlignTop)
+        bottom_row.addStretch(1)
+        bottom_row.addWidget(self._transform_frame, 0, Qt.AlignRight | Qt.AlignTop)
+        models_layout.addLayout(bottom_row, 0)
+        self._transform_frame.setVisible(self._assembly_transform_enabled)
 
         self.tabs.addTab(models_tab, self._t('tool_editor.tab.models', '3D models'))
         self._update_measurement_summary_label()
@@ -1108,8 +1133,6 @@ class AddEditToolDialog(QDialog):
                 return True
             if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.RightButton:
                 return True
-        if obj is getattr(self, '_transform_frame', None) and event.type() == QEvent.Resize:
-            self._update_transform_row_sizes()
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
         return super().eventFilter(obj, event)
@@ -2341,9 +2364,8 @@ class AddEditToolDialog(QDialog):
             widget.setEnabled(single_selected)
 
         if count == 0:
-            self._selected_part_label.setText(
-                self._t('tool_editor.transform.no_selection', 'Click a part to select. Ctrl+click for multiple')
-            )
+            if hasattr(self, 'models_preview'):
+                self.models_preview.set_selection_caption(None)
             self._transform_x.setText('0')
             self._transform_y.setText('0')
             self._transform_z.setText('0')
@@ -2355,12 +2377,14 @@ class AddEditToolDialog(QDialog):
             index = self._selected_part_index
             name_item = self.model_table.item(index, 0)
             name = name_item.text().strip() if name_item else f'Part {index + 1}'
-            self._selected_part_label.setText(name or f'Part {index + 1}')
+            if hasattr(self, 'models_preview'):
+                self.models_preview.set_selection_caption(name or f'Part {index + 1}')
             t = self._part_transforms.get(index, {})
             self._update_transform_fields(t, index=index)
             return
 
-        self._selected_part_label.setText(f'{count} models selected')
+        if hasattr(self, 'models_preview'):
+            self.models_preview.set_selection_caption(None)
         t = self._part_transforms.get(self._selected_part_index, {})
         self._update_transform_fields(t, index=self._selected_part_index)
 
@@ -2380,46 +2404,15 @@ class AddEditToolDialog(QDialog):
         if not hasattr(self, '_transform_frame') or not hasattr(self, '_transform_x'):
             return
 
-        frame_w = int(self._transform_frame.width() or 0)
-        if frame_w <= 0:
-            return
-
-        # Match _tf_layout horizontal contents margins and keep a safety buffer
-        # so edge buttons never clip on either side.
-        inner_w = max(120, frame_w - 16)
-        label_total = 16 * 3
-        gap_total = 3 + 4 + 4 + 4 + 6
-        safety_total = 24
-
-        min_btn_w, max_btn_w = 30, 42
-        min_edit_w, max_edit_w = 50, 80
-
-        btn_w = max_btn_w
-        edit_w = max_edit_w
-        available = max(0, inner_w - label_total - gap_total - safety_total)
-        needed = (3 * btn_w) + (3 * edit_w)
-
-        if needed > available:
-            deficit = needed - available
-            max_edit_reduce = 3 * (max_edit_w - min_edit_w)
-            reduce_edit_total = min(deficit, max_edit_reduce)
-            reduce_edit_each = (reduce_edit_total + 2) // 3
-            edit_w = max(min_edit_w, max_edit_w - reduce_edit_each)
-
-            needed = (3 * btn_w) + (3 * edit_w)
-            if needed > available:
-                deficit = needed - available
-                max_btn_reduce = 3 * (max_btn_w - min_btn_w)
-                reduce_btn_total = min(deficit, max_btn_reduce)
-                reduce_btn_each = (reduce_btn_total + 2) // 3
-                btn_w = max(min_btn_w, max_btn_w - reduce_btn_each)
+        btn_w = 42
+        edit_w = 80
 
         self._mode_toggle_btn.setFixedWidth(btn_w)
         self._fine_transform_btn.setFixedWidth(btn_w)
         self._reset_transform_btn.setFixedWidth(btn_w)
-        self._mode_toggle_btn.setIconSize(QSize(18 if btn_w >= 40 else 16, 18 if btn_w >= 40 else 16))
-        self._fine_transform_btn.setIconSize(QSize(18 if btn_w >= 40 else 16, 18 if btn_w >= 40 else 16))
-        self._reset_transform_btn.setIconSize(QSize(18 if btn_w >= 40 else 16, 18 if btn_w >= 40 else 16))
+        self._mode_toggle_btn.setIconSize(QSize(18, 18))
+        self._fine_transform_btn.setIconSize(QSize(18, 18))
+        self._reset_transform_btn.setIconSize(QSize(18, 18))
 
         self._transform_x.setFixedWidth(edit_w)
         self._transform_y.setFixedWidth(edit_w)

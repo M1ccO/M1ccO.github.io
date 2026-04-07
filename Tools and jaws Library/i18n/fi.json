@@ -66,6 +66,7 @@
     "tool_editor.measurements.open_editor": "Muokkaa mittauksia",
     "tool_editor.measurements.none": "Mittauksia ei ole määritetty",
     "tool_editor.measurements.count": "{count} mittausta määritetty",
+    "tool_editor.models.actions_title": "Mallien toiminnot",
     "tool_editor.measurements.part": "Osa",
     "tool_editor.measurements.part_placeholder": "(osan nimi, tyhjä = kokoonpano)",
     "tool_editor.measurements.value_placeholder": "Mitattu tai mukautettu arvo",
@@ -422,6 +423,7 @@
     "tool_editor.transform.multi_selection": "{count} mallia valittu",
     "tool_editor.transform.reset": "NOLLAA",
     "tool_editor.transform.reset_tooltip": "Vasen napsautus: palauta alkuperäinen sijainti. Oikea napsautus: palauta tallennettu sijainti.",
+    "tool_editor.transform.toolbar_title": "Muunnos",
     "tool_editor.transform.cycle_axis_tooltip": "Napsauta akselia vaihtaaksesi X / Y / Z",
     "work_editor.tools.move_up": "▲",
     "work_editor.tools.move_down": "▼"

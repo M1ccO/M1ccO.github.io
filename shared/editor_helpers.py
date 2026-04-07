@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QGraphicsDropShadowEffect,
     QGridLayout,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -43,6 +44,30 @@ def add_shadow(widget, blur_radius=6, x_offset=0, y_offset=1):
 def setup_editor_dialog(dialog: QDialog):
     """Apply the standard work-editor property so QSS scoping rules match."""
     dialog.setProperty('workEditorDialog', True)
+
+
+def create_titled_section(title: str) -> QGroupBox:
+    """Create a light-blue titled section matching measurement editor groups."""
+    group = QGroupBox(title)
+    group.setStyleSheet(
+        'QGroupBox {'
+        '  background-color: #f0f6fc;'
+        '  border: 1px solid #d0d8e0;'
+        '  border-radius: 6px;'
+        '  margin-top: 10px;'
+        '  padding-top: 8px;'
+        '}'
+        'QGroupBox::title {'
+        '  subcontrol-origin: margin;'
+        '  left: 10px;'
+        '  padding: 0 4px;'
+        '  color: #5a6b7c;'
+        '  font-size: 8pt;'
+        '  font-weight: 600;'
+        '}'
+    )
+    group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    return group
 
 
 # ── Button bar ───────────────────────────────────────────────────────────

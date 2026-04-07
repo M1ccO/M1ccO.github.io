@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl, Signal
-from PySide6.QtWidgets import QApplication, QAbstractScrollArea, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication, QAbstractScrollArea, QGridLayout, QLabel, QVBoxLayout, QWidget
 from PySide6.QtWebEngineCore import QWebEnginePage
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from config import (
@@ -114,6 +114,7 @@ class StlPreviewWidget(QWidget):
         self._point_picking_enabled = False
         self._control_hint_text = ''
         self._axis_orbit_visible = False
+        self._selection_caption = ''
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -123,9 +124,39 @@ class StlPreviewWidget(QWidget):
         self._error_label.setWordWrap(True)
         self._error_label.hide()
 
+        self._view_host = QWidget()
+        self._view_layout = QGridLayout(self._view_host)
+        self._view_layout.setContentsMargins(0, 0, 0, 0)
+        self._view_layout.setSpacing(0)
+
         self._web = ScrollFriendlyWebView()
         self._web.setPage(PreviewWebPage(self._web))
-        self._layout.addWidget(self._web)
+        self._view_layout.addWidget(self._web, 0, 0)
+
+        self._selection_caption_wrap = QWidget()
+        self._selection_caption_wrap.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self._selection_caption_wrap.setStyleSheet('background: transparent;')
+        self._selection_caption_wrap.hide()
+        self._selection_caption_layout = QVBoxLayout(self._selection_caption_wrap)
+        self._selection_caption_layout.setContentsMargins(10, 10, 0, 0)
+        self._selection_caption_layout.setSpacing(0)
+        self._selection_caption_label = QLabel('')
+        self._selection_caption_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self._selection_caption_label.setStyleSheet(
+            'background-color: rgba(255, 255, 255, 0.86);'
+            'border: 1px solid #d7e0e8;'
+            'border-radius: 4px;'
+            'padding: 2px 6px;'
+            'color: #607181;'
+            'font-size: 9pt;'
+            'font-weight: 500;'
+        )
+        self._selection_caption_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self._selection_caption_label.setWordWrap(False)
+        self._selection_caption_layout.addWidget(self._selection_caption_label, 0, Qt.AlignLeft | Qt.AlignTop)
+        self._view_layout.addWidget(self._selection_caption_wrap, 0, 0, Qt.AlignLeft | Qt.AlignTop)
+
+        self._layout.addWidget(self._view_host, 1)
         self._layout.addWidget(self._error_label)
 
         if not self._viewer_html.exists():
@@ -146,12 +177,16 @@ class StlPreviewWidget(QWidget):
 
     def _show_error(self, message: str):
         self._web.hide()
+        self._selection_caption_wrap.hide()
         self._error_label.setText(message)
         self._error_label.show()
 
     def _show_web(self):
         self._error_label.hide()
         self._web.show()
+        if self._selection_caption:
+            self._selection_caption_wrap.show()
+            self._selection_caption_wrap.raise_()
 
     def _call_js(self, function_name: str, *args):
         if not self._page_ready:
@@ -301,6 +336,8 @@ class StlPreviewWidget(QWidget):
         self._loaded_part_files = []
         self._part_transforms_cache = []
         self._selected_part_index = -1
+        self._selected_part_indices = []
+        self.set_selection_caption(None)
         self._web.reset_wheel_mode()
 
         if self._page_ready:
@@ -311,6 +348,8 @@ class StlPreviewWidget(QWidget):
         self._loaded_part_files = []
         self._part_transforms_cache = []
         self._selected_part_index = -1
+        self._selected_part_indices = []
+        self.set_selection_caption(None)
         self._web.reset_wheel_mode()
 
         if not stl_path:
@@ -340,6 +379,7 @@ class StlPreviewWidget(QWidget):
 
         self._pending_stl_path = None
         self._pending_label = None
+        self.set_selection_caption(None)
 
         payload = self._build_parts_payload(parts)
 
@@ -714,6 +754,17 @@ class StlPreviewWidget(QWidget):
     def set_control_hint_text(self, text: str | None):
         self._control_hint_text = str(text or '').strip()
         self._apply_hint_text()
+
+    def set_selection_caption(self, text: str | None):
+        normalized = str(text or '').strip()
+        self._selection_caption = normalized
+        if not normalized:
+            self._selection_caption_label.clear()
+            self._selection_caption_wrap.hide()
+            return
+        self._selection_caption_label.setText(normalized)
+        self._selection_caption_wrap.show()
+        self._selection_caption_wrap.raise_()
 
     def set_point_picking_enabled(self, enabled: bool):
         self._point_picking_enabled = bool(enabled)

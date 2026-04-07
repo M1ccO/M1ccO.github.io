@@ -66,6 +66,7 @@
     "tool_editor.measurements.open_editor": "Edit measurements",
     "tool_editor.measurements.none": "No measurements configured",
     "tool_editor.measurements.count": "{count} measurements configured",
+    "tool_editor.models.actions_title": "Model actions",
     "tool_editor.measurements.part": "Part",
     "tool_editor.measurements.part_placeholder": "(part name, blank = assembly)",
     "tool_editor.measurements.value_placeholder": "Measured or custom value",
@@ -422,6 +423,7 @@
     "tool_editor.transform.multi_selection": "{count} models selected",
     "tool_editor.transform.reset": "RESET",
     "tool_editor.transform.reset_tooltip": "Left click: reset to original position. Right click: restore saved position.",
+    "tool_editor.transform.toolbar_title": "Transform",
     "tool_editor.transform.cycle_axis_tooltip": "Click axis to switch X / Y / Z",
     "work_editor.tools.move_up": "▲",
     "work_editor.tools.move_down": "▼"
