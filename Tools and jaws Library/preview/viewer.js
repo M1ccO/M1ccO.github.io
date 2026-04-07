@@ -65,6 +65,9 @@ transformControl.addEventListener('dragging-changed', (event) => {
       object,
       startPosition: object.position.clone(),
       startRotation: object.rotation.clone(),
+      lastRawRotation: object.rotation.clone(),
+      appliedRotation: object.rotation.clone(),
+      rotationCarryDegrees: { x: 0, y: 0, z: 0 },
     };
   }
   if (event.value && transformControl.object === selectionProxy) {
@@ -162,19 +165,10 @@ let _measurementDragJustEnded = false;
 let _selectionProxyDragState = null;
 let _fineDragState = null;
 
+const TRANSLATE_DRAG_GAIN = 0.35;
 const FINE_DRAG_GAIN = 0.005;
-const TRANSFORM_PAN_GAIN = 0.35;
-const TRANSFORM_FINE_PAN_GAIN = 0.015;
-
-function _updateTransformPanGain() {
-  if (!transformEditEnabled) {
-    controls.panSpeed = 1.0;
-    return;
-  }
-  controls.panSpeed = fineTransformSnapEnabled ? TRANSFORM_FINE_PAN_GAIN : TRANSFORM_PAN_GAIN;
-}
-
-_updateTransformPanGain();
+const ROTATE_DRAG_GAIN = 0.2;
+const FINE_ROTATE_DRAG_GAIN = 0.1;
 
 window.addEventListener('keydown', (event) => {
   const ctrlNow = !!event.ctrlKey;
@@ -183,7 +177,6 @@ window.addEventListener('keydown', (event) => {
   }
   fineTransformSnapEnabled = ctrlNow;
   _updateTransformSnap();
-  _updateTransformPanGain();
 });
 
 window.addEventListener('keyup', (event) => {
@@ -193,13 +186,11 @@ window.addEventListener('keyup', (event) => {
   }
   fineTransformSnapEnabled = ctrlNow;
   _updateTransformSnap();
-  _updateTransformPanGain();
 });
 
 window.addEventListener('blur', () => {
   fineTransformSnapEnabled = false;
   _updateTransformSnap();
-  _updateTransformPanGain();
 });
 
 // Measurement color scheme - distinctive colors for each type
@@ -813,26 +804,57 @@ function _applyFineDragDamping(object) {
     return;
   }
 
-  if (!fineTransformSnapEnabled) {
+  const mode = transformControl.getMode();
+  if (mode !== 'translate' && mode !== 'rotate') {
     return;
   }
 
-  // Apply custom gain only to translation. Rotation stays on native
-  // TransformControls snapping to prevent fine-mode jump artifacts.
-  if (transformControl.getMode() !== 'translate') {
+  if (mode === 'translate') {
+    const gain = fineTransformSnapEnabled ? FINE_DRAG_GAIN : TRANSLATE_DRAG_GAIN;
+    const snapMm = fineTransformSnapEnabled ? _snapFineMm : _snapMm;
+    const rawDelta = object.position.clone().sub(_fineDragState.startPosition);
+    rawDelta.multiplyScalar(gain);
+    const snappedDelta = new THREE.Vector3(
+      snapMm(rawDelta.x),
+      snapMm(rawDelta.y),
+      snapMm(rawDelta.z),
+    );
+    object.position.copy(_fineDragState.startPosition.clone().add(snappedDelta));
     return;
   }
 
-  const gain = FINE_DRAG_GAIN;
-  const snapMm = _snapFineMm;
-  const rawDelta = object.position.clone().sub(_fineDragState.startPosition);
-  rawDelta.multiplyScalar(gain);
-  const snappedDelta = new THREE.Vector3(
-    snapMm(rawDelta.x),
-    snapMm(rawDelta.y),
-    snapMm(rawDelta.z),
-  );
-  object.position.copy(_fineDragState.startPosition.clone().add(snappedDelta));
+  const wrapDeltaRadians = (current, previous) => Math.atan2(Math.sin(current - previous), Math.cos(current - previous));
+  const axis = String(transformControl.axis || '').toUpperCase();
+  const gain = fineTransformSnapEnabled ? FINE_ROTATE_DRAG_GAIN : ROTATE_DRAG_GAIN;
+  const snapDegrees = fineTransformSnapEnabled ? _snapFineDegrees : _snapDegrees;
+  const nextRotation = _fineDragState.appliedRotation.clone();
+  const rawRotation = object.rotation.clone();
+
+  const applyAxis = (axisName, currentValue, previousValue) => {
+    const axisKey = axisName.toLowerCase();
+    const deltaDegrees = THREE.MathUtils.radToDeg(wrapDeltaRadians(currentValue, previousValue));
+    const gainedDegrees = deltaDegrees * gain;
+    const carryDegrees = _fineDragState.rotationCarryDegrees[axisKey] + gainedDegrees;
+    const snappedDegrees = snapDegrees(carryDegrees);
+    _fineDragState.rotationCarryDegrees[axisKey] = carryDegrees - snappedDegrees;
+    return _fineDragState.appliedRotation[axisKey] + THREE.MathUtils.degToRad(snappedDegrees);
+  };
+
+  if (axis === 'X') {
+    nextRotation.x = applyAxis('X', rawRotation.x, _fineDragState.lastRawRotation.x);
+  } else if (axis === 'Y') {
+    nextRotation.y = applyAxis('Y', rawRotation.y, _fineDragState.lastRawRotation.y);
+  } else if (axis === 'Z') {
+    nextRotation.z = applyAxis('Z', rawRotation.z, _fineDragState.lastRawRotation.z);
+  } else {
+    nextRotation.x = applyAxis('X', rawRotation.x, _fineDragState.lastRawRotation.x);
+    nextRotation.y = applyAxis('Y', rawRotation.y, _fineDragState.lastRawRotation.y);
+    nextRotation.z = applyAxis('Z', rawRotation.z, _fineDragState.lastRawRotation.z);
+  }
+
+  _fineDragState.lastRawRotation.copy(rawRotation);
+  _fineDragState.appliedRotation.copy(nextRotation);
+  object.rotation.copy(nextRotation);
 }
 
 function _distanceDirectionForOverlay(definition) {
@@ -1684,7 +1706,6 @@ window.setPointPickingEnabled = function (enabled) {
 
 window.setTransformEditEnabled = function (enabled) {
   transformEditEnabled = !!enabled;
-  _updateTransformPanGain();
   if (!transformEditEnabled) {
     requestedSelectedMeshIndex = -1;
     requestedSelectedMeshIndices = [];
