@@ -12,12 +12,136 @@ import { applySelectionProxyTransformDelta } from './transform_delta_engine.js';
 const canvas = document.getElementById('viewport');
 const status = document.getElementById('status');
 const hintElement = document.getElementById('hint');
+const axisOrbitCanvas = document.getElementById('axis-orbit');
 const defaultControlHintText = hintElement ? hintElement.textContent : '';
+const axisOrbitCtx = axisOrbitCanvas ? axisOrbitCanvas.getContext('2d') : null;
+let axisOrbitVisible = false;
+let _axisOrbitLastDpr = 0;
+let _axisOrbitLastWidth = 0;
+let _axisOrbitLastHeight = 0;
+const _axisOrbitInvQuat = new THREE.Quaternion();
+const _axisOrbitAxes = [
+  { key: 'X', color: '#d64545', world: new THREE.Vector3(1, 0, 0), camera: new THREE.Vector3() },
+  { key: 'Y', color: '#29a34a', world: new THREE.Vector3(0, 1, 0), camera: new THREE.Vector3() },
+  { key: 'Z', color: '#2f66d2', world: new THREE.Vector3(0, 0, 1), camera: new THREE.Vector3() },
+];
 
 function _setControlHintText(text) {
   if (!hintElement) return;
   const normalized = typeof text === 'string' ? text.trim() : '';
   hintElement.textContent = normalized || defaultControlHintText;
+}
+
+function _hexToRgba(hex, alpha = 1) {
+  const normalized = String(hex || '').replace('#', '').trim();
+  if (normalized.length !== 6) {
+    return `rgba(0,0,0,${alpha})`;
+  }
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function _syncAxisOrbitCanvasSize() {
+  if (!axisOrbitCanvas || !axisOrbitCtx) return false;
+  const rect = axisOrbitCanvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return false;
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  const targetW = Math.max(1, Math.round(rect.width * dpr));
+  const targetH = Math.max(1, Math.round(rect.height * dpr));
+  const changed = (
+    axisOrbitCanvas.width !== targetW
+    || axisOrbitCanvas.height !== targetH
+    || _axisOrbitLastDpr !== dpr
+    || _axisOrbitLastWidth !== rect.width
+    || _axisOrbitLastHeight !== rect.height
+  );
+  if (changed) {
+    axisOrbitCanvas.width = targetW;
+    axisOrbitCanvas.height = targetH;
+    _axisOrbitLastDpr = dpr;
+    _axisOrbitLastWidth = rect.width;
+    _axisOrbitLastHeight = rect.height;
+  }
+  return true;
+}
+
+function _drawAxisOrbit() {
+  if (!axisOrbitVisible || !axisOrbitCanvas || !axisOrbitCtx) return;
+  if (!_syncAxisOrbitCanvasSize()) return;
+
+  const dpr = Math.max(window.devicePixelRatio || 1, 1);
+  const w = axisOrbitCanvas.width;
+  const h = axisOrbitCanvas.height;
+  const cx = w * 0.5;
+  const cy = h * 0.5;
+  const radius = Math.min(w, h) * 0.28;
+
+  axisOrbitCtx.clearRect(0, 0, w, h);
+
+  _axisOrbitInvQuat.copy(camera.quaternion).invert();
+  for (const axis of _axisOrbitAxes) {
+    axis.camera.copy(axis.world).applyQuaternion(_axisOrbitInvQuat).normalize();
+  }
+
+  // Draw back-facing axes first so front-facing axes stay readable.
+  const sortedAxes = [..._axisOrbitAxes].sort((a, b) => b.camera.z - a.camera.z);
+  const fontPx = Math.max(9, Math.round(10 * dpr));
+  axisOrbitCtx.font = `700 ${fontPx}px "Segoe UI", Arial, sans-serif`;
+  axisOrbitCtx.textAlign = 'center';
+  axisOrbitCtx.textBaseline = 'middle';
+
+  for (const axis of sortedAxes) {
+    const sx = axis.camera.x;
+    const sy = -axis.camera.y;
+    const ex = cx + sx * radius;
+    const ey = cy + sy * radius;
+    const towardViewer = axis.camera.z < 0;
+    const alpha = towardViewer ? 1.0 : 0.58;
+    const lineWidth = towardViewer ? 2.15 * dpr : 1.5 * dpr;
+    const color = _hexToRgba(axis.color, alpha);
+
+    axisOrbitCtx.strokeStyle = color;
+    axisOrbitCtx.lineWidth = lineWidth;
+    axisOrbitCtx.beginPath();
+    axisOrbitCtx.moveTo(cx, cy);
+    axisOrbitCtx.lineTo(ex, ey);
+    axisOrbitCtx.stroke();
+
+    const len = Math.max(1e-6, Math.hypot(ex - cx, ey - cy));
+    const ux = (ex - cx) / len;
+    const uy = (ey - cy) / len;
+    const nx = -uy;
+    const ny = ux;
+    const head = 5.5 * dpr;
+
+    axisOrbitCtx.fillStyle = color;
+    axisOrbitCtx.beginPath();
+    axisOrbitCtx.moveTo(ex, ey);
+    axisOrbitCtx.lineTo(ex - ux * head + nx * head * 0.55, ey - uy * head + ny * head * 0.55);
+    axisOrbitCtx.lineTo(ex - ux * head - nx * head * 0.55, ey - uy * head - ny * head * 0.55);
+    axisOrbitCtx.closePath();
+    axisOrbitCtx.fill();
+
+    const labelOffset = 8.5 * dpr;
+    axisOrbitCtx.fillStyle = _hexToRgba(axis.color, towardViewer ? 1.0 : 0.78);
+    axisOrbitCtx.fillText(axis.key, ex + nx * labelOffset, ey + ny * labelOffset);
+  }
+
+  axisOrbitCtx.fillStyle = 'rgba(43, 56, 72, 0.85)';
+  axisOrbitCtx.beginPath();
+  axisOrbitCtx.arc(cx, cy, 2.3 * dpr, 0, Math.PI * 2);
+  axisOrbitCtx.fill();
+}
+
+function _setAxisOrbitVisible(visible) {
+  axisOrbitVisible = !!visible;
+  if (!axisOrbitCanvas) return;
+  axisOrbitCanvas.style.display = axisOrbitVisible ? 'block' : 'none';
+  if (axisOrbitVisible) {
+    _drawAxisOrbit();
+  }
 }
 
 const renderer = new THREE.WebGLRenderer({
@@ -614,6 +738,7 @@ function _findPartMeshByName(partName) {
 
     return text;
   };
+  const compactPartKey = (value) => normalizePartKey(value).replace(/[aeiouyåäöõ]/g, '').replace(/\s+/g, '');
 
   const targetLower = target.toLowerCase();
   const exact = currentMeshes.find((mesh) => mesh && String(mesh._partName || '').trim().toLowerCase() === targetLower);
@@ -637,6 +762,19 @@ function _findPartMeshByName(partName) {
     return normalizedExact;
   }
 
+  const targetCompact = compactPartKey(target);
+  if (targetCompact) {
+    const compactExact = currentMeshes.find((mesh) => {
+      if (!mesh) {
+        return false;
+      }
+      return compactPartKey(mesh._partName || '') === targetCompact;
+    });
+    if (compactExact) {
+      return compactExact;
+    }
+  }
+
   return currentMeshes.find((mesh) => {
     if (!mesh) {
       return false;
@@ -647,6 +785,9 @@ function _findPartMeshByName(partName) {
 }
 
 function _findPartMeshByIndex(partIndex) {
+  if (partIndex === null || partIndex === undefined || partIndex === '') {
+    return null;
+  }
   const idx = Number(partIndex);
   if (!Number.isInteger(idx) || idx < 0 || idx >= currentMeshes.length) {
     return null;
@@ -676,7 +817,7 @@ function _resolveAnchorPoint(partName, point, pointSpace = '', partIndex = null)
   }
 
   const warningKey = `${targetName}|${partIndex}|${normalizedSpace}`;
-  if (!_missingAnchorWarningKeys.has(warningKey)) {
+  if (window?.__previewDebugAnchorWarnings && !_missingAnchorWarningKeys.has(warningKey)) {
     _missingAnchorWarningKeys.add(warningKey);
     console.warn(
       `[viewer] Measurement anchor fallback: part not found (name="${targetName}", index=${partIndex}, space="${normalizedSpace || 'local'}")`
@@ -1205,14 +1346,20 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
   const axisName = String(definition.distance_axis || 'z').trim().toLowerCase();
   const baseColor = measurementColors.distance;
   const color = measurementDragEnabled ? 0x19f25f : baseColor;
+  const activePoint = String(definition.active_point || '').trim().toLowerCase();
   const offsetFromDefinition = _parseOverlayVector(definition.offset_xyz);
   const startShift = Number(definition.start_shift) || 0;
   const endShift = Number(definition.end_shift) || 0;
 
   const makeDragHandle = (position, dragKind) => {
-    const handleSize = Math.max(currentMaxDim * 0.018, 1.8);
+    const isActivePoint = (
+      (activePoint === 'start' && dragKind === 'distance-start')
+      || (activePoint === 'end' && dragKind === 'distance-end')
+    );
+    const handleSize = Math.max(currentMaxDim * (isActivePoint ? 0.03 : 0.018), isActivePoint ? 3.2 : 1.8);
+    const handleColor = isActivePoint ? 0xffd400 : color;
     const geometry = new THREE.SphereGeometry(handleSize, 12, 10);
-    const material = new THREE.MeshBasicMaterial({ color, depthTest: true, depthWrite: true });
+    const material = new THREE.MeshBasicMaterial({ color: handleColor, depthTest: true, depthWrite: true });
     const handle = new THREE.Mesh(geometry, material);
     handle.position.copy(position);
     handle.visible = measurementDragEnabled;
@@ -1299,8 +1446,8 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
     ? [1, 0, 0]
     : (axisName === 'y' ? [0, 1, 0] : [0, 0, 1]);
   const axisDirection =
-    _resolveAxisDirection(definition.start_part, localAxis)
-    || _resolveAxisDirection(definition.end_part, localAxis)
+    _resolveAxisDirection(definition.start_part, localAxis, definition.start_part_index)
+    || _resolveAxisDirection(definition.end_part, localAxis, definition.end_part_index)
     || _resolveAxisDirection('', localAxis);
   const axialLength = axisDirection ? span.dot(axisDirection) : 0;
   const hasAxialDirection = Number.isFinite(axialLength) && Math.abs(axialLength) > 1e-6;
@@ -2110,6 +2257,10 @@ window.setRenderingEnabled = function (enabled) {
   }
 };
 
+window.setAxisOrbitVisible = function (enabled) {
+  _setAxisOrbitVisible(enabled);
+};
+
 window.getPreviewBridgeStats = function () {
   return getPreviewBridgeStats();
 };
@@ -2121,6 +2272,9 @@ function animate() {
   }
   controls.update();
   _updateMeasurementLabelScales();
+  if (axisOrbitVisible) {
+    _drawAxisOrbit();
+  }
   renderer.render(scene, camera);
 }
 animate();
@@ -2129,6 +2283,9 @@ window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  if (axisOrbitVisible) {
+    _drawAxisOrbit();
+  }
 });
 
 showStatus('Viewer ready.');

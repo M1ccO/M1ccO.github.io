@@ -367,7 +367,6 @@ class AddEditToolDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.setObjectName('toolEditorTabs')
         self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
-        self.tabs.currentChanged.connect(self._on_tab_changed)
         root.addWidget(self.tabs, 1)
 
         # -------------------------
@@ -572,10 +571,6 @@ class AddEditToolDialog(QDialog):
         group5 = self._build_field_group([
             self._build_edit_field(self._t('tool_library.field.notes', 'Notes'), self.notes),
         ])
-
-        # Wire per-field label clicks to swap individual code/link pairs
-        self._showing_links = False
-        self._code_link_pairs = []
 
         # Dummy field order for compatibility
         self._general_field_order = []
@@ -886,8 +881,9 @@ class AddEditToolDialog(QDialog):
         self._transform_frame = QFrame()
         self._transform_frame.setProperty('editorFieldCard', True)
         self._transform_frame.setProperty('editorFieldGroup', True)
+        self._transform_frame.setMinimumWidth(520)
         _tf_layout = QVBoxLayout(self._transform_frame)
-        _tf_layout.setContentsMargins(4, 6, 4, 2)
+        _tf_layout.setContentsMargins(6, 6, 6, 2)
         _tf_layout.setSpacing(4)
 
         self._selected_part_label = QLabel(
@@ -936,46 +932,68 @@ class AddEditToolDialog(QDialog):
             )
         )
         self._update_fine_transform_button_appearance()
-        
-        _lbl_x = QLabel('X')
-        _lbl_x.setProperty('detailFieldKey', True)
-        _lbl_x.setFixedWidth(16)
-        _lbl_x.setAlignment(Qt.AlignCenter)
-        
+        self._transform_axis_order = ('x', 'y', 'z')
+        self._transform_axis_groups = {}
+        self._transform_axis_buttons = {}
+        self._transform_axis_edits = {}
+        self._compact_transform_axis = 'x'
+        self._transform_compact_mode = False
+
+        def _make_axis_editor(axis_key: str) -> QWidget:
+            _axis_wrap = QWidget()
+            _axis_layout = QHBoxLayout(_axis_wrap)
+            _axis_layout.setContentsMargins(0, 0, 0, 0)
+            _axis_layout.setSpacing(2)
+
+            _axis_btn = QPushButton(axis_key.upper())
+            _axis_btn.setProperty('detailFieldKey', True)
+            _axis_btn.setProperty('transformAxisButton', True)
+            _axis_btn.setProperty('axisKey', axis_key)
+            _axis_btn.setCursor(Qt.PointingHandCursor)
+            _axis_btn.setFocusPolicy(Qt.NoFocus)
+            _axis_btn.setFixedWidth(16)
+            _axis_btn.setStyleSheet(
+                'QPushButton[transformAxisButton="true"] {'
+                '  background: transparent;'
+                '  border: none;'
+                '  font-weight: 700;'
+                '  padding: 0px;'
+                '}'
+                'QPushButton[transformAxisButton="true"]:hover {'
+                '  color: #1f6fb2;'
+                '}'
+            )
+            _axis_btn.clicked.connect(self._on_transform_axis_button_clicked)
+
+            _axis_edit = QLineEdit('0')
+            _axis_edit.setFixedWidth(80)
+            _axis_edit.setAlignment(Qt.AlignRight)
+
+            _axis_layout.addWidget(_axis_btn)
+            _axis_layout.addWidget(_axis_edit)
+            self._transform_axis_groups[axis_key] = _axis_wrap
+            self._transform_axis_buttons[axis_key] = _axis_btn
+            self._transform_axis_edits[axis_key] = _axis_edit
+            return _axis_wrap
+
         _mode_row.addWidget(self._mode_toggle_btn)
         _mode_row.addSpacing(3)
         _mode_row.addWidget(self._fine_transform_btn)
         _mode_row.addSpacing(4)
-        _mode_row.addWidget(_lbl_x)
-        self._transform_x = QLineEdit('0')
-        self._transform_x.setFixedWidth(80)
-        self._transform_x.setAlignment(Qt.AlignRight)
-        _mode_row.addWidget(self._transform_x)
-        
-        _lbl_y = QLabel('Y')
-        _lbl_y.setProperty('detailFieldKey', True)
-        _lbl_y.setFixedWidth(16)
-        _lbl_y.setAlignment(Qt.AlignCenter)
+        _mode_row.addWidget(_make_axis_editor('x'))
         _mode_row.addSpacing(4)
-        _mode_row.addWidget(_lbl_y)
-        self._transform_y = QLineEdit('0')
-        self._transform_y.setFixedWidth(80)
-        self._transform_y.setAlignment(Qt.AlignRight)
-        _mode_row.addWidget(self._transform_y)
-        
-        _lbl_z = QLabel('Z')
-        _lbl_z.setProperty('detailFieldKey', True)
-        _lbl_z.setFixedWidth(16)
-        _lbl_z.setAlignment(Qt.AlignCenter)
+        _mode_row.addWidget(_make_axis_editor('y'))
         _mode_row.addSpacing(4)
-        _mode_row.addWidget(_lbl_z)
-        self._transform_z = QLineEdit('0')
-        self._transform_z.setFixedWidth(80)
-        self._transform_z.setAlignment(Qt.AlignRight)
-        _mode_row.addWidget(self._transform_z)
-        
+        _mode_row.addWidget(_make_axis_editor('z'))
+
+        self._transform_x = self._transform_axis_edits['x']
+        self._transform_y = self._transform_axis_edits['y']
+        self._transform_z = self._transform_axis_edits['z']
+
+        _mode_row.addSpacing(6)
         _mode_row.addWidget(self._reset_transform_btn)
         _tf_layout.addLayout(_mode_row)
+        self._transform_frame.installEventFilter(self)
 
         self._preview_controls_separator = QFrame()
         self._preview_controls_separator.setProperty('jawColumnSeparator', True)
@@ -1004,6 +1022,7 @@ class AddEditToolDialog(QDialog):
             self._transform_y.returnPressed.connect(self._transform_y.editingFinished.emit)
             self._transform_z.returnPressed.connect(self._transform_z.editingFinished.emit)
             self.model_table.itemSelectionChanged.connect(self._on_model_table_selection_changed)
+            QTimer.singleShot(0, self._update_transform_controls_layout)
 
         splitter.addWidget(models_panel)
         splitter.addWidget(preview_panel)
@@ -1075,24 +1094,7 @@ class AddEditToolDialog(QDialog):
         )
         self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
 
-        self.code_link_toggle_btn = QPushButton()
-        style_icon_action_button(
-            self.code_link_toggle_btn,
-            TOOL_ICONS_DIR / 'import_export.svg',
-            self._t('tool_editor.action.show_links', 'Show links'),
-        )
-        self.code_link_toggle_btn.clicked.connect(self._toggle_code_link_mode)
-        self.code_link_toggle_btn.setVisible(False)
-
-        bottom_bar = QWidget()
-        bottom_bar.setObjectName('dialogBottomBar')
-        bottom_bar.setStyleSheet('#dialogBottomBar { background: transparent; }')
-        bottom_layout = QHBoxLayout(bottom_bar)
-        bottom_layout.setContentsMargins(0, 0, 0, 0)
-        bottom_layout.setSpacing(8)
-        bottom_layout.addWidget(self.code_link_toggle_btn)
-        bottom_layout.addWidget(self._dialog_buttons, 1)
-        root.addWidget(bottom_bar)
+        root.addWidget(self._dialog_buttons)
 
         apply_secondary_button_theme(self, self._save_btn)
 
@@ -1123,6 +1125,8 @@ class AddEditToolDialog(QDialog):
                 return True
             if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.RightButton:
                 return True
+        if obj is getattr(self, '_transform_frame', None) and event.type() == QEvent.Resize:
+            self._update_transform_controls_layout()
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
         return super().eventFilter(obj, event)
@@ -1184,16 +1188,6 @@ class AddEditToolDialog(QDialog):
     def _swap_field_pair(self, hide_field: QFrame, show_field: QFrame):
         hide_field.setVisible(False)
         show_field.setVisible(True)
-
-    def _toggle_code_link_mode(self):
-        self._showing_links = not self._showing_links
-        for code_field, link_field in self._code_link_pairs:
-            code_field.setVisible(not self._showing_links)
-            link_field.setVisible(self._showing_links)
-        if self._showing_links:
-            self.code_link_toggle_btn.setToolTip(self._t('tool_editor.action.show_codes', 'Show codes'))
-        else:
-            self.code_link_toggle_btn.setToolTip(self._t('tool_editor.action.show_links', 'Show links'))
 
     def _style_combo(self, combo: QComboBox):
         apply_shared_dropdown_style(combo)
@@ -1727,10 +1721,6 @@ class AddEditToolDialog(QDialog):
         self._set_group_select_hint_visible(True)
         self._update_group_button_visibility()
 
-    def _on_tab_changed(self, index: int):
-        if hasattr(self, 'code_link_toggle_btn'):
-            self.code_link_toggle_btn.setVisible(index == 0)
-
     def _reflow_general_fields(self, force: bool = False):
         pass  # Field groups handle their own layout
 
@@ -1747,6 +1737,7 @@ class AddEditToolDialog(QDialog):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._reflow_general_fields()
+        self._update_transform_controls_layout()
         self._ensure_on_screen()
 
     def moveEvent(self, event):
@@ -1755,6 +1746,7 @@ class AddEditToolDialog(QDialog):
 
     def showEvent(self, event):
         super().showEvent(event)
+        self._update_transform_controls_layout()
         self._ensure_on_screen()
 
     def _ensure_on_screen(self):
@@ -2400,6 +2392,51 @@ class AddEditToolDialog(QDialog):
             self._transform_x.setText(str(view_t.get('rx', 0)))
             self._transform_y.setText(str(view_t.get('ry', 0)))
             self._transform_z.setText(str(view_t.get('rz', 0)))
+
+    def _on_transform_axis_button_clicked(self):
+        if not getattr(self, '_transform_compact_mode', False):
+            return
+        order = list(getattr(self, '_transform_axis_order', ('x', 'y', 'z')))
+        if not order:
+            return
+        current_axis = str(getattr(self, '_compact_transform_axis', order[0])).lower()
+        if current_axis not in order:
+            current_axis = order[0]
+        next_idx = (order.index(current_axis) + 1) % len(order)
+        self._compact_transform_axis = order[next_idx]
+        self._update_transform_controls_layout(force=True)
+
+    def _update_transform_controls_layout(self, force: bool = False):
+        if not hasattr(self, '_transform_frame') or not hasattr(self, '_transform_axis_groups'):
+            return
+
+        width = self._transform_frame.width() or self._transform_frame.minimumWidth()
+        compact = width <= 500
+        changed = compact != getattr(self, '_transform_compact_mode', False)
+        if not force and not changed:
+            return
+
+        self._transform_compact_mode = compact
+        order = list(getattr(self, '_transform_axis_order', ('x', 'y', 'z')))
+        current_axis = str(getattr(self, '_compact_transform_axis', 'x')).lower()
+        if current_axis not in order:
+            current_axis = order[0] if order else 'x'
+        self._compact_transform_axis = current_axis
+
+        cycle_tip = self._t(
+            'tool_editor.transform.cycle_axis_tooltip',
+            'Click axis to switch X / Y / Z',
+        )
+        for axis in order:
+            group = self._transform_axis_groups.get(axis)
+            button = self._transform_axis_buttons.get(axis)
+            edit = self._transform_axis_edits.get(axis)
+            if group is not None:
+                group.setVisible((not compact) or axis == current_axis)
+            if button is not None:
+                button.setToolTip(cycle_tip if compact else '')
+            if edit is not None:
+                edit.setFixedWidth(108 if compact and axis == current_axis else 80)
 
     def _on_mode_toggle_clicked(self):
         if self._mode_toggle_btn.isChecked():

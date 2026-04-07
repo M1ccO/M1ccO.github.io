@@ -113,6 +113,7 @@ class StlPreviewWidget(QWidget):
         self._measurement_drag_enabled = False
         self._point_picking_enabled = False
         self._control_hint_text = ''
+        self._axis_orbit_visible = False
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -223,6 +224,7 @@ class StlPreviewWidget(QWidget):
         self._apply_preview_transform_state()
         self._apply_transform_editor_state()
         self._apply_measurement_state()
+        self._apply_axis_orbit_state()
         self._sync_rendering_state()
 
     def _send_model_to_viewer(self, stl_path: Path, label: str | None = None):
@@ -465,6 +467,9 @@ class StlPreviewWidget(QWidget):
             offset_xyz = cls._parse_xyz_value(offset_raw) if offset_text else ''
             start_shift = str(overlay.get('start_shift') or '0').strip() or '0'
             end_shift = str(overlay.get('end_shift') or '0').strip() or '0'
+            active_point = str(overlay.get('active_point') or '').strip().lower()
+            if active_point not in {'start', 'end'}:
+                active_point = ''
             return {
                 'type': 'distance',
                 'name': str(overlay.get('name') or f'Distance {index + 1}').strip() or f'Distance {index + 1}',
@@ -482,6 +487,7 @@ class StlPreviewWidget(QWidget):
                 'offset_xyz': offset_xyz,
                 'start_shift': start_shift,
                 'end_shift': end_shift,
+                'active_point': active_point,
             }
 
         if overlay_type == 'diameter_ring':
@@ -535,6 +541,11 @@ class StlPreviewWidget(QWidget):
         filter_value = self._measurement_filter if self._measurement_filter else ''
         self._call_js('setMeasurementFilter', filter_value)
         self._call_js('setMeasurementDragEnabled', bool(self._measurement_drag_enabled))
+
+    def _apply_axis_orbit_state(self):
+        if not self._page_ready:
+            return
+        self._call_js('setAxisOrbitVisible', bool(self._axis_orbit_visible))
 
     def set_measurement_drag_enabled(self, enabled: bool):
         normalized = bool(enabled)
@@ -692,6 +703,13 @@ class StlPreviewWidget(QWidget):
     def set_measurement_focus_index(self, index: int | None):
         value = int(index) if isinstance(index, int) else -1
         self._call_js('setMeasurementFocusIndex', value)
+
+    def set_axis_orbit_visible(self, visible: bool):
+        normalized = bool(visible)
+        if normalized == self._axis_orbit_visible:
+            return
+        self._axis_orbit_visible = normalized
+        self._apply_axis_orbit_state()
 
     def set_control_hint_text(self, text: str | None):
         self._control_hint_text = str(text or '').strip()
