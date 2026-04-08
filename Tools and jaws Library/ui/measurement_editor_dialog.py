@@ -19,177 +19,70 @@ from PySide6.QtWidgets import (
 )
 from config import TOOL_ICONS_DIR
 from ui.stl_preview import StlPreviewWidget
+from ui.measurement_editor.utils.coordinates import (
+    xyz_to_tuple as _xyz_to_tuple,
+    fmt_coord as _fmt_coord,
+    float_or_default as _float_or_default,
+)
+from ui.measurement_editor.utils.axis_math import (
+    axis_xyz_text as _axis_xyz_text,
+    normalize_axis_xyz_text as _normalize_axis_xyz_text,
+    normalize_diameter_axis_mode as _normalize_diameter_axis_mode,
+    rotation_deg_to_axis_xyz_text as _rotation_deg_to_axis_xyz_text,
+    axis_xyz_to_rotation_deg_tuple as _axis_xyz_to_rotation_deg_tuple,
+)
+from ui.measurement_editor.models.distance import (
+    compose_distance_commit_payload as _compose_distance_commit_payload,
+    normalize_distance_measurement as _normalize_distance_measurement_model,
+)
+from ui.measurement_editor.models.angle import (
+    normalize_angle_measurement as _normalize_angle_measurement_model,
+)
+from ui.measurement_editor.models.diameter import (
+    compose_diameter_commit_payload as _compose_diameter_commit_payload,
+    normalize_diameter_measurement as _normalize_diameter_measurement_model,
+)
+from ui.measurement_editor.models.radius import (
+    normalize_radius_measurement as _normalize_radius_measurement_model,
+)
+from ui.measurement_editor.controllers.distance_controller import (
+    distance_adjust_target_key as _distance_adjust_target_key_helper,
+    distance_axis_sign as _distance_axis_sign_helper,
+    distance_effective_point_xyz_text as _distance_effective_point_xyz_text_helper,
+    distance_measured_value_text as _distance_measured_value_text_helper,
+    distance_value_mode as _distance_value_mode_helper,
+    normalize_distance_adjust_mode as _normalize_distance_adjust_mode_helper,
+    normalize_distance_axis as _normalize_distance_axis_helper,
+    normalize_distance_nudge_point as _normalize_distance_nudge_point_helper,
+    toggle_distance_adjust_mode as _toggle_distance_adjust_mode_helper,
+)
+from ui.measurement_editor.controllers.diameter_controller import (
+    diameter_adjust_mode as _diameter_adjust_mode_helper,
+    diameter_adjust_target_key as _diameter_adjust_target_key_helper,
+    diameter_geometry_target as _diameter_geometry_target_helper,
+    normalize_diameter_adjust_mode as _normalize_diameter_adjust_mode_helper,
+    normalize_diameter_geometry_target as _normalize_diameter_geometry_target_helper,
+    toggle_diameter_adjust_mode as _toggle_diameter_adjust_mode_helper,
+    toggle_diameter_geometry_target as _toggle_diameter_geometry_target_helper,
+    diameter_visual_offset_mm as _diameter_visual_offset_mm_helper,
+    diameter_measured_numeric as _diameter_measured_numeric_helper,
+    diameter_has_manual_value as _diameter_has_manual_value_helper,
+    diameter_is_complete as _diameter_is_complete_helper,
+)
+from ui.measurement_editor.forms.shared_sections import (
+    apply_section_groupbox_style as _apply_section_groupbox_style,
+    build_adjust_header_row as _build_adjust_header_row,
+)
+from ui.measurement_editor.bridge.preview_sync import (
+    apply_diameter_overlay_update as _apply_diameter_overlay_update,
+    apply_distance_overlay_update as _apply_distance_overlay_update,
+    compose_preview_overlays as _compose_preview_overlays,
+)
 from shared.editor_helpers import (
     create_dialog_buttons,
     apply_secondary_button_theme,
     setup_editor_dialog,
 )
-
-
-def _xyz_to_tuple(value) -> tuple[float, float, float]:
-    """Convert xyz value (list or string) into a float triplet."""
-    def _finite(v, default: float = 0.0) -> float:
-        try:
-            num = float(v)
-        except Exception:
-            return default
-        return num if math.isfinite(num) else default
-
-    if isinstance(value, (list, tuple)) and len(value) >= 3:
-        return _finite(value[0]), _finite(value[1]), _finite(value[2])
-
-    text = str(value or '').strip()
-    if not text:
-        return 0.0, 0.0, 0.0
-
-    text = (
-        text.replace('[', ' ')
-        .replace(']', ' ')
-        .replace('(', ' ')
-        .replace(')', ' ')
-        .replace(';', ',')
-    )
-    parts = [p.strip() for p in text.split(',') if p.strip()]
-    if len(parts) < 3:
-        return 0.0, 0.0, 0.0
-    return _finite(parts[0]), _finite(parts[1]), _finite(parts[2])
-
-
-def _fmt_coord(value: float) -> str:
-    try:
-        numeric = float(value)
-    except Exception:
-        numeric = 0.0
-    if not math.isfinite(numeric):
-        numeric = 0.0
-    return f"{numeric:.4g}"
-
-
-def _xyz_to_text(value) -> str:
-    x, y, z = _xyz_to_tuple(value)
-    return f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
-
-
-def _xyz_to_text_optional(value) -> str:
-    text = str(value or '').strip()
-    if not text:
-        return ''
-    return _xyz_to_text(value)
-
-
-def _axis_xyz_text(axis: str) -> str:
-    return {
-        'x': '1, 0, 0',
-        'y': '0, 1, 0',
-        'z': '0, 0, 1',
-    }.get(str(axis or '').strip().lower(), '0, 0, 1')
-
-
-def _axis_from_xyz(value, default: str = 'z') -> str:
-    x, y, z = _xyz_to_tuple(value)
-    magnitudes = {
-        'x': abs(x),
-        'y': abs(y),
-        'z': abs(z),
-    }
-    axis, magnitude = max(magnitudes.items(), key=lambda item: item[1])
-    return axis if magnitude > 1e-6 else default
-
-
-def _normalize_axis_xyz_text(value, fallback: str = '0, 0, 1') -> str:
-    x, y, z = _xyz_to_tuple(value)
-    length = (x * x + y * y + z * z) ** 0.5
-    if length <= 1e-8:
-        x, y, z = _xyz_to_tuple(fallback)
-        length = (x * x + y * y + z * z) ** 0.5
-    if length <= 1e-8:
-        x, y, z = 0.0, 0.0, 1.0
-        length = 1.0
-    return f"{_fmt_coord(x / length)}, {_fmt_coord(y / length)}, {_fmt_coord(z / length)}"
-
-
-def _diameter_axis_mode_from_xyz(value, default: str = 'z') -> str:
-    x, y, z = _xyz_to_tuple(value)
-    length = (x * x + y * y + z * z) ** 0.5
-    if length <= 1e-8:
-        return default
-    nx = x / length
-    ny = y / length
-    nz = z / length
-    tol = 1e-3
-    if abs(abs(nx) - 1.0) <= tol and abs(ny) <= tol and abs(nz) <= tol:
-        return 'x'
-    if abs(abs(ny) - 1.0) <= tol and abs(nx) <= tol and abs(nz) <= tol:
-        return 'y'
-    if abs(abs(nz) - 1.0) <= tol and abs(nx) <= tol and abs(ny) <= tol:
-        return 'z'
-    return 'direct'
-
-
-def _normalize_diameter_axis_mode(mode: str, axis_xyz, default: str = 'z') -> str:
-    normalized = str(mode or '').strip().lower()
-    if normalized in {'x', 'y', 'z', 'direct'}:
-        return normalized
-    return _diameter_axis_mode_from_xyz(axis_xyz, default=default)
-
-
-def _float_or_default(value, default: float) -> float:
-    try:
-        numeric = float(str(value).strip().replace(',', '.'))
-    except Exception:
-        return float(default)
-    return numeric if math.isfinite(numeric) else float(default)
-
-
-def _normalize_distance_point_space(part_name, part_index, point_space) -> str:
-    has_part_ref = bool(str(part_name or '').strip())
-    if not has_part_ref:
-        try:
-            has_part_ref = int(part_index) >= 0
-        except Exception:
-            has_part_ref = False
-    normalized = str(point_space or '').strip().lower()
-    if normalized not in {'local', 'world'}:
-        return 'local' if has_part_ref else 'world'
-    if normalized == 'world' and has_part_ref:
-        # Legacy migration: part-bound coordinates should be interpreted in local space.
-        return 'local'
-    return normalized
-
-
-def _rotation_deg_to_axis_xyz_text(rx_deg: float, ry_deg: float, rz_deg: float, fallback: str = '0, 0, 1') -> str:
-    rx = math.radians(float(rx_deg))
-    ry = math.radians(float(ry_deg))
-    rz = math.radians(float(rz_deg))
-    cx = math.cos(rx)
-    sx = math.sin(rx)
-    cy = math.cos(ry)
-    sy = math.sin(ry)
-    cz = math.cos(rz)
-    sz = math.sin(rz)
-    vx = (cz * sy * cx) + (sz * sx)
-    vy = (sz * sy * cx) - (cz * sx)
-    vz = cy * cx
-    return _normalize_axis_xyz_text(f"{vx}, {vy}, {vz}", fallback=fallback)
-
-
-def _axis_xyz_to_rotation_deg_tuple(axis_xyz) -> tuple[float, float, float]:
-    x, y, z = _xyz_to_tuple(axis_xyz)
-    length = (x * x + y * y + z * z) ** 0.5
-    if length <= 1e-8:
-        return 0.0, 0.0, 0.0
-    vx = x / length
-    vy = y / length
-    vz = z / length
-    sx = max(-1.0, min(1.0, -vy))
-    rx = math.asin(sx)
-    cx = math.cos(rx)
-    if abs(cx) <= 1e-8:
-        ry = 0.0
-    else:
-        ry = math.atan2(vx, vz)
-    rz = 0.0
-    return math.degrees(rx), math.degrees(ry), math.degrees(rz)
 
 
 class MeasurementEditorDialog(QDialog):
@@ -516,23 +409,7 @@ class MeasurementEditorDialog(QDialog):
         form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         self._dist_basic_section = QGroupBox(self._t('tool_editor.measurements.basic_functions', 'Basic functions'))
-        self._dist_basic_section.setStyleSheet(
-            'QGroupBox {'
-            '  background-color: #f0f6fc;'
-            '  border: 1px solid #d0d8e0;'
-            '  border-radius: 6px;'
-            '  margin-top: 10px;'
-            '  padding-top: 8px;'
-            '}'
-            'QGroupBox::title {'
-            '  subcontrol-origin: margin;'
-            '  left: 10px;'
-            '  padding: 0 4px;'
-            '  color: #5a6b7c;'
-            '  font-size: 8pt;'
-            '  font-weight: 600;'
-            '}'
-        )
+        _apply_section_groupbox_style(self._dist_basic_section)
         basic_form = QFormLayout(self._dist_basic_section)
         basic_form.setContentsMargins(8, 6, 8, 6)
         basic_form.setHorizontalSpacing(6)
@@ -583,23 +460,7 @@ class MeasurementEditorDialog(QDialog):
         form.addRow(self._dist_basic_section)
 
         self._dist_adjust_section = QGroupBox('')
-        self._dist_adjust_section.setStyleSheet(
-            'QGroupBox {'
-            '  background-color: #f0f6fc;'
-            '  border: 1px solid #d0d8e0;'
-            '  border-radius: 6px;'
-            '  margin-top: 10px;'
-            '  padding-top: 8px;'
-            '}'
-            'QGroupBox::title {'
-            '  subcontrol-origin: margin;'
-            '  left: 10px;'
-            '  padding: 0 4px;'
-            '  color: #5a6b7c;'
-            '  font-size: 8pt;'
-            '  font-weight: 600;'
-            '}'
-        )
+        _apply_section_groupbox_style(self._dist_adjust_section)
         adjust_section_layout = QVBoxLayout(self._dist_adjust_section)
         adjust_section_layout.setContentsMargins(8, 6, 8, 4)
         adjust_section_layout.setSpacing(2)
@@ -621,28 +482,12 @@ class MeasurementEditorDialog(QDialog):
         self._dist_nudge_step_edit = QLineEdit('1.0')
         self._dist_nudge_step_edit.setFixedWidth(74)
 
-        _adjust_label_style = (
-            'color: #6b7b8e; font-size: 9pt; background: transparent; '
-            'padding: 0px 0px 1px 0px;'
-        )
-        precise_top_row = QHBoxLayout()
-        precise_top_row.setSpacing(4)
-        precise_top_row.setContentsMargins(0, 0, 0, 0)
-        for _hdr_key, _hdr_fallback, _edit in [
+        precise_top_row = _build_adjust_header_row(self._t, [
             ('tool_editor.measurements.axis_x', 'X', self._dist_adjust_x_edit),
             ('tool_editor.measurements.axis_y', 'Y', self._dist_adjust_y_edit),
             ('tool_editor.measurements.axis_z', 'Z', self._dist_adjust_z_edit),
             (None, 'mm', self._dist_nudge_step_edit),
-        ]:
-            _col = QVBoxLayout()
-            _col.setSpacing(1)
-            _col.setContentsMargins(0, 0, 0, 0)
-            _hdr_lbl = QLabel(self._t(_hdr_key, _hdr_fallback) if _hdr_key else _hdr_fallback)
-            _hdr_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-            _hdr_lbl.setStyleSheet(_adjust_label_style)
-            _col.addWidget(_hdr_lbl)
-            _col.addWidget(_edit)
-            precise_top_row.addLayout(_col)
+        ])
 
         self._dist_nudge_minus_btn = QPushButton('-')
         self._dist_nudge_minus_btn.setText('\u2212')
@@ -716,23 +561,7 @@ class MeasurementEditorDialog(QDialog):
         form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
         self._diam_basic_section = QGroupBox(self._t('tool_editor.measurements.basic_functions', 'Basic functions'))
-        self._diam_basic_section.setStyleSheet(
-            'QGroupBox {'
-            '  background-color: #f0f6fc;'
-            '  border: 1px solid #d0d8e0;'
-            '  border-radius: 6px;'
-            '  margin-top: 10px;'
-            '  padding-top: 8px;'
-            '}'
-            'QGroupBox::title {'
-            '  subcontrol-origin: margin;'
-            '  left: 10px;'
-            '  padding: 0 4px;'
-            '  color: #5a6b7c;'
-            '  font-size: 8pt;'
-            '  font-weight: 600;'
-            '}'
-        )
+        _apply_section_groupbox_style(self._diam_basic_section)
         basic_form = QFormLayout(self._diam_basic_section)
         basic_form.setContentsMargins(8, 6, 8, 6)
         basic_form.setHorizontalSpacing(6)
@@ -778,23 +607,7 @@ class MeasurementEditorDialog(QDialog):
         form.addRow(self._diam_basic_section)
 
         self._diam_adjust_section = QGroupBox('')
-        self._diam_adjust_section.setStyleSheet(
-            'QGroupBox {'
-            '  background-color: #f0f6fc;'
-            '  border: 1px solid #d0d8e0;'
-            '  border-radius: 6px;'
-            '  margin-top: 10px;'
-            '  padding-top: 8px;'
-            '}'
-            'QGroupBox::title {'
-            '  subcontrol-origin: margin;'
-            '  left: 10px;'
-            '  padding: 0 4px;'
-            '  color: #5a6b7c;'
-            '  font-size: 8pt;'
-            '  font-weight: 600;'
-            '}'
-        )
+        _apply_section_groupbox_style(self._diam_adjust_section)
         adjust_section_layout = QVBoxLayout(self._diam_adjust_section)
         adjust_section_layout.setContentsMargins(8, 6, 8, 4)
         adjust_section_layout.setSpacing(2)
@@ -815,30 +628,16 @@ class MeasurementEditorDialog(QDialog):
         self._diam_nudge_step_edit = QLineEdit('1.0')
         self._diam_nudge_step_edit.setFixedWidth(74)
 
-        _adjust_label_style = (
-            'color: #6b7b8e; font-size: 9pt; background: transparent; '
-            'padding: 0px 0px 1px 0px;'
-        )
-        precise_top_row = QHBoxLayout()
-        precise_top_row.setSpacing(4)
-        precise_top_row.setContentsMargins(0, 0, 0, 0)
-        for _hdr_key, _hdr_fallback, _edit in [
+        def _on_diameter_header_created(label: QLabel, header_key: str | None):
+            if header_key is None:
+                self._diam_adjust_step_unit_lbl = label
+
+        precise_top_row = _build_adjust_header_row(self._t, [
             ('tool_editor.measurements.axis_x', 'X', self._diam_adjust_x_edit),
             ('tool_editor.measurements.axis_y', 'Y', self._diam_adjust_y_edit),
             ('tool_editor.measurements.axis_z', 'Z', self._diam_adjust_z_edit),
             (None, 'mm', self._diam_nudge_step_edit),
-        ]:
-            _col = QVBoxLayout()
-            _col.setSpacing(1)
-            _col.setContentsMargins(0, 0, 0, 0)
-            _hdr_lbl = QLabel(self._t(_hdr_key, _hdr_fallback) if _hdr_key else _hdr_fallback)
-            _hdr_lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-            _hdr_lbl.setStyleSheet(_adjust_label_style)
-            if _hdr_key is None:
-                self._diam_adjust_step_unit_lbl = _hdr_lbl
-            _col.addWidget(_hdr_lbl)
-            _col.addWidget(_edit)
-            precise_top_row.addLayout(_col)
+        ], on_header_created=_on_diameter_header_created)
 
         self._diam_nudge_minus_btn = QPushButton('-')
         self._diam_nudge_minus_btn.setText('\u2212')
@@ -1325,125 +1124,32 @@ class MeasurementEditorDialog(QDialog):
             self._add_type_cancel_top_btn.setVisible(True)
 
     def _normalize_distance_measurement(self, meas: dict | None) -> dict:
-        data = dict(meas or {})
-        uid = self._ensure_measurement_uid(data)
-        axis = str(data.get('distance_axis', 'z')).strip().lower()
-        if axis not in {'direct', 'x', 'y', 'z'}:
-            axis = 'z'
-        value_mode = str(data.get('label_value_mode', 'measured')).strip().lower()
-        if value_mode not in {'measured', 'custom'}:
-            value_mode = 'measured'
-        start_part = str(data.get('start_part', '')).strip()
-        end_part = str(data.get('end_part', '')).strip()
-        try:
-            start_part_index = int(data.get('start_part_index', -1) or -1)
-        except Exception:
-            start_part_index = -1
-        try:
-            end_part_index = int(data.get('end_part_index', -1) or -1)
-        except Exception:
-            end_part_index = -1
-        return {
-            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_distance', 'New Distance'),
-            'start_part': start_part,
-            'start_part_index': start_part_index,
-            'start_xyz': _xyz_to_text_optional(data.get('start_xyz', '')),
-            'start_space': _normalize_distance_point_space(
-                start_part,
-                start_part_index,
-                data.get('start_space', ''),
-            ),
-            'end_part': end_part,
-            'end_part_index': end_part_index,
-            'end_xyz': _xyz_to_text_optional(data.get('end_xyz', '')),
-            'end_space': _normalize_distance_point_space(
-                end_part,
-                end_part_index,
-                data.get('end_space', ''),
-            ),
-            'distance_axis': axis,
-            'label_value_mode': value_mode,
-            'label_custom_value': str(data.get('label_custom_value', '')).strip(),
-            'offset_xyz': _xyz_to_text_optional(data.get('offset_xyz', '')),
-            'start_shift': str(data.get('start_shift', '0')).strip() or '0',
-            'end_shift': str(data.get('end_shift', '0')).strip() or '0',
-            'type': 'distance',
-            '_uid': uid,
-        }
+        return _normalize_distance_measurement_model(
+            meas,
+            ensure_uid=self._ensure_measurement_uid,
+            translate=self._t,
+        )
 
     def _normalize_diameter_measurement(self, meas: dict | None) -> dict:
-        data = dict(meas or {})
-        uid = self._ensure_measurement_uid(data)
-        edge_text = _xyz_to_text_optional(data.get('edge_xyz', ''))
-        diameter_text = str(data.get('diameter', '')).strip()
-        if diameter_text:
-            try:
-                diameter_num = float(diameter_text.replace(',', '.'))
-            except Exception:
-                diameter_num = None
-            if not (isinstance(diameter_num, float) and math.isfinite(diameter_num)):
-                diameter_text = ''
-            else:
-                diameter_text = f"{diameter_num:.6g}"
-        mode = str(data.get('diameter_mode', '')).strip().lower()
-        if mode not in {'measured', 'manual'}:
-            mode = 'manual' if diameter_text else ('measured' if edge_text else 'manual')
-        try:
-            part_index = int(data.get('part_index', -1) or -1)
-        except Exception:
-            part_index = -1
-        axis_mode = _normalize_diameter_axis_mode(
-            str(data.get('diameter_axis_mode', '')).strip().lower(),
-            data.get('axis_xyz', '0, 0, 1'),
-            default='z',
+        return _normalize_diameter_measurement_model(
+            meas,
+            ensure_uid=self._ensure_measurement_uid,
+            translate=self._t,
         )
-        axis_xyz = (
-            _axis_xyz_text(axis_mode)
-            if axis_mode in {'x', 'y', 'z'}
-            else _normalize_axis_xyz_text(data.get('axis_xyz', '0, 0, 1'))
-        )
-        visual_offset_mm = _float_or_default(data.get('diameter_visual_offset_mm', 1.0), 1.0)
-        return {
-            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_diameter', 'New Diameter'),
-            'part': str(data.get('part', '')).strip(),
-            'part_index': part_index,
-            'center_xyz': _xyz_to_text_optional(data.get('center_xyz', '')),
-            'edge_xyz': edge_text,
-            'axis_xyz': axis_xyz,
-            'diameter_axis_mode': axis_mode,
-            'offset_xyz': _xyz_to_text_optional(data.get('offset_xyz', '')),
-            'diameter_visual_offset_mm': visual_offset_mm,
-            'diameter_mode': mode,
-            'diameter': diameter_text,
-            'type': 'diameter_ring',
-            '_uid': uid,
-        }
 
     def _normalize_radius_measurement(self, meas: dict | None) -> dict:
-        data = dict(meas or {})
-        uid = self._ensure_measurement_uid(data)
-        return {
-            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_radius', 'New Radius'),
-            'part': str(data.get('part', '')).strip(),
-            'center_xyz': _xyz_to_text(data.get('center_xyz', '0, 0, 0')),
-            'axis_xyz': _xyz_to_text(data.get('axis_xyz', '0, 1, 0')),
-            'radius': str(data.get('radius', '5')).strip() or '5',
-            'type': 'radius',
-            '_uid': uid,
-        }
+        return _normalize_radius_measurement_model(
+            meas,
+            ensure_uid=self._ensure_measurement_uid,
+            translate=self._t,
+        )
 
     def _normalize_angle_measurement(self, meas: dict | None) -> dict:
-        data = dict(meas or {})
-        uid = self._ensure_measurement_uid(data)
-        return {
-            'name': str(data.get('name', '')).strip() or self._t('tool_editor.measurements.new_angle', 'New Angle'),
-            'part': str(data.get('part', '')).strip(),
-            'center_xyz': _xyz_to_text(data.get('center_xyz', '0, 0, 0')),
-            'start_xyz': _xyz_to_text(data.get('start_xyz', '1, 0, 0')),
-            'end_xyz': _xyz_to_text(data.get('end_xyz', '0, 1, 0')),
-            'type': 'angle',
-            '_uid': uid,
-        }
+        return _normalize_angle_measurement_model(
+            meas,
+            ensure_uid=self._ensure_measurement_uid,
+            translate=self._t,
+        )
 
     def _populate_measurements(self):
         self._distance_list.clear()
@@ -1739,18 +1445,16 @@ class MeasurementEditorDialog(QDialog):
         return self._diam_adjust_x_edit, self._diam_adjust_y_edit, self._diam_adjust_z_edit
 
     def _diameter_adjust_mode(self) -> str:
-        if hasattr(self, '_diam_adjust_mode_btn') and self._diam_adjust_mode_btn.isChecked():
-            return 'geometry'
-        return 'callout'
+        is_geometry_checked = bool(
+            hasattr(self, '_diam_adjust_mode_btn') and self._diam_adjust_mode_btn.isChecked()
+        )
+        return _diameter_adjust_mode_helper(is_geometry_checked)
 
     def _diameter_geometry_target(self) -> str:
-        if (
-            hasattr(self, '_diam_geometry_target_btn')
-            and self._diam_geometry_target_btn.isChecked()
-            and self._diameter_axis_value() == 'direct'
-        ):
-            return 'rotation'
-        return 'axis'
+        is_rotation_checked = bool(
+            hasattr(self, '_diam_geometry_target_btn') and self._diam_geometry_target_btn.isChecked()
+        )
+        return _diameter_geometry_target_helper(self._diameter_axis_value(), is_rotation_checked)
 
     def _diameter_adjust_target_key(
         self,
@@ -1759,9 +1463,7 @@ class MeasurementEditorDialog(QDialog):
     ) -> str:
         effective_mode = mode or self._diameter_adjust_mode()
         effective_target = geometry_target or self._diameter_geometry_target()
-        if effective_mode == 'geometry':
-            return 'axis_xyz' if effective_target == 'rotation' else 'center_xyz'
-        return 'offset_xyz'
+        return _diameter_adjust_target_key_helper(effective_mode, effective_target)
 
     def _diameter_adjust_active_axis_value(self) -> str:
         focused_axis = self._focused_axis(self._diameter_adjust_edits())
@@ -1788,8 +1490,8 @@ class MeasurementEditorDialog(QDialog):
             )
 
     def _diameter_visual_offset_mm(self, model: dict | None = None) -> float:
-        data = model or self._diameter_edit_model or {}
-        return _float_or_default(data.get('diameter_visual_offset_mm', 1.0), 1.0)
+        data = model if model is not None else (self._diameter_edit_model or {})
+        return _diameter_visual_offset_mm_helper(data)
 
     def _load_diameter_visual_offset_edit_from_model(self):
         if self._diameter_edit_model is None or not hasattr(self, '_diam_visual_offset_edit'):
@@ -1944,7 +1646,7 @@ class MeasurementEditorDialog(QDialog):
         self._update_distance_edit_mode_title()
 
     def _set_diameter_adjust_mode(self, mode: str, commit: bool = True):
-        normalized = 'geometry' if mode == 'geometry' else 'callout'
+        normalized = _normalize_diameter_adjust_mode_helper(mode)
         if hasattr(self, '_diam_adjust_mode_btn'):
             self._diam_adjust_mode_btn.blockSignals(True)
             self._diam_adjust_mode_btn.setChecked(normalized == 'geometry')
@@ -1956,7 +1658,7 @@ class MeasurementEditorDialog(QDialog):
             self._commit_diameter_edit(sync_adjust_edits=False)
 
     def _on_diameter_adjust_mode_toggled(self):
-        previous_mode = 'callout' if self._diameter_adjust_mode() == 'geometry' else 'geometry'
+        previous_mode = _toggle_diameter_adjust_mode_helper(self._diameter_adjust_mode())
         previous_target = self._diameter_adjust_target_key(
             mode=previous_mode,
             geometry_target=self._diameter_geometry_target()
@@ -1968,7 +1670,7 @@ class MeasurementEditorDialog(QDialog):
         self._commit_diameter_edit(sync_adjust_edits=False)
 
     def _set_diameter_geometry_target(self, target: str, commit: bool = True):
-        normalized = 'rotation' if (target == 'rotation' and self._diameter_axis_value() == 'direct') else 'axis'
+        normalized = _normalize_diameter_geometry_target_helper(target, self._diameter_axis_value())
         if hasattr(self, '_diam_geometry_target_btn'):
             self._diam_geometry_target_btn.blockSignals(True)
             self._diam_geometry_target_btn.setChecked(normalized == 'rotation')
@@ -1980,7 +1682,10 @@ class MeasurementEditorDialog(QDialog):
             self._commit_diameter_edit(sync_adjust_edits=False)
 
     def _on_diameter_geometry_target_toggled(self):
-        previous_target = 'axis' if self._diameter_geometry_target() == 'rotation' else 'rotation'
+        previous_target = _toggle_diameter_geometry_target_helper(
+            self._diameter_geometry_target(),
+            self._diameter_axis_value(),
+        )
         previous_target_key = self._diameter_adjust_target_key(
             mode='geometry',
             geometry_target=previous_target
@@ -1992,30 +1697,7 @@ class MeasurementEditorDialog(QDialog):
         self._commit_diameter_edit(sync_adjust_edits=False)
 
     def _diameter_measured_numeric(self) -> float | None:
-        model = self._diameter_edit_model or {}
-        center_text = str(model.get('center_xyz') or '').strip()
-        edge_text = str(model.get('edge_xyz') or '').strip()
-        if not center_text or not edge_text:
-            return None
-        cx, cy, cz = _xyz_to_tuple(center_text)
-        ex, ey, ez = _xyz_to_tuple(edge_text)
-        dx = ex - cx
-        dy = ey - cy
-        dz = ez - cz
-        ax, ay, az = _xyz_to_tuple(model.get('axis_xyz', '0, 0, 1'))
-        axis_len = (ax * ax + ay * ay + az * az) ** 0.5
-        if axis_len <= 1e-8:
-            ax, ay, az = 0.0, 0.0, 1.0
-            axis_len = 1.0
-        ux = ax / axis_len
-        uy = ay / axis_len
-        uz = az / axis_len
-        axial = (dx * ux) + (dy * uy) + (dz * uz)
-        px = dx - (ux * axial)
-        py = dy - (uy * axial)
-        pz = dz - (uz * axial)
-        radius = (px * px + py * py + pz * pz) ** 0.5
-        return radius * 2 if radius > 1e-6 else None
+        return _diameter_measured_numeric_helper(self._diameter_edit_model or {})
 
     def _update_diameter_measured_value_box(self):
         if not hasattr(self, '_diam_value_edit'):
@@ -2087,24 +1769,14 @@ class MeasurementEditorDialog(QDialog):
             )
 
     def _diameter_has_manual_value(self, model: dict | None = None) -> bool:
-        data = model or self._diameter_edit_model or {}
-        try:
-            return float(str(data.get('diameter', '')).strip().replace(',', '.')) > 1e-6
-        except Exception:
-            return False
+        data = model if model is not None else (self._diameter_edit_model or {})
+        return _diameter_has_manual_value_helper(data)
 
     def _diameter_is_complete(self, model: dict | None = None) -> bool:
         data = model or self._diameter_edit_model
         if data is None and self._current_diameter_item is not None:
             data = dict(self._current_diameter_item.data(Qt.UserRole) or {})
-        data = data or {}
-        has_center = bool(str(data.get('center_xyz') or '').strip())
-        if not has_center:
-            return False
-        mode = str(data.get('diameter_mode') or self._diameter_value_mode()).strip().lower()
-        if mode == 'measured':
-            return bool(str(data.get('edge_xyz') or '').strip())
-        return self._diameter_has_manual_value(data)
+        return _diameter_is_complete_helper(data or {}, self._diameter_value_mode())
 
     def _prompt_diameter_value_near_cursor(self) -> str | None:
         initial_value = 10.0
@@ -2428,27 +2100,7 @@ class MeasurementEditorDialog(QDialog):
             )
 
     def _distance_measured_value_text(self) -> str:
-        model = self._distance_edit_model or {}
-        start_text = str(model.get('start_xyz') or '').strip()
-        end_text = str(model.get('end_xyz') or '').strip()
-        if not start_text or not end_text:
-            return ''
-
-        sx, sy, sz = _xyz_to_tuple(start_text)
-        ex, ey, ez = _xyz_to_tuple(end_text)
-        axis = self._distance_axis_value()
-        if axis == 'x':
-            value = abs(ex - sx)
-        elif axis == 'y':
-            value = abs(ey - sy)
-        elif axis == 'z':
-            value = abs(ez - sz)
-        else:
-            dx = ex - sx
-            dy = ey - sy
-            dz = ez - sz
-            value = (dx * dx + dy * dy + dz * dz) ** 0.5
-        return f"{value:.3f} mm"
+        return _distance_measured_value_text_helper(self._distance_edit_model or {}, self._distance_axis_value())
 
     def _update_distance_measured_value_box(self):
         if not hasattr(self, '_dist_value_edit'):
@@ -2521,44 +2173,15 @@ class MeasurementEditorDialog(QDialog):
             self._store_distance_adjust_edits_to_model()
         mode = self._distance_value_mode()
         custom_text = self._dist_value_edit.text().strip() if mode == 'custom' else ''
-        start_part = str(model.get('start_part', '')).strip()
-        end_part = str(model.get('end_part', '')).strip()
-        try:
-            start_part_index = int(model.get('start_part_index', -1) or -1)
-        except Exception:
-            start_part_index = -1
-        try:
-            end_part_index = int(model.get('end_part_index', -1) or -1)
-        except Exception:
-            end_part_index = -1
-        meas = {
-            'name': self._dist_name_edit.text() or self._t(
-                'tool_editor.measurements.new_distance', 'New Distance'),
-            'start_part': start_part,
-            'start_part_index': start_part_index,
-            'start_xyz': str(model.get('start_xyz', '')).strip(),
-            'start_space': _normalize_distance_point_space(
-                start_part,
-                start_part_index,
-                model.get('start_space', ''),
-            ),
-            'end_part': end_part,
-            'end_part_index': end_part_index,
-            'end_xyz': str(model.get('end_xyz', '')).strip(),
-            'end_space': _normalize_distance_point_space(
-                end_part,
-                end_part_index,
-                model.get('end_space', ''),
-            ),
-            'distance_axis': self._distance_axis_value(),
-            'label_value_mode': mode,
-            'label_custom_value': custom_text,
-            'offset_xyz': str(model.get('offset_xyz', '')).strip(),
-            'start_shift': str(model.get('start_shift', '0')).strip(),
-            'end_shift': str(model.get('end_shift', '0')).strip(),
-            'type': 'distance',
-            '_uid': uid,
-        }
+        meas = _compose_distance_commit_payload(
+            model=model,
+            name_text=self._dist_name_edit.text(),
+            distance_axis=self._distance_axis_value(),
+            label_value_mode=mode,
+            label_custom_value=custom_text,
+            uid=uid,
+            translate=self._t,
+        )
         self._distance_edit_model = dict(meas)
         self._current_distance_item.setData(Qt.UserRole, meas)
         self._current_distance_item.setText(meas['name'])
@@ -2567,9 +2190,7 @@ class MeasurementEditorDialog(QDialog):
         self._update_distance_pick_status()
 
     def _distance_value_mode(self) -> str:
-        if self._dist_value_mode_btn.isChecked():
-            return 'custom'
-        return 'measured'
+        return _distance_value_mode_helper(self._dist_value_mode_btn.isChecked())
 
     def _set_distance_value_mode(self, mode: str, commit: bool = True):
         normalized = mode if mode in {'measured', 'custom'} else 'measured'
@@ -2598,14 +2219,10 @@ class MeasurementEditorDialog(QDialog):
         self._commit_distance_edit()
 
     def _distance_adjust_mode(self) -> str:
-        if self._dist_adjust_mode_btn.isChecked():
-            return 'point'
-        return 'offset'
+        return _normalize_distance_adjust_mode_helper('point' if self._dist_adjust_mode_btn.isChecked() else 'offset')
 
     def _distance_nudge_point(self) -> str:
-        if self._dist_nudge_point_btn.isChecked():
-            return 'end'
-        return 'start'
+        return _normalize_distance_nudge_point_helper('end' if self._dist_nudge_point_btn.isChecked() else 'start')
 
     def _distance_adjust_edits(self) -> tuple[QLineEdit, QLineEdit, QLineEdit]:
         return self._dist_adjust_x_edit, self._dist_adjust_y_edit, self._dist_adjust_z_edit
@@ -2613,9 +2230,7 @@ class MeasurementEditorDialog(QDialog):
     def _distance_adjust_target_key(self, mode: str | None = None, point: str | None = None) -> str:
         effective_mode = mode or self._distance_adjust_mode()
         effective_point = point or self._distance_nudge_point()
-        if effective_mode == 'point':
-            return f'{effective_point}_xyz'
-        return 'offset_xyz'
+        return _distance_adjust_target_key_helper(effective_mode, effective_point)
 
     def _distance_adjust_active_axis_value(self) -> str:
         focused_axis = self._focused_axis(self._distance_adjust_edits())
@@ -2642,46 +2257,10 @@ class MeasurementEditorDialog(QDialog):
             axis_edit.setToolTip(tooltip)
 
     def _distance_axis_sign(self, model: dict, axis: str) -> float:
-        sx, sy, sz = _xyz_to_tuple(model.get('start_xyz', '0, 0, 0'))
-        ex, ey, ez = _xyz_to_tuple(model.get('end_xyz', '0, 0, 0'))
-        if axis == 'x':
-            value = ex - sx
-        elif axis == 'y':
-            value = ey - sy
-        else:
-            value = ez - sz
-        return 1.0 if value >= 0 else -1.0
+        return _distance_axis_sign_helper(model, axis)
 
     def _distance_effective_point_xyz_text(self, point: str) -> str:
-        model = self._distance_edit_model or {}
-        point_key = 'end_xyz' if point == 'end' else 'start_xyz'
-        shift_key = 'end_shift' if point == 'end' else 'start_shift'
-        x, y, z = _xyz_to_tuple(model.get(point_key, '0, 0, 0'))
-        shift = _float_or_default(model.get(shift_key, 0.0), 0.0)
-        axis = str(model.get('distance_axis', 'z')).strip().lower()
-
-        if axis == 'direct':
-            sx, sy, sz = _xyz_to_tuple(model.get('start_xyz', '0, 0, 0'))
-            ex, ey, ez = _xyz_to_tuple(model.get('end_xyz', '0, 0, 0'))
-            dx = ex - sx
-            dy = ey - sy
-            dz = ez - sz
-            length = (dx * dx + dy * dy + dz * dz) ** 0.5
-            if length > 1e-8:
-                ux = dx / length
-                uy = dy / length
-                uz = dz / length
-                x += ux * shift
-                y += uy * shift
-                z += uz * shift
-        elif axis == 'x':
-            x += self._distance_axis_sign(model, 'x') * shift
-        elif axis == 'y':
-            y += self._distance_axis_sign(model, 'y') * shift
-        else:
-            z += self._distance_axis_sign(model, 'z') * shift
-
-        return f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
+        return _distance_effective_point_xyz_text_helper(self._distance_edit_model or {}, point)
 
     def _load_distance_adjust_edits_from_model(self):
         if not hasattr(self, '_dist_adjust_x_edit'):
@@ -2726,7 +2305,7 @@ class MeasurementEditorDialog(QDialog):
             self._load_distance_adjust_edits_from_model()
 
     def _set_distance_adjust_mode(self, mode: str, commit: bool = True):
-        normalized = 'point' if mode == 'point' else 'offset'
+        normalized = _normalize_distance_adjust_mode_helper(mode)
         self._dist_adjust_mode_btn.blockSignals(True)
         self._dist_adjust_mode_btn.setChecked(normalized == 'point')
         self._dist_adjust_mode_btn.blockSignals(False)
@@ -2735,14 +2314,14 @@ class MeasurementEditorDialog(QDialog):
             self._commit_distance_edit()
 
     def _on_distance_adjust_mode_toggled(self):
-        previous_mode = 'offset' if self._distance_adjust_mode() == 'point' else 'point'
+        previous_mode = _toggle_distance_adjust_mode_helper(self._distance_adjust_mode())
         previous_target = self._distance_adjust_target_key(mode=previous_mode, point=self._distance_nudge_point())
         self._store_distance_adjust_edits_to_model(previous_target)
         self._update_distance_adjust_controls(refresh_values=True)
         self._commit_distance_edit(sync_adjust_edits=False)
 
     def _set_distance_nudge_point(self, point: str, commit: bool = True):
-        normalized = 'end' if point == 'end' else 'start'
+        normalized = _normalize_distance_nudge_point_helper(point)
         self._dist_nudge_point_btn.blockSignals(True)
         self._dist_nudge_point_btn.setChecked(normalized == 'end')
         self._dist_nudge_point_btn.blockSignals(False)
@@ -2754,7 +2333,7 @@ class MeasurementEditorDialog(QDialog):
         return getattr(self, '_dist_axis_value', 'z')
 
     def _set_distance_axis(self, axis: str, commit: bool = True):
-        normalized = axis if axis in {'direct', 'x', 'y', 'z'} else 'z'
+        normalized = _normalize_distance_axis_helper(axis)
         self._dist_axis_value = normalized
         if self._distance_edit_model is not None:
             self._distance_edit_model['distance_axis'] = normalized
@@ -2834,32 +2413,16 @@ class MeasurementEditorDialog(QDialog):
         diameter_text = (
             f"{measured_value:.6g}" if measured_value is not None else ''
         ) if mode == 'measured' else self._diam_value_edit.text().strip()
-        axis_mode = _normalize_diameter_axis_mode(
-            self._diameter_axis_value(),
-            model.get('axis_xyz', '0, 0, 1'),
-            default='z',
+        meas = _compose_diameter_commit_payload(
+            model=model,
+            name_text=self._diam_name_edit.text(),
+            axis_value=self._diameter_axis_value(),
+            diameter_mode=mode,
+            diameter_text=diameter_text,
+            visual_offset_mm=self._diameter_visual_offset_mm(model),
+            uid=uid,
+            translate=self._t,
         )
-        axis_xyz = (
-            _axis_xyz_text(axis_mode)
-            if axis_mode in {'x', 'y', 'z'}
-            else _normalize_axis_xyz_text(model.get('axis_xyz', '0, 0, 1'))
-        )
-        meas = {
-            'name': self._diam_name_edit.text() or self._t(
-                'tool_editor.measurements.new_diameter', 'New Diameter'),
-            'part': str(model.get('part', '')).strip(),
-            'part_index': int(model.get('part_index', -1) or -1),
-            'center_xyz': str(model.get('center_xyz', '')).strip(),
-            'edge_xyz': str(model.get('edge_xyz', '')).strip(),
-            'axis_xyz': axis_xyz,
-            'diameter_axis_mode': axis_mode,
-            'offset_xyz': str(model.get('offset_xyz', '')).strip(),
-            'diameter_visual_offset_mm': self._diameter_visual_offset_mm(model),
-            'diameter_mode': mode,
-            'diameter': diameter_text,
-            'type': 'diameter_ring',
-            '_uid': uid,
-        }
         self._diameter_edit_model = dict(meas)
         self._current_diameter_item.setData(Qt.UserRole, meas)
         self._current_diameter_item.setText(meas['name'])
@@ -3318,41 +2881,7 @@ class MeasurementEditorDialog(QDialog):
                 return
 
             current = dict(item.data(Qt.UserRole) or {})
-            incoming_start_part = str(overlay.get('start_part', current.get('start_part', '')))
-            incoming_end_part = str(overlay.get('end_part', current.get('end_part', '')))
-            try:
-                incoming_start_part_index = int(overlay.get('start_part_index', current.get('start_part_index', -1)) or -1)
-            except Exception:
-                incoming_start_part_index = -1
-            try:
-                incoming_end_part_index = int(overlay.get('end_part_index', current.get('end_part_index', -1)) or -1)
-            except Exception:
-                incoming_end_part_index = -1
-            current.update({
-                'start_part': incoming_start_part,
-                'start_part_index': incoming_start_part_index,
-                'start_xyz': _xyz_to_text(overlay.get('start_xyz', current.get('start_xyz', ''))),
-                'start_space': _normalize_distance_point_space(
-                    incoming_start_part,
-                    incoming_start_part_index,
-                    overlay.get('start_space', current.get('start_space', '')),
-                ),
-                'end_part': incoming_end_part,
-                'end_part_index': incoming_end_part_index,
-                'end_xyz': _xyz_to_text(overlay.get('end_xyz', current.get('end_xyz', ''))),
-                'end_space': _normalize_distance_point_space(
-                    incoming_end_part,
-                    incoming_end_part_index,
-                    overlay.get('end_space', current.get('end_space', '')),
-                ),
-                'distance_axis': str(overlay.get('distance_axis', current.get('distance_axis', 'z'))),
-                'label_value_mode': str(overlay.get('label_value_mode', current.get('label_value_mode', 'measured'))),
-                'label_custom_value': str(overlay.get('label_custom_value', current.get('label_custom_value', ''))),
-                'offset_xyz': _xyz_to_text(overlay.get('offset_xyz', current.get('offset_xyz', ''))),
-                'start_shift': str(overlay.get('start_shift', current.get('start_shift', '0'))),
-                'end_shift': str(overlay.get('end_shift', current.get('end_shift', '0'))),
-                'type': 'distance',
-            })
+            current = _apply_distance_overlay_update(current, overlay)
             item.setData(Qt.UserRole, current)
             if item is self._current_distance_item:
                 self._distance_edit_model = dict(current)
@@ -3371,43 +2900,7 @@ class MeasurementEditorDialog(QDialog):
                 return
 
             current = dict(item.data(Qt.UserRole) or {})
-            incoming_axis_xyz = overlay.get('axis_xyz', current.get('axis_xyz', '0, 0, 1'))
-            incoming_axis_mode = _normalize_diameter_axis_mode(
-                overlay.get('diameter_axis_mode', current.get('diameter_axis_mode', '')),
-                incoming_axis_xyz,
-                default='z',
-            )
-            normalized_axis_xyz = (
-                _axis_xyz_text(incoming_axis_mode)
-                if incoming_axis_mode in {'x', 'y', 'z'}
-                else _normalize_axis_xyz_text(incoming_axis_xyz, fallback='0, 0, 1')
-            )
-            incoming_diameter_raw = str(overlay.get('diameter', current.get('diameter', ''))).strip()
-            try:
-                incoming_diameter_num = float(incoming_diameter_raw.replace(',', '.'))
-            except Exception:
-                incoming_diameter_num = None
-            incoming_diameter_text = (
-                f"{incoming_diameter_num:.6g}"
-                if isinstance(incoming_diameter_num, float) and math.isfinite(incoming_diameter_num)
-                else ''
-            )
-            current.update({
-                'part': str(overlay.get('part', current.get('part', ''))),
-                'part_index': int(overlay.get('part_index', current.get('part_index', -1)) or -1),
-                'center_xyz': _xyz_to_text_optional(overlay.get('center_xyz', current.get('center_xyz', ''))),
-                'edge_xyz': _xyz_to_text_optional(overlay.get('edge_xyz', current.get('edge_xyz', ''))),
-                'axis_xyz': normalized_axis_xyz,
-                'diameter_axis_mode': incoming_axis_mode,
-                'offset_xyz': _xyz_to_text_optional(overlay.get('offset_xyz', current.get('offset_xyz', ''))),
-                'diameter_visual_offset_mm': _float_or_default(
-                    overlay.get('diameter_visual_offset_mm', current.get('diameter_visual_offset_mm', 1.0)),
-                    1.0,
-                ),
-                'diameter_mode': str(overlay.get('diameter_mode', current.get('diameter_mode', 'manual'))),
-                'diameter': incoming_diameter_text,
-                'type': 'diameter_ring',
-            })
+            current = _apply_diameter_overlay_update(current, overlay)
             item.setData(Qt.UserRole, current)
             if item is self._current_diameter_item:
                 self._diameter_edit_model = dict(current)
@@ -3431,7 +2924,7 @@ class MeasurementEditorDialog(QDialog):
     # ─────────────────────────────────────────────────────────────────
 
     def _refresh_preview_measurements(self):
-        overlays = []
+        distance_overlays: list[dict] = []
         active_uid = ''
         active_point = ''
         if self._current_distance_item is not None:
@@ -3445,17 +2938,25 @@ class MeasurementEditorDialog(QDialog):
                 active_point = self._distance_nudge_point()
         for i in range(self._distance_list.count()):
             overlay = self._normalize_distance_measurement(self._distance_list.item(i).data(Qt.UserRole))
-            if active_uid and str(overlay.get('_uid') or '').strip() == active_uid:
-                overlay['active_point'] = active_point
-            else:
-                overlay['active_point'] = ''
-            overlays.append(overlay)
+            distance_overlays.append(overlay)
+        diameter_overlays: list[dict] = []
         for i in range(self._diameter_list.count()):
-            overlays.append(self._normalize_diameter_measurement(self._diameter_list.item(i).data(Qt.UserRole)))
+            diameter_overlays.append(self._normalize_diameter_measurement(self._diameter_list.item(i).data(Qt.UserRole)))
+        radius_overlays: list[dict] = []
         for i in range(self._radius_list.count()):
-            overlays.append(self._normalize_radius_measurement(self._radius_list.item(i).data(Qt.UserRole)))
+            radius_overlays.append(self._normalize_radius_measurement(self._radius_list.item(i).data(Qt.UserRole)))
+        angle_overlays: list[dict] = []
         for i in range(self._angle_list.count()):
-            overlays.append(self._normalize_angle_measurement(self._angle_list.item(i).data(Qt.UserRole)))
+            angle_overlays.append(self._normalize_angle_measurement(self._angle_list.item(i).data(Qt.UserRole)))
+
+        overlays = _compose_preview_overlays(
+            distance_overlays=distance_overlays,
+            diameter_overlays=diameter_overlays,
+            radius_overlays=radius_overlays,
+            angle_overlays=angle_overlays,
+            active_distance_uid=active_uid,
+            active_point=active_point,
+        )
         self._preview_widget.set_measurement_overlays(overlays)
 
     def _sync_preview_measurements_before_save(self):
