@@ -63,6 +63,9 @@ export function createMeasurementDragController(deps) {
       }
 
       let axisDir = null;
+      let axisLocalDir = null;
+      let originalCenter = null;
+      let originalEdge = null;
       let originalOffset = null;
       if (overlayType === 'distance') {
         axisDir = deps.distanceDirectionForOverlay(overlay);
@@ -71,13 +74,31 @@ export function createMeasurementDragController(deps) {
         }
         originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDistanceOffsetForOverlay(overlay);
       } else if (overlayType === 'diameter_ring') {
-        if (dragKind !== 'diameter-offset') {
+        if (dragKind === 'diameter-offset') {
+          originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDiameterOffsetForOverlay(overlay);
+        } else if (dragKind === 'diameter-axis-position') {
+          axisDir = deps.diameterAxisForOverlay(overlay);
+          if (!axisDir) {
+            return false;
+          }
+          axisLocalDir = deps.parseOverlayVector(overlay.axis_xyz);
+          if (!axisLocalDir || axisLocalDir.lengthSq() <= 1e-8) {
+            axisLocalDir = new deps.THREE.Vector3(0, 0, 1);
+          } else {
+            axisLocalDir = axisLocalDir.clone();
+          }
+          axisLocalDir.normalize();
+          originalCenter = deps.parseOverlayVector(overlay.center_xyz);
+          if (!originalCenter) {
+            return false;
+          }
+          originalEdge = deps.parseOverlayVector(overlay.edge_xyz);
+        } else {
           return false;
         }
-        originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDiameterOffsetForOverlay(overlay);
       }
 
-      if (!originalOffset) {
+      if (!originalOffset && dragKind === 'diameter-offset') {
         return false;
       }
 
@@ -95,9 +116,12 @@ export function createMeasurementDragController(deps) {
         overlayType,
         measurementIndex,
         axisDir,
+        axisLocalDir,
         plane,
         planeStartPoint,
         originalOffset,
+        originalCenter,
+        originalEdge,
         originalStartShift: Number(overlay.start_shift) || 0,
         originalEndShift: Number(overlay.end_shift) || 0,
       };
@@ -156,6 +180,15 @@ export function createMeasurementDragController(deps) {
       } else if (dragState.dragKind === 'diameter-offset') {
         const newOffset = snapVec(dragState.originalOffset.clone().add(delta));
         overlay.offset_xyz = deps.formatVec3(newOffset);
+      } else if (dragState.dragKind === 'diameter-axis-position') {
+        const shiftAmount = snap(delta.dot(dragState.axisDir));
+        const shiftLocal = dragState.axisLocalDir.clone().multiplyScalar(shiftAmount);
+        const nextCenter = dragState.originalCenter.clone().add(shiftLocal);
+        overlay.center_xyz = deps.formatVec3(nextCenter);
+        if (dragState.originalEdge) {
+          const nextEdge = dragState.originalEdge.clone().add(shiftLocal);
+          overlay.edge_xyz = deps.formatVec3(nextEdge);
+        }
       } else if (dragState.dragKind === 'distance-start') {
         const shift = delta.dot(dragState.axisDir);
         overlay.start_shift = String(snap(dragState.originalStartShift + shift));

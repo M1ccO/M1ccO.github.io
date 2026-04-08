@@ -756,19 +756,32 @@ class MeasurementEditorDialog(QDialog):
         adjust_bottom_row.setSpacing(6)
         adjust_bottom_row.setContentsMargins(0, 0, 0, 0)
         self._diam_adjust_mode_btn = QPushButton('')
+        self._diam_adjust_mode_btn.setCheckable(True)
+        self._diam_adjust_mode_btn.setChecked(False)  # checked = geometry, unchecked = callout
         self._diam_adjust_mode_btn.setFixedWidth(46)
         self._diam_adjust_mode_btn.setIconSize(QSize(24, 24))
         self._diam_adjust_mode_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self._diam_adjust_mode_btn.clicked.connect(self._on_diameter_adjust_mode_toggled)
         self._diam_adjust_mode_btn.setFocusPolicy(Qt.NoFocus)
-        self._diam_adjust_mode_btn.setEnabled(False)
+        self._diam_geometry_target_btn = QPushButton('')
+        self._diam_geometry_target_btn.setCheckable(True)
+        self._diam_geometry_target_btn.setChecked(False)  # checked = rotation, unchecked = axis position
+        self._diam_geometry_target_btn.setFixedWidth(46)
+        self._diam_geometry_target_btn.setIconSize(QSize(24, 24))
+        self._diam_geometry_target_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        self._diam_geometry_target_btn.clicked.connect(self._on_diameter_geometry_target_toggled)
+        self._diam_geometry_target_btn.setVisible(False)
+        self._diam_geometry_target_btn.setFocusPolicy(Qt.NoFocus)
         adjust_bottom_row.addWidget(self._diam_adjust_mode_btn)
+        adjust_bottom_row.addWidget(self._diam_geometry_target_btn)
         adjust_bottom_row.addStretch(1)
         adjust_section_layout.addLayout(adjust_bottom_row)
 
         form.addRow(self._diam_adjust_section)
         self._diam_adjust_section.setVisible(False)
 
-        self._update_diameter_adjust_controls(refresh_values=True)
+        self._set_diameter_geometry_target('axis', commit=False)
+        self._set_diameter_adjust_mode('callout', commit=False)
         self._set_diameter_axis('z', commit=False)
         self._set_diameter_value_mode('measured', commit=False)
         self._update_diameter_measured_value_box()
@@ -1428,7 +1441,19 @@ class MeasurementEditorDialog(QDialog):
     def _update_distance_edit_mode_title(self):
         kind = self._active_measurement_kind()
         if kind == 'diameter' and hasattr(self, '_diam_adjust_section'):
-            mode_text = self._t('tool_editor.measurements.edit_mode_callout', 'Callout move')
+            if self._diameter_adjust_mode() == 'geometry':
+                if self._diameter_geometry_target() == 'rotation':
+                    mode_text = self._t(
+                        'tool_editor.measurements.edit_mode_diameter_rotation',
+                        'Rotation around axis'
+                    )
+                else:
+                    mode_text = self._t(
+                        'tool_editor.measurements.edit_mode_diameter_axis_position',
+                        'Axis position'
+                    )
+            else:
+                mode_text = self._t('tool_editor.measurements.edit_mode_callout', 'Callout move')
             self._diam_adjust_section.setTitle(
                 f"{self._t('tool_editor.measurements.edit_mode', 'Edit mode')}: {mode_text}"
             )
@@ -1515,6 +1540,27 @@ class MeasurementEditorDialog(QDialog):
     def _diameter_adjust_edits(self) -> tuple[QLineEdit, QLineEdit, QLineEdit]:
         return self._diam_adjust_x_edit, self._diam_adjust_y_edit, self._diam_adjust_z_edit
 
+    def _diameter_adjust_mode(self) -> str:
+        if hasattr(self, '_diam_adjust_mode_btn') and self._diam_adjust_mode_btn.isChecked():
+            return 'geometry'
+        return 'callout'
+
+    def _diameter_geometry_target(self) -> str:
+        if hasattr(self, '_diam_geometry_target_btn') and self._diam_geometry_target_btn.isChecked():
+            return 'rotation'
+        return 'axis'
+
+    def _diameter_adjust_target_key(
+        self,
+        mode: str | None = None,
+        geometry_target: str | None = None
+    ) -> str:
+        effective_mode = mode or self._diameter_adjust_mode()
+        effective_target = geometry_target or self._diameter_geometry_target()
+        if effective_mode == 'geometry':
+            return 'edge_xyz' if effective_target == 'rotation' else 'center_xyz'
+        return 'offset_xyz'
+
     def _diameter_adjust_active_axis_value(self) -> str:
         focused_axis = self._focused_axis(self._diameter_adjust_edits())
         if focused_axis in {'x', 'y', 'z'}:
@@ -1525,39 +1571,178 @@ class MeasurementEditorDialog(QDialog):
             return self._diam_adjust_active_axis
         return 'all'
 
-    def _load_diameter_adjust_edits_from_model(self):
-        if self._diameter_edit_model is None or not hasattr(self, '_diam_adjust_x_edit'):
+    def _ensure_diameter_rotation_target_value(self):
+        if self._diameter_edit_model is None:
             return
-        self._set_xyz_edits(self._diameter_adjust_edits(), self._diameter_edit_model.get('offset_xyz', '0, 0, 0'))
-        tooltip = self._t(
-            'tool_editor.measurements.callout_tooltip',
-            'Drag the callout in the preview, or type here to fine-tune'
-        )
+        model = self._diameter_edit_model
+        if str(model.get('edge_xyz') or '').strip():
+            return
+
+        center_text = str(model.get('center_xyz') or '').strip()
+        if not center_text:
+            return
+
+        cx, cy, cz = _xyz_to_tuple(center_text)
+        diameter_guess = None
+        try:
+            diameter_guess = float(str(model.get('diameter', '')).strip().replace(',', '.'))
+        except Exception:
+            diameter_guess = None
+        if not (isinstance(diameter_guess, float) and diameter_guess > 1e-6):
+            measured = self._diameter_measured_numeric()
+            diameter_guess = measured if measured is not None else 2.0
+        radius = max(float(diameter_guess) * 0.5, 1.0)
+
+        axis = self._diameter_axis_value()
+        if axis == 'x':
+            edge = (cx, cy + radius, cz)
+        elif axis == 'y':
+            edge = (cx + radius, cy, cz)
+        else:
+            edge = (cx + radius, cy, cz)
+        model['edge_xyz'] = f"{_fmt_coord(edge[0])}, {_fmt_coord(edge[1])}, {_fmt_coord(edge[2])}"
+
+    def _update_diameter_adjust_tooltips(self):
+        mode = self._diameter_adjust_mode()
+        if mode == 'callout':
+            tooltip = self._t(
+                'tool_editor.measurements.callout_tooltip',
+                'Drag the callout in the preview, or type here to fine-tune'
+            )
+        elif self._diameter_geometry_target() == 'rotation':
+            tooltip = self._t(
+                'tool_editor.measurements.diameter_rotation_tooltip',
+                'Edit the edge reference point to rotate the diameter around the selected axis'
+            )
+        else:
+            tooltip = self._t(
+                'tool_editor.measurements.diameter_axis_position_tooltip',
+                'Edit center coordinates to move the diameter ring position'
+            )
         for axis_edit in self._diameter_adjust_edits():
             axis_edit.setToolTip(tooltip)
 
-    def _store_diameter_adjust_edits_to_model(self):
+    def _load_diameter_adjust_edits_from_model(self):
         if self._diameter_edit_model is None or not hasattr(self, '_diam_adjust_x_edit'):
             return
-        offset_text = self._xyz_text_from_edits(self._diameter_adjust_edits())
-        if not str(self._diameter_edit_model.get('offset_xyz') or '').strip():
-            ox, oy, oz = _xyz_to_tuple(offset_text)
-            if abs(ox) <= 1e-6 and abs(oy) <= 1e-6 and abs(oz) <= 1e-6:
-                self._diameter_edit_model['offset_xyz'] = ''
-                return
-        self._diameter_edit_model['offset_xyz'] = offset_text
+        target_key = self._diameter_adjust_target_key()
+        self._set_xyz_edits(
+            self._diameter_adjust_edits(),
+            self._diameter_edit_model.get(target_key, '0, 0, 0')
+        )
+        self._update_diameter_adjust_tooltips()
+
+    def _store_diameter_adjust_edits_to_model(self, target_key: str | None = None):
+        if self._diameter_edit_model is None or not hasattr(self, '_diam_adjust_x_edit'):
+            return
+        key = target_key or self._diameter_adjust_target_key()
+        value_text = self._xyz_text_from_edits(self._diameter_adjust_edits())
+
+        if key == 'offset_xyz':
+            if not str(self._diameter_edit_model.get('offset_xyz') or '').strip():
+                ox, oy, oz = _xyz_to_tuple(value_text)
+                if abs(ox) <= 1e-6 and abs(oy) <= 1e-6 and abs(oz) <= 1e-6:
+                    self._diameter_edit_model['offset_xyz'] = ''
+                    return
+            self._diameter_edit_model['offset_xyz'] = value_text
+            return
+
+        if key == 'center_xyz':
+            prev_cx, prev_cy, prev_cz = _xyz_to_tuple(self._diameter_edit_model.get('center_xyz', '0, 0, 0'))
+            next_cx, next_cy, next_cz = _xyz_to_tuple(value_text)
+            dx = next_cx - prev_cx
+            dy = next_cy - prev_cy
+            dz = next_cz - prev_cz
+            if abs(dx) > 1e-9 or abs(dy) > 1e-9 or abs(dz) > 1e-9:
+                edge_text = str(self._diameter_edit_model.get('edge_xyz') or '').strip()
+                if edge_text:
+                    ex, ey, ez = _xyz_to_tuple(edge_text)
+                    self._diameter_edit_model['edge_xyz'] = (
+                        f"{_fmt_coord(ex + dx)}, {_fmt_coord(ey + dy)}, {_fmt_coord(ez + dz)}"
+                    )
+
+        self._diameter_edit_model[key] = value_text
 
     def _update_diameter_adjust_controls(self, refresh_values: bool = True):
         if not hasattr(self, '_diam_adjust_mode_btn'):
             return
+        is_geometry_mode = self._diameter_adjust_mode() == 'geometry'
+        is_rotation = self._diameter_geometry_target() == 'rotation'
+        self._diam_adjust_mode_btn.blockSignals(True)
+        self._diam_adjust_mode_btn.setChecked(is_geometry_mode)
         self._diam_adjust_mode_btn.setText('')
-        self._diam_adjust_mode_btn.setIcon(self._icon('edit_arrow.svg'))
+        self._diam_adjust_mode_btn.setIcon(self._icon('comment.svg' if is_geometry_mode else 'move.svg'))
         self._diam_adjust_mode_btn.setToolTip(
-            self._t('tool_editor.measurements.callout_offset', 'Callout offset')
+            self._t('tool_editor.measurements.click_edit_callout_position', 'Click to move callout')
+            if is_geometry_mode else
+            self._t('tool_editor.measurements.click_edit_diameter_geometry', 'Click to edit diameter position')
         )
+        self._diam_adjust_mode_btn.blockSignals(False)
+
+        if hasattr(self, '_diam_geometry_target_btn'):
+            self._diam_geometry_target_btn.blockSignals(True)
+            self._diam_geometry_target_btn.setChecked(is_rotation)
+            self._diam_geometry_target_btn.setText('')
+            self._diam_geometry_target_btn.setIcon(self._icon('move.svg' if is_rotation else 'rotate.svg'))
+            self._diam_geometry_target_btn.setToolTip(
+                self._t('tool_editor.measurements.click_edit_axis_position', 'Click to edit axis position')
+                if is_rotation else
+                self._t('tool_editor.measurements.click_edit_diameter_rotation', 'Click to edit rotation around axis')
+            )
+            self._diam_geometry_target_btn.setVisible(is_geometry_mode)
+            self._diam_geometry_target_btn.blockSignals(False)
+
         if refresh_values:
             self._load_diameter_adjust_edits_from_model()
         self._update_distance_edit_mode_title()
+
+    def _set_diameter_adjust_mode(self, mode: str, commit: bool = True):
+        normalized = 'geometry' if mode == 'geometry' else 'callout'
+        if hasattr(self, '_diam_adjust_mode_btn'):
+            self._diam_adjust_mode_btn.blockSignals(True)
+            self._diam_adjust_mode_btn.setChecked(normalized == 'geometry')
+            self._diam_adjust_mode_btn.blockSignals(False)
+        if normalized == 'geometry' and self._diameter_geometry_target() == 'rotation':
+            self._ensure_diameter_rotation_target_value()
+        self._update_diameter_adjust_controls(refresh_values=True)
+        if commit:
+            self._commit_diameter_edit(sync_adjust_edits=False)
+
+    def _on_diameter_adjust_mode_toggled(self):
+        previous_mode = 'callout' if self._diameter_adjust_mode() == 'geometry' else 'geometry'
+        previous_target = self._diameter_adjust_target_key(
+            mode=previous_mode,
+            geometry_target=self._diameter_geometry_target()
+        )
+        self._store_diameter_adjust_edits_to_model(previous_target)
+        if self._diameter_adjust_mode() == 'geometry' and self._diameter_geometry_target() == 'rotation':
+            self._ensure_diameter_rotation_target_value()
+        self._update_diameter_adjust_controls(refresh_values=True)
+        self._commit_diameter_edit(sync_adjust_edits=False)
+
+    def _set_diameter_geometry_target(self, target: str, commit: bool = True):
+        normalized = 'rotation' if target == 'rotation' else 'axis'
+        if hasattr(self, '_diam_geometry_target_btn'):
+            self._diam_geometry_target_btn.blockSignals(True)
+            self._diam_geometry_target_btn.setChecked(normalized == 'rotation')
+            self._diam_geometry_target_btn.blockSignals(False)
+        if normalized == 'rotation':
+            self._ensure_diameter_rotation_target_value()
+        self._update_diameter_adjust_controls(refresh_values=True)
+        if commit:
+            self._commit_diameter_edit(sync_adjust_edits=False)
+
+    def _on_diameter_geometry_target_toggled(self):
+        previous_target = 'axis' if self._diameter_geometry_target() == 'rotation' else 'rotation'
+        previous_target_key = self._diameter_adjust_target_key(
+            mode='geometry',
+            geometry_target=previous_target
+        )
+        self._store_diameter_adjust_edits_to_model(previous_target_key)
+        if self._diameter_geometry_target() == 'rotation':
+            self._ensure_diameter_rotation_target_value()
+        self._update_diameter_adjust_controls(refresh_values=True)
+        self._commit_diameter_edit(sync_adjust_edits=False)
 
     def _diameter_measured_numeric(self) -> float | None:
         model = self._diameter_edit_model or {}
@@ -1816,8 +2001,9 @@ class MeasurementEditorDialog(QDialog):
         self._diam_name_edit.setText(self._diameter_edit_model.get('name', ''))
         self._set_diameter_axis(_axis_from_xyz(self._diameter_edit_model.get('axis_xyz', '0, 0, 1'), default='z'), commit=False)
         self._set_diameter_value_mode(str(self._diameter_edit_model.get('diameter_mode', 'measured')).lower(), commit=False)
-        self._load_diameter_adjust_edits_from_model()
-        self._update_diameter_adjust_controls(refresh_values=False)
+        self._set_diameter_geometry_target('axis', commit=False)
+        self._set_diameter_adjust_mode('callout', commit=False)
+        self._update_diameter_adjust_controls(refresh_values=True)
         self._update_diameter_measured_value_box()
         self._update_diameter_pick_status()
 
@@ -2458,9 +2644,10 @@ class MeasurementEditorDialog(QDialog):
         except (ValueError, AttributeError):
             step = 1.0
 
-        self._store_diameter_adjust_edits_to_model()
+        target_key = self._diameter_adjust_target_key()
+        self._store_diameter_adjust_edits_to_model(target_key)
         delta = step if direction == '+' else -step
-        x, y, z = _xyz_to_tuple(self._diameter_edit_model.get('offset_xyz', '0, 0, 0'))
+        x, y, z = _xyz_to_tuple(self._diameter_edit_model.get(target_key, '0, 0, 0'))
         if nudge_axis == 'x':
             x += delta
         elif nudge_axis == 'y':
@@ -2468,8 +2655,18 @@ class MeasurementEditorDialog(QDialog):
         else:
             z += delta
 
-        self._diameter_edit_model['offset_xyz'] = f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
+        self._diameter_edit_model[target_key] = f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
+        if target_key == 'center_xyz':
+            edge_text = str(self._diameter_edit_model.get('edge_xyz') or '').strip()
+            if edge_text:
+                ex, ey, ez = _xyz_to_tuple(edge_text)
+                self._diameter_edit_model['edge_xyz'] = (
+                    f"{_fmt_coord(ex + (delta if nudge_axis == 'x' else 0))}, "
+                    f"{_fmt_coord(ey + (delta if nudge_axis == 'y' else 0))}, "
+                    f"{_fmt_coord(ez + (delta if nudge_axis == 'z' else 0))}"
+                )
         self._load_diameter_adjust_edits_from_model()
+        self._update_diameter_measured_value_box()
         self._commit_diameter_edit(sync_adjust_edits=False)
 
     def eventFilter(self, watched, event):
@@ -2581,6 +2778,8 @@ class MeasurementEditorDialog(QDialog):
             else:
                 self._diameter_edit_model['part'] = ''
                 self._diameter_edit_model['part_index'] = -1
+            if self._diameter_adjust_target_key() == 'center_xyz':
+                self._load_diameter_adjust_edits_from_model()
             if self._diameter_value_mode() == 'measured':
                 self._start_diameter_edge_pick()
             else:
@@ -2609,6 +2808,8 @@ class MeasurementEditorDialog(QDialog):
             self._diameter_edit_model['edge_xyz'] = (
                 f"{_fmt_coord(picked['x'])}, {_fmt_coord(picked['y'])}, {_fmt_coord(picked['z'])}"
             )
+            if self._diameter_adjust_target_key() == 'edge_xyz':
+                self._load_diameter_adjust_edits_from_model()
             self._cancel_pick()
             self._commit_diameter_edit(sync_adjust_edits=False)
             return

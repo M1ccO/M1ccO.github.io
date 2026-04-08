@@ -1265,6 +1265,14 @@ function _distanceDirectionForOverlay(definition) {
   return axisDirection.clone().multiplyScalar(axialLength >= 0 ? 1 : -1).normalize();
 }
 
+function _diameterAxisForOverlay(definition) {
+  const axisDirection = _resolveAxisDirection(definition?.part, definition?.axis_xyz, definition?.part_index);
+  if (!axisDirection || axisDirection.lengthSq() <= 1e-10) {
+    return null;
+  }
+  return axisDirection.clone().normalize();
+}
+
 function _distanceDragObjects() {
   const objects = [];
   measurementGroup.traverse((node) => {
@@ -1284,6 +1292,7 @@ const _measurementDragController = createMeasurementDragController({
   getMeasurementOverlays: () => measurementOverlays,
   getMeasurementDragObjects: _distanceDragObjects,
   distanceDirectionForOverlay: _distanceDirectionForOverlay,
+  diameterAxisForOverlay: _diameterAxisForOverlay,
   parseOverlayVector: _parseOverlayVector,
   defaultDistanceOffsetForOverlay: _defaultDistanceOffsetForOverlay,
   defaultDiameterOffsetForOverlay: _defaultDiameterOffsetForOverlay,
@@ -1343,23 +1352,30 @@ function _resolveDiameterGeometry(definition) {
   const rawMode = String(definition?.diameter_mode || '').trim().toLowerCase();
   const mode = rawMode === 'measured' ? 'measured' : 'manual';
   let diameter = Number(definition?.diameter) || 0;
-  if (mode === 'measured') {
-    const edgeValue = _parseOverlayVector(definition?.edge_xyz);
-    if (!edgeValue) {
-      return null;
-    }
+  let projectedEdgeDirection = null;
+  const edgeValue = _parseOverlayVector(definition?.edge_xyz);
+  if (edgeValue) {
     const edge = _resolveAnchorPoint(partName, definition.edge_xyz, '', partIndex);
     if (!edge) {
-      return null;
+      if (mode === 'measured') {
+        return null;
+      }
+    } else {
+      const radialVector = edge.clone().sub(center);
+      const axialComponent = axis.clone().multiplyScalar(radialVector.dot(axis));
+      const projected = radialVector.clone().sub(axialComponent);
+      const projectedLength = projected.length();
+      if (Number.isFinite(projectedLength) && projectedLength > 1e-6) {
+        projectedEdgeDirection = projected.clone().normalize();
+        if (mode === 'measured') {
+          diameter = projectedLength * 2;
+        }
+      } else if (mode === 'measured') {
+        return null;
+      }
     }
-    const radialVector = edge.clone().sub(center);
-    const axialComponent = axis.clone().multiplyScalar(radialVector.dot(axis));
-    const projected = radialVector.clone().sub(axialComponent);
-    const radius = projected.length();
-    if (!Number.isFinite(radius) || radius <= 1e-6) {
-      return null;
-    }
-    diameter = radius * 2;
+  } else if (mode === 'measured') {
+    return null;
   }
 
   if (!Number.isFinite(diameter) || diameter <= 0) {
@@ -1367,10 +1383,13 @@ function _resolveDiameterGeometry(definition) {
   }
 
   const radius = diameter / 2;
-  const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
-    ? new THREE.Vector3(1, 0, 0)
-    : new THREE.Vector3(0, 1, 0);
-  const tangent = new THREE.Vector3().crossVectors(axis, reference);
+  let tangent = projectedEdgeDirection ? projectedEdgeDirection.clone() : null;
+  if (!tangent || tangent.lengthSq() <= 1e-8) {
+    const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
+      ? new THREE.Vector3(1, 0, 0)
+      : new THREE.Vector3(0, 1, 0);
+    tangent = new THREE.Vector3().crossVectors(axis, reference);
+  }
   if (tangent.lengthSq() <= 1e-8) {
     return null;
   }
@@ -1639,14 +1658,26 @@ function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
     depthWrite: true,
   });
   const ring = new THREE.Line(ringGeometry, ringMaterial);
+  ring.userData = {
+    dragKind: 'diameter-axis-position',
+    measurementIndex,
+  };
   group.add(ring);
   definition.diameter = Number(diameter.toFixed(6));
   definition.measured_value = Number(diameter.toFixed(6));
 
   if (includeLabel) {
-    const ringAnchor = center.clone().add(tangent.clone().multiplyScalar(radius));
+    const defaultAnchor = center.clone().add(tangent.clone().multiplyScalar(radius));
     const labelOffset = _parseOverlayVector(definition.offset_xyz) || _defaultDiameterOffsetForOverlay(definition);
-    const labelAnchor = ringAnchor.clone().add(labelOffset);
+    const labelAnchor = defaultAnchor.clone().add(labelOffset);
+    let ringAnchor = defaultAnchor.clone();
+    const radialToLabel = labelAnchor.clone().sub(center);
+    const axial = axis.clone().multiplyScalar(radialToLabel.dot(axis));
+    const radialProjected = radialToLabel.clone().sub(axial);
+    if (radialProjected.lengthSq() > 1e-8) {
+      radialProjected.normalize().multiplyScalar(radius);
+      ringAnchor = center.clone().add(radialProjected);
+    }
     if (labelOffset.lengthSq() > 1e-8) {
       const leaderLine = new THREE.Line(
         new THREE.BufferGeometry().setFromPoints([ringAnchor, labelAnchor]),

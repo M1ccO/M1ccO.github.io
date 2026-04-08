@@ -60,6 +60,13 @@ QTabBar::tab:selected {
     font-weight: 700;
 }
 
+/* Tool/Jaw editors: keep tab-gap area white (not gray blocks between tabs). */
+QDialog[workEditorDialog="true"] QTabWidget,
+QDialog[workEditorDialog="true"] QTabBar,
+QDialog[workEditorDialog="true"] QTabWidget::tab-bar {
+    background: #ffffff;
+}
+
 /* Editor dialogs (Tool/Jaw) – unified via workEditorDialog property. */
 QDialog[workEditorDialog="true"] {
     background: #ffffff;

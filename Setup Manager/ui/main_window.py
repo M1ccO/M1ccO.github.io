@@ -551,6 +551,7 @@ class MainWindow(QMainWindow):
 
     def _open_jaws_library_action(self):
         if self._launch_context.get("selected"):
+            tool_ids = self._launch_context.get("tool_ids") or []
             jaw_ids = self._launch_context.get("jaw_ids") or []
             if not jaw_ids:
                 QMessageBox.information(
@@ -559,7 +560,7 @@ class MainWindow(QMainWindow):
                     self._t("setup_manager.viewer.no_jaw_links", "Selected work has no jaw links."),
                 )
                 return
-            self._open_tool_library_with_master_filter([], jaw_ids, module="jaws")
+            self._open_tool_library_with_master_filter(tool_ids, jaw_ids, module="jaws")
             return
         self._open_tool_library_module("jaws")
 
