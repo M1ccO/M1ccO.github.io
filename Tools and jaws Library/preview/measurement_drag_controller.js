@@ -181,6 +181,7 @@ export function createMeasurementDragController(deps) {
       const snapVec = event.ctrlKey
         ? (v) => new deps.THREE.Vector3(snap(v.x), snap(v.y), snap(v.z))
         : deps.snapVec3Mm;
+      let didUpdate = false;
 
       if (dragState.dragKind === 'distance-offset') {
         const alongAxis = dragState.axisDir.clone().multiplyScalar(delta.dot(dragState.axisDir));
@@ -190,12 +191,14 @@ export function createMeasurementDragController(deps) {
           ? deps.overlayVectorWorldToLocal(overlay, newOffset)
           : newOffset;
         overlay.offset_xyz = deps.formatVec3(localOffset || newOffset);
+        didUpdate = true;
       } else if (dragState.dragKind === 'diameter-offset') {
         const newOffset = snapVec(dragState.originalOffset.clone().add(delta));
         const localOffset = typeof deps.overlayVectorWorldToLocal === 'function'
           ? deps.overlayVectorWorldToLocal(overlay, newOffset)
           : newOffset;
         overlay.offset_xyz = deps.formatVec3(localOffset || newOffset);
+        didUpdate = true;
       } else if (dragState.dragKind === 'diameter-axis-position') {
         const shiftAmount = snap(delta.dot(dragState.axisDir));
         const shiftLocal = dragState.axisLocalDir.clone().multiplyScalar(shiftAmount);
@@ -205,15 +208,23 @@ export function createMeasurementDragController(deps) {
           const nextEdge = dragState.originalEdge.clone().add(shiftLocal);
           overlay.edge_xyz = deps.formatVec3(nextEdge);
         }
+        didUpdate = true;
       } else if (dragState.dragKind === 'distance-start') {
         const shift = delta.dot(dragState.axisDir);
         overlay.start_shift = String(snap(dragState.originalStartShift + shift));
+        didUpdate = true;
       } else if (dragState.dragKind === 'distance-end') {
         const shift = delta.dot(dragState.axisDir);
         overlay.end_shift = String(snap(dragState.originalEndShift + shift));
+        didUpdate = true;
       }
 
-      deps.scheduleMeasurementsRender();
+      if (didUpdate) {
+        deps.scheduleMeasurementsRender();
+        if (typeof deps.emitMeasurementUpdated === 'function') {
+          deps.emitMeasurementUpdated(dragState.measurementIndex);
+        }
+      }
       event.preventDefault();
     },
 

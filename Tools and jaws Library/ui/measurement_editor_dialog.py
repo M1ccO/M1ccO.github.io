@@ -2641,11 +2641,57 @@ class MeasurementEditorDialog(QDialog):
         for axis_edit in self._distance_adjust_edits():
             axis_edit.setToolTip(tooltip)
 
+    def _distance_axis_sign(self, model: dict, axis: str) -> float:
+        sx, sy, sz = _xyz_to_tuple(model.get('start_xyz', '0, 0, 0'))
+        ex, ey, ez = _xyz_to_tuple(model.get('end_xyz', '0, 0, 0'))
+        if axis == 'x':
+            value = ex - sx
+        elif axis == 'y':
+            value = ey - sy
+        else:
+            value = ez - sz
+        return 1.0 if value >= 0 else -1.0
+
+    def _distance_effective_point_xyz_text(self, point: str) -> str:
+        model = self._distance_edit_model or {}
+        point_key = 'end_xyz' if point == 'end' else 'start_xyz'
+        shift_key = 'end_shift' if point == 'end' else 'start_shift'
+        x, y, z = _xyz_to_tuple(model.get(point_key, '0, 0, 0'))
+        shift = _float_or_default(model.get(shift_key, 0.0), 0.0)
+        axis = str(model.get('distance_axis', 'z')).strip().lower()
+
+        if axis == 'direct':
+            sx, sy, sz = _xyz_to_tuple(model.get('start_xyz', '0, 0, 0'))
+            ex, ey, ez = _xyz_to_tuple(model.get('end_xyz', '0, 0, 0'))
+            dx = ex - sx
+            dy = ey - sy
+            dz = ez - sz
+            length = (dx * dx + dy * dy + dz * dz) ** 0.5
+            if length > 1e-8:
+                ux = dx / length
+                uy = dy / length
+                uz = dz / length
+                x += ux * shift
+                y += uy * shift
+                z += uz * shift
+        elif axis == 'x':
+            x += self._distance_axis_sign(model, 'x') * shift
+        elif axis == 'y':
+            y += self._distance_axis_sign(model, 'y') * shift
+        else:
+            z += self._distance_axis_sign(model, 'z') * shift
+
+        return f"{_fmt_coord(x)}, {_fmt_coord(y)}, {_fmt_coord(z)}"
+
     def _load_distance_adjust_edits_from_model(self):
         if not hasattr(self, '_dist_adjust_x_edit'):
             return
         model = self._distance_edit_model or {}
-        self._set_xyz_edits(self._distance_adjust_edits(), model.get(self._distance_adjust_target_key(), '0, 0, 0'))
+        if self._distance_adjust_mode() == 'point':
+            value = self._distance_effective_point_xyz_text(self._distance_nudge_point())
+        else:
+            value = model.get(self._distance_adjust_target_key(), '0, 0, 0')
+        self._set_xyz_edits(self._distance_adjust_edits(), value)
         self._update_distance_adjust_tooltips()
 
     def _store_distance_adjust_edits_to_model(self, target_key: str | None = None):
@@ -3310,8 +3356,7 @@ class MeasurementEditorDialog(QDialog):
             item.setData(Qt.UserRole, current)
             if item is self._current_distance_item:
                 self._distance_edit_model = dict(current)
-                if self._distance_adjust_mode() == 'offset':
-                    self._load_distance_adjust_edits_from_model()
+                self._load_distance_adjust_edits_from_model()
                 self._update_distance_pick_status()
             else:
                 self._refresh_preview_measurements()
