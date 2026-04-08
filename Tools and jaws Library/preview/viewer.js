@@ -21,22 +21,81 @@ let _axisOrbitLastWidth = 0;
 let _axisOrbitLastHeight = 0;
 const _axisOrbitInvQuat = new THREE.Quaternion();
 const _axisOrbitRefQuat = new THREE.Quaternion();
+const _overlayVectorQuat = new THREE.Quaternion();
+const _overlayVectorInvQuat = new THREE.Quaternion();
 const _axisOrbitAxes = [
   { key: 'X', color: '#d64545', world: new THREE.Vector3(1, 0, 0), camera: new THREE.Vector3() },
   { key: 'Y', color: '#29a34a', world: new THREE.Vector3(0, 1, 0), camera: new THREE.Vector3() },
   { key: 'Z', color: '#2f66d2', world: new THREE.Vector3(0, 0, 1), camera: new THREE.Vector3() },
 ];
 
+function _axisOrbitMeshByPartReference(partIndexValue, partNameValue) {
+  const partIndex = Number(partIndexValue);
+  const partName = String(partNameValue || '').trim();
+  return (
+    _findPartMeshByIndex(Number.isInteger(partIndex) ? partIndex : null)
+    || _findPartMeshByName(partName)
+  );
+}
+
+function _axisOrbitReferenceMeshForOverlay(overlay) {
+  if (!overlay || typeof overlay !== 'object') {
+    return null;
+  }
+
+  // Most overlay types use part/part_index directly.
+  let mesh = _axisOrbitMeshByPartReference(overlay.part_index, overlay.part);
+  if (mesh) {
+    return mesh;
+  }
+
+  // Distance overlays anchor to start/end parts.
+  const overlayType = String(overlay.type || '').trim().toLowerCase();
+  if (overlayType === 'distance') {
+    mesh = _axisOrbitMeshByPartReference(overlay.start_part_index, overlay.start_part);
+    if (mesh) {
+      return mesh;
+    }
+    mesh = _axisOrbitMeshByPartReference(overlay.end_part_index, overlay.end_part);
+    if (mesh) {
+      return mesh;
+    }
+  }
+
+  return null;
+}
+
+function _overlayVectorLocalToWorld(overlay, vector) {
+  if (!vector || !(vector instanceof THREE.Vector3)) {
+    return null;
+  }
+  const refMesh = _axisOrbitReferenceMeshForOverlay(overlay);
+  if (!refMesh) {
+    return vector.clone();
+  }
+  refMesh.getWorldQuaternion(_overlayVectorQuat);
+  return vector.clone().applyQuaternion(_overlayVectorQuat);
+}
+
+function _overlayVectorWorldToLocal(overlay, vector) {
+  if (!vector || !(vector instanceof THREE.Vector3)) {
+    return null;
+  }
+  const refMesh = _axisOrbitReferenceMeshForOverlay(overlay);
+  if (!refMesh) {
+    return vector.clone();
+  }
+  refMesh.getWorldQuaternion(_overlayVectorQuat);
+  _overlayVectorInvQuat.copy(_overlayVectorQuat).invert();
+  return vector.clone().applyQuaternion(_overlayVectorInvQuat);
+}
+
 function _axisOrbitReferenceObject() {
   const focusedIndex = _normalizeMeasurementFocusIndex(measurementFocusIndex);
   if (focusedIndex >= 0 && focusedIndex < measurementOverlays.length) {
     const focusedOverlay = measurementOverlays[focusedIndex];
     if (focusedOverlay && typeof focusedOverlay === 'object') {
-      const focusedPartIndex = Number(focusedOverlay.part_index);
-      const focusedPartName = String(focusedOverlay.part || '').trim();
-      const focusedMesh =
-        _findPartMeshByIndex(Number.isInteger(focusedPartIndex) ? focusedPartIndex : null)
-        || _findPartMeshByName(focusedPartName);
+      const focusedMesh = _axisOrbitReferenceMeshForOverlay(focusedOverlay);
       if (focusedMesh) {
         return focusedMesh;
       }
@@ -1495,6 +1554,8 @@ const _measurementDragController = createMeasurementDragController({
   distanceDirectionForOverlay: _distanceDirectionForOverlay,
   diameterAxisForOverlay: _diameterAxisForOverlay,
   parseOverlayVector: _parseOverlayVector,
+  overlayVectorLocalToWorld: _overlayVectorLocalToWorld,
+  overlayVectorWorldToLocal: _overlayVectorWorldToLocal,
   defaultDistanceOffsetForOverlay: _defaultDistanceOffsetForOverlay,
   defaultDiameterOffsetForOverlay: _defaultDiameterOffsetForOverlay,
   snapMm: _snapMm,
@@ -1667,7 +1728,8 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
   const baseColor = measurementColors.distance;
   const color = baseColor;
   const activePoint = String(definition.active_point || '').trim().toLowerCase();
-  const offsetFromDefinition = _parseOverlayVector(definition.offset_xyz);
+  const parsedOffset = _parseOverlayVector(definition.offset_xyz);
+  const offsetFromDefinition = parsedOffset ? _overlayVectorLocalToWorld(definition, parsedOffset) : null;
   const startShift = Number(definition.start_shift) || 0;
   const endShift = Number(definition.end_shift) || 0;
 
@@ -1895,7 +1957,10 @@ function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
 
   if (includeLabel) {
     const defaultAnchor = center.clone().add(tangent.clone().multiplyScalar(radius));
-    const labelOffset = _parseOverlayVector(definition.offset_xyz) || _defaultDiameterOffsetForOverlay(definition);
+    const parsedLabelOffset = _parseOverlayVector(definition.offset_xyz);
+    const labelOffset =
+      (parsedLabelOffset ? _overlayVectorLocalToWorld(definition, parsedLabelOffset) : null)
+      || _defaultDiameterOffsetForOverlay(definition);
     const labelAnchor = defaultAnchor.clone().add(labelOffset);
     let ringAnchor = defaultAnchor.clone();
     const radialToLabel = labelAnchor.clone().sub(center);

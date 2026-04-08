@@ -72,10 +72,20 @@ export function createMeasurementDragController(deps) {
         if (!axisDir) {
           return false;
         }
-        originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDistanceOffsetForOverlay(overlay);
+        const parsedOffset = deps.parseOverlayVector(overlay.offset_xyz);
+        originalOffset = parsedOffset
+          ? (typeof deps.overlayVectorLocalToWorld === 'function'
+            ? deps.overlayVectorLocalToWorld(overlay, parsedOffset)
+            : parsedOffset.clone())
+          : deps.defaultDistanceOffsetForOverlay(overlay);
       } else if (overlayType === 'diameter_ring') {
         if (dragKind === 'diameter-offset') {
-          originalOffset = deps.parseOverlayVector(overlay.offset_xyz) || deps.defaultDiameterOffsetForOverlay(overlay);
+          const parsedOffset = deps.parseOverlayVector(overlay.offset_xyz);
+          originalOffset = parsedOffset
+            ? (typeof deps.overlayVectorLocalToWorld === 'function'
+              ? deps.overlayVectorLocalToWorld(overlay, parsedOffset)
+              : parsedOffset.clone())
+            : deps.defaultDiameterOffsetForOverlay(overlay);
         } else if (dragKind === 'diameter-axis-position') {
           axisDir = deps.diameterAxisForOverlay(overlay);
           if (!axisDir) {
@@ -176,10 +186,16 @@ export function createMeasurementDragController(deps) {
         const alongAxis = dragState.axisDir.clone().multiplyScalar(delta.dot(dragState.axisDir));
         const sidewaysDelta = delta.clone().sub(alongAxis);
         const newOffset = snapVec(dragState.originalOffset.clone().add(sidewaysDelta));
-        overlay.offset_xyz = deps.formatVec3(newOffset);
+        const localOffset = typeof deps.overlayVectorWorldToLocal === 'function'
+          ? deps.overlayVectorWorldToLocal(overlay, newOffset)
+          : newOffset;
+        overlay.offset_xyz = deps.formatVec3(localOffset || newOffset);
       } else if (dragState.dragKind === 'diameter-offset') {
         const newOffset = snapVec(dragState.originalOffset.clone().add(delta));
-        overlay.offset_xyz = deps.formatVec3(newOffset);
+        const localOffset = typeof deps.overlayVectorWorldToLocal === 'function'
+          ? deps.overlayVectorWorldToLocal(overlay, newOffset)
+          : newOffset;
+        overlay.offset_xyz = deps.formatVec3(localOffset || newOffset);
       } else if (dragState.dragKind === 'diameter-axis-position') {
         const shiftAmount = snap(delta.dot(dragState.axisDir));
         const shiftLocal = dragState.axisLocalDir.clone().multiplyScalar(shiftAmount);
