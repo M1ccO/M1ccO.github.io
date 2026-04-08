@@ -67,6 +67,78 @@ QDialog[workEditorDialog="true"] QTabWidget::tab-bar {
     background: #ffffff;
 }
 
+/* Import mapping dialog: match editor baseline with dedicated section accents. */
+QDialog#importMappingDialog {
+    background: #ffffff;
+}
+
+QDialog#importMappingDialog QTabWidget#importMappingTabs,
+QDialog#importMappingDialog QTabBar,
+QDialog#importMappingDialog QTabWidget#importMappingTabs::tab-bar,
+QDialog#importMappingDialog QTabWidget#importMappingTabs QWidget {
+    background: #ffffff;
+}
+
+QDialog#importMappingDialog QTabWidget#importMappingTabs::pane {
+    border-top: 1px solid #c8d4e0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    background: #ffffff;
+}
+
+QDialog#importMappingDialog QFrame#importMappingOuterShell {
+    background: #ffffff;
+    border: none;
+}
+
+QDialog#importMappingDialog QFrame#importMappingSection {
+    background: #ffffff;
+    border: none;
+}
+
+QDialog#importMappingDialog QFrame#importMappingInnerSection {
+    background: #ffffff;
+    border: none;
+    border-radius: 6px;
+}
+
+QDialog#importMappingDialog QGroupBox#importModeBox {
+    background: #f0f6fc;
+    border: 1px solid #c8d4e0;
+    border-radius: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
+}
+
+QDialog#importMappingDialog QGroupBox#importModeBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 6px;
+    color: #22303c;
+}
+
+QDialog#importMappingDialog QRadioButton {
+    background: transparent;
+}
+
+QDialog#importMappingDialog QGroupBox#importModeBox QRadioButton::indicator {
+    width: 13px;
+    height: 13px;
+    border: 1px solid #9fb4c8;
+    border-radius: 7px;
+    background: #ffffff;
+    margin-right: 6px;
+}
+
+QDialog#importMappingDialog QGroupBox#importModeBox QRadioButton::indicator:checked {
+    border: 1px solid #89a6c3;
+    background-color: qradialgradient(
+        cx: 0.5, cy: 0.5, radius: 0.62, fx: 0.5, fy: 0.5,
+        stop: 0 #3f4f5f, stop: 0.30 #3f4f5f,
+        stop: 0.31 #ffffff, stop: 1 #ffffff
+    );
+}
 /* Editor dialogs (Tool/Jaw) – unified via workEditorDialog property. */
 QDialog[workEditorDialog="true"] {
     background: #ffffff;

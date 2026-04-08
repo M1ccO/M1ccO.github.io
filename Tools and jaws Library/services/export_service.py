@@ -1,6 +1,6 @@
 import json
 
-from config import MILLING_TOOL_TYPES, TURNING_TOOL_TYPES
+from config import ALL_TOOL_TYPES, I18N_DIR, MILLING_TOOL_TYPES, TURNING_TOOL_TYPES
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -96,6 +96,8 @@ class ExportService:
         '9DD6C6',
     ]
     _UNKNOWN_TOOLTYPE_ROW_COLOR = 'ECEFF3'
+    _CUTTING_TYPES = ('Insert', 'Drill', 'Mill')
+    _DRILL_LIKE_TOOL_TYPES = {'Drill', 'Spot Drill', 'Reamer', 'Tapping', 'Turn Drill', 'Turn Spot Drill'}
     _HEADER_FILL_COLOR = 'CFE4F8'
     _HEADER_FONT_COLOR = '16334E'
     _HEADER_BORDER_COLOR = 'D0D7DE'
@@ -142,9 +144,14 @@ class ExportService:
 
     def __init__(self, translate=None):
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self._i18n_cache: dict[str, dict] = {}
+        self._tool_type_alias_map: dict[str, str] = {}
+        self._cutting_type_alias_map: dict[str, str] = {}
+        self._rebuild_import_alias_maps()
 
     def set_translator(self, translate):
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self._rebuild_import_alias_maps()
 
     def _t(self, key: str, default: str) -> str:
         try:
@@ -158,6 +165,195 @@ class ExportService:
             return raw
         key = f"tool_library.tool_type.{raw.lower().replace('.', '_').replace('/', '_').replace(' ', '_')}"
         return self._t(key, raw)
+
+    def _localized_cutting_type(self, raw_cutting_type: str) -> str:
+        raw = str(raw_cutting_type or '').strip()
+        if not raw:
+            return raw
+        key = f"tool_library.cutting_type.{raw.lower().replace(' ', '_')}"
+        return self._t(key, raw)
+
+    @staticmethod
+    def _lookup_key(value) -> str:
+        return ' '.join(str(value or '').strip().casefold().split())
+
+    @staticmethod
+    def _coerce_text(value) -> str:
+        if value is None:
+            return ''
+        if isinstance(value, int):
+            return str(value)
+        if isinstance(value, float):
+            if value.is_integer():
+                return str(int(value))
+            return str(value).strip()
+        return str(value).strip()
+
+    @staticmethod
+    def _coerce_float(value, default: float = 0.0) -> float:
+        if value is None:
+            return default
+        if isinstance(value, (int, float)):
+            return float(value)
+        text = str(value).strip()
+        if not text:
+            return default
+        text = text.replace(' ', '').replace(',', '.')
+        try:
+            return float(text)
+        except Exception:
+            return default
+
+    @staticmethod
+    def _coerce_int(value, default: int = 0) -> int:
+        if value is None:
+            return default
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        text = str(value).strip()
+        if not text:
+            return default
+        try:
+            return int(float(text.replace(',', '.')))
+        except Exception:
+            return default
+
+    def _load_translation_catalog(self, language: str) -> dict:
+        lang = str(language or '').strip().lower()
+        if not lang:
+            return {}
+        if lang in self._i18n_cache:
+            return self._i18n_cache[lang]
+        path = I18N_DIR / f'{lang}.json'
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if not isinstance(data, dict):
+                data = {}
+        except Exception:
+            data = {}
+        self._i18n_cache[lang] = data
+        return data
+
+    @staticmethod
+    def _tool_type_i18n_key(raw_tool_type: str) -> str:
+        normalized = (raw_tool_type or '').strip().lower().replace('.', '_').replace('/', '_').replace(' ', '_')
+        return f"tool_library.tool_type.{normalized}"
+
+    @staticmethod
+    def _cutting_type_i18n_key(raw_cutting_type: str) -> str:
+        normalized = (raw_cutting_type or '').strip().lower().replace(' ', '_')
+        return f"tool_library.cutting_type.{normalized}"
+
+    @staticmethod
+    def _add_alias(alias_map: dict[str, str], alias_value, canonical: str):
+        key = ExportService._lookup_key(alias_value)
+        if key:
+            alias_map[key] = canonical
+
+    def _rebuild_import_alias_maps(self):
+        tool_aliases: dict[str, str] = {}
+        cutting_aliases: dict[str, str] = {}
+
+        en_catalog = self._load_translation_catalog('en')
+        fi_catalog = self._load_translation_catalog('fi')
+
+        for canonical in ALL_TOOL_TYPES:
+            key = self._tool_type_i18n_key(canonical)
+            self._add_alias(tool_aliases, canonical, canonical)
+            self._add_alias(tool_aliases, self._t(key, canonical), canonical)
+            self._add_alias(tool_aliases, en_catalog.get(key, ''), canonical)
+            self._add_alias(tool_aliases, fi_catalog.get(key, ''), canonical)
+
+        for canonical in self._CUTTING_TYPES:
+            key = self._cutting_type_i18n_key(canonical)
+            self._add_alias(cutting_aliases, canonical, canonical)
+            self._add_alias(cutting_aliases, self._t(key, canonical), canonical)
+            self._add_alias(cutting_aliases, en_catalog.get(key, ''), canonical)
+            self._add_alias(cutting_aliases, fi_catalog.get(key, ''), canonical)
+
+        self._tool_type_alias_map = tool_aliases
+        self._cutting_type_alias_map = cutting_aliases
+
+    def _normalize_tool_type_value(self, value: str) -> str:
+        raw = self._coerce_text(value)
+        if not raw:
+            return raw
+        return self._tool_type_alias_map.get(self._lookup_key(raw), raw)
+
+    def _normalize_cutting_type_value(self, value: str) -> str:
+        raw = self._coerce_text(value)
+        if not raw:
+            return ''
+        return self._cutting_type_alias_map.get(self._lookup_key(raw), '')
+
+    @staticmethod
+    def _cell_hyperlink_target(cell) -> str:
+        if cell is None:
+            return ''
+        link = getattr(cell, 'hyperlink', None)
+        if not link:
+            return ''
+        target = getattr(link, 'target', None)
+        return str(target or '').strip()
+
+    @staticmethod
+    def _mapped_cell(row_cells, header_to_idx: dict[str, int], mapping: dict[str, str], field_key: str):
+        excel_header = str(mapping.get(field_key, '') or '').strip()
+        if not excel_header:
+            return None
+        idx = header_to_idx.get(excel_header)
+        if idx is None or idx < 0 or idx >= len(row_cells):
+            return None
+        return row_cells[idx]
+
+    def _infer_cutting_type(self, tool: dict) -> str:
+        if self._coerce_int(tool.get('mill_cutting_edges', 0), 0) > 0:
+            return 'Mill'
+        if self._coerce_float(tool.get('drill_nose_angle', 0), 0.0) > 0:
+            return 'Drill'
+
+        normalized_tool_type = self._normalize_tool_type_value(tool.get('tool_type', ''))
+        if normalized_tool_type in self._DRILL_LIKE_TOOL_TYPES:
+            return 'Drill'
+        if normalized_tool_type in MILLING_TOOL_TYPES:
+            return 'Mill'
+        return 'Insert'
+
+    def _component_items_from_import_row(self, tool: dict) -> list[dict]:
+        holder_code = self._coerce_text(tool.get('holder_code', ''))
+        holder_link = self._coerce_text(tool.get('holder_link', ''))
+        cutting_code = self._coerce_text(tool.get('cutting_code', ''))
+        cutting_link = self._coerce_text(tool.get('cutting_link', ''))
+        cutting_type = self._coerce_text(tool.get('cutting_type', 'Insert')) or 'Insert'
+
+        items = []
+        if holder_code:
+            items.append(
+                {
+                    'role': 'holder',
+                    'label': self._t('tool_library.field.holder', 'Holder'),
+                    'code': holder_code,
+                    'link': holder_link,
+                    'group': '',
+                    'order': len(items),
+                }
+            )
+
+        if cutting_code:
+            items.append(
+                {
+                    'role': 'cutting',
+                    'label': self._localized_cutting_type(cutting_type),
+                    'code': cutting_code,
+                    'link': cutting_link,
+                    'group': '',
+                    'order': len(items),
+                }
+            )
+        return items
 
     def _normalize_number(self, value):
         if value is None or value == '':
@@ -397,7 +593,7 @@ class ExportService:
             wb.close()
 
     def import_tools(self, filename: str, mapping: dict[str, str]) -> list[dict]:
-        wb = load_workbook(filename=filename, read_only=True, data_only=True)
+        wb = load_workbook(filename=filename, read_only=False, data_only=True)
         try:
             ws = wb.active
             raw_headers = next(ws.iter_rows(min_row=1, max_row=1, values_only=True), None)
@@ -409,39 +605,59 @@ class ExportService:
             float_fields = {'geom_x', 'geom_z', 'radius', 'nose_corner_radius', 'drill_nose_angle'}
             int_fields = {'mill_cutting_edges'}
             list_fields = {'support_parts', 'geometry_profiles'}
+            required_id_field = 'id' if 'id' in self.IMPORT_DEFAULTS else ('jaw_id' if 'jaw_id' in self.IMPORT_DEFAULTS else '')
+            is_tool_import = all(
+                field in self.IMPORT_DEFAULTS
+                for field in ('tool_type', 'cutting_type', 'holder_code', 'cutting_code')
+            )
 
             imported = []
-            for row in ws.iter_rows(min_row=2, values_only=True):
+            for row in ws.iter_rows(min_row=2, max_col=len(headers), values_only=False):
                 tool = dict(self.IMPORT_DEFAULTS)
 
                 for field_key, excel_header in mapping.items():
                     if field_key not in self.IMPORT_DEFAULTS:
                         continue
-                    idx = header_to_idx.get(excel_header)
+                    idx = header_to_idx.get(str(excel_header or '').strip())
                     if idx is None or idx >= len(row):
                         continue
-                    raw = row[idx]
+                    cell = row[idx]
+                    raw = cell.value if cell is not None else None
                     if raw is None:
                         continue
 
                     if field_key in float_fields:
-                        try:
-                            tool[field_key] = float(raw)
-                        except Exception:
-                            pass
+                        tool[field_key] = self._coerce_float(raw, float(tool.get(field_key, 0.0) or 0.0))
                     elif field_key in int_fields:
-                        try:
-                            tool[field_key] = int(raw)
-                        except Exception:
-                            pass
+                        tool[field_key] = self._coerce_int(raw, int(tool.get(field_key, 0) or 0))
                     elif field_key in list_fields:
                         tool[field_key] = self._parse_json_list_or_empty(raw)
                     else:
-                        tool[field_key] = str(raw).strip()
+                        tool[field_key] = self._coerce_text(raw)
 
-                tool['tool_head'] = self._normalize_tool_head(tool.get('tool_head', 'HEAD1'))
+                if 'tool_head' in self.IMPORT_DEFAULTS:
+                    tool['tool_head'] = self._normalize_tool_head(tool.get('tool_head', 'HEAD1'))
 
-                if not str(tool.get('id', '')).strip():
+                if is_tool_import:
+                    holder_code_cell = self._mapped_cell(row, header_to_idx, mapping, 'holder_code')
+                    cutting_code_cell = self._mapped_cell(row, header_to_idx, mapping, 'cutting_code')
+                    cutting_type_cell = self._mapped_cell(row, header_to_idx, mapping, 'cutting_type')
+                    holder_hyperlink = self._cell_hyperlink_target(holder_code_cell)
+                    cutting_hyperlink = self._cell_hyperlink_target(cutting_code_cell)
+
+                    holder_link_column = self._coerce_text(tool.get('holder_link', ''))
+                    cutting_link_column = self._coerce_text(tool.get('cutting_link', ''))
+                    tool['holder_link'] = holder_link_column or holder_hyperlink
+                    tool['cutting_link'] = cutting_link_column or cutting_hyperlink
+
+                    tool['tool_type'] = self._normalize_tool_type_value(tool.get('tool_type', ''))
+
+                    mapped_cutting_raw = self._coerce_text(cutting_type_cell.value if cutting_type_cell is not None else '')
+                    explicit_cutting_type = self._normalize_cutting_type_value(mapped_cutting_raw)
+                    tool['cutting_type'] = explicit_cutting_type or self._infer_cutting_type(tool)
+                    tool['component_items'] = self._component_items_from_import_row(tool)
+
+                if required_id_field and not self._coerce_text(tool.get(required_id_field, '')):
                     continue
 
                 imported.append(tool)

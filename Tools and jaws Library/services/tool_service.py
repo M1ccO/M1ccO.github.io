@@ -1,10 +1,13 @@
 import json
+import re
 
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
 from shared.model_paths import TOOLS_PREFIX, normalize_model_path_for_storage, read_model_roots
 
 
 class ToolService:
+    _TOOL_ID_TOKEN_RE = re.compile(r'\d+|\D+')
+
     def __init__(self, db):
         self.db = db
         self._seed_if_empty()
@@ -463,7 +466,25 @@ class ToolService:
             params.append(selected_head)
 
         query += ' ORDER BY id, uid'
-        return [self._normalize_tool_record(r) for r in self.db.conn.execute(query, params).fetchall()]
+        tools = [self._normalize_tool_record(r) for r in self.db.conn.execute(query, params).fetchall()]
+        tools.sort(key=self._tool_sort_key)
+        return tools
+
+    @classmethod
+    def _tool_sort_key(cls, tool: dict):
+        tool_id = str((tool or {}).get('id', '') or '').strip()
+        parts = []
+        for token in cls._TOOL_ID_TOKEN_RE.findall(tool_id):
+            if token.isdigit():
+                parts.append((0, int(token)))
+            else:
+                parts.append((1, token.casefold()))
+        uid = (tool or {}).get('uid')
+        try:
+            uid_value = int(uid)
+        except Exception:
+            uid_value = 0
+        return (parts, tool_id.casefold(), uid_value)
 
     def get_tool(self, tool_id):
         row = self.db.conn.execute('SELECT * FROM tools WHERE id = ? ORDER BY uid DESC LIMIT 1', (tool_id,)).fetchone()

@@ -301,6 +301,7 @@ class AddEditToolDialog(QDialog):
         self._fine_transform_enabled = False
         self._selected_part_index = -1
         self._selected_part_indices = []
+        self._group_target_rows: list[int] = []
         self._general_field_columns = None
         self._clamping_screen_bounds = False
         self._suspend_preview_refresh = False
@@ -1639,7 +1640,18 @@ class AddEditToolDialog(QDialog):
         self._schedule_spare_component_refresh()
 
     def _update_group_button_visibility(self):
-        selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
+        if self.group_name_edit.isVisible():
+            self.group_btn.setVisible(True)
+            self.group_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'assemblies_icon.svg')))
+            self.group_btn.setToolTip(self._t('tool_editor.action.group_parts', 'Group selected parts'))
+            self.group_btn.setProperty('dangerAction', False)
+            self.group_hint_label.setVisible(True)
+            self._set_group_select_hint_visible(False)
+            self.group_btn.style().unpolish(self.group_btn)
+            self.group_btn.style().polish(self.group_btn)
+            return
+
+        selected_rows = self._selected_component_rows()
         if len(selected_rows) < 1:
             self.group_btn.setVisible(True)
             self.group_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'assemblies_icon.svg')))
@@ -1648,6 +1660,7 @@ class AddEditToolDialog(QDialog):
             self.group_name_edit.setVisible(False)
             self.group_hint_label.setVisible(False)
             self._set_group_select_hint_visible(True)
+            self._group_target_rows = []
             self.group_btn.style().unpolish(self.group_btn)
             self.group_btn.style().polish(self.group_btn)
             return
@@ -1657,8 +1670,7 @@ class AddEditToolDialog(QDialog):
 
         groups = set()
         for row in selected_rows:
-            item = self.parts_table.item(row, 4)
-            groups.add(item.text().strip() if item else '')
+            groups.add(self.parts_table.cell_text(row, 'group'))
 
         non_empty = groups - {''}
         all_same_group = bool(non_empty) and len(non_empty) == 1 and '' not in groups
@@ -1680,29 +1692,39 @@ class AddEditToolDialog(QDialog):
     def _set_group_select_hint_visible(self, visible: bool):
         self.group_select_hint_label.setVisible(bool(visible) and not self.group_name_edit.isVisible())
 
+    def _selected_component_rows(self) -> list[int]:
+        selected = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
+        if selected:
+            return selected
+        row = self.parts_table.currentRow()
+        return [row] if row >= 0 else []
+
     def _toggle_group(self):
-        selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
+        # If name editor is already open, clicking the same button should apply.
+        if self.group_name_edit.isVisible():
+            self._apply_group_name()
+            return
+
+        selected_rows = self._selected_component_rows()
         if not selected_rows:
             return
 
+        self._group_target_rows = list(selected_rows)
+
         groups = set()
         for row in selected_rows:
-            item = self.parts_table.item(row, 4)
-            groups.add(item.text().strip() if item else '')
+            groups.add(self.parts_table.cell_text(row, 'group'))
 
         non_empty = groups - {''}
         all_same_group = bool(non_empty) and len(non_empty) == 1 and '' not in groups
 
         if all_same_group:
             for row in selected_rows:
-                item = self.parts_table.item(row, 4)
-                if item:
-                    item.setText('')
-                else:
-                    self.parts_table.setItem(row, 4, QTableWidgetItem(''))
+                self.parts_table.set_cell_text(row, 'group', '')
             self.group_name_edit.setVisible(False)
             self.group_hint_label.setVisible(False)
             self._set_group_select_hint_visible(True)
+            self._group_target_rows = []
             self._update_group_button_visibility()
         else:
             self.group_name_edit.setVisible(True)
@@ -1713,23 +1735,36 @@ class AddEditToolDialog(QDialog):
 
     def _apply_group_name(self):
         name = self.group_name_edit.text().strip()
+
+        target_rows = self._selected_component_rows()
+        if not target_rows:
+            target_rows = [
+                row
+                for row in self._group_target_rows
+                if 0 <= row < self.parts_table.rowCount()
+            ]
+
         if not name:
             self.group_name_edit.setVisible(False)
             self.group_hint_label.setVisible(False)
             self._set_group_select_hint_visible(True)
+            self._group_target_rows = []
             return
 
-        selected_rows = sorted(set(idx.row() for idx in self.parts_table.selectedIndexes()))
-        for row in selected_rows:
-            item = self.parts_table.item(row, 4)
-            if item:
-                item.setText(name)
-            else:
-                self.parts_table.setItem(row, 4, QTableWidgetItem(name))
+        if not target_rows:
+            self.group_name_edit.setVisible(False)
+            self.group_hint_label.setVisible(False)
+            self._set_group_select_hint_visible(True)
+            self._group_target_rows = []
+            return
+
+        for row in target_rows:
+            self.parts_table.set_cell_text(row, 'group', name)
 
         self.group_name_edit.setVisible(False)
         self.group_hint_label.setVisible(False)
         self._set_group_select_hint_visible(True)
+        self._group_target_rows = []
         self._update_group_button_visibility()
 
     def _reflow_general_fields(self, force: bool = False):

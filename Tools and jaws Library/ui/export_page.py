@@ -2,8 +2,8 @@ from pathlib import Path
 import shutil
 from datetime import datetime
 
-from PySide6.QtCore import QPoint, QRect, Qt, Signal
-from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtCore import QEvent, QPoint, QRect, Qt, Signal
+from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPen
 from PySide6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QRadioButton,
     QScrollArea,
+    QSizePolicy,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -29,6 +30,18 @@ from services.tool_service import ToolService
 
 class FieldConnectorWidget(QWidget):
     mappingChanged = Signal(str, str)
+    _SURFACE_BG = QColor('#ffffff')
+    _LEFT_FILL = QColor('#ffffff')
+    _LEFT_FILL_MAPPED = QColor('#ffffff')
+    _RIGHT_FILL = QColor('#ffffff')
+    _RIGHT_FILL_MAPPED = QColor('#ffffff')
+    _BORDER = QColor('#b5cadf')
+    _BORDER_MAPPED = QColor('#42a5f5')
+    _TITLE_COLOR = QColor('#16334e')
+    _TEXT_COLOR = QColor('#1f2a33')
+    _SECTION_BORDER = QColor('#c8d4e0')
+    _SECTION_TITLE = QColor('#22303c')
+    _SECTION_FILL = QColor('#f0f6fc')
 
     def __init__(self, excel_headers: list[str], software_fields: list[tuple[str, str]], parent=None):
         super().__init__(parent)
@@ -38,12 +51,14 @@ class FieldConnectorWidget(QWidget):
 
         self._left_rects: list[tuple[str, QRect]] = []
         self._right_rects: list[tuple[str, QRect]] = []
+        self._left_section_rect = QRect()
+        self._right_section_rect = QRect()
         self._dragging_header = ''
         self._drag_pos = QPoint()
 
         rows = max(len(self._headers), len(self._fields))
         self.setMinimumHeight(max(420, 42 + rows * 36))
-        self.setMinimumWidth(940)
+        self.setMinimumWidth(640)
         self.setMouseTracking(True)
 
     def set_mapping(self, field_key: str, header: str):
@@ -70,7 +85,7 @@ class FieldConnectorWidget(QWidget):
         right_w = left_w
         left_x = margin
         right_x = left_x + left_w + col_gap
-        top_y = margin + 18
+        top_y = margin + 24
 
         self._left_rects = []
         self._right_rects = []
@@ -82,6 +97,36 @@ class FieldConnectorWidget(QWidget):
         for i, (key, _label) in enumerate(self._fields):
             r = QRect(right_x, top_y + i * (row_h + 4), right_w, row_h)
             self._right_rects.append((key, r))
+
+        total_rows = max(1, len(self._headers), len(self._fields))
+        content_h = (total_rows * (row_h + 4)) - 4
+        section_top = margin + 8
+        section_h = (top_y - section_top) + content_h + 10
+        self._left_section_rect = QRect(left_x - 6, section_top, left_w + 12, section_h)
+        self._right_section_rect = QRect(right_x - 6, section_top, right_w + 12, section_h)
+
+    def _draw_titled_section(self, painter: QPainter, rect: QRect, title: str):
+        painter.setPen(QPen(self._SECTION_BORDER, 1))
+        painter.setBrush(self._SECTION_FILL)
+        painter.drawRoundedRect(rect, 6, 6)
+
+        base_font = painter.font()
+        title_font = painter.font()
+        title_font.setBold(True)
+        painter.setFont(title_font)
+        metrics = QFontMetrics(title_font)
+
+        text_w = metrics.horizontalAdvance(title)
+        title_rect = QRect(rect.left() + 10, rect.top() - 8, text_w + 8, 16)
+        # Remove only the top border line behind title text (groupbox-like gap),
+        # without painting a full background block behind the heading.
+        gap_left = title_rect.left() - 2
+        gap_right = title_rect.right() + 2
+        painter.setPen(QPen(self._SECTION_FILL, 2))
+        painter.drawLine(gap_left, rect.top(), gap_right, rect.top())
+        painter.setPen(QPen(self._SECTION_TITLE))
+        painter.drawText(title_rect, Qt.AlignVCenter | Qt.AlignLeft, title)
+        painter.setFont(base_font)
 
     def _header_for_field(self, field_key: str) -> str:
         return self._mapping.get(field_key, '')
@@ -121,11 +166,10 @@ class FieldConnectorWidget(QWidget):
 
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
+        p.fillRect(self.rect(), self._SURFACE_BG)
 
-        title_pen = QPen(QColor('#2b3136'))
-        p.setPen(title_pen)
-        p.drawText(12, 18, 'Excel headings')
-        p.drawText(self.width() // 2 + 20, 18, 'Software fields')
+        self._draw_titled_section(p, self._left_section_rect, 'Excel headings')
+        self._draw_titled_section(p, self._right_section_rect, 'Software fields')
 
         # Draw connection lines first so row cards render on top.
         line_pen = QPen(QColor('#2f8fdc'), 2)
@@ -146,26 +190,28 @@ class FieldConnectorWidget(QWidget):
         # Left side: Excel rows
         for header, rect in self._left_rects:
             is_used = header in self._mapping.values()
-            fill = QColor('#dceaf9') if is_used else QColor('#ffffff')
-            border = QColor('#7fa6cc') if is_used else QColor('#c7cfd6')
+            fill = self._LEFT_FILL_MAPPED if is_used else self._LEFT_FILL
+            border = self._BORDER_MAPPED if is_used else self._BORDER
+            border_w = 3 if is_used else 1
 
-            p.setPen(QPen(border, 1))
+            p.setPen(QPen(border, border_w))
             p.setBrush(fill)
             p.drawRoundedRect(rect, 5, 5)
-            p.setPen(QPen(QColor('#1f2a33')))
+            p.setPen(QPen(self._TEXT_COLOR))
             p.drawText(rect.adjusted(8, 0, -8, 0), Qt.AlignVCenter | Qt.AlignLeft, header)
 
         # Right side: Software rows
         for field_key, rect in self._right_rects:
             mapped = field_key in self._mapping
-            fill = QColor('#e3f3e7') if mapped else QColor('#ffffff')
-            border = QColor('#7db08a') if mapped else QColor('#c7cfd6')
+            fill = self._RIGHT_FILL_MAPPED if mapped else self._RIGHT_FILL
+            border = self._BORDER_MAPPED if mapped else self._BORDER
+            border_w = 3 if mapped else 1
 
-            p.setPen(QPen(border, 1))
+            p.setPen(QPen(border, border_w))
             p.setBrush(fill)
             p.drawRoundedRect(rect, 5, 5)
             label = self._field_label(field_key)
-            p.setPen(QPen(QColor('#1f2a33')))
+            p.setPen(QPen(self._TEXT_COLOR))
             p.drawText(rect.adjusted(8, 0, -8, 0), Qt.AlignVCenter | Qt.AlignLeft, label)
 
     def mousePressEvent(self, event):
@@ -207,6 +253,59 @@ class FieldConnectorWidget(QWidget):
         self.update()
 
 
+class _TabAttachedBorderFrame(QFrame):
+    _BORDER_COLOR = QColor('#c8d4e0')
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._tabs: QTabWidget | None = None
+        self.setAttribute(Qt.WA_StyledBackground, True)
+
+    def set_tabs(self, tabs: QTabWidget):
+        if self._tabs is tabs:
+            return
+        if self._tabs is not None:
+            self._tabs.removeEventFilter(self)
+            self._tabs.tabBar().removeEventFilter(self)
+        self._tabs = tabs
+        if self._tabs is not None:
+            self._tabs.installEventFilter(self)
+            self._tabs.tabBar().installEventFilter(self)
+        self.update()
+
+    def eventFilter(self, watched, event):
+        if (
+            self._tabs is not None
+            and event.type() in (QEvent.Move, QEvent.Resize, QEvent.Show, QEvent.Hide)
+            and (watched is self._tabs or watched is self._tabs.tabBar())
+        ):
+            self.update()
+        return super().eventFilter(watched, event)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        width = self.width()
+        height = self.height()
+        if width <= 1 or height <= 1:
+            return
+
+        left = 0
+        right = width - 1
+        bottom = height - 1
+        top = 0
+        if self._tabs is not None and self._tabs.tabBar().isVisible():
+            tab_bar = self._tabs.tabBar()
+            tab_bottom = tab_bar.mapTo(self, QPoint(0, tab_bar.height() - 1)).y()
+            top = max(0, tab_bottom)
+
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing, False)
+        p.setPen(QPen(self._BORDER_COLOR, 1))
+        p.drawLine(left, top, left, bottom)
+        p.drawLine(right, top, right, bottom)
+        p.drawLine(left, bottom, right, bottom)
+
+
 class ImportMappingDialog(QDialog):
     GENERAL_FIELDS = [
         ('id', 'Tool ID'),
@@ -217,34 +316,30 @@ class ImportMappingDialog(QDialog):
         ('geom_z', 'Geom Z'),
         ('radius', 'Radius'),
         ('nose_corner_radius', 'Nose R / Corner R'),
-        ('holder_code', 'Holder code'),
-        ('holder_link', 'Holder link'),
-        ('holder_add_element', 'Add. Element'),
-        ('holder_add_element_link', 'Add. Element link'),
-        ('cutting_type', 'Cutting component type'),
-        ('cutting_code', 'Cutting component code'),
-        ('cutting_link', 'Cutting component link'),
-        ('cutting_add_element', 'Add. Insert/Drill/Mill'),
-        ('cutting_add_element_link', 'Add. Insert/Drill/Mill link'),
         ('drill_nose_angle', 'Nose angle'),
         ('mill_cutting_edges', 'Cutting edges'),
         ('notes', 'Notes'),
     ]
 
-    ADDITIONAL_FIELDS = [
-        ('support_parts', 'Support parts (JSON or text)'),
-    ]
-
-    MODEL_FIELDS = [
-        ('stl_path', '3D model path / JSON'),
+    COMPONENT_FIELDS = [
+        ('cutting_type', 'Cutting component type'),
+        ('holder_code', 'Holder code'),
+        ('holder_link', 'Holder link (optional)'),
+        ('cutting_code', 'Cutting component code'),
+        ('cutting_link', 'Cutting component link (optional)'),
     ]
 
     def __init__(self, excel_headers: list[str], parent=None):
         super().__init__(parent)
         self.setWindowTitle('Import Mapping')
         self.resize(1120, 760)
+        self.setMinimumWidth(700)
+        self.setObjectName('importMappingDialog')
+        self.setProperty('workEditorDialog', True)
         self._headers = [h for h in excel_headers if h]
         self._connectors: list[FieldConnectorWidget] = []
+        self._tabs: QTabWidget | None = None
+        self.mode_box: QGroupBox | None = None
         self._build_ui()
 
     def _build_ui(self):
@@ -252,14 +347,31 @@ class ImportMappingDialog(QDialog):
         root.setContentsMargins(14, 14, 14, 14)
         root.setSpacing(10)
 
+        outer_shell = _TabAttachedBorderFrame()
+        outer_shell.setObjectName('importMappingOuterShell')
+        outer_shell_layout = QVBoxLayout(outer_shell)
+        outer_shell_layout.setContentsMargins(1, 0, 1, 1)
+        outer_shell_layout.setSpacing(8)
+
+        import_section = QFrame()
+        import_section.setObjectName('importMappingSection')
+        import_section_layout = QVBoxLayout(import_section)
+        import_section_layout.setContentsMargins(0, 0, 0, 0)
+        import_section_layout.setSpacing(6)
+
         tabs = QTabWidget()
+        tabs.setObjectName('importMappingTabs')
         tabs.addTab(self._build_connector_tab(self.GENERAL_FIELDS), 'General')
-        tabs.addTab(self._build_connector_tab(self.ADDITIONAL_FIELDS), 'Additional Parts')
-        tabs.addTab(self._build_connector_tab(self.MODEL_FIELDS), '3D Models')
-        root.addWidget(tabs, 1)
+        tabs.addTab(self._build_connector_tab(self.COMPONENT_FIELDS), 'Components')
+        self._tabs = tabs
+        outer_shell.set_tabs(tabs)
+        import_section_layout.addWidget(tabs, 1)
+        outer_shell_layout.addWidget(import_section, 1)
 
         mode_box = QGroupBox('Import Mode')
-        mode_box.setStyleSheet('QGroupBox { background: transparent; }')
+        self.mode_box = mode_box
+        mode_box.setObjectName('importModeBox')
+        mode_box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         mode_layout = QVBoxLayout(mode_box)
         self.mode_group = QButtonGroup(self)
         self.mode_overwrite = QRadioButton('Overwrite current database')
@@ -267,8 +379,6 @@ class ImportMappingDialog(QDialog):
         self.mode_new_db = QRadioButton('Create new database file')
         self.mode_group.addButton(self.mode_overwrite)
         self.mode_group.addButton(self.mode_new_db)
-        self.mode_overwrite.setStyleSheet('QRadioButton { background-color: transparent; }')
-        self.mode_new_db.setStyleSheet('QRadioButton { background-color: transparent; }')
 
         newdb_row = QHBoxLayout()
         self.new_db_path = QLineEdit()
@@ -282,7 +392,11 @@ class ImportMappingDialog(QDialog):
         mode_layout.addWidget(self.mode_overwrite)
         mode_layout.addWidget(self.mode_new_db)
         mode_layout.addLayout(newdb_row)
-        root.addWidget(mode_box)
+        mode_row = QHBoxLayout()
+        mode_row.setContentsMargins(14, 0, 14, 10)
+        mode_row.addWidget(mode_box, 1)
+        outer_shell_layout.addLayout(mode_row)
+        root.addWidget(outer_shell, 1)
 
         self.mode_overwrite.toggled.connect(self._update_mode_ui)
         self._update_mode_ui()
@@ -303,21 +417,26 @@ class ImportMappingDialog(QDialog):
     def _build_connector_tab(self, fields: list[tuple[str, str]]) -> QWidget:
         page = QWidget()
         layout = QVBoxLayout(page)
-        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setContentsMargins(0, 0, 0, 0)
+        inner_section = QFrame()
+        inner_section.setObjectName('importMappingInnerSection')
+        inner_layout = QVBoxLayout(inner_section)
+        inner_layout.setContentsMargins(8, 8, 8, 8)
+        inner_layout.setSpacing(0)
         connector = FieldConnectorWidget(self._headers, fields)
         connector.mappingChanged.connect(self._on_connector_mapping_changed)
         self._connectors.append(connector)
 
         scroll = QScrollArea()
-        scroll.setWidgetResizable(False)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setWidgetResizable(True)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setStyleSheet('QScrollArea { background: transparent; border: none; } QScrollArea > QWidget > QWidget { background: transparent; }')
         scroll.viewport().setStyleSheet('background: transparent;')
         scroll.setWidget(connector)
-
-        layout.addWidget(scroll, 1)
+        inner_layout.addWidget(scroll, 1)
+        layout.addWidget(inner_section, 1)
         return page
 
     def _on_connector_mapping_changed(self, field_key: str, header: str):
@@ -547,7 +666,7 @@ class ExportPage(QWidget):
                 with self.tool_service.db.conn:
                     self.tool_service.db.conn.execute('DELETE FROM tools')
                     for tool in tools:
-                        self.tool_service.save_tool(tool)
+                        self.tool_service.save_tool(tool, allow_duplicate=True)
                 if callable(self.on_data_changed):
                     self.on_data_changed()
                 QMessageBox.information(self, 'Import', f'Imported {len(tools)} tools into current database.')
@@ -559,7 +678,7 @@ class ExportPage(QWidget):
             with new_db.conn:
                 new_db.conn.execute('DELETE FROM tools')
             for tool in tools:
-                new_tool_service.save_tool(tool)
+                new_tool_service.save_tool(tool, allow_duplicate=True)
             new_db.close()
             QMessageBox.information(self, 'Import', f'Imported {len(tools)} tools into new database:\n{db_path}')
         except Exception as exc:
