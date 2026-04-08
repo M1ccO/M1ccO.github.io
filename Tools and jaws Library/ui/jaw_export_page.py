@@ -178,6 +178,9 @@ class JawExportPage(ExportPage):
         self.jaw_service = jaw_service
         self._jaw_tool_adapter.jaw_service = jaw_service
 
+    def _export_filename_prefix(self) -> str:
+        return 'jaws-library-export'
+
     def import_excel(self):
         path, _ = QFileDialog.getOpenFileName(self, self._t('jaw_library.import.title', 'Import from Excel'), '', self._t('jaw_library.import.filter_excel', 'Excel (*.xlsx *.xlsm)'))
         if not path:

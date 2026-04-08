@@ -35,6 +35,10 @@ from PySide6.QtWidgets import (
 )
 from config import ICONS_DIR
 from ui.widgets.common import apply_shared_dropdown_style, apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
+try:
+    from shared.editor_helpers import apply_titled_section_style
+except ModuleNotFoundError:
+    from editor_helpers import apply_titled_section_style
 
 
 WORK_COORDINATES = ["G54", "G55", "G56", "G57", "G58", "G59"]
@@ -148,6 +152,7 @@ class _JawSelectorPanel(QWidget):
             " "
         )
         self.dynamic_input_group.setProperty("jawInputGroup", True)
+        apply_titled_section_style(self.dynamic_input_group)
         search_layout = QVBoxLayout(self.dynamic_input_group)
         search_layout.setContentsMargins(10, 8, 10, 8)
         search_layout.setSpacing(0)
@@ -599,6 +604,7 @@ class _OrderedToolList(QWidget):
 
         list_panel = QGroupBox(head_label)
         list_panel.setProperty("toolIdsPanel", True)
+        apply_titled_section_style(list_panel)
         list_panel_layout = QVBoxLayout(list_panel)
         list_panel_layout.setContentsMargins(8, 10, 8, 8)
         list_panel_layout.setSpacing(0)
@@ -1234,6 +1240,7 @@ class WorkEditorDialog(QDialog):
 
     def _build_head_zero_group(self, title: str, prefix: str) -> QGroupBox:
         group = QGroupBox(title)
+        apply_titled_section_style(group)
         grid = QGridLayout(group)
         grid.setContentsMargins(12, 8, 12, 8)
         grid.setHorizontalSpacing(8)
@@ -1361,6 +1368,7 @@ class WorkEditorDialog(QDialog):
         layout.addWidget(scroll, 1)
 
         programs_group = QGroupBox(self._t("work_editor.zeros.nc_programs", "NC Programs"))
+        apply_titled_section_style(programs_group)
         programs_form = QFormLayout(programs_group)
         programs_form.setSpacing(8)
         self.main_program_input = QLineEdit()
@@ -1398,6 +1406,7 @@ class WorkEditorDialog(QDialog):
         self._set_zero_xy_visibility(self.zero_show_xy_checkbox.isChecked())
 
         sub_group = QGroupBox(self._t("setup_page.field.sp2", "SP2"))
+        apply_titled_section_style(sub_group)
         sub_form = QFormLayout(sub_group)
         sub_form.setSpacing(8)
         self.sub_pickup_z_input = QLineEdit()
@@ -1594,12 +1603,14 @@ class WorkEditorDialog(QDialog):
         self.robot_info_input.setMaximumHeight(96)
 
         notes_group = QGroupBox(self._t("setup_page.field.notes", "Notes"))
+        apply_titled_section_style(notes_group)
         notes_group_layout = QVBoxLayout(notes_group)
         notes_group_layout.setContentsMargins(10, 8, 10, 10)
         notes_group_layout.addWidget(self.notes_input, 1)
         layout.addWidget(notes_group, 1)
 
         robot_group = QGroupBox(self._t("setup_page.field.robot_info", "Robot info"))
+        apply_titled_section_style(robot_group)
         robot_group_layout = QVBoxLayout(robot_group)
         robot_group_layout.setContentsMargins(10, 8, 10, 10)
         robot_group_layout.addWidget(self.robot_info_input, 0)

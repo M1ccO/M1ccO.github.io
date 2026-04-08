@@ -450,5 +450,17 @@
     "tool_editor.transform.toolbar_title": "Muunnos",
     "tool_editor.transform.cycle_axis_tooltip": "Napsauta akselia vaihtaaksesi X / Y / Z",
     "work_editor.tools.move_up": "▲",
-    "work_editor.tools.move_down": "▼"
+    "work_editor.tools.move_down": "▼",
+    "tool_library.export.header.tool_id": "Työkalu ID",
+    "tool_library.export.header.description": "Kuvaus",
+    "tool_library.export.header.tool_type": "Työkalutyyppi",
+    "tool_library.export.header.geom_x": "Geom X",
+    "tool_library.export.header.geom_z": "Geom Z",
+    "tool_library.export.header.radius": "Säde",
+    "tool_library.export.header.nose_corner_radius": "Nirkonsäde / Nurkansäde",
+    "tool_library.export.header.notes": "Huomiot",
+    "tool_library.export.header.holder_code": "Pidikekoodi",
+    "tool_library.export.header.cutting_code": "Leikkuukoodi",
+    "tool_library.export.header.nose_angle": "Kärkikulma",
+    "tool_library.export.header.cutting_edges": "Leikkuusärmät"
 }

@@ -126,6 +126,8 @@ class MainWindow(QMainWindow):
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization = LocalizationService(I18N_DIR)
         self.localization.set_language(self.ui_preferences.get("language", "en"))
+        if hasattr(self.export_service, "set_translator"):
+            self.export_service.set_translator(self._t)
         self._clamping_screen_bounds = False
         self._nav_width = 48
         self._nav_revealed = False

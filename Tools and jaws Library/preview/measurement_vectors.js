@@ -1,8 +1,19 @@
 import * as THREE from './three.module.js';
 
+function _toFiniteNumber(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 export function parseOverlayVector(value) {
   if (Array.isArray(value) && value.length >= 3) {
-    return new THREE.Vector3(Number(value[0]) || 0, Number(value[1]) || 0, Number(value[2]) || 0);
+    const x = _toFiniteNumber(value[0]);
+    const y = _toFiniteNumber(value[1]);
+    const z = _toFiniteNumber(value[2]);
+    if (x == null || y == null || z == null) {
+      return null;
+    }
+    return new THREE.Vector3(x, y, z);
   }
   const text = String(value || '').trim();
   if (!text) {
@@ -12,9 +23,18 @@ export function parseOverlayVector(value) {
   if (parts.length < 3) {
     return null;
   }
-  return new THREE.Vector3(Number(parts[0]) || 0, Number(parts[1]) || 0, Number(parts[2]) || 0);
+  const x = _toFiniteNumber(parts[0]);
+  const y = _toFiniteNumber(parts[1]);
+  const z = _toFiniteNumber(parts[2]);
+  if (x == null || y == null || z == null) {
+    return null;
+  }
+  return new THREE.Vector3(x, y, z);
 }
 
 export function formatVec3(value) {
-  return `${value.x.toFixed(4)}, ${value.y.toFixed(4)}, ${value.z.toFixed(4)}`;
+  const x = Number.isFinite(Number(value?.x)) ? Number(value.x) : 0;
+  const y = Number.isFinite(Number(value?.y)) ? Number(value.y) : 0;
+  const z = Number.isFinite(Number(value?.z)) ? Number(value.z) : 0;
+  return `${x.toFixed(4)}, ${y.toFixed(4)}, ${z.toFixed(4)}`;
 }

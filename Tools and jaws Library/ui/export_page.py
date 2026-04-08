@@ -371,6 +371,8 @@ class ExportPage(QWidget):
         self.on_data_changed = on_data_changed
         self.on_database_switched = on_database_switched
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or "")
+        if hasattr(self.export_service, 'set_translator'):
+            self.export_service.set_translator(self._t)
         self._build_ui()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
@@ -464,8 +466,21 @@ class ExportPage(QWidget):
         shutil.copy2(src, backup)
         return backup
 
+    def _export_filename_prefix(self) -> str:
+        return 'tool-library-export'
+
+    def _default_export_path(self) -> Path:
+        date_stamp = datetime.now().strftime('%d-%m-%y')
+        filename = f'{self._export_filename_prefix()}__{date_stamp}.xlsx'
+        return EXPORT_DEFAULT_PATH.parent / filename
+
     def export_excel(self):
-        path, _ = QFileDialog.getSaveFileName(self, self._t('tool_library.export.title', 'Export to Excel'), str(EXPORT_DEFAULT_PATH), self._t('tool_library.export.filter_excel', 'Excel (*.xlsx)'))
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            self._t('tool_library.export.title', 'Export to Excel'),
+            str(self._default_export_path()),
+            self._t('tool_library.export.filter_excel', 'Excel (*.xlsx)'),
+        )
         if not path:
             return
         try:

@@ -73,6 +73,30 @@ class ToolService:
         return f'{x:.4g}, {y:.4g}, {z:.4g}'
 
     @staticmethod
+    def _diameter_axis_mode_from_axis_xyz(axis_xyz_text: str) -> str:
+        text = str(axis_xyz_text or '').strip()
+        if not text:
+            return 'z'
+        parts = [p.strip() for p in text.replace(';', ',').split(',') if p.strip()]
+        if len(parts) < 3:
+            return 'z'
+        try:
+            x = float(parts[0])
+            y = float(parts[1])
+            z = float(parts[2])
+        except Exception:
+            return 'z'
+
+        eps = 1e-6
+        if abs(x - 1.0) <= eps and abs(y) <= eps and abs(z) <= eps:
+            return 'x'
+        if abs(y - 1.0) <= eps and abs(x) <= eps and abs(z) <= eps:
+            return 'y'
+        if abs(z - 1.0) <= eps and abs(x) <= eps and abs(y) <= eps:
+            return 'z'
+        return 'direct'
+
+    @staticmethod
     def _normalize_component_item(item, default_order=0):
         if not isinstance(item, dict):
             return None
@@ -160,17 +184,34 @@ class ToolService:
             name = (item.get('name') or '').strip() or f'Diameter {order + 1}'
             part = str(item.get('part') or '').strip()
             center_xyz = ToolService._normalize_xyz_text(item.get('center_xyz'))
+            edge_xyz = ToolService._normalize_xyz_text(item.get('edge_xyz'))
             axis_xyz = ToolService._normalize_xyz_text(item.get('axis_xyz'))
+            offset_xyz = ToolService._normalize_xyz_text(item.get('offset_xyz') or '')
             diameter = str(item.get('diameter') or '').strip()
-            if not (name or part or center_xyz or axis_xyz or diameter):
+            diameter_mode = str(item.get('diameter_mode') or 'manual').strip().lower()
+            if diameter_mode not in {'manual', 'measured'}:
+                diameter_mode = 'manual'
+            axis_mode = str(item.get('diameter_axis_mode') or '').strip().lower()
+            if axis_mode not in {'x', 'y', 'z', 'direct'}:
+                axis_mode = ToolService._diameter_axis_mode_from_axis_xyz(axis_xyz)
+            try:
+                part_index = int(item.get('part_index', -1) or -1)
+            except Exception:
+                part_index = -1
+            if not (name or part or center_xyz or edge_xyz or axis_xyz or diameter or offset_xyz):
                 return None
             return {
                 'type': 'diameter_ring',
                 'name': name,
                 'part': part,
+                'part_index': part_index,
                 'center_xyz': center_xyz,
+                'edge_xyz': edge_xyz,
                 'axis_xyz': axis_xyz,
+                'diameter_mode': diameter_mode,
+                'diameter_axis_mode': axis_mode,
                 'diameter': diameter,
+                'offset_xyz': offset_xyz,
                 'order': order,
             }
 

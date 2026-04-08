@@ -26,6 +26,23 @@ from PySide6.QtWidgets import (
 )
 
 _SHADOW_COLOR = QColor(121, 138, 156, 72)
+_TITLED_SECTION_STYLESHEET = (
+    'QGroupBox {'
+    '  background-color: #f0f6fc;'
+    '  border: 1px solid #d0d8e0;'
+    '  border-radius: 6px;'
+    '  margin-top: 10px;'
+    '  padding-top: 8px;'
+    '}'
+    'QGroupBox::title {'
+    '  subcontrol-origin: margin;'
+    '  left: 10px;'
+    '  padding: 0 4px;'
+    '  color: #5a6b7c;'
+    '  font-size: 8pt;'
+    '  font-weight: 600;'
+    '}'
+)
 
 
 # ── Shadow helper ────────────────────────────────────────────────────────
@@ -46,26 +63,16 @@ def setup_editor_dialog(dialog: QDialog):
     dialog.setProperty('workEditorDialog', True)
 
 
+def apply_titled_section_style(group: QGroupBox) -> QGroupBox:
+    """Apply the shared titled-section style used by editor helper panels."""
+    group.setStyleSheet(_TITLED_SECTION_STYLESHEET)
+    return group
+
+
 def create_titled_section(title: str) -> QGroupBox:
     """Create a light-blue titled section matching measurement editor groups."""
     group = QGroupBox(title)
-    group.setStyleSheet(
-        'QGroupBox {'
-        '  background-color: #f0f6fc;'
-        '  border: 1px solid #d0d8e0;'
-        '  border-radius: 6px;'
-        '  margin-top: 10px;'
-        '  padding-top: 8px;'
-        '}'
-        'QGroupBox::title {'
-        '  subcontrol-origin: margin;'
-        '  left: 10px;'
-        '  padding: 0 4px;'
-        '  color: #5a6b7c;'
-        '  font-size: 8pt;'
-        '  font-weight: 600;'
-        '}'
-    )
+    apply_titled_section_style(group)
     group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     return group
 

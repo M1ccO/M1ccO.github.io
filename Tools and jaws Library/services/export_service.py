@@ -1,5 +1,6 @@
 import json
 
+from config import MILLING_TOOL_TYPES, TURNING_TOOL_TYPES
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -31,22 +32,35 @@ class ExportService:
         ('notes', 'Notes'),
     ]
 
-    # V2 export keeps stable tool metadata columns and expands components dynamically.
+    # Tool export schema (HEAD split by worksheet).
     EXPORT_BASE_FIELDS = [
-        ('export_format', 'Export format'),
         ('id', 'Tool ID'),
-        ('tool_head', 'Tool Head'),
-        ('tool_type', 'Tool type'),
         ('description', 'Description'),
+        ('tool_type', 'Tool type'),
         ('geom_x', 'Geom X'),
         ('geom_z', 'Geom Z'),
         ('radius', 'Radius'),
         ('nose_corner_radius', 'Nose R / Corner R'),
-        ('cutting_type', 'Cutting component type'),
         ('drill_nose_angle', 'Nose angle'),
         ('mill_cutting_edges', 'Cutting edges'),
         ('notes', 'Notes'),
+        ('holder_code', 'Holder code'),
+        ('cutting_code', 'Cutting code'),
     ]
+    EXPORT_HEADER_I18N_KEYS = {
+        'id': 'tool_library.export.header.tool_id',
+        'description': 'tool_library.export.header.description',
+        'tool_type': 'tool_library.export.header.tool_type',
+        'geom_x': 'tool_library.export.header.geom_x',
+        'geom_z': 'tool_library.export.header.geom_z',
+        'radius': 'tool_library.export.header.radius',
+        'nose_corner_radius': 'tool_library.export.header.nose_corner_radius',
+        'notes': 'tool_library.export.header.notes',
+        'holder_code': 'tool_library.export.header.holder_code',
+        'cutting_code': 'tool_library.export.header.cutting_code',
+        'drill_nose_angle': 'tool_library.export.header.nose_angle',
+        'mill_cutting_edges': 'tool_library.export.header.cutting_edges',
+    }
 
     _ROLE_ORDER = ('holder', 'cutting', 'support')
     _ROLE_LABEL = {
@@ -54,18 +68,51 @@ class ExportService:
         'cutting': 'Cutting',
         'support': 'Support',
     }
-    _COMPONENT_SLOT_CAP = 3
-
-    _TOOLTYPE_ROW_COLORS = [
-        'EAF4FF',  # light blue
-        'EDF8EA',  # light green
-        'FFF4E8',  # light orange
-        'F5ECFF',  # light violet
-        'EAF8F8',  # light cyan
-        'FFF9E3',  # light yellow
-        'FDEEEF',  # light rose
-        'ECEFF3',  # light slate
+    _COMPONENT_SLOT_CAP = 2
+    _TURNING_TOOLTYPE_ROW_COLORS = [
+        'FFF4E8',
+        'FFEFD9',
+        'FFE9CB',
+        'FFE3BC',
+        'FFDEAE',
+        'FFD89F',
+        'FFD291',
+        'FFCD82',
+        'FFC774',
+        'FFC165',
     ]
+    _MILLING_TOOLTYPE_ROW_COLORS = [
+        'EAF8F2',
+        'E3F5EE',
+        'DCF2EA',
+        'D5EFE6',
+        'CEECE2',
+        'C7E9DE',
+        'C0E6DA',
+        'B9E3D6',
+        'B2E0D2',
+        'ABDCCE',
+        'A4D9CA',
+        '9DD6C6',
+    ]
+    _UNKNOWN_TOOLTYPE_ROW_COLOR = 'ECEFF3'
+    _HEADER_FILL_COLOR = 'CFE4F8'
+    _HEADER_FONT_COLOR = '16334E'
+    _HEADER_BORDER_COLOR = 'D0D7DE'
+    _COLUMN_MIN_WIDTHS = {
+        'id': 18,
+        'description': 34,
+        'tool_type': 24,
+        'geom_x': 15,
+        'geom_z': 15,
+        'radius': 10,
+        'nose_corner_radius': 32,
+        'drill_nose_angle': 18,
+        'mill_cutting_edges': 18,
+        'notes': 26,
+        'holder_code': 24,
+        'cutting_code': 24,
+    }
 
     IMPORT_DEFAULTS = {
         'id': '',
@@ -92,6 +139,25 @@ class ExportService:
         'support_parts': [],
         'stl_path': '',
     }
+
+    def __init__(self, translate=None):
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+
+    def set_translator(self, translate):
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+
+    def _t(self, key: str, default: str) -> str:
+        try:
+            return self._translate(key, default)
+        except Exception:
+            return default
+
+    def _localized_tool_type(self, raw_tool_type: str) -> str:
+        raw = str(raw_tool_type or '').strip()
+        if not raw:
+            return raw
+        key = f"tool_library.tool_type.{raw.lower().replace('.', '_').replace('/', '_').replace(' ', '_')}"
+        return self._t(key, raw)
 
     def _normalize_number(self, value):
         if value is None or value == '':
@@ -199,6 +265,27 @@ class ExportService:
 
         return fallback
 
+    def _component_export_payload(self, tool: dict) -> dict:
+        items = self._normalize_component_items(tool)
+
+        holder_idx = next((idx for idx, item in enumerate(items) if item.get('role') == 'holder'), None)
+        cutting_idx = next((idx for idx, item in enumerate(items) if item.get('role') == 'cutting'), None)
+
+        holder = items[holder_idx] if holder_idx is not None else None
+        cutting = items[cutting_idx] if cutting_idx is not None else None
+
+        def _text(item: dict | None, key: str) -> str:
+            if not item:
+                return ''
+            return str(item.get(key) or '').strip()
+
+        return {
+            'holder_code': _text(holder, 'code'),
+            'holder_link': _text(holder, 'link'),
+            'cutting_code': _text(cutting, 'code'),
+            'cutting_link': _text(cutting, 'link'),
+        }
+
     def _analyze_component_layout(self, tools: list[dict], slot_cap: int | None = None):
         cap = int(slot_cap or self._COMPONENT_SLOT_CAP)
         max_counts = {role: 0 for role in self._ROLE_ORDER}
@@ -285,6 +372,19 @@ class ExportService:
             grouped[role].sort(key=lambda entry: int(entry.get('order', 0)))
         return grouped
 
+    def _tool_type_fill_map(self) -> dict[str, PatternFill]:
+        fills: dict[str, PatternFill] = {}
+
+        for idx, tool_type in enumerate(TURNING_TOOL_TYPES):
+            color = self._TURNING_TOOLTYPE_ROW_COLORS[idx % len(self._TURNING_TOOLTYPE_ROW_COLORS)]
+            fills[str(tool_type).strip().casefold()] = PatternFill(fill_type='solid', fgColor=color)
+
+        for idx, tool_type in enumerate(MILLING_TOOL_TYPES):
+            color = self._MILLING_TOOLTYPE_ROW_COLORS[idx % len(self._MILLING_TOOLTYPE_ROW_COLORS)]
+            fills[str(tool_type).strip().casefold()] = PatternFill(fill_type='solid', fgColor=color)
+
+        return fills
+
     def read_excel_headers(self, filename: str) -> list[str]:
         wb = load_workbook(filename=filename, read_only=True, data_only=True)
         try:
@@ -351,46 +451,49 @@ class ExportService:
             wb.close()
 
     def _write_tools_sheet(self, ws, tools: list[dict]):
-        layout = self._analyze_component_layout(tools)
-        component_columns = self._component_columns(layout)
-        headers = [label for _key, label in self.EXPORT_BASE_FIELDS] + [col['label'] for col in component_columns]
+        headers = [
+            self._t(self.EXPORT_HEADER_I18N_KEYS.get(key, key), label)
+            for key, label in self.EXPORT_BASE_FIELDS
+        ]
 
         # Header row
         ws.append(headers)
-        header_fill = PatternFill(fill_type='solid', fgColor='1F4E78')
-        header_font = Font(color='FFFFFF', bold=True)
+        header_fill = PatternFill(fill_type='solid', fgColor=self._HEADER_FILL_COLOR)
+        header_font = Font(name='Segoe UI', color=self._HEADER_FONT_COLOR, bold=True)
         thin = Side(style='thin', color='D0D7DE')
+        header_side = Side(style='thin', color=self._HEADER_BORDER_COLOR)
+        header_border = Border(left=header_side, right=header_side, top=header_side, bottom=header_side)
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
+        default_font = Font(name='Segoe UI')
+        hyperlink_font = Font(name='Segoe UI', color='0563C1', underline='single')
 
         for col_idx in range(1, len(headers) + 1):
             cell = ws.cell(row=1, column=col_idx)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = Alignment(horizontal='center', vertical='center')
-            cell.border = border
+            cell.border = header_border
 
-        # Stable color mapping for each tool type present in export
-        unique_tool_types = []
-        for tool in tools or []:
-            t = (tool.get('tool_type', '') or '').strip()
-            if t and t not in unique_tool_types:
-                unique_tool_types.append(t)
-        tool_type_fill = {
-            t: PatternFill(fill_type='solid', fgColor=self._TOOLTYPE_ROW_COLORS[idx % len(self._TOOLTYPE_ROW_COLORS)])
-            for idx, t in enumerate(sorted(unique_tool_types))
-        }
+        tool_type_fill = self._tool_type_fill_map()
+        unknown_fill = PatternFill(fill_type='solid', fgColor=self._UNKNOWN_TOOLTYPE_ROW_COLOR)
 
         numeric_keys = {'geom_x', 'geom_z', 'radius', 'nose_corner_radius', 'drill_nose_angle'}
         int_keys = {'mill_cutting_edges'}
+        hyperlink_targets = {
+            'holder_code': 'holder_link',
+            'cutting_code': 'cutting_link',
+        }
 
         # Data rows
         for tool in tools or []:
             normalized_tool = dict(tool)
-            normalized_tool['export_format'] = f"TOOL_EXPORT_V2;slot_cap={layout['slot_cap']}"
+            normalized_tool.update(self._component_export_payload(normalized_tool))
 
             row_values = []
             for key, _label in self.EXPORT_BASE_FIELDS:
                 value = normalized_tool.get(key, '')
+                if key == 'tool_type':
+                    value = self._localized_tool_type(value)
                 if key in numeric_keys:
                     value = self._normalize_number(value)
                 elif key in int_keys:
@@ -400,44 +503,36 @@ class ExportService:
                         value = value
                 row_values.append(value)
 
-            grouped_items = self._group_items_by_role(self._normalize_component_items(normalized_tool))
-            for column in component_columns:
-                role = column['role']
-                attr = column['attr']
-                if attr == 'overflow':
-                    overflow_items = grouped_items[role][layout['slot_counts'][role]:]
-                    row_values.append(json.dumps(overflow_items, ensure_ascii=False) if overflow_items else '')
-                    continue
-
-                slot_idx = int(column['slot']) - 1
-                role_items = grouped_items[role]
-                if slot_idx >= len(role_items):
-                    row_values.append('')
-                    continue
-                row_values.append(role_items[slot_idx].get(attr, ''))
-
             ws.append(row_values)
             row_idx = ws.max_row
 
-            fill = tool_type_fill.get((tool.get('tool_type', '') or '').strip())
+            type_key = (tool.get('tool_type', '') or '').strip().casefold()
+            fill = tool_type_fill.get(type_key, unknown_fill)
             for col_idx in range(1, len(headers) + 1):
                 cell = ws.cell(row=row_idx, column=col_idx)
                 cell.border = border
-                if fill is not None:
-                    cell.fill = fill
+                cell.fill = fill
 
-                if col_idx <= len(self.EXPORT_BASE_FIELDS):
-                    key = self.EXPORT_BASE_FIELDS[col_idx - 1][0]
-                else:
-                    key = ''
+                key = self.EXPORT_BASE_FIELDS[col_idx - 1][0]
                 if key in numeric_keys and isinstance(cell.value, (int, float)):
                     cell.number_format = '0.000'
-                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
                 elif key in int_keys and isinstance(cell.value, int):
                     cell.number_format = '0'
-                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
                 else:
-                    cell.alignment = Alignment(horizontal='left', vertical='center')
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
+                cell.font = default_font
+
+                link_key = hyperlink_targets.get(key)
+                if link_key:
+                    link_value = str(normalized_tool.get(link_key, '') or '').strip()
+                    if link_value:
+                        try:
+                            cell.hyperlink = link_value
+                            cell.font = hyperlink_font
+                        except Exception:
+                            pass
 
         ws.freeze_panes = 'A2'
         ws.auto_filter.ref = ws.dimensions
@@ -451,7 +546,10 @@ class ExportService:
                 if val is None:
                     continue
                 max_len = max(max_len, len(str(val)))
-            ws.column_dimensions[letter].width = min(max(max_len + 2, 10), 52)
+            key = self.EXPORT_BASE_FIELDS[col_idx - 1][0]
+            min_width = int(self._COLUMN_MIN_WIDTHS.get(key, 10))
+            width = max(max_len + 6, min_width)
+            ws.column_dimensions[letter].width = min(width, 64)
 
         # Slightly taller rows for readability.
         ws.row_dimensions[1].height = 24

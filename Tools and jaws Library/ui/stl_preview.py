@@ -1,4 +1,5 @@
 import json
+import math
 import re
 from pathlib import Path
 
@@ -455,11 +456,19 @@ class StlPreviewWidget(QWidget):
 
     @staticmethod
     def _parse_xyz_value(value, default=(0.0, 0.0, 0.0)):
-        if isinstance(value, (list, tuple)) and len(value) >= 3:
+        def _finite(v, fallback):
             try:
-                return [float(value[0]), float(value[1]), float(value[2])]
+                num = float(v)
             except Exception:
-                return [float(default[0]), float(default[1]), float(default[2])]
+                return float(fallback)
+            return num if math.isfinite(num) else float(fallback)
+
+        if isinstance(value, (list, tuple)) and len(value) >= 3:
+            return [
+                _finite(value[0], default[0]),
+                _finite(value[1], default[1]),
+                _finite(value[2], default[2]),
+            ]
 
         text = str(value or '').strip()
         if not text:
@@ -468,10 +477,35 @@ class StlPreviewWidget(QWidget):
         parts = [token for token in re.split(r'[\s,;]+', text.replace(',', ' ')) if token]
         if len(parts) < 3:
             return [float(default[0]), float(default[1]), float(default[2])]
+        return [
+            _finite(parts[0], default[0]),
+            _finite(parts[1], default[1]),
+            _finite(parts[2], default[2]),
+        ]
+
+    @staticmethod
+    def _parse_float_value(value, default: float = 0.0) -> float:
         try:
-            return [float(parts[0]), float(parts[1]), float(parts[2])]
+            numeric = float(str(value).strip().replace(',', '.'))
         except Exception:
-            return [float(default[0]), float(default[1]), float(default[2])]
+            return float(default)
+        return numeric if math.isfinite(numeric) else float(default)
+
+    @staticmethod
+    def _normalize_distance_space(part_name, part_index, point_space) -> str:
+        has_part_ref = bool(str(part_name or '').strip())
+        if not has_part_ref:
+            try:
+                has_part_ref = int(part_index) >= 0
+            except Exception:
+                has_part_ref = False
+        normalized = str(point_space or '').strip().lower()
+        if normalized not in {'local', 'world'}:
+            return 'local' if has_part_ref else 'world'
+        if normalized == 'world' and has_part_ref:
+            # Legacy migration: part-bound coordinates must stay local to follow transforms.
+            return 'local'
+        return normalized
 
     @classmethod
     def _normalize_measurement_overlay(cls, overlay, index: int = 0):
@@ -496,12 +530,16 @@ class StlPreviewWidget(QWidget):
                 end_part_index = int(overlay.get('end_part_index', -1) or -1)
             except Exception:
                 end_part_index = -1
-            start_space = str(overlay.get('start_space') or '').strip().lower()
-            end_space = str(overlay.get('end_space') or '').strip().lower()
-            if start_space not in {'local', 'world'}:
-                start_space = 'local' if start_part else 'world'
-            if end_space not in {'local', 'world'}:
-                end_space = 'local' if end_part else 'world'
+            start_space = cls._normalize_distance_space(
+                start_part,
+                start_part_index,
+                overlay.get('start_space', ''),
+            )
+            end_space = cls._normalize_distance_space(
+                end_part,
+                end_part_index,
+                overlay.get('end_space', ''),
+            )
             offset_raw = overlay.get('offset_xyz')
             offset_text = str(offset_raw or '').strip()
             offset_xyz = cls._parse_xyz_value(offset_raw) if offset_text else ''
@@ -549,6 +587,40 @@ class StlPreviewWidget(QWidget):
             diameter_mode = str(overlay.get('diameter_mode') or '').strip().lower()
             if diameter_mode not in {'measured', 'manual'}:
                 diameter_mode = 'measured' if edge_text else 'manual'
+            visual_offset_mm = cls._parse_float_value(overlay.get('diameter_visual_offset_mm', 1.0), 1.0)
+            axis_xyz = cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 0.0, 1.0))
+            axis_mode = str(overlay.get('diameter_axis_mode') or '').strip().lower()
+            if axis_mode not in {'x', 'y', 'z', 'direct'}:
+                ax, ay, az = axis_xyz
+                length = float((ax * ax + ay * ay + az * az) ** 0.5)
+                if length <= 1e-8:
+                    axis_mode = 'z'
+                else:
+                    nx = ax / length
+                    ny = ay / length
+                    nz = az / length
+                    tol = 1e-3
+                    if abs(abs(nx) - 1.0) <= tol and abs(ny) <= tol and abs(nz) <= tol:
+                        axis_mode = 'x'
+                    elif abs(abs(ny) - 1.0) <= tol and abs(nx) <= tol and abs(nz) <= tol:
+                        axis_mode = 'y'
+                    elif abs(abs(nz) - 1.0) <= tol and abs(nx) <= tol and abs(ny) <= tol:
+                        axis_mode = 'z'
+                    else:
+                        axis_mode = 'direct'
+            if axis_mode == 'x':
+                axis_xyz = [1.0, 0.0, 0.0]
+            elif axis_mode == 'y':
+                axis_xyz = [0.0, 1.0, 0.0]
+            elif axis_mode == 'z':
+                axis_xyz = [0.0, 0.0, 1.0]
+            else:
+                ax, ay, az = axis_xyz
+                length = float((ax * ax + ay * ay + az * az) ** 0.5)
+                if length <= 1e-8:
+                    axis_xyz = [0.0, 0.0, 1.0]
+                else:
+                    axis_xyz = [ax / length, ay / length, az / length]
             return {
                 'type': 'diameter_ring',
                 'name': str(overlay.get('name') or f'Diameter {index + 1}').strip() or f'Diameter {index + 1}',
@@ -556,8 +628,10 @@ class StlPreviewWidget(QWidget):
                 'part_index': part_index,
                 'center_xyz': cls._parse_xyz_value(center_raw) if center_text else '',
                 'edge_xyz': cls._parse_xyz_value(edge_raw) if edge_text else '',
-                'axis_xyz': cls._parse_xyz_value(overlay.get('axis_xyz'), default=(0.0, 0.0, 1.0)),
+                'axis_xyz': axis_xyz,
+                'diameter_axis_mode': axis_mode,
                 'offset_xyz': cls._parse_xyz_value(offset_raw) if offset_text else '',
+                'diameter_visual_offset_mm': visual_offset_mm,
                 'diameter_mode': diameter_mode,
                 'diameter': diameter,
             }
@@ -626,6 +700,15 @@ class StlPreviewWidget(QWidget):
             return
         self._web.page().runJavaScript(
             f"window.getMeasurementResolvedValue && window.getMeasurementResolvedValue({json.dumps(int(index))});",
+            callback,
+        )
+
+    def get_measurements_snapshot(self, callback):
+        if not self._page_ready:
+            callback(None)
+            return
+        self._web.page().runJavaScript(
+            "window.getMeasurementsSnapshot && window.getMeasurementsSnapshot();",
             callback,
         )
 

@@ -20,11 +20,42 @@ let _axisOrbitLastDpr = 0;
 let _axisOrbitLastWidth = 0;
 let _axisOrbitLastHeight = 0;
 const _axisOrbitInvQuat = new THREE.Quaternion();
+const _axisOrbitRefQuat = new THREE.Quaternion();
 const _axisOrbitAxes = [
   { key: 'X', color: '#d64545', world: new THREE.Vector3(1, 0, 0), camera: new THREE.Vector3() },
   { key: 'Y', color: '#29a34a', world: new THREE.Vector3(0, 1, 0), camera: new THREE.Vector3() },
   { key: 'Z', color: '#2f66d2', world: new THREE.Vector3(0, 0, 1), camera: new THREE.Vector3() },
 ];
+
+function _axisOrbitReferenceObject() {
+  const focusedIndex = _normalizeMeasurementFocusIndex(measurementFocusIndex);
+  if (focusedIndex >= 0 && focusedIndex < measurementOverlays.length) {
+    const focusedOverlay = measurementOverlays[focusedIndex];
+    if (focusedOverlay && typeof focusedOverlay === 'object') {
+      const focusedPartIndex = Number(focusedOverlay.part_index);
+      const focusedPartName = String(focusedOverlay.part || '').trim();
+      const focusedMesh =
+        _findPartMeshByIndex(Number.isInteger(focusedPartIndex) ? focusedPartIndex : null)
+        || _findPartMeshByName(focusedPartName);
+      if (focusedMesh) {
+        return focusedMesh;
+      }
+    }
+  }
+
+  if (selectedMeshIndex >= 0 && selectedMeshIndex < currentMeshes.length && currentMeshes[selectedMeshIndex]) {
+    return currentMeshes[selectedMeshIndex];
+  }
+  for (const mesh of currentMeshes) {
+    if (mesh) {
+      return mesh;
+    }
+  }
+  if (currentGroup) {
+    return currentGroup;
+  }
+  return null;
+}
 
 function _setControlHintText(text) {
   if (!hintElement) return;
@@ -76,18 +107,46 @@ function _drawAxisOrbit() {
   const h = axisOrbitCanvas.height;
   const cx = w * 0.5;
   const cy = h * 0.5;
-  const radius = Math.min(w, h) * 0.28;
+  const orbitRadius = Math.min(w, h) * 0.36;
+  const axisRadius = orbitRadius * 0.78;
 
   axisOrbitCtx.clearRect(0, 0, w, h);
 
+  const sphereGradient = axisOrbitCtx.createRadialGradient(
+    cx - orbitRadius * 0.35,
+    cy - orbitRadius * 0.35,
+    orbitRadius * 0.08,
+    cx,
+    cy,
+    orbitRadius * 1.08
+  );
+  sphereGradient.addColorStop(0, 'rgba(255, 255, 255, 0.98)');
+  sphereGradient.addColorStop(1, 'rgba(219, 228, 238, 0.92)');
+  axisOrbitCtx.fillStyle = sphereGradient;
+  axisOrbitCtx.beginPath();
+  axisOrbitCtx.arc(cx, cy, orbitRadius, 0, Math.PI * 2);
+  axisOrbitCtx.fill();
+  axisOrbitCtx.strokeStyle = 'rgba(151, 165, 181, 0.85)';
+  axisOrbitCtx.lineWidth = 1 * dpr;
+  axisOrbitCtx.stroke();
+
+  // Show local axes of the active model/part so helper matches transformed geometry.
   _axisOrbitInvQuat.copy(camera.quaternion).invert();
+  const refObject = _axisOrbitReferenceObject();
+  if (refObject) {
+    refObject.getWorldQuaternion(_axisOrbitRefQuat);
+  } else {
+    _axisOrbitRefQuat.identity();
+  }
   for (const axis of _axisOrbitAxes) {
-    axis.camera.copy(axis.world).applyQuaternion(_axisOrbitInvQuat).normalize();
+    axis.camera.copy(axis.world);
+    axis.camera.applyQuaternion(_axisOrbitRefQuat);
+    axis.camera.applyQuaternion(_axisOrbitInvQuat).normalize();
   }
 
   // Draw back-facing axes first so front-facing axes stay readable.
   const sortedAxes = [..._axisOrbitAxes].sort((a, b) => b.camera.z - a.camera.z);
-  const fontPx = Math.max(9, Math.round(10 * dpr));
+  const fontPx = Math.max(10, Math.round(11 * dpr));
   axisOrbitCtx.font = `700 ${fontPx}px "Segoe UI", Arial, sans-serif`;
   axisOrbitCtx.textAlign = 'center';
   axisOrbitCtx.textBaseline = 'middle';
@@ -95,11 +154,11 @@ function _drawAxisOrbit() {
   for (const axis of sortedAxes) {
     const sx = axis.camera.x;
     const sy = -axis.camera.y;
-    const ex = cx + sx * radius;
-    const ey = cy + sy * radius;
+    const ex = cx + sx * axisRadius;
+    const ey = cy + sy * axisRadius;
     const towardViewer = axis.camera.z < 0;
-    const alpha = towardViewer ? 1.0 : 0.58;
-    const lineWidth = towardViewer ? 2.15 * dpr : 1.5 * dpr;
+    const alpha = towardViewer ? 1.0 : 0.5;
+    const lineWidth = towardViewer ? 2.3 * dpr : 1.45 * dpr;
     const color = _hexToRgba(axis.color, alpha);
 
     axisOrbitCtx.strokeStyle = color;
@@ -112,26 +171,25 @@ function _drawAxisOrbit() {
     const len = Math.max(1e-6, Math.hypot(ex - cx, ey - cy));
     const ux = (ex - cx) / len;
     const uy = (ey - cy) / len;
-    const nx = -uy;
-    const ny = ux;
-    const head = 5.5 * dpr;
-
+    const endpointRadius = towardViewer ? (3.2 * dpr) : (2.5 * dpr);
     axisOrbitCtx.fillStyle = color;
     axisOrbitCtx.beginPath();
-    axisOrbitCtx.moveTo(ex, ey);
-    axisOrbitCtx.lineTo(ex - ux * head + nx * head * 0.55, ey - uy * head + ny * head * 0.55);
-    axisOrbitCtx.lineTo(ex - ux * head - nx * head * 0.55, ey - uy * head - ny * head * 0.55);
-    axisOrbitCtx.closePath();
+    axisOrbitCtx.arc(ex, ey, endpointRadius, 0, Math.PI * 2);
     axisOrbitCtx.fill();
 
-    const labelOffset = 8.5 * dpr;
-    axisOrbitCtx.fillStyle = _hexToRgba(axis.color, towardViewer ? 1.0 : 0.78);
-    axisOrbitCtx.fillText(axis.key, ex + nx * labelOffset, ey + ny * labelOffset);
+    const labelOffset = 11 * dpr;
+    const lx = ex + ux * labelOffset;
+    const ly = ey + uy * labelOffset;
+    axisOrbitCtx.strokeStyle = 'rgba(255, 255, 255, 0.92)';
+    axisOrbitCtx.lineWidth = 2.8 * dpr;
+    axisOrbitCtx.strokeText(axis.key, lx, ly);
+    axisOrbitCtx.fillStyle = _hexToRgba(axis.color, towardViewer ? 1.0 : 0.84);
+    axisOrbitCtx.fillText(axis.key, lx, ly);
   }
 
-  axisOrbitCtx.fillStyle = 'rgba(43, 56, 72, 0.85)';
+  axisOrbitCtx.fillStyle = 'rgba(43, 56, 72, 0.9)';
   axisOrbitCtx.beginPath();
-  axisOrbitCtx.arc(cx, cy, 2.3 * dpr, 0, Math.PI * 2);
+  axisOrbitCtx.arc(cx, cy, 2.7 * dpr, 0, Math.PI * 2);
   axisOrbitCtx.fill();
 }
 
@@ -325,7 +383,7 @@ function _markCameraDragJustEnded() {
 // Measurement color scheme - distinctive colors for each type
 const measurementColors = {
   distance: 0x00dd00,      // Green
-  diameter_ring: 0xff6b35,  // Orange
+  diameter_ring: 0xff3b30,  // Red
   radius: 0x004aff,         // Blue
   angle: 0xff00ff,          // Magenta
 };
@@ -341,6 +399,11 @@ const MEAS_LABEL_RADIUS = 8;
 const MEAS_LABEL_BORDER_PX = 1.5;
 const MEAS_LABEL_LINE_CLEARANCE_PX = 4;
 const _measurementLabelWorldPos = new THREE.Vector3();
+const _measurementLabelRight = new THREE.Vector3();
+const _measurementLabelUp = new THREE.Vector3();
+const _measurementLabelCenter = new THREE.Vector3();
+const _measurementLabelDelta = new THREE.Vector3();
+const _measurementLeaderEnd = new THREE.Vector3();
 
 function showStatus(text) {
   status.textContent = text;
@@ -803,12 +866,16 @@ function _resolveAnchorPoint(partName, point, pointSpace = '', partIndex = null)
   const parsed = _parseOverlayVector(point);
   const coordPoint = parsed ? parsed.clone() : new THREE.Vector3(0, 0, 0);
   const normalizedSpace = String(pointSpace || '').trim().toLowerCase();
+  const partIndexNum = Number(partIndex);
+  const hasPartIndexRef = Number.isInteger(partIndexNum) && partIndexNum >= 0;
 
-  if (!targetName) {
+  if (!targetName && !hasPartIndexRef) {
     return coordPoint;
   }
 
-  const mesh = _findPartMeshByIndex(partIndex) || _findPartMeshByName(targetName);
+  const mesh =
+    _findPartMeshByIndex(hasPartIndexRef ? partIndexNum : null)
+    || _findPartMeshByName(targetName);
   if (mesh) {
     if (normalizedSpace === 'world') {
       return coordPoint;
@@ -816,11 +883,11 @@ function _resolveAnchorPoint(partName, point, pointSpace = '', partIndex = null)
     return mesh.localToWorld(coordPoint);
   }
 
-  const warningKey = `${targetName}|${partIndex}|${normalizedSpace}`;
+  const warningKey = `${targetName || '<index>'}|${hasPartIndexRef ? partIndexNum : partIndex}|${normalizedSpace}`;
   if (window?.__previewDebugAnchorWarnings && !_missingAnchorWarningKeys.has(warningKey)) {
     _missingAnchorWarningKeys.add(warningKey);
     console.warn(
-      `[viewer] Measurement anchor fallback: part not found (name="${targetName}", index=${partIndex}, space="${normalizedSpace || 'local'}")`
+      `[viewer] Measurement anchor fallback: part not found (name="${targetName}", index=${hasPartIndexRef ? partIndexNum : partIndex}, space="${normalizedSpace || 'local'}")`
     );
   }
 
@@ -838,10 +905,14 @@ function _resolveAxisDirection(partName, axis, partIndex = null) {
   const targetName = String(partName || '').trim();
   const parsedAxis = _parseOverlayVector(axis);
   const localAxis = parsedAxis ? parsedAxis.clone() : new THREE.Vector3(0, 0, 0);
-  if (localAxis.lengthSq() <= 1e-8) {
+  const localAxisFinite = Number.isFinite(localAxis.x) && Number.isFinite(localAxis.y) && Number.isFinite(localAxis.z);
+  if (!localAxisFinite || localAxis.lengthSq() <= 1e-8) {
     localAxis.set(0, 1, 0);
   }
   localAxis.normalize();
+  if (!Number.isFinite(localAxis.x) || !Number.isFinite(localAxis.y) || !Number.isFinite(localAxis.z)) {
+    localAxis.set(0, 1, 0);
+  }
 
   const mesh = _findPartMeshByIndex(partIndex) || _findPartMeshByName(targetName);
   if (mesh) {
@@ -952,6 +1023,71 @@ function _updateMeasurementLabelScale(sprite) {
     const clearanceWorld = (worldHeight * 0.5) + (Math.max(1, clearancePx) * worldPerPixel);
     sprite.position.copy(midpoint).add(sideDirection.multiplyScalar(clearanceWorld));
   }
+
+  _updateMeasurementLabelLeader(sprite);
+}
+
+function _measurementLabelEdgePointToward(sprite, fromPoint, outPoint) {
+  if (!sprite?.isSprite || !(fromPoint instanceof THREE.Vector3)) {
+    return null;
+  }
+  const center = sprite.getWorldPosition(_measurementLabelCenter);
+  const halfWidth = Math.max(Number(sprite.scale.x) * 0.5, 1e-6);
+  const halfHeight = Math.max(Number(sprite.scale.y) * 0.5, 1e-6);
+
+  _measurementLabelRight.set(1, 0, 0).applyQuaternion(camera.quaternion).normalize();
+  _measurementLabelUp.set(0, 1, 0).applyQuaternion(camera.quaternion).normalize();
+  _measurementLabelDelta.copy(fromPoint).sub(center);
+
+  let localX = _measurementLabelDelta.dot(_measurementLabelRight);
+  let localY = _measurementLabelDelta.dot(_measurementLabelUp);
+  if (!Number.isFinite(localX) || !Number.isFinite(localY)) {
+    return null;
+  }
+  if (Math.abs(localX) < 1e-8 && Math.abs(localY) < 1e-8) {
+    localX = 1;
+    localY = 0;
+  }
+
+  const edgeScale = 1 / Math.max(Math.abs(localX) / halfWidth, Math.abs(localY) / halfHeight, 1e-8);
+  let edgeX = localX * edgeScale;
+  let edgeY = localY * edgeScale;
+
+  const dirLength = Math.hypot(localX, localY);
+  if (dirLength > 1e-8) {
+    const distance = Math.max(camera.position.distanceTo(center), 0.001);
+    const worldPerPixel =
+      (2 * distance * Math.tan(THREE.MathUtils.degToRad(camera.fov) * 0.5))
+      / Math.max(renderer.domElement.clientHeight, 1);
+    const outsideClearance = Math.max(1, MEAS_LABEL_BORDER_PX) * worldPerPixel;
+    edgeX += (localX / dirLength) * outsideClearance;
+    edgeY += (localY / dirLength) * outsideClearance;
+  }
+
+  const target = outPoint || new THREE.Vector3();
+  target.copy(center);
+  target.addScaledVector(_measurementLabelRight, edgeX);
+  target.addScaledVector(_measurementLabelUp, edgeY);
+  return target;
+}
+
+function _updateMeasurementLabelLeader(sprite) {
+  const leaderLine = sprite?.userData?.leaderLine;
+  const leaderAnchor = sprite?.userData?.leaderAnchor;
+  if (!(leaderLine?.isLine) || !(leaderAnchor instanceof THREE.Vector3)) {
+    return;
+  }
+  const leaderEnd = _measurementLabelEdgePointToward(sprite, leaderAnchor, _measurementLeaderEnd);
+  if (!(leaderEnd instanceof THREE.Vector3)) {
+    return;
+  }
+  const positions = leaderLine.geometry?.getAttribute('position');
+  if (!positions || positions.count < 2) {
+    return;
+  }
+  positions.setXYZ(0, leaderAnchor.x, leaderAnchor.y, leaderAnchor.z);
+  positions.setXYZ(1, leaderEnd.x, leaderEnd.y, leaderEnd.z);
+  positions.needsUpdate = true;
 }
 
 function _updateMeasurementLabelScales() {
@@ -1265,12 +1401,77 @@ function _distanceDirectionForOverlay(definition) {
   return axisDirection.clone().multiplyScalar(axialLength >= 0 ? 1 : -1).normalize();
 }
 
-function _diameterAxisForOverlay(definition) {
-  const axisDirection = _resolveAxisDirection(definition?.part, definition?.axis_xyz, definition?.part_index);
-  if (!axisDirection || axisDirection.lengthSq() <= 1e-10) {
+function _normalizeDiameterAxisMode(rawMode, axisLocal) {
+  const mode = String(rawMode || '').trim().toLowerCase();
+  if (mode === 'x' || mode === 'y' || mode === 'z' || mode === 'direct') {
+    return mode;
+  }
+  if (!axisLocal || axisLocal.lengthSq() <= 1e-10) {
+    return 'z';
+  }
+  const unit = axisLocal.clone().normalize();
+  const tol = 1e-3;
+  if (Math.abs(Math.abs(unit.x) - 1.0) <= tol && Math.abs(unit.y) <= tol && Math.abs(unit.z) <= tol) {
+    return 'x';
+  }
+  if (Math.abs(Math.abs(unit.y) - 1.0) <= tol && Math.abs(unit.x) <= tol && Math.abs(unit.z) <= tol) {
+    return 'y';
+  }
+  if (Math.abs(Math.abs(unit.z) - 1.0) <= tol && Math.abs(unit.x) <= tol && Math.abs(unit.y) <= tol) {
+    return 'z';
+  }
+  return 'direct';
+}
+
+function _diameterAxisInfoForOverlay(definition) {
+  if (!definition) {
     return null;
   }
-  return axisDirection.clone().normalize();
+  const parsedAxis = _parseOverlayVector(definition.axis_xyz);
+  const axisMode = _normalizeDiameterAxisMode(definition.diameter_axis_mode, parsedAxis);
+  let axisLocal;
+  if (axisMode === 'x') {
+    axisLocal = new THREE.Vector3(1, 0, 0);
+  } else if (axisMode === 'y') {
+    axisLocal = new THREE.Vector3(0, 1, 0);
+  } else if (axisMode === 'z') {
+    axisLocal = new THREE.Vector3(0, 0, 1);
+  } else if (parsedAxis && parsedAxis.lengthSq() > 1e-10) {
+    axisLocal = parsedAxis.clone().normalize();
+  } else {
+    axisLocal = new THREE.Vector3(0, 0, 1);
+  }
+  if (!Number.isFinite(axisLocal.x) || !Number.isFinite(axisLocal.y) || !Number.isFinite(axisLocal.z)) {
+    axisLocal = new THREE.Vector3(0, 0, 1);
+  }
+
+  const axisWorld =
+    _resolveAxisDirection(definition.part, [axisLocal.x, axisLocal.y, axisLocal.z], definition.part_index)
+    || axisLocal.clone().normalize();
+  if (
+    !axisWorld
+    || !Number.isFinite(axisWorld.x)
+    || !Number.isFinite(axisWorld.y)
+    || !Number.isFinite(axisWorld.z)
+    || axisWorld.lengthSq() <= 1e-10
+  ) {
+    return null;
+  }
+  definition.diameter_axis_mode = axisMode;
+  definition.axis_xyz = _formatVec3(axisLocal);
+  return {
+    axisMode,
+    axisLocal: axisLocal.clone().normalize(),
+    axisWorld: axisWorld.clone().normalize(),
+  };
+}
+
+function _diameterAxisForOverlay(definition) {
+  const info = _diameterAxisInfoForOverlay(definition);
+  if (!info) {
+    return null;
+  }
+  return info.axisWorld.clone();
 }
 
 function _distanceDragObjects() {
@@ -1335,6 +1536,15 @@ function _defaultDistanceOffsetForOverlay(definition) {
   return offsetDirection.multiplyScalar(offsetDistance);
 }
 
+function _normalizeDiameterVisualOffsetMm(definition) {
+  const raw = Number(definition?.diameter_visual_offset_mm);
+  const normalized = Number.isFinite(raw) ? raw : 1.0;
+  if (definition && typeof definition === 'object') {
+    definition.diameter_visual_offset_mm = Number(normalized.toFixed(6));
+  }
+  return normalized;
+}
+
 function _resolveDiameterGeometry(definition) {
   const centerValue = _parseOverlayVector(definition?.center_xyz);
   if (!centerValue) {
@@ -1344,14 +1554,16 @@ function _resolveDiameterGeometry(definition) {
   const partName = definition?.part;
   const partIndex = definition?.part_index;
   const center = _resolveAnchorPoint(partName, definition.center_xyz, '', partIndex);
-  const axis = _resolveAxisDirection(partName, definition.axis_xyz, partIndex);
-  if (!center || !axis) {
+  const axisInfo = _diameterAxisInfoForOverlay(definition);
+  if (!center || !axisInfo) {
     return null;
   }
+  const axis = axisInfo.axisWorld;
 
   const rawMode = String(definition?.diameter_mode || '').trim().toLowerCase();
   const mode = rawMode === 'measured' ? 'measured' : 'manual';
-  let diameter = Number(definition?.diameter) || 0;
+  let resolvedDiameter = Number(definition?.diameter) || 0;
+  const visualOffsetMm = _normalizeDiameterVisualOffsetMm(definition);
   let projectedEdgeDirection = null;
   const edgeValue = _parseOverlayVector(definition?.edge_xyz);
   if (edgeValue) {
@@ -1368,7 +1580,7 @@ function _resolveDiameterGeometry(definition) {
       if (Number.isFinite(projectedLength) && projectedLength > 1e-6) {
         projectedEdgeDirection = projected.clone().normalize();
         if (mode === 'measured') {
-          diameter = projectedLength * 2;
+          resolvedDiameter = projectedLength * 2;
         }
       } else if (mode === 'measured') {
         return null;
@@ -1378,11 +1590,18 @@ function _resolveDiameterGeometry(definition) {
     return null;
   }
 
-  if (!Number.isFinite(diameter) || diameter <= 0) {
+  if (!Number.isFinite(resolvedDiameter) || resolvedDiameter <= 0) {
     return null;
   }
 
-  const radius = diameter / 2;
+  const renderDiameter = mode === 'manual'
+    ? (resolvedDiameter + visualOffsetMm)
+    : resolvedDiameter;
+  if (!Number.isFinite(renderDiameter) || renderDiameter <= 0) {
+    return null;
+  }
+
+  const radius = renderDiameter / 2;
   let tangent = projectedEdgeDirection ? projectedEdgeDirection.clone() : null;
   if (!tangent || tangent.lengthSq() <= 1e-8) {
     const reference = Math.abs(axis.dot(new THREE.Vector3(0, 1, 0))) > 0.9
@@ -1404,7 +1623,10 @@ function _resolveDiameterGeometry(definition) {
     center,
     axis,
     radius,
-    diameter,
+    resolvedDiameter,
+    renderDiameter,
+    visualOffsetMm,
+    mode,
     tangent,
     bitangent,
   };
@@ -1443,7 +1665,7 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
 
   const axisName = String(definition.distance_axis || 'z').trim().toLowerCase();
   const baseColor = measurementColors.distance;
-  const color = measurementDragEnabled ? 0x19f25f : baseColor;
+  const color = baseColor;
   const activePoint = String(definition.active_point || '').trim().toLowerCase();
   const offsetFromDefinition = _parseOverlayVector(definition.offset_xyz);
   const startShift = Number(definition.start_shift) || 0;
@@ -1633,22 +1855,25 @@ function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
     center,
     axis,
     radius,
-    diameter,
+    resolvedDiameter,
+    mode,
     tangent,
     bitangent,
   } = geometry;
   const group = new THREE.Group();
   const baseColor = measurementColors.diameter_ring;
-  const color = measurementDragEnabled ? 0x19f25f : baseColor;
+  const color = baseColor;
 
   const ringPoints = [];
   for (let i = 0; i <= 64; i += 1) {
     const angle = (i / 64) * Math.PI * 2;
-    ringPoints.push(
-      center.clone()
+    const point = center.clone()
         .add(tangent.clone().multiplyScalar(Math.cos(angle) * radius))
-        .add(bitangent.clone().multiplyScalar(Math.sin(angle) * radius))
-    );
+        .add(bitangent.clone().multiplyScalar(Math.sin(angle) * radius));
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y) || !Number.isFinite(point.z)) {
+      return null;
+    }
+    ringPoints.push(point);
   }
 
   const ringGeometry = new THREE.BufferGeometry().setFromPoints(ringPoints);
@@ -1663,8 +1888,10 @@ function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
     measurementIndex,
   };
   group.add(ring);
-  definition.diameter = Number(diameter.toFixed(6));
-  definition.measured_value = Number(diameter.toFixed(6));
+  if (mode === 'measured') {
+    definition.diameter = Number(resolvedDiameter.toFixed(6));
+  }
+  definition.measured_value = Number(resolvedDiameter.toFixed(6));
 
   if (includeLabel) {
     const defaultAnchor = center.clone().add(tangent.clone().multiplyScalar(radius));
@@ -1678,30 +1905,34 @@ function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
       radialProjected.normalize().multiplyScalar(radius);
       ringAnchor = center.clone().add(radialProjected);
     }
-    if (labelOffset.lengthSq() > 1e-8) {
-      const leaderLine = new THREE.Line(
-        new THREE.BufferGeometry().setFromPoints([ringAnchor, labelAnchor]),
-        new THREE.LineBasicMaterial({
-          color,
-          transparent: true,
-          opacity: 0.7,
-          depthTest: true,
-          depthWrite: true,
-        })
-      );
-      leaderLine.userData = {
-        dragKind: 'diameter-offset',
-        measurementIndex,
-      };
-      group.add(leaderLine);
-    }
-    const labelSprite = _makeMeasurementLabel(`${diameter.toFixed(3)}`, color, labelAnchor);
+    const labelSprite = _makeMeasurementLabel(`${resolvedDiameter.toFixed(3)}`, color, labelAnchor);
     if (labelSprite) {
       labelSprite.userData = {
         ...(labelSprite.userData || {}),
         dragKind: 'diameter-offset',
         measurementIndex,
       };
+      if (labelOffset.lengthSq() > 1e-8) {
+        const leaderLine = new THREE.Line(
+          new THREE.BufferGeometry().setFromPoints([ringAnchor, labelAnchor]),
+          new THREE.LineBasicMaterial({
+            color,
+            transparent: true,
+            opacity: 0.7,
+            depthTest: true,
+            depthWrite: true,
+          })
+        );
+        leaderLine.frustumCulled = false;
+        leaderLine.userData = {
+          dragKind: 'diameter-offset',
+          measurementIndex,
+        };
+        group.add(leaderLine);
+        labelSprite.userData.leaderLine = leaderLine;
+        labelSprite.userData.leaderAnchor = ringAnchor.clone();
+        _updateMeasurementLabelLeader(labelSprite);
+      }
       group.add(labelSprite);
     }
   }
@@ -2390,6 +2621,14 @@ window.getMeasurementResolvedValue = function (index) {
   }
   const measured = Number(overlay.measured_value);
   return Number.isFinite(measured) ? measured : null;
+};
+
+window.getMeasurementsSnapshot = function () {
+  try {
+    return JSON.parse(JSON.stringify(measurementOverlays || []));
+  } catch (_err) {
+    return null;
+  }
 };
 
 window.setRenderingEnabled = function (enabled) {
