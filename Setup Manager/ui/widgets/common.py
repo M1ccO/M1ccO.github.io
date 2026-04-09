@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from PySide6.QtCore import QEvent, QObject, QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPalette, QPen
+from PySide6.QtGui import QColor, QFontMetrics, QGuiApplication, QPainter, QPalette, QPen
 from PySide6.QtWidgets import QApplication, QComboBox, QWidget, QToolButton, QVBoxLayout, QLabel, QSizePolicy, QStyledItemDelegate, QStyle
 from config import ICONS_DIR
 
@@ -114,7 +114,31 @@ class BorderOnlyComboItemDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
-        return QSize(size.width(), max(size.height(), 32))
+        return QSize(size.width(), max(size.height(), 44))
+
+
+def _reposition_combo_popup(combo: QComboBox):
+    view = combo.view()
+    if view is None:
+        return
+    popup = view.window()
+    if popup is None or not popup.isVisible():
+        return
+
+    bottom_left = combo.mapToGlobal(combo.rect().bottomLeft())
+    screen = combo.screen() or QGuiApplication.screenAt(bottom_left) or QGuiApplication.primaryScreen()
+    if screen is None:
+        return
+
+    available = screen.availableGeometry()
+    margin = 4
+    available_below = available.bottom() - bottom_left.y() - margin
+    target_height = popup.height()
+    if available_below > 0:
+        target_height = max(80, min(target_height, available_below))
+
+    popup.resize(max(combo.width(), popup.width()), target_height)
+    popup.move(bottom_left.x(), bottom_left.y())
 
 
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
@@ -166,6 +190,17 @@ class _ComboPopupResetFilter(QObject):
     def eventFilter(self, obj, event):
         if event.type() in (QEvent.Hide, QEvent.HideToParent):
             _reset_popup_visual_state(self.combo)
+        return False
+
+
+class _ComboPopupPositionFilter(QObject):
+    def __init__(self, combo):
+        super().__init__(combo)
+        self.combo = combo
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Show:
+            QTimer.singleShot(0, lambda: _reposition_combo_popup(self.combo))
         return False
 
 
@@ -248,6 +283,26 @@ def apply_shared_dropdown_style(combo):
     popup_window.setPalette(view_palette)
     popup_window.setStyleSheet('background-color: #FCFCFC; border: 1px solid #c8d0d8;')
 
+    popup_row_height = combo.property('dropdownPopupRowHeight')
+    if popup_row_height is None:
+        size_profile = str(combo.property('dropdownSizeProfile') or '')
+        if size_profile == 'compact':
+            popup_row_height = 22
+        else:
+            popup_row_height = 44
+    if popup_row_height is not None:
+        try:
+            popup_row_height = int(popup_row_height)
+        except (TypeError, ValueError):
+            popup_row_height = None
+    if popup_row_height:
+        max_rows = max(1, combo.maxVisibleItems())
+        popup_height = max_rows * popup_row_height
+        view.setMinimumHeight(0)
+        view.setMaximumHeight(popup_height)
+        popup_window.setMinimumHeight(0)
+        popup_window.setMaximumHeight(popup_height + 6)
+
     hover_filter = _ComboHoverFilter(combo)
     combo.installEventFilter(hover_filter)
     view.installEventFilter(hover_filter)
@@ -261,6 +316,9 @@ def apply_shared_dropdown_style(combo):
     view.viewport().installEventFilter(popup_reset_filter)
     view.window().installEventFilter(popup_reset_filter)
 
+    popup_position_filter = _ComboPopupPositionFilter(combo)
+    view.window().installEventFilter(popup_position_filter)
+
     # After selecting an item, clear popup row visuals once the popup closes.
     combo.activated.connect(lambda _idx: QTimer.singleShot(0, lambda: _reset_popup_visual_state(combo)))
 
@@ -268,6 +326,7 @@ def apply_shared_dropdown_style(combo):
     combo._shared_dropdown_hover_filter = hover_filter
     combo._shared_dropdown_wheel_guard = wheel_guard
     combo._shared_dropdown_popup_reset_filter = popup_reset_filter
+    combo._shared_dropdown_popup_position_filter = popup_position_filter
 
 
 def apply_tool_library_combo_style(combo: QComboBox) -> None:

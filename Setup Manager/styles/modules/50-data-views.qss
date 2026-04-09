@@ -65,19 +65,19 @@ QTabBar::tab:selected {
 
 /* ── Group boxes ─────────────────────────────────────────────────────────── */
 QGroupBox {
-    font-weight: 600;
-    border: 1px solid #c8d4e0;
+    font-weight: 700;
+    border: 1px solid #dbe2e8;
     border-radius: 6px;
     margin-top: 10px;
-    padding-top: 4px;
+    padding-top: 8px;
     background: #ffffff;
 }
 
 QGroupBox::title {
     subcontrol-origin: margin;
     left: 10px;
-    padding: 0 4px;
-    color: #0f2a43;
+    padding: 0 6px;
+    color: #22303c;
 }
 
 /* ── List widgets ────────────────────────────────────────────────────────── */
@@ -142,24 +142,6 @@ QDialog[workEditorDialog="true"] {
     background: #ffffff;
 }
 
-/* Work Editor: subtle section-panel tint while keeping controls crisp. */
-QDialog[workEditorDialog="true"] QGroupBox {
-    background: #f6f9fc;
-    border: 1px solid #c8d4e0;
-    border-radius: 6px;
-    margin-top: 14px;
-    padding-top: 6px;
-}
-
-QDialog[workEditorDialog="true"] QGroupBox::title {
-    subcontrol-origin: margin;
-    subcontrol-position: top left;
-    left: 10px;
-    top: 2px;
-    padding: 0 4px;
-    background: transparent;
-}
-
 QDialog[workEditorDialog="true"] QFrame[toolIdsHostSurface="true"] {
     background: transparent;
     border: none;
@@ -184,10 +166,6 @@ QDialog[workEditorDialog="true"] QWidget[previewBody="true"] {
     background: #ffffff;
     border: 1px solid #c8d4e0;
     border-radius: 0px;
-}
-
-QDialog[workEditorDialog="true"] QGroupBox[toolIdsPanel="true"] {
-    background: #f6f9fc;
 }
 
 QDialog[workEditorDialog="true"] QListWidget#toolIdsOrderList {
@@ -325,10 +303,6 @@ QDialog[workEditorDialog="true"] QLineEdit:disabled {
 }
 
 /* Jaw panels: search/filter section and list section */
-QDialog[workEditorDialog="true"] QGroupBox[jawInputGroup="true"] {
-    background: #f6f9fc;
-}
-
 QDialog[workEditorDialog="true"] QListWidget[jawListWidget="true"] {
     background: #ffffff;
     border: 1px solid #c8d4e0;

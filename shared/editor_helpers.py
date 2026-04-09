@@ -9,6 +9,7 @@ from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -36,13 +37,18 @@ _TITLED_SECTION_STYLESHEET = (
     '}'
     'QGroupBox::title {'
     '  subcontrol-origin: margin;'
+    '  subcontrol-position: top left;'
     '  left: 10px;'
-    '  padding: 0 4px;'
-    '  color: #5a6b7c;'
-    '  font-size: 8pt;'
-    '  font-weight: 600;'
+    '  top: -3px;'
+    '  padding: 0 6px;'
+    '  color: #22303c;'
+    '  font-size: 10.5pt;'
+    '  font-weight: 700;'
     '}'
 )
+
+_CHECKBOX_EDGE_COLOR = '#8aa0b6'
+_CHECKBOX_EDGE_HOVER_COLOR = '#6f86a0'
 
 
 # ── Shadow helper ────────────────────────────────────────────────────────
@@ -75,6 +81,51 @@ def create_titled_section(title: str) -> QGroupBox:
     apply_titled_section_style(group)
     group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     return group
+
+
+def apply_shared_checkbox_style(
+    checkbox: QCheckBox,
+    *,
+    indicator_size: int = 16,
+    min_height: int = 0,
+) -> QCheckBox:
+    """Apply a shared checkbox look with visible box edges and native checkmark.
+
+    Only the unchecked indicator is styled so checked state keeps Qt's default
+    check mark rendering.
+    """
+    checkbox_style = [
+        'QCheckBox {'
+        '  background: transparent;'
+        '  spacing: 6px;'
+    ]
+    if min_height > 0:
+        checkbox_style.append(f'  min-height: {int(min_height)}px;')
+    checkbox_style.append('}')
+    checkbox_style.extend([
+        'QCheckBox::indicator {'
+        f'  width: {int(indicator_size)}px;'
+        f'  height: {int(indicator_size)}px;'
+        f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
+        '  border-radius: 3px;'
+        '  background: #ffffff;'
+        '}',
+        'QCheckBox::indicator:unchecked {'
+        f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
+        '  border-radius: 3px;'
+        '  background: #ffffff;'
+        '}',
+        'QCheckBox::indicator:checked {'
+        f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
+        '  border-radius: 3px;'
+        '  background: #ffffff;'
+        '}',
+        'QCheckBox::indicator:unchecked:hover {'
+        f'  border: 1px solid {_CHECKBOX_EDGE_HOVER_COLOR};'
+        '}',
+    ])
+    checkbox.setStyleSheet(''.join(checkbox_style))
+    return checkbox
 
 
 # ── Button bar ───────────────────────────────────────────────────────────

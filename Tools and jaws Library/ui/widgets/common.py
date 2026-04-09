@@ -1,5 +1,5 @@
 from PySide6.QtCore import QEvent, QObject, QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPalette, QPen
+from PySide6.QtGui import QColor, QFontMetrics, QGuiApplication, QPainter, QPalette, QPen
 from PySide6.QtWidgets import QApplication, QAbstractItemView, QComboBox, QWidget, QToolButton, QVBoxLayout, QLabel, QSizePolicy, QStyledItemDelegate, QStyle
 
 
@@ -94,7 +94,31 @@ class BorderOnlyComboItemDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)
-        return QSize(size.width(), max(size.height(), 40))
+        return QSize(size.width(), max(size.height(), 44))
+
+
+def _reposition_combo_popup(combo: QComboBox):
+    view = combo.view()
+    if view is None:
+        return
+    popup = view.window()
+    if popup is None or not popup.isVisible():
+        return
+
+    bottom_left = combo.mapToGlobal(combo.rect().bottomLeft())
+    screen = combo.screen() or QGuiApplication.screenAt(bottom_left) or QGuiApplication.primaryScreen()
+    if screen is None:
+        return
+
+    available = screen.availableGeometry()
+    margin = 4
+    available_below = available.bottom() - bottom_left.y() - margin
+    target_height = popup.height()
+    if available_below > 0:
+        target_height = max(80, min(target_height, available_below))
+
+    popup.resize(max(combo.width(), popup.width()), target_height)
+    popup.move(bottom_left.x(), bottom_left.y())
 
 
 from PySide6.QtWidgets import QGraphicsDropShadowEffect
@@ -146,6 +170,17 @@ class _ComboPopupResetFilter(QObject):
     def eventFilter(self, obj, event):
         if event.type() in (QEvent.Hide, QEvent.HideToParent):
             _reset_popup_visual_state(self.combo)
+        return False
+
+
+class _ComboPopupPositionFilter(QObject):
+    def __init__(self, combo):
+        super().__init__(combo)
+        self.combo = combo
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Show:
+            QTimer.singleShot(0, lambda: _reposition_combo_popup(self.combo))
         return False
 
 
@@ -233,6 +268,8 @@ def apply_shared_dropdown_style(combo):
         size_profile = str(combo.property('dropdownSizeProfile') or '')
         if size_profile == 'compact':
             popup_row_height = 22
+        else:
+            popup_row_height = 44
     if popup_row_height is not None:
         try:
             popup_row_height = int(popup_row_height)
@@ -260,6 +297,9 @@ def apply_shared_dropdown_style(combo):
     view.viewport().installEventFilter(popup_reset_filter)
     view.window().installEventFilter(popup_reset_filter)
 
+    popup_position_filter = _ComboPopupPositionFilter(combo)
+    view.window().installEventFilter(popup_position_filter)
+
     # After selecting an item, clear popup row visuals once the popup closes.
     combo.activated.connect(lambda _idx: QTimer.singleShot(0, lambda: _reset_popup_visual_state(combo)))
 
@@ -267,6 +307,7 @@ def apply_shared_dropdown_style(combo):
     combo._shared_dropdown_hover_filter = hover_filter
     combo._shared_dropdown_wheel_guard = wheel_guard
     combo._shared_dropdown_popup_reset_filter = popup_reset_filter
+    combo._shared_dropdown_popup_position_filter = popup_position_filter
 
 
 class CollapsibleGroup(QWidget):

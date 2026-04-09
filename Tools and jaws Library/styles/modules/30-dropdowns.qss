@@ -18,11 +18,11 @@ QComboBox {
                                       stop:0 #E2E2E2, stop:1 #FAFAFA);
     border: 1px solid #c0c4c8;
     border-radius: 6px;
-    min-height: 36px;
+    min-height: 40px;
     font-size: 10.5pt;
     font-weight: 600;
     min-width: 76px;
-    padding: 5px 10px;
+    padding: 6px 10px;
 }
 
 /* Keyboard focus border */

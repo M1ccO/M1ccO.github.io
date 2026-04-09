@@ -11,6 +11,8 @@ from PySide6.QtWidgets import (
 )
 from config import (
     ALL_TOOL_TYPES,
+    MILLING_TOOL_TYPES,
+    TURNING_TOOL_TYPES,
     EDITOR_DROPDOWN_WIDTH,
     JAW_MODELS_ROOT_DEFAULT,
     SHARED_UI_PREFERENCES_PATH,
@@ -304,6 +306,7 @@ class AddEditToolDialog(QDialog):
         self._group_target_rows: list[int] = []
         self._general_field_columns = None
         self._clamping_screen_bounds = False
+        self._turning_drill_geometry_mode = False
         self._suspend_preview_refresh = False
         self._spare_refresh_timer = QTimer(self)
         self._spare_refresh_timer.setSingleShot(True)
@@ -449,7 +452,7 @@ class AddEditToolDialog(QDialog):
         self.tool_type.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.tool_type.setFixedWidth(330)
         self.tool_type.setMaxVisibleItems(8)
-        self._configure_combo_popup(self.tool_type, max_rows=8, row_height=40)
+        self._configure_combo_popup(self.tool_type, max_rows=8, row_height=44)
 
         self.tool_type_row = QWidget()
         self.tool_type_row.setProperty('editorInlineRow', True)
@@ -472,7 +475,7 @@ class AddEditToolDialog(QDialog):
 
         self.cutting_type = QComboBox()
         self.cutting_type.setObjectName('cuttingTypeCombo')
-        for raw_cutting in ['Insert', 'Drill', 'Mill']:
+        for raw_cutting in ['Insert', 'Drill', 'Center drill', 'Mill']:
             self.cutting_type.addItem(self._localized_cutting_type(raw_cutting), raw_cutting)
         self.cutting_type.currentTextChanged.connect(self._update_tool_type_fields)
         self._style_combo(self.cutting_type)
@@ -509,7 +512,7 @@ class AddEditToolDialog(QDialog):
         self.drill_nose_angle = QLineEdit()
         self.mill_cutting_edges = QLineEdit()
         self.drill_row_label = QLabel(self._t('tool_library.field.nose_angle', 'Nose angle'))
-        self.mill_row_label = QLabel(self._t('tool_library.field.cutting_edges', 'Cutting edges'))
+        self.mill_row_label = QLabel(self._t('tool_library.field.number_of_flutes', 'Number of flutes'))
 
         # Make editor controls visually closer to detail value boxes.
         for w in [
@@ -533,11 +536,16 @@ class AddEditToolDialog(QDialog):
         ])
 
         # Group 2: Geometry
+        self.corner_or_nose_label = QLabel(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'))
+        self.corner_or_nose_field = self._build_edit_field('', self.nose_corner_radius, key_label=self.corner_or_nose_label)
+        self.mill_field = self._build_edit_field('', self.mill_cutting_edges, key_label=self.mill_row_label)
+        self.mill_field.setVisible(False)
         group2 = self._build_field_group([
             self._build_edit_field(self._t('tool_library.field.geom_x', 'Geom X'), self.geom_x),
             self._build_edit_field(self._t('tool_library.field.geom_z', 'Geom Z'), self.geom_z),
             self._build_edit_field(self._t('tool_library.field.radius', 'Radius'), self.radius),
-            self._build_edit_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), self.nose_corner_radius),
+            self.corner_or_nose_field,
+            self.mill_field,
         ])
 
         # Group 3: Holder (code/link toggle)
@@ -561,12 +569,11 @@ class AddEditToolDialog(QDialog):
         self.cutting_link_field.setVisible(False)
         self.cutting_add_link_field.setVisible(False)
         self.drill_field = self._build_edit_field('', self.drill_nose_angle, key_label=self.drill_row_label)
-        self.mill_field = self._build_edit_field('', self.mill_cutting_edges, key_label=self.mill_row_label)
         group4 = self._build_field_group([
             cutting_type_field,
             self.cutting_code_field, self.cutting_link_field,
             self.cutting_add_field, self.cutting_add_link_field,
-            self.drill_field, self.mill_field,
+            self.drill_field,
         ])
 
         # Group 5: Notes
@@ -688,7 +695,6 @@ class AddEditToolDialog(QDialog):
         self.part_down_btn.clicked.connect(lambda: self._move_component_row(1))
         self.pick_part_btn.clicked.connect(self._pick_additional_part)
         self.group_btn.clicked.connect(self._toggle_group)
-        self.group_name_edit.returnPressed.connect(self._apply_group_name)
         self.group_name_edit.installEventFilter(self)
         self.parts_table.itemSelectionChanged.connect(self._update_group_button_visibility)
         self.parts_table.itemChanged.connect(self._schedule_spare_component_refresh)
@@ -845,8 +851,8 @@ class AddEditToolDialog(QDialog):
         self.model_table = PartsTable(['Part Name', 'STL File', 'Color'])
         self.model_table.setObjectName('editorModelsTable')
         self.model_table.setMinimumHeight(240)
-        self.model_table.setMaximumHeight(420)
-        self.model_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.model_table.setMaximumHeight(16777215)
+        self.model_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.model_table.verticalHeader().setDefaultSectionSize(44)
         self.model_table.verticalHeader().setMinimumSectionSize(28)
         self.model_table.setColumnCount(3)
@@ -868,8 +874,7 @@ class AddEditToolDialog(QDialog):
         self.model_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.model_table.itemChanged.connect(self._on_model_table_changed)
 
-        models_panel_layout.addWidget(self.model_table, 0)
-        models_panel_layout.addStretch(1)
+        models_panel_layout.addWidget(self.model_table, 1)
 
         # Right side: preview panel
         preview_panel = QFrame()
@@ -1124,12 +1129,11 @@ class AddEditToolDialog(QDialog):
         self._update_general_header()
 
     def eventFilter(self, obj, event):
-        if obj is self.group_name_edit and event.type() == QEvent.KeyPress:
-            if event.key() in (Qt.Key_Return, Qt.Key_Enter):
-                self._apply_group_name()
-                return True  # fully consume — prevent dialog default button from firing
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
             focused = QApplication.focusWidget()
+            if focused is self.group_name_edit:
+                self._apply_group_name()
+                return True  # fully consume — prevent dialog default button from firing
             if isinstance(focused, QLineEdit) and self.isAncestorOf(focused):
                 focused.clearFocus()
                 return True
@@ -1203,9 +1207,9 @@ class AddEditToolDialog(QDialog):
 
     def _style_combo(self, combo: QComboBox):
         apply_shared_dropdown_style(combo)
-        self._configure_combo_popup(combo, max_rows=8, row_height=40)
+        self._configure_combo_popup(combo, max_rows=8, row_height=44)
 
-    def _configure_combo_popup(self, combo: QComboBox, max_rows: int = 8, row_height: int = 40):
+    def _configure_combo_popup(self, combo: QComboBox, max_rows: int = 8, row_height: int = 44):
         view = combo.view()
         if view is None:
             return
@@ -1581,7 +1585,7 @@ class AddEditToolDialog(QDialog):
         combo.setMinimumHeight(28)
         combo.setMaximumHeight(28)
         combo.setMaxVisibleItems(8)
-        self._configure_combo_popup(combo, max_rows=8, row_height=40)
+        self._configure_combo_popup(combo, max_rows=8, row_height=44)
 
         combo_field = QFrame()
         combo_field.setProperty('editorFieldCard', True)
@@ -1736,13 +1740,13 @@ class AddEditToolDialog(QDialog):
     def _apply_group_name(self):
         name = self.group_name_edit.text().strip()
 
-        target_rows = self._selected_component_rows()
+        target_rows = [
+            row
+            for row in self._group_target_rows
+            if 0 <= row < self.parts_table.rowCount()
+        ]
         if not target_rows:
-            target_rows = [
-                row
-                for row in self._group_target_rows
-                if 0 <= row < self.parts_table.rowCount()
-            ]
+            target_rows = self._selected_component_rows()
 
         if not name:
             self.group_name_edit.setVisible(False)
@@ -2644,7 +2648,7 @@ class AddEditToolDialog(QDialog):
             combo.setMinimumHeight(28)
             combo.setMaxVisibleItems(8)
             self._style_combo(combo)
-            self._configure_combo_popup(combo, max_rows=8, row_height=40)
+            self._configure_combo_popup(combo, max_rows=8, row_height=44)
             combo.currentIndexChanged.connect(
                 lambda _idx, t=table, key=column_key, c=combo: self._on_measurement_part_combo_changed(t, key, c)
             )
@@ -2967,13 +2971,50 @@ class AddEditToolDialog(QDialog):
         localized = self._localized_cutting_type(raw_value)
         self.cutting_code_label.setText(self._t('tool_library.field.cutting_code', '{cutting_type} code', cutting_type=localized))
 
+    @staticmethod
+    def _is_turning_drill_tool_type(raw_tool_type: str) -> bool:
+        normalized = (raw_tool_type or '').strip().lower()
+        return normalized in {'turn drill', 'turn spot drill'}
+
+    @staticmethod
+    def _is_mill_tool_type(raw_tool_type: str) -> bool:
+        return (raw_tool_type or '').strip() in MILLING_TOOL_TYPES
+
     def _update_tool_type_fields(self):
-        # cutting component type is user-controlled and independent from tool type
+        selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
         cutting_type = (self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert'
-        show_drill = cutting_type == 'Drill'
-        show_mill = cutting_type == 'Mill'
-        self.drill_field.setVisible(show_drill)
-        self.mill_field.setVisible(show_mill)
+        turning_drill_type = self._is_turning_drill_tool_type(selected_type)
+        mill_tool_type = self._is_mill_tool_type(selected_type)
+        is_chamfer = selected_type == 'Chamfer'
+        uses_pitch_label = selected_type == 'Tapping'
+
+        if turning_drill_type:
+            if not self._turning_drill_geometry_mode:
+                drill_angle_text = self.drill_nose_angle.text().strip()
+                if drill_angle_text:
+                    self.nose_corner_radius.setText(drill_angle_text)
+            self._turning_drill_geometry_mode = True
+            self.corner_or_nose_label.setText(self._t('tool_library.field.nose_angle', 'Nose angle'))
+        else:
+            if self._turning_drill_geometry_mode:
+                geometry_angle_text = self.nose_corner_radius.text().strip()
+                if geometry_angle_text:
+                    self.drill_nose_angle.setText(geometry_angle_text)
+            self._turning_drill_geometry_mode = False
+            if uses_pitch_label:
+                self.corner_or_nose_label.setText(self._t('tool_library.field.pitch', 'Pitch'))
+            elif selected_type in TURNING_TOOL_TYPES:
+                self.corner_or_nose_label.setText(self._t('tool_library.field.nose_radius', 'Nose radius'))
+            elif selected_type in MILLING_TOOL_TYPES:
+                self.corner_or_nose_label.setText(self._t('tool_library.field.corner_radius', 'Corner radius'))
+            else:
+                self.corner_or_nose_label.setText(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'))
+
+        # For non-turning drill tools, keep optional drill angle in cutting component section.
+        is_drill_cutting = cutting_type in {'Drill', 'Center drill'}
+        self.corner_or_nose_field.setVisible(not (is_drill_cutting and not turning_drill_type))
+        self.drill_field.setVisible((is_drill_cutting and not turning_drill_type) or is_chamfer)
+        self.mill_field.setVisible(mill_tool_type and not is_drill_cutting)
         self._update_cutting_label()
         self._reflow_general_fields(force=True)
 
@@ -3127,6 +3168,11 @@ class AddEditToolDialog(QDialog):
 
         self._load_measurement_overlays(self.tool.get('measurement_overlays', []))
 
+        # Reset so the final _update_tool_type_fields() initializes the geometry field
+        # cleanly, regardless of signal order during combo population in _load_tool.
+        self._turning_drill_geometry_mode = False
+        if self._is_turning_drill_tool_type(self.tool.get('tool_type', '')):
+            self.nose_corner_radius.setText(str(self.tool.get('drill_nose_angle', '')))
         self._update_tool_type_fields()
         self._refresh_models_preview()
         if self._assembly_transform_enabled:
@@ -3226,6 +3272,8 @@ class AddEditToolDialog(QDialog):
 
         selected_cutting = (self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert'
         selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
+        turning_drill_type = self._is_turning_drill_tool_type(selected_type)
+        mill_tool_type = self._is_mill_tool_type(selected_type)
         model_parts = self._model_table_to_parts()
         component_items = self._component_items_from_table()
         support_parts = self._spare_parts_from_table()
@@ -3239,7 +3287,10 @@ class AddEditToolDialog(QDialog):
             'geom_x': parse_float(self.geom_x, self._t('tool_library.field.geom_x', 'Geom X')),
             'geom_z': parse_float(self.geom_z, self._t('tool_library.field.geom_z', 'Geom Z')),
             'radius': parse_float(self.radius, self._t('tool_library.field.radius', 'Radius')),
-            'nose_corner_radius': parse_float(self.nose_corner_radius, self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R')),
+            'nose_corner_radius': parse_float(
+                self.nose_corner_radius,
+                self._t('tool_library.field.pitch', 'Pitch') if selected_type == 'Tapping' else self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R')
+            ) if not turning_drill_type else 0.0,
             'holder_code': self.holder_code.text().strip(),
             'holder_link': self.holder_link.text().strip(),
             'holder_add_element': self.holder_add_element.text().strip(),
@@ -3250,8 +3301,16 @@ class AddEditToolDialog(QDialog):
             'cutting_add_element': self.cutting_add_element.text().strip(),
             'cutting_add_element_link': self.cutting_add_element_link.text().strip(),
             'notes': self.notes.text().strip(),
-            'drill_nose_angle': parse_float(self.drill_nose_angle, self._t('tool_library.field.nose_angle', 'Nose angle')) if selected_cutting == 'Drill' else 0.0,
-            'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.cutting_edges', 'Cutting edges')) if selected_cutting == 'Mill' else 0,
+            'drill_nose_angle': (
+                parse_float(self.nose_corner_radius, self._t('tool_library.field.nose_angle', 'Nose angle'))
+                if turning_drill_type
+                else (
+                    parse_float(self.drill_nose_angle, self._t('tool_library.field.nose_angle', 'Nose angle'))
+                    if selected_cutting in {'Drill', 'Center drill'} or selected_type == 'Chamfer'
+                    else 0.0
+                )
+            ),
+            'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.number_of_flutes', 'Number of flutes')) if mill_tool_type else 0,
             'support_parts': support_parts,
             'component_items': component_items,
             'measurement_overlays': self._measurement_overlays_from_tables(),

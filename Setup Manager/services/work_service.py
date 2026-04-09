@@ -139,6 +139,9 @@ class WorkService:
         data["head1_sub_coord"] = (data.get("head1_sub_coord") or data.get("head1_zero") or "").strip()
         data["head2_main_coord"] = (data.get("head2_main_coord") or data.get("head2_zero") or "").strip()
         data["head2_sub_coord"] = (data.get("head2_sub_coord") or data.get("head2_zero") or "").strip()
+        data["raw_part_od"] = (data.get("raw_part_od") or "").strip()
+        data["raw_part_id"] = (data.get("raw_part_id") or "").strip()
+        data["raw_part_length"] = (data.get("raw_part_length") or "").strip()
         for prefix in self._ZERO_PREFIXES:
             for axis in self._ZERO_AXES:
                 key = f"{prefix}_{axis}"
@@ -199,6 +202,9 @@ class WorkService:
             "drawing_id": (payload.get("drawing_id") or "").strip(),
             "description": (payload.get("description") or "").strip(),
             "drawing_path": (payload.get("drawing_path") or "").strip(),
+            "raw_part_od": (payload.get("raw_part_od") or "").strip(),
+            "raw_part_id": (payload.get("raw_part_id") or "").strip(),
+            "raw_part_length": (payload.get("raw_part_length") or "").strip(),
             "main_jaw_id": (payload.get("main_jaw_id") or "").strip(),
             "sub_jaw_id": (payload.get("sub_jaw_id") or "").strip(),
             "main_stop_screws": (payload.get("main_stop_screws") or "").strip(),

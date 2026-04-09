@@ -79,6 +79,7 @@ from ui.measurement_editor.bridge.preview_sync import (
     compose_preview_overlays as _compose_preview_overlays,
 )
 from shared.editor_helpers import (
+    apply_shared_checkbox_style,
     create_dialog_buttons,
     apply_secondary_button_theme,
     setup_editor_dialog,
@@ -237,28 +238,7 @@ class MeasurementEditorDialog(QDialog):
         self._distance_detail_mode_btn = QCheckBox('')
         self._distance_detail_mode_btn.setChecked(False)
         self._distance_detail_mode_btn.stateChanged.connect(self._on_distance_detail_mode_changed)
-        _tick_icon_path = (TOOL_ICONS_DIR / 'check_small.svg').as_posix()
-        self._distance_detail_mode_btn.setStyleSheet(
-            'QCheckBox { background: transparent; }'
-            'QCheckBox::indicator {'
-            '  width: 14px;'
-            '  height: 14px;'
-            '  border: 1px solid #bfd0e2;'
-            '  border-radius: 2px;'
-            '  background: #ffffff;'
-            '}'
-            'QCheckBox::indicator:unchecked {'
-            '  border: 1px solid #bfd0e2;'
-            '  border-radius: 2px;'
-            '  background: #ffffff;'
-            '}'
-            'QCheckBox::indicator:checked {'
-            '  border: 1px solid #bfd0e2;'
-            '  border-radius: 2px;'
-            '  background: #ffffff;'
-            f'  image: url("{_tick_icon_path}");'
-            '}'
-        )
+        apply_shared_checkbox_style(self._distance_detail_mode_btn, indicator_size=14)
         self._distance_detail_mode_col = QWidget()
         self._distance_detail_mode_col.setStyleSheet('background: transparent;')
         _detail_col_layout = QHBoxLayout(self._distance_detail_mode_col)

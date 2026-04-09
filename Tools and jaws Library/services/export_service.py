@@ -96,7 +96,7 @@ class ExportService:
         '9DD6C6',
     ]
     _UNKNOWN_TOOLTYPE_ROW_COLOR = 'ECEFF3'
-    _CUTTING_TYPES = ('Insert', 'Drill', 'Mill')
+    _CUTTING_TYPES = ('Insert', 'Drill', 'Center drill', 'Mill')
     _DRILL_LIKE_TOOL_TYPES = {'Drill', 'Spot Drill', 'Reamer', 'Tapping', 'Turn Drill', 'Turn Spot Drill'}
     _HEADER_FILL_COLOR = 'CFE4F8'
     _HEADER_FONT_COLOR = '16334E'

@@ -792,18 +792,47 @@ class PrintService:
 
         sp1_details = self._jaw_details(work.get("main_jaw_id"))
         sp2_details = self._jaw_details(work.get("sub_jaw_id"))
+        raw_part_od = self._to_text(work.get("raw_part_od"))
+        raw_part_id = self._to_text(work.get("raw_part_id"))
+        raw_part_length = self._to_text(work.get("raw_part_length"))
+        raw_part_line = ""
+        if raw_part_od or raw_part_id or raw_part_length:
+            if raw_part_od and raw_part_id and raw_part_length:
+                raw_part_value = f"{raw_part_od}/{raw_part_id}*{raw_part_length}"
+            elif raw_part_od and raw_part_length:
+                raw_part_value = f"{raw_part_od}*{raw_part_length}"
+            elif raw_part_od and raw_part_id:
+                raw_part_value = f"{raw_part_od}/{raw_part_id}"
+            elif raw_part_od:
+                raw_part_value = raw_part_od
+            elif raw_part_id and raw_part_length:
+                raw_part_value = f"{raw_part_id}*{raw_part_length}"
+            elif raw_part_id:
+                raw_part_value = raw_part_id
+            else:
+                raw_part_value = raw_part_length
+            raw_part_line = self._t(
+                "print.setup_card.label.sp1_raw_part",
+                "Aihio: {value}",
+                value=raw_part_value,
+            )
+
+        sp1_is_spiked = self._to_text(sp1_details.get('jaw_type')).lower() == 'spiked jaws'
         sp1_jaw_lines = [
             self._t("print.setup_card.label.sp1_jaw", "SP1 jaw: {value}", value=self._jaw_summary(work.get('main_jaw_id'))),
         ]
-        if self._to_text(sp1_details.get('jaw_type')).lower() == 'spiked jaws':
-            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_stop_screws", "SP1 stop screws: {value}", value=self._safe(work.get('main_stop_screws'))))
+        if raw_part_line and not sp1_is_spiked:
+            sp1_jaw_lines.append(raw_part_line)
         sp1_turning_washer = self._to_text(sp1_details.get('turning_washer'))
         if sp1_turning_washer:
-            sp1_jaw_lines.insert(1, self._t("print.setup_card.label.sp1_turning_ring", "SP1 turning ring: {value}", value=sp1_turning_washer))
+            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_turning_ring", "SP1 turning ring: {value}", value=sp1_turning_washer))
         sp1_last_modified = self._to_text(sp1_details.get('last_modified'))
         if sp1_last_modified:
-            insert_idx = 2 if sp1_turning_washer else 1
-            sp1_jaw_lines.insert(insert_idx, self._t("print.setup_card.label.sp1_last_modified", "SP1 last modified: {value}", value=sp1_last_modified))
+            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_last_modified", "SP1 last modified: {value}", value=sp1_last_modified))
+        if sp1_is_spiked:
+            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_stop_screws", "SP1 stop screws: {value}", value=self._safe(work.get('main_stop_screws'))))
+            if raw_part_line:
+                sp1_jaw_lines.append(raw_part_line)
 
         sp2_jaw_lines = [
             self._t("print.setup_card.label.sp2_jaw", "SP2 jaw: {value}", value=self._jaw_summary(work.get('sub_jaw_id'))),

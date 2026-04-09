@@ -15,6 +15,8 @@ from PySide6.QtWidgets import (
 from config import (
     EXPORT_DEFAULT_PATH,
     ALL_TOOL_TYPES,
+    MILLING_TOOL_TYPES,
+    TURNING_TOOL_TYPES,
     TOOL_TYPE_TO_ICON,
     TOOL_ICONS_DIR,
     DEFAULT_TOOL_ICON,
@@ -1036,6 +1038,15 @@ class HomePage(QWidget):
         key = f"tool_library.cutting_type.{(raw_cutting_type or '').strip().lower().replace(' ', '_')}"
         return self._t(key, raw_cutting_type)
 
+    @staticmethod
+    def _is_turning_drill_tool_type(raw_tool_type: str) -> bool:
+        normalized = (raw_tool_type or '').strip().lower()
+        return normalized in {'turn drill', 'turn spot drill'}
+
+    @staticmethod
+    def _is_mill_tool_type(raw_tool_type: str) -> bool:
+        return (raw_tool_type or '').strip() in MILLING_TOOL_TYPES
+
     def _build_tool_type_filter_items(self):
         current_raw = self.type_filter.currentData() if hasattr(self, 'type_filter') and self.type_filter.count() else 'All'
         if not hasattr(self, 'type_filter'):
@@ -1201,31 +1212,83 @@ class HomePage(QWidget):
             return field_frame
 
         raw_cutting_type = tool.get('cutting_type', 'Insert')
+        raw_tool_type = tool.get('tool_type', '')
+        turning_drill_type = self._is_turning_drill_tool_type(raw_tool_type)
+        mill_tool_type = self._is_mill_tool_type(raw_tool_type)
 
-        # Build the information grid.
-        # Row 0: Geom X (left half) | Geom Z (right half)
-        # Row 1: Radius (left half) | Nose R / Corner R (right half)
-        # Row 2+: type-specific fields and notes.
+        # Build the information grid using 6 equal columns.
+        # Two-box rows use 3+3 spans; three-box rows use 2+2+2 spans.
         info = QGridLayout()
-        info.setHorizontalSpacing(14)
+        info.setHorizontalSpacing(6)
         info.setVerticalSpacing(8)
         info.setColumnStretch(0, 1)
         info.setColumnStretch(1, 1)
         info.setColumnStretch(2, 1)
         info.setColumnStretch(3, 1)
 
-        info.addWidget(build_field(self._t('tool_library.field.geom_x', 'Geom X'), str(tool.get('geom_x', ''))), 0, 0, 1, 2, Qt.AlignTop)
-        info.addWidget(build_field(self._t('tool_library.field.geom_z', 'Geom Z'), str(tool.get('geom_z', ''))), 0, 2, 1, 2, Qt.AlignTop)
-        info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 2, Qt.AlignTop)
-        info.addWidget(build_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), str(tool.get('nose_corner_radius', ''))), 1, 2, 1, 2, Qt.AlignTop)
+        info.setColumnStretch(4, 1)
+        info.setColumnStretch(5, 1)
 
-        full_row = 2
-        if raw_cutting_type == 'Drill':
-            info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), str(tool.get('drill_nose_angle', ''))), full_row, 0, 1, 4, Qt.AlignTop)
-            full_row += 1
-        if raw_cutting_type == 'Mill':
-            info.addWidget(build_field(self._t('tool_library.field.cutting_edges', 'Cutting edges'), str(tool.get('mill_cutting_edges', ''))), full_row, 0, 1, 4, Qt.AlignTop)
-            full_row += 1
+        def add_two_box_row(row, left_label, left_value, right_label, right_value):
+            info.addWidget(build_field(left_label, left_value), row, 0, 1, 3, Qt.AlignTop)
+            info.addWidget(build_field(right_label, right_value), row, 3, 1, 3, Qt.AlignTop)
+
+        def add_three_box_row(row, first_label, first_value, second_label, second_value, third_label, third_value):
+            info.addWidget(build_field(first_label, first_value), row, 0, 1, 2, Qt.AlignTop)
+            info.addWidget(build_field(second_label, second_value), row, 2, 1, 2, Qt.AlignTop)
+            info.addWidget(build_field(third_label, third_value), row, 4, 1, 2, Qt.AlignTop)
+
+        add_two_box_row(
+            0,
+            self._t('tool_library.field.geom_x', 'Geom X'),
+            str(tool.get('geom_x', '')),
+            self._t('tool_library.field.geom_z', 'Geom Z'),
+            str(tool.get('geom_z', '')),
+        )
+
+        is_milling = raw_tool_type in MILLING_TOOL_TYPES
+        is_drill_cutting = raw_cutting_type in {'Drill', 'Center drill'}
+        is_chamfer = (raw_tool_type or '').strip() == 'Chamfer'
+        uses_pitch_label = (raw_tool_type or '').strip() == 'Tapping'
+
+        if is_chamfer:
+            add_two_box_row(
+                1,
+                self._t('tool_library.field.radius', 'Radius'),
+                str(tool.get('radius', '')),
+                self._t('tool_library.field.nose_angle', 'Nose angle'),
+                str(tool.get('drill_nose_angle', '')),
+            )
+            add_two_box_row(
+                2,
+                self._t('tool_library.field.number_of_flutes', 'Number of flutes'),
+                str(tool.get('mill_cutting_edges', '')),
+                self._t('tool_library.field.corner_radius', 'Corner radius'),
+                str(tool.get('nose_corner_radius', '')),
+            )
+            full_row = 3
+        elif is_milling and not is_drill_cutting:
+            add_three_box_row(
+                1,
+                self._t('tool_library.field.radius', 'Radius'),
+                str(tool.get('radius', '')),
+                self._t('tool_library.field.number_of_flutes', 'Number of flutes'),
+                str(tool.get('mill_cutting_edges', '')),
+                self._t('tool_library.field.pitch', 'Pitch') if uses_pitch_label else self._t('tool_library.field.corner_radius', 'Corner radius'),
+                str(tool.get('nose_corner_radius', '')),
+            )
+            full_row = 2
+        else:
+            info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
+            if turning_drill_type:
+                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), str(tool.get('drill_nose_angle', ''))), 1, 3, 1, 3, Qt.AlignTop)
+            elif is_drill_cutting:
+                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), str(tool.get('drill_nose_angle', ''))), 1, 3, 1, 3, Qt.AlignTop)
+            elif raw_tool_type in TURNING_TOOL_TYPES:
+                info.addWidget(build_field(self._t('tool_library.field.nose_radius', 'Nose radius'), str(tool.get('nose_corner_radius', ''))), 1, 3, 1, 3, Qt.AlignTop)
+            elif not is_drill_cutting:
+                info.addWidget(build_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), str(tool.get('nose_corner_radius', ''))), 1, 3, 1, 3, Qt.AlignTop)
+            full_row = 2
 
         # notes field - spans full width
         notes_text = tool.get('notes', tool.get('spare_parts', ''))
@@ -1242,7 +1305,7 @@ class HomePage(QWidget):
             notes_val.setWordWrap(True)
             nlayout.addWidget(notes_key)
             nlayout.addWidget(notes_val)
-            info.addWidget(notes_field, full_row, 0, 1, 4)
+            info.addWidget(notes_field, full_row, 0, 1, 6)
         layout.addLayout(info)
         layout.addWidget(self._build_components_panel(tool, support_parts))
         layout.addWidget(self._build_preview_panel(tool.get('stl_path')))
@@ -1319,23 +1382,6 @@ class HomePage(QWidget):
             if code:
                 return f"{role}:{code}"
             return f"{role}:idx:{fallback_idx}"
-
-        def _wrap_title(text: str) -> str:
-            raw = (text or '').strip()
-            if len(raw) <= 18:
-                return raw
-            words = raw.split()
-            if len(words) <= 1:
-                return raw
-            line1 = ''
-            line2 = ''
-            for word in words:
-                candidate = (line1 + ' ' + word).strip()
-                if not line1 or len(candidate) <= 18:
-                    line1 = candidate
-                else:
-                    line2 = (line2 + ' ' + word).strip()
-            return f"{line1}\n{line2}" if line2 else line1
 
         component_items = tool.get('component_items', [])
         if isinstance(component_items, str):
@@ -1453,21 +1499,22 @@ class HomePage(QWidget):
                     row += 1
 
             display_name = item.get('label', self._t('tool_library.field.part', 'Part'))
-            wrapped_name = _wrap_title(display_name)
+            button_text = (display_name or '').strip()
 
             component_key = _component_key(item, idx)
             linked_spares = spare_index.get(component_key, [])
 
-            btn = QPushButton(wrapped_name)
+            btn = QPushButton(button_text)
             btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.setToolTip((item.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=display_name))
             btn.setMinimumWidth(100)
             fm = QFontMetrics(btn.font())
-            widest_line = max([fm.horizontalAdvance(line) for line in wrapped_name.split('\n')] or [100])
-            btn.setMaximumWidth(max(120, min(260, widest_line + 36)))
-            btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            required_width = fm.horizontalAdvance(button_text) + 50
+            btn_width = max(120, min(440, required_width))
+            btn.setFixedWidth(btn_width)
+            btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
             btn.clicked.connect(lambda _=False, p=item: self.part_clicked(p))
 
             grid.addWidget(btn, row, 0)
@@ -1533,12 +1580,14 @@ class HomePage(QWidget):
                         'background: transparent; border: none; font-size: 10pt; color: #5a6a7a;'
                     )
 
-                    spare_btn = QPushButton(_wrap_title(spare_name))
+                    spare_btn = QPushButton(spare_name)
                     spare_btn.setProperty('panelActionButton', True)
                     spare_btn.setCursor(Qt.PointingHandCursor)
                     spare_btn.setToolTip((spare.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=spare_name))
                     spare_btn.setStyleSheet('font-size: 9pt;')
-                    spare_btn.setFixedWidth(SPARE_BTN_WIDTH)
+                    spare_btn_fm = QFontMetrics(spare_btn.font())
+                    spare_required_width = spare_btn_fm.horizontalAdvance(spare_name) + 48
+                    spare_btn.setFixedWidth(max(SPARE_BTN_WIDTH, min(440, spare_required_width)))
                     spare_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
                     spare_btn.clicked.connect(lambda _=False, p=spare: self.part_clicked(p))
 

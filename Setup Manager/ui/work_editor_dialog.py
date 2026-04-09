@@ -36,9 +36,9 @@ from PySide6.QtWidgets import (
 from config import ICONS_DIR
 from ui.widgets.common import apply_shared_dropdown_style, apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
 try:
-    from shared.editor_helpers import apply_titled_section_style
+    from shared.editor_helpers import apply_shared_checkbox_style, apply_titled_section_style, create_titled_section
 except ModuleNotFoundError:
-    from editor_helpers import apply_titled_section_style
+    from editor_helpers import apply_shared_checkbox_style, apply_titled_section_style, create_titled_section
 
 
 WORK_COORDINATES = ["G54", "G55", "G56", "G57", "G58", "G59"]
@@ -148,11 +148,9 @@ class _JawSelectorPanel(QWidget):
         layout.setSpacing(8)
 
         # Dynamic input section: border/title always present to avoid layout jump.
-        self.dynamic_input_group = QGroupBox(
-            " "
-        )
+        self.dynamic_input_group = create_titled_section(" ")
         self.dynamic_input_group.setProperty("jawInputGroup", True)
-        apply_titled_section_style(self.dynamic_input_group)
+        self.dynamic_input_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         search_layout = QVBoxLayout(self.dynamic_input_group)
         search_layout.setContentsMargins(10, 8, 10, 8)
         search_layout.setSpacing(0)
@@ -163,7 +161,8 @@ class _JawSelectorPanel(QWidget):
         search_layout.addWidget(self.search)
         layout.addWidget(self.dynamic_input_group)
 
-        selection_group = QGroupBox(title)
+        selection_group = create_titled_section(title)
+        selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         selection_layout = QVBoxLayout(selection_group)
         selection_layout.setContentsMargins(8, 10, 8, 8)
         selection_layout.setSpacing(0)
@@ -602,9 +601,9 @@ class _OrderedToolList(QWidget):
         header_row.addWidget(self.spindle_selector)
         layout.addLayout(header_row)
 
-        list_panel = QGroupBox(head_label)
+        list_panel = create_titled_section(head_label)
         list_panel.setProperty("toolIdsPanel", True)
-        apply_titled_section_style(list_panel)
+        list_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         list_panel_layout = QVBoxLayout(list_panel)
         list_panel_layout.setContentsMargins(8, 10, 8, 8)
         list_panel_layout.setSpacing(0)
@@ -1239,8 +1238,8 @@ class WorkEditorDialog(QDialog):
                 self.zero_points_host._update_separator_shapes()
 
     def _build_head_zero_group(self, title: str, prefix: str) -> QGroupBox:
-        group = QGroupBox(title)
-        apply_titled_section_style(group)
+        group = create_titled_section(title)
+        group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         grid = QGridLayout(group)
         grid.setContentsMargins(12, 8, 12, 8)
         grid.setHorizontalSpacing(8)
@@ -1300,13 +1299,16 @@ class WorkEditorDialog(QDialog):
         combo.setCurrentIndex(index if index >= 0 else combo.findText(default))
 
     def _build_general_tab(self):
-        form = QFormLayout(self.general_tab)
-        form.setContentsMargins(18, 18, 18, 18)
-        form.setSpacing(10)
+        layout = QVBoxLayout(self.general_tab)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
 
         self.work_id_input = QLineEdit()
         self.drawing_id_input = QLineEdit()
         self.description_input = QLineEdit()
+        self.raw_part_od_input = QLineEdit()
+        self.raw_part_id_input = QLineEdit()
+        self.raw_part_length_input = QLineEdit()
 
         drawing_row = QWidget()
         drawing_layout = QHBoxLayout(drawing_row)
@@ -1317,13 +1319,38 @@ class WorkEditorDialog(QDialog):
         drawing_layout.addWidget(self.drawing_path_input, 1)
         drawing_layout.addWidget(browse_btn)
 
-        form.addRow(self._t("setup_page.field.work_id", "Work ID"), self.work_id_input)
-        form.addRow(self._t("setup_page.field.drawing_id", "Drawing ID"), self.drawing_id_input)
-        form.addRow(self._t("setup_page.field.description", "Description"), self.description_input)
+        general_group = create_titled_section(self._t("work_editor.general.section.general", "General"))
+        general_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        general_form = QFormLayout(general_group)
+        general_form.setSpacing(8)
+        general_form.addRow(self._t("setup_page.field.work_id", "Work ID"), self.work_id_input)
+        general_form.addRow(self._t("setup_page.field.drawing_id", "Drawing ID"), self.drawing_id_input)
+        general_form.addRow(self._t("setup_page.field.description", "Description"), self.description_input)
         self._drawing_row = drawing_row
         self._drawing_row_label = self._t("work_editor.field.drawing_path", "Drawing path")
         if self._drawings_enabled:
-            form.addRow(self._drawing_row_label, drawing_row)
+            general_form.addRow(self._drawing_row_label, drawing_row)
+
+        raw_part_group = create_titled_section(self._t("work_editor.general.section.raw_part", "Raw Part"))
+        raw_part_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        raw_form = QFormLayout(raw_part_group)
+        raw_form.setSpacing(8)
+        raw_form.addRow(
+            self._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
+            self.raw_part_od_input,
+        )
+        raw_form.addRow(
+            self._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
+            self.raw_part_id_input,
+        )
+        raw_form.addRow(
+            self._t("work_editor.general.raw_length", "Length"),
+            self.raw_part_length_input,
+        )
+
+        layout.addWidget(general_group)
+        layout.addWidget(raw_part_group)
+        layout.addStretch(1)
 
     def _build_spindles_tab(self):
         layout = QVBoxLayout(self.spindles_tab)
@@ -1367,8 +1394,8 @@ class WorkEditorDialog(QDialog):
         scroll.setWidget(content)
         layout.addWidget(scroll, 1)
 
-        programs_group = QGroupBox(self._t("work_editor.zeros.nc_programs", "NC Programs"))
-        apply_titled_section_style(programs_group)
+        programs_group = create_titled_section(self._t("work_editor.zeros.nc_programs", "NC Programs"))
+        programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         programs_form = QFormLayout(programs_group)
         programs_form.setSpacing(8)
         self.main_program_input = QLineEdit()
@@ -1390,6 +1417,7 @@ class WorkEditorDialog(QDialog):
         self.zero_show_xy_checkbox = QCheckBox(
             self._t("work_editor.zeros.show_xy", "Show X/Y columns")
         )
+        apply_shared_checkbox_style(self.zero_show_xy_checkbox, indicator_size=16)
         self.zero_show_xy_checkbox.setChecked(False)
         self.zero_show_xy_checkbox.toggled.connect(self._set_zero_xy_visibility)
         xy_toggle_row.addWidget(self.zero_show_xy_checkbox)
@@ -1405,8 +1433,8 @@ class WorkEditorDialog(QDialog):
         content_layout.addWidget(self.zero_points_host)
         self._set_zero_xy_visibility(self.zero_show_xy_checkbox.isChecked())
 
-        sub_group = QGroupBox(self._t("setup_page.field.sp2", "SP2"))
-        apply_titled_section_style(sub_group)
+        sub_group = create_titled_section(self._t("setup_page.field.sp2", "SP2"))
+        sub_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sub_form = QFormLayout(sub_group)
         sub_form.setSpacing(8)
         self.sub_pickup_z_input = QLineEdit()
@@ -1438,13 +1466,7 @@ class WorkEditorDialog(QDialog):
         toolbar.addStretch(1)
 
         self.print_pots_checkbox = QCheckBox(self._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"))
-        _check_x_svg = (Path(ICONS_DIR) / "check_x.svg").as_posix()
-        self.print_pots_checkbox.setStyleSheet(
-            "QCheckBox { font-size: 13px; min-height: 30px; }"
-            "QCheckBox::indicator { width: 16px; height: 16px; border: 2px solid #6b829a; border-radius: 3px; background: #ffffff; }"
-            f"QCheckBox::indicator:checked {{ border: 2px solid #2f79c7; background: #e9f3ff;"
-            f" image: url('{_check_x_svg}'); }}"
-        )
+        apply_shared_checkbox_style(self.print_pots_checkbox, indicator_size=16, min_height=30)
         self.print_pots_checkbox.setFixedHeight(30)
 
         self.edit_pots_btn = QPushButton(self._t("work_editor.tools.edit_pots", "Edit Pots"))
@@ -1602,15 +1624,15 @@ class WorkEditorDialog(QDialog):
         self.notes_input.setMinimumHeight(150)
         self.robot_info_input.setMaximumHeight(96)
 
-        notes_group = QGroupBox(self._t("setup_page.field.notes", "Notes"))
-        apply_titled_section_style(notes_group)
+        notes_group = create_titled_section(self._t("setup_page.field.notes", "Notes"))
+        notes_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         notes_group_layout = QVBoxLayout(notes_group)
         notes_group_layout.setContentsMargins(10, 8, 10, 10)
         notes_group_layout.addWidget(self.notes_input, 1)
         layout.addWidget(notes_group, 1)
 
-        robot_group = QGroupBox(self._t("setup_page.field.robot_info", "Robot info"))
-        apply_titled_section_style(robot_group)
+        robot_group = create_titled_section(self._t("setup_page.field.robot_info", "Robot info"))
+        robot_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         robot_group_layout = QVBoxLayout(robot_group)
         robot_group_layout.setContentsMargins(10, 8, 10, 10)
         robot_group_layout.addWidget(self.robot_info_input, 0)
@@ -1654,6 +1676,9 @@ class WorkEditorDialog(QDialog):
         self.drawing_id_input.setText(self.work.get("drawing_id", ""))
         self.description_input.setText(self.work.get("description", ""))
         self.drawing_path_input.setText(self.work.get("drawing_path", ""))
+        self.raw_part_od_input.setText(self.work.get("raw_part_od", ""))
+        self.raw_part_id_input.setText(self.work.get("raw_part_id", ""))
+        self.raw_part_length_input.setText(self.work.get("raw_part_length", ""))
 
         self.main_jaw_selector.set_value(self.work.get("main_jaw_id", ""))
         self.sub_jaw_selector.set_value(self.work.get("sub_jaw_id", ""))
@@ -1703,6 +1728,9 @@ class WorkEditorDialog(QDialog):
             "drawing_id": self.drawing_id_input.text().strip(),
             "description": self.description_input.text().strip(),
             "drawing_path": self.drawing_path_input.text().strip() if self._drawings_enabled else self.work.get("drawing_path", ""),
+            "raw_part_od": self.raw_part_od_input.text().strip(),
+            "raw_part_id": self.raw_part_id_input.text().strip(),
+            "raw_part_length": self.raw_part_length_input.text().strip(),
             "main_jaw_id": self.main_jaw_selector.get_value(),
             "sub_jaw_id": self.sub_jaw_selector.get_value(),
             "main_stop_screws": self.main_jaw_selector.get_stop_screws(),
