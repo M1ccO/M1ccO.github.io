@@ -2986,6 +2986,7 @@ class AddEditToolDialog(QDialog):
         turning_drill_type = self._is_turning_drill_tool_type(selected_type)
         mill_tool_type = self._is_mill_tool_type(selected_type)
         is_chamfer = selected_type == 'Chamfer'
+        is_center_drill_tool = selected_type == 'Spot Drill'
         uses_pitch_label = selected_type == 'Tapping'
 
         if turning_drill_type:
@@ -3005,6 +3006,8 @@ class AddEditToolDialog(QDialog):
                 self.corner_or_nose_label.setText(self._t('tool_library.field.pitch', 'Pitch'))
             elif selected_type in TURNING_TOOL_TYPES:
                 self.corner_or_nose_label.setText(self._t('tool_library.field.nose_radius', 'Nose radius'))
+            elif is_chamfer or is_center_drill_tool:
+                self.corner_or_nose_label.setText(self._t('tool_library.field.nose_angle', 'Nose angle'))
             elif selected_type in MILLING_TOOL_TYPES:
                 self.corner_or_nose_label.setText(self._t('tool_library.field.corner_radius', 'Corner radius'))
             else:
@@ -3012,9 +3015,13 @@ class AddEditToolDialog(QDialog):
 
         # For non-turning drill tools, keep optional drill angle in cutting component section.
         is_drill_cutting = cutting_type in {'Drill', 'Center drill'}
-        self.corner_or_nose_field.setVisible(not (is_drill_cutting and not turning_drill_type))
-        self.drill_field.setVisible((is_drill_cutting and not turning_drill_type) or is_chamfer)
-        self.mill_field.setVisible(mill_tool_type and not is_drill_cutting)
+        geometry_uses_nose_angle = is_chamfer or is_center_drill_tool
+        if geometry_uses_nose_angle:
+            self.corner_or_nose_field.setVisible(True)
+        else:
+            self.corner_or_nose_field.setVisible(not (is_drill_cutting and not turning_drill_type))
+        self.drill_field.setVisible((is_drill_cutting and not turning_drill_type) and not geometry_uses_nose_angle)
+        self.mill_field.setVisible(mill_tool_type and not is_center_drill_tool and (not is_drill_cutting or geometry_uses_nose_angle))
         self._update_cutting_label()
         self._reflow_general_fields(force=True)
 
@@ -3171,8 +3178,13 @@ class AddEditToolDialog(QDialog):
         # Reset so the final _update_tool_type_fields() initializes the geometry field
         # cleanly, regardless of signal order during combo population in _load_tool.
         self._turning_drill_geometry_mode = False
-        if self._is_turning_drill_tool_type(self.tool.get('tool_type', '')):
+        tool_type = (self.tool.get('tool_type', '') or '').strip()
+        if self._is_turning_drill_tool_type(tool_type):
             self.nose_corner_radius.setText(str(self.tool.get('drill_nose_angle', '')))
+        elif tool_type in {'Chamfer', 'Spot Drill'}:
+            angle_text = str(self.tool.get('drill_nose_angle', '')).strip()
+            if angle_text:
+                self.nose_corner_radius.setText(angle_text)
         self._update_tool_type_fields()
         self._refresh_models_preview()
         if self._assembly_transform_enabled:
@@ -3274,6 +3286,8 @@ class AddEditToolDialog(QDialog):
         selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
         turning_drill_type = self._is_turning_drill_tool_type(selected_type)
         mill_tool_type = self._is_mill_tool_type(selected_type)
+        geometry_uses_nose_angle = selected_type in {'Chamfer', 'Spot Drill'}
+        show_mill_flutes = mill_tool_type and selected_type != 'Spot Drill'
         model_parts = self._model_table_to_parts()
         component_items = self._component_items_from_table()
         support_parts = self._spare_parts_from_table()
@@ -3290,7 +3304,7 @@ class AddEditToolDialog(QDialog):
             'nose_corner_radius': parse_float(
                 self.nose_corner_radius,
                 self._t('tool_library.field.pitch', 'Pitch') if selected_type == 'Tapping' else self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R')
-            ) if not turning_drill_type else 0.0,
+            ) if (not turning_drill_type and not geometry_uses_nose_angle) else 0.0,
             'holder_code': self.holder_code.text().strip(),
             'holder_link': self.holder_link.text().strip(),
             'holder_add_element': self.holder_add_element.text().strip(),
@@ -3303,14 +3317,14 @@ class AddEditToolDialog(QDialog):
             'notes': self.notes.text().strip(),
             'drill_nose_angle': (
                 parse_float(self.nose_corner_radius, self._t('tool_library.field.nose_angle', 'Nose angle'))
-                if turning_drill_type
+                if turning_drill_type or geometry_uses_nose_angle
                 else (
                     parse_float(self.drill_nose_angle, self._t('tool_library.field.nose_angle', 'Nose angle'))
                     if selected_cutting in {'Drill', 'Center drill'} or selected_type == 'Chamfer'
                     else 0.0
                 )
             ),
-            'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.number_of_flutes', 'Number of flutes')) if mill_tool_type else 0,
+            'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.number_of_flutes', 'Number of flutes')) if show_mill_flutes else 0,
             'support_parts': support_parts,
             'component_items': component_items,
             'measurement_overlays': self._measurement_overlays_from_tables(),

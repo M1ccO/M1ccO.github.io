@@ -1249,24 +1249,33 @@ class HomePage(QWidget):
         is_milling = raw_tool_type in MILLING_TOOL_TYPES
         is_drill_cutting = raw_cutting_type in {'Drill', 'Center drill'}
         is_chamfer = (raw_tool_type or '').strip() == 'Chamfer'
+        is_center_drill_tool = (raw_tool_type or '').strip() == 'Spot Drill'
         uses_pitch_label = (raw_tool_type or '').strip() == 'Tapping'
+        angle_value = str(tool.get('drill_nose_angle', ''))
+        if not angle_value.strip():
+            # Backward compatibility: older records may store point angle in nose_corner_radius.
+            angle_value = str(tool.get('nose_corner_radius', ''))
 
         if is_chamfer:
+            add_three_box_row(
+                1,
+                self._t('tool_library.field.radius', 'Radius'),
+                str(tool.get('radius', '')),
+                self._t('tool_library.field.nose_angle', 'Nose angle'),
+                angle_value,
+                self._t('tool_library.field.number_of_flutes', 'Number of flutes'),
+                str(tool.get('mill_cutting_edges', '')),
+            )
+            full_row = 2
+        elif is_center_drill_tool:
             add_two_box_row(
                 1,
                 self._t('tool_library.field.radius', 'Radius'),
                 str(tool.get('radius', '')),
                 self._t('tool_library.field.nose_angle', 'Nose angle'),
-                str(tool.get('drill_nose_angle', '')),
+                angle_value,
             )
-            add_two_box_row(
-                2,
-                self._t('tool_library.field.number_of_flutes', 'Number of flutes'),
-                str(tool.get('mill_cutting_edges', '')),
-                self._t('tool_library.field.corner_radius', 'Corner radius'),
-                str(tool.get('nose_corner_radius', '')),
-            )
-            full_row = 3
+            full_row = 2
         elif is_milling and not is_drill_cutting:
             add_three_box_row(
                 1,
