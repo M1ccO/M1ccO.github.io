@@ -76,6 +76,27 @@ class ToolService:
         return f'{x:.4g}, {y:.4g}, {z:.4g}'
 
     @staticmethod
+    def _normalize_spindle_orientation(value) -> str:
+        normalized = str(value or '').strip().lower().replace('_', ' ')
+        if normalized in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}:
+            return 'sub'
+        return 'main'
+
+    @staticmethod
+    def _coerce_float_or_default(value, default: float = 0.0) -> float:
+        try:
+            if value is None:
+                return default
+            if isinstance(value, (int, float)):
+                return float(value)
+            text = str(value).strip()
+            if not text:
+                return default
+            return float(text.replace(',', '.'))
+        except Exception:
+            return default
+
+    @staticmethod
     def _diameter_axis_mode_from_axis_xyz(axis_xyz_text: str) -> str:
         text = str(axis_xyz_text or '').strip()
         if not text:
@@ -358,6 +379,8 @@ class ToolService:
                 tool['uid'] = None
         tool_head = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper()
         tool['tool_head'] = tool_head if tool_head in {'HEAD1', 'HEAD2'} else 'HEAD1'
+        tool['spindle_orientation'] = self._normalize_spindle_orientation(tool.get('spindle_orientation', 'main'))
+        tool['b_axis_angle'] = self._coerce_float_or_default(tool.get('b_axis_angle', 0), 0.0)
         tool['geometry_profiles'] = self._coerce_json_list(tool.get('geometry_profiles'))
         tool['support_parts'] = self._coerce_json_list(tool.get('support_parts'))
         raw_components = self._coerce_json_list(tool.get('component_items'))
@@ -387,10 +410,12 @@ class ToolService:
         sample = {
             'id': 'T1001',
             'tool_head': 'HEAD1',
+            'spindle_orientation': 'main',
             'tool_type': 'O.D Turning',
             'description': 'Ulkorouhinta - 80/R1.2',
             'geom_x': 150.0,
             'geom_z': 50.0,
+            'b_axis_angle': 0.0,
             'radius': 0.0,
             'nose_corner_radius': 1.2,
             'holder_code': 'C6-PSRNR-35065-15HP',
@@ -443,18 +468,20 @@ class ToolService:
                 'lower(notes) LIKE ? OR '
                 'lower(CAST(geom_x AS TEXT)) LIKE ? OR '
                 'lower(CAST(geom_z AS TEXT)) LIKE ? OR '
+                'lower(CAST(b_axis_angle AS TEXT)) LIKE ? OR '
                 'lower(CAST(radius AS TEXT)) LIKE ? OR '
                 'lower(CAST(nose_corner_radius AS TEXT)) LIKE ? OR '
                 'lower(printf("%.3f", geom_x)) LIKE ? OR '
                 'lower(printf("%.3f", geom_z)) LIKE ? OR '
+                'lower(printf("%.3f", b_axis_angle)) LIKE ? OR '
                 'lower(printf("%.3f", radius)) LIKE ? OR '
                 'lower(printf("%.3f", nose_corner_radius)) LIKE ?'
                 ')'
             )
             params.extend([
                 token, token, token, token, token,
-                token, token, token, token,
-                token, token, token, token,
+                token, token, token, token, token,
+                token, token, token, token, token,
             ])
         if tool_type and tool_type != 'All':
             query += ' AND tool_type = ?'
@@ -536,6 +563,8 @@ class ToolService:
         selected_head = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper()
         if selected_head not in {'HEAD1', 'HEAD2'}:
             selected_head = 'HEAD1'
+        spindle_orientation = self._normalize_spindle_orientation(tool.get('spindle_orientation', 'main'))
+        b_axis_angle = self._coerce_float_or_default(tool.get('b_axis_angle', 0), 0.0)
 
         tools_models_root, _ = read_model_roots(
             SHARED_UI_PREFERENCES_PATH,
@@ -568,10 +597,12 @@ class ToolService:
         payload = (
             tool['id'].strip(),
             selected_head,
+            spindle_orientation,
             tool.get('tool_type', 'O.D Turning').strip() or 'O.D Turning',
             tool.get('description', '').strip(),
             float(tool.get('geom_x', 0) or 0),
             float(tool.get('geom_z', 0) or 0),
+            b_axis_angle,
             float(tool.get('radius', 0) or 0),
             float(tool.get('nose_corner_radius', 0) or 0),
             legacy['holder_code'],
@@ -609,12 +640,12 @@ class ToolService:
                     self.db.conn.execute(
                         """
                         INSERT INTO tools (
-                            id, tool_head, tool_type, description, geom_x, geom_z, radius,
+                            id, tool_head, spindle_orientation, tool_type, description, geom_x, geom_z, b_axis_angle, radius,
                             nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                             cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                             notes, drill_nose_angle, mill_cutting_edges, spare_parts,
                             geometry_profiles, support_parts, component_items, measurement_overlays, stl_path, default_pot
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         payload,
                     )
@@ -627,10 +658,12 @@ class ToolService:
                 SET
                     id=?,
                     tool_head=?,
+                    spindle_orientation=?,
                     tool_type=?,
                     description=?,
                     geom_x=?,
                     geom_z=?,
+                    b_axis_angle=?,
                     radius=?,
                     nose_corner_radius=?,
                     holder_code=?,

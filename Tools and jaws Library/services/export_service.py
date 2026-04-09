@@ -96,6 +96,34 @@ class ExportService:
         '9DD6C6',
     ]
     _UNKNOWN_TOOLTYPE_ROW_COLOR = 'ECEFF3'
+    _TURNING_EXPORT_BASE_COLOR = 'E4A95F'
+    _MILLING_EXPORT_BASE_COLOR = '87C7B0'
+    _TURNING_LIGHTEN_BY_TOOLTYPE = {
+        'O.D Turning': 0.08,
+        'I.D Turning': 0.14,
+        'O.D Groove': 0.20,
+        'I.D Groove': 0.26,
+        'Face Groove': 0.31,
+        'O.D Thread': 0.37,
+        'I.D Thread': 0.43,
+        'Turn Thread': 0.49,
+        'Turn Drill': 0.58,
+        'Turn Spot Drill': 0.66,
+    }
+    _MILLING_LIGHTEN_BY_TOOLTYPE = {
+        'Drill': 0.06,
+        'Spot Drill': 0.14,
+        'Tapping': 0.22,
+        'Reamer': 0.30,
+        'Boring': 0.36,
+        'Chamfer': 0.42,
+        'Face Mill': 0.48,
+        'Side Mill': 0.54,
+        'Endmill': 0.58,
+        'Slotting': 0.62,
+        'Custom': 0.66,
+        'Sensor': 0.70,
+    }
     _CUTTING_TYPES = ('Insert', 'Drill', 'Center drill', 'Mill')
     _DRILL_LIKE_TOOL_TYPES = {'Drill', 'Spot Drill', 'Reamer', 'Tapping', 'Turn Drill', 'Turn Spot Drill'}
     _HEADER_FILL_COLOR = 'CFE4F8'
@@ -219,6 +247,20 @@ class ExportService:
             return int(float(text.replace(',', '.')))
         except Exception:
             return default
+
+    @staticmethod
+    def _mix_with_white(hex_rgb: str, ratio: float) -> str:
+        ratio = max(0.0, min(0.85, float(ratio)))
+        rgb = str(hex_rgb or '').strip().lstrip('#')
+        if len(rgb) != 6:
+            return hex_rgb
+        r = int(rgb[0:2], 16)
+        g = int(rgb[2:4], 16)
+        b = int(rgb[4:6], 16)
+        r = int(round(r + (255 - r) * ratio))
+        g = int(round(g + (255 - g) * ratio))
+        b = int(round(b + (255 - b) * ratio))
+        return f'{r:02X}{g:02X}{b:02X}'
 
     def _load_translation_catalog(self, language: str) -> dict:
         lang = str(language or '').strip().lower()
@@ -572,11 +614,15 @@ class ExportService:
         fills: dict[str, PatternFill] = {}
 
         for idx, tool_type in enumerate(TURNING_TOOL_TYPES):
-            color = self._TURNING_TOOLTYPE_ROW_COLORS[idx % len(self._TURNING_TOOLTYPE_ROW_COLORS)]
+            default_ratio = min(0.72, 0.08 + idx * 0.07)
+            ratio = self._TURNING_LIGHTEN_BY_TOOLTYPE.get(tool_type, default_ratio)
+            color = self._mix_with_white(self._TURNING_EXPORT_BASE_COLOR, ratio)
             fills[str(tool_type).strip().casefold()] = PatternFill(fill_type='solid', fgColor=color)
 
         for idx, tool_type in enumerate(MILLING_TOOL_TYPES):
-            color = self._MILLING_TOOLTYPE_ROW_COLORS[idx % len(self._MILLING_TOOLTYPE_ROW_COLORS)]
+            default_ratio = min(0.76, 0.08 + idx * 0.06)
+            ratio = self._MILLING_LIGHTEN_BY_TOOLTYPE.get(tool_type, default_ratio)
+            color = self._mix_with_white(self._MILLING_EXPORT_BASE_COLOR, ratio)
             fills[str(tool_type).strip().casefold()] = PatternFill(fill_type='solid', fgColor=color)
 
         return fills

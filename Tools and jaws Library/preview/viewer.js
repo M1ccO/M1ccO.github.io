@@ -1,4 +1,4 @@
-import * as THREE from './three.module.js';
+﻿import * as THREE from './three.module.js';
 import { OrbitControls } from './OrbitControls.js';
 import { STLLoader } from './STLLoader.js';
 import { TransformControls } from './TransformControls.js';
@@ -270,9 +270,128 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+
+let _shadowMapDirty = true;
+function _markShadowMapDirty() {
+  _shadowMapDirty = true;
+}
+
+function createStudioEnvironmentMap(activeRenderer) {
+  const width = 1024;
+  const height = 512;
+  const envCanvas = document.createElement('canvas');
+  envCanvas.width = width;
+  envCanvas.height = height;
+  const ctx = envCanvas.getContext('2d');
+  if (!ctx) {
+    return null;
+  }
+
+  const base = ctx.createLinearGradient(0, 0, 0, height);
+  base.addColorStop(0.0, '#f7f9fc');
+  base.addColorStop(0.24, '#cdd4dc');
+  base.addColorStop(0.56, '#77818d');
+  base.addColorStop(1.0, '#1f252d');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, width, height);
+
+  const drawSoftVerticalStrip = (centerX, stripWidth, alpha) => {
+    const x0 = centerX - stripWidth * 0.5;
+    const x1 = centerX + stripWidth * 0.5;
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0.0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.25, `rgba(255,255,255,${alpha * 0.38})`);
+    g.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+    g.addColorStop(0.75, `rgba(255,255,255,${alpha * 0.38})`);
+    g.addColorStop(1.0, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, 0, stripWidth, height);
+  };
+
+  const drawDarkVerticalStrip = (centerX, stripWidth, alpha) => {
+    const x0 = centerX - stripWidth * 0.5;
+    const x1 = centerX + stripWidth * 0.5;
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0.0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.22, `rgba(0,0,0,${alpha * 0.35})`);
+    g.addColorStop(0.5, `rgba(0,0,0,${alpha})`);
+    g.addColorStop(0.78, `rgba(0,0,0,${alpha * 0.35})`);
+    g.addColorStop(1.0, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, 0, stripWidth, height);
+  };
+
+  drawSoftVerticalStrip(width * 0.17, width * 0.12, 0.78);
+  drawSoftVerticalStrip(width * 0.50, width * 0.08, 0.66);
+  drawSoftVerticalStrip(width * 0.83, width * 0.12, 0.74);
+
+  drawDarkVerticalStrip(width * 0.33, width * 0.08, 0.42);
+  drawDarkVerticalStrip(width * 0.66, width * 0.09, 0.38);
+
+  const sideFalloff = ctx.createLinearGradient(0, 0, width, 0);
+  sideFalloff.addColorStop(0.0, 'rgba(0,0,0,0.45)');
+  sideFalloff.addColorStop(0.12, 'rgba(0,0,0,0)');
+  sideFalloff.addColorStop(0.88, 'rgba(0,0,0,0)');
+  sideFalloff.addColorStop(1.0, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = sideFalloff;
+  ctx.fillRect(0, 0, width, height);
+
+  const topGlow = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.06,
+    6,
+    width * 0.5,
+    height * 0.06,
+    width * 0.58
+  );
+  topGlow.addColorStop(0.0, 'rgba(255,255,255,0.58)');
+  topGlow.addColorStop(1.0, 'rgba(255,255,255,0)');
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(0, 0, width, height);
+
+  const bottomBand = ctx.createLinearGradient(0, height * 0.63, 0, height);
+  bottomBand.addColorStop(0.0, 'rgba(0,0,0,0)');
+  bottomBand.addColorStop(1.0, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = bottomBand;
+  ctx.fillRect(0, height * 0.63, width, height * 0.37);
+
+  const vignette = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.52,
+    width * 0.18,
+    width * 0.5,
+    height * 0.52,
+    width * 0.75
+  );
+  vignette.addColorStop(0.0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1.0, 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+
+  const equirect = new THREE.CanvasTexture(envCanvas);
+  equirect.mapping = THREE.EquirectangularReflectionMapping;
+  equirect.colorSpace = THREE.SRGBColorSpace;
+  equirect.needsUpdate = true;
+
+  const pmrem = new THREE.PMREMGenerator(activeRenderer);
+  pmrem.compileEquirectangularShader();
+  const envRT = pmrem.fromEquirectangular(equirect);
+  equirect.dispose();
+  pmrem.dispose();
+  return envRT;
+}
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xefefef);
+scene.background = new THREE.Color(0xd6d9de);
+const studioEnvRT = createStudioEnvironmentMap(renderer);
+if (studioEnvRT) {
+  scene.environment = studioEnvRT.texture;
+}
 
 const camera = new THREE.PerspectiveCamera(
   45,
@@ -344,6 +463,7 @@ transformControl.addEventListener('dragging-changed', (event) => {
   if (!event.value) {
     _selectionProxyDragState = null;
     _updateTransformSnap();
+    _markShadowMapDirty();
     _gizmoDragJustEnded = true;
     setTimeout(() => { _gizmoDragJustEnded = false; }, 100);
   }
@@ -376,21 +496,47 @@ transformControl.addEventListener('objectChange', () => {
   _scheduleMeasurementsRender();
 });
 
-const hemi = new THREE.HemisphereLight(0xffffff, 0x8c8c8c, 1.1);
-hemi.position.set(0, 200, 0);
+const hemi = new THREE.HemisphereLight(0xf5f8ff, 0x78808a, 0.38);
+hemi.position.set(0, 220, 0);
 scene.add(hemi);
 
-const dir1 = new THREE.DirectionalLight(0xffffff, 1.1);
-dir1.position.set(120, 160, 100);
-scene.add(dir1);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.18);
+keyLight.position.set(140, 185, 130);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.bias = -0.00006;
+keyLight.shadow.normalBias = 0.018;
+keyLight.shadow.camera.near = 20;
+keyLight.shadow.camera.far = 700;
+keyLight.shadow.camera.left = -280;
+keyLight.shadow.camera.right = 280;
+keyLight.shadow.camera.top = 280;
+keyLight.shadow.camera.bottom = -280;
+scene.add(keyLight);
 
-const dir2 = new THREE.DirectionalLight(0xffffff, 0.55);
-dir2.position.set(-120, 100, -80);
-scene.add(dir2);
+const fillLight = new THREE.DirectionalLight(0xdce7ff, 0.24);
+fillLight.position.set(-170, 120, -90);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.44);
+rimLight.position.set(-90, 95, 190);
+scene.add(rimLight);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.04);
+scene.add(ambient);
 
 const grid = new THREE.GridHelper(250, 12, 0xb5b5b5, 0xd5d5d5);
 grid.position.y = 0;
 scene.add(grid);
+
+const shadowCatcher = new THREE.Mesh(
+  new THREE.PlaneGeometry(2600, 2600),
+  new THREE.ShadowMaterial({ opacity: 0.32 })
+);
+shadowCatcher.rotation.x = -Math.PI / 2;
+shadowCatcher.position.y = -0.02;
+shadowCatcher.receiveShadow = true;
+scene.add(shadowCatcher);
 
 const measurementGroup = new THREE.Group();
 measurementGroup.visible = false;
@@ -441,11 +587,16 @@ function _markCameraDragJustEnded() {
 
 // Measurement color scheme - distinctive colors for each type
 const measurementColors = {
-  distance: 0x00dd00,      // Green
-  diameter_ring: 0xff3b30,  // Red
-  radius: 0x004aff,         // Blue
-  angle: 0xff00ff,          // Magenta
+  distance: 0x00b7ff,       // Electric cyan-blue
+  diameter_ring: 0xff483b,  // Bright red
+  radius: 0x2b87ff,         // Bright blue
+  angle: 0xff32d6,          // Bright magenta
 };
+const MEAS_OVERLAY_RENDER_ORDER = 1600;
+const MEAS_OVERLAY_MIN_TRANSPARENT_OPACITY = 0.9;
+const MEAS_DISTANCE_BEAM_BASE_RADIUS_FACTOR = 0.0018;
+const MEAS_DISTANCE_BEAM_MIN_RADIUS = 0.08;
+const MEAS_DISTANCE_BEAM_MAX_RADIUS_FACTOR = 0.0042;
 
 // 3D measurement value label styling (rendered as depth-tested sprites)
 const MEAS_LABEL_FONT_PX = 16;
@@ -455,7 +606,7 @@ const MEAS_LABEL_MAX_PX_HEIGHT = 28;
 const MEAS_LABEL_PADDING_X = 10;
 const MEAS_LABEL_PADDING_Y = 5;
 const MEAS_LABEL_RADIUS = 8;
-const MEAS_LABEL_BORDER_PX = 1.5;
+const MEAS_LABEL_BORDER_PX = 1.8;
 const MEAS_LABEL_LINE_CLEARANCE_PX = 4;
 const _measurementLabelWorldPos = new THREE.Vector3();
 const _measurementLabelRight = new THREE.Vector3();
@@ -473,12 +624,180 @@ function hideStatus() {
   status.style.display = 'none';
 }
 
+const MACHINED_SKIN_KEY = 'machined-metal-skin-v2';
+
+function _syncMachinedSkinUniforms(material) {
+  const uniforms = material?.userData?._skinUniforms;
+  if (!uniforms) {
+    return;
+  }
+  uniforms.uSkinRoughnessAmount.value = material.userData.skinRoughnessAmount || 0.0;
+  uniforms.uSkinScale.value = material.userData.skinScale || 0.2;
+}
+
+function installMachinedSkin(material) {
+  if (!material || material.userData?._skinInstalled) {
+    _syncMachinedSkinUniforms(material);
+    return;
+  }
+
+  material.userData = material.userData || {};
+  material.userData._skinInstalled = true;
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSkinRoughnessAmount = { value: material.userData.skinRoughnessAmount || 0.0 };
+    shader.uniforms.uSkinScale = { value: material.userData.skinScale || 0.2 };
+    material.userData._skinUniforms = shader.uniforms;
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vModelPos;`
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+vModelPos = position;`
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vModelPos;
+uniform float uSkinRoughnessAmount;
+uniform float uSkinScale;
+
+float _skinHash(vec3 p) {
+  p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.23));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float _skinNoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+
+  float n000 = _skinHash(i + vec3(0.0, 0.0, 0.0));
+  float n100 = _skinHash(i + vec3(1.0, 0.0, 0.0));
+  float n010 = _skinHash(i + vec3(0.0, 1.0, 0.0));
+  float n110 = _skinHash(i + vec3(1.0, 1.0, 0.0));
+  float n001 = _skinHash(i + vec3(0.0, 0.0, 1.0));
+  float n101 = _skinHash(i + vec3(1.0, 0.0, 1.0));
+  float n011 = _skinHash(i + vec3(0.0, 1.0, 1.0));
+  float n111 = _skinHash(i + vec3(1.0, 1.0, 1.0));
+
+  float nx00 = mix(n000, n100, f.x);
+  float nx10 = mix(n010, n110, f.x);
+  float nx01 = mix(n001, n101, f.x);
+  float nx11 = mix(n011, n111, f.x);
+  float nxy0 = mix(nx00, nx10, f.y);
+  float nxy1 = mix(nx01, nx11, f.y);
+  return mix(nxy0, nxy1, f.z);
+}`
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+vec3 _skinPos = vModelPos * uSkinScale;
+float _grainA = _skinNoise(_skinPos * 2.6);
+float _grainB = _skinNoise(_skinPos * 6.2);
+float _pixelFootprint = max(max(length(dFdx(_skinPos)), length(dFdy(_skinPos))), 1e-4);
+float _aaFade = 1.0 - smoothstep(0.22, 0.85, _pixelFootprint);
+float _hiFreqMix = 1.0 - smoothstep(0.18, 0.72, _pixelFootprint);
+float _grain = (_grainA * (0.78 + 0.14 * _hiFreqMix) + _grainB * (0.22 * _hiFreqMix)) * 2.0 - 1.0;
+float _viewDistance = length(vViewPosition);
+float _detailFade = 1.0 - smoothstep(70.0, 210.0, _viewDistance);
+float _grainAmount = uSkinRoughnessAmount * mix(0.12, 0.64, _detailFade) * _aaFade;
+roughnessFactor = clamp(roughnessFactor + _grain * _grainAmount, 0.12, 1.0);`
+      );
+
+    _syncMachinedSkinUniforms(material);
+  };
+
+  material.customProgramCacheKey = () => MACHINED_SKIN_KEY;
+  material.needsUpdate = true;
+}
+
+function applyMaterialFinish(material, colorValue) {
+  if (!material || !material.color) {
+    return;
+  }
+  material.userData = material.userData || {};
+
+  const baseColor = new THREE.Color(colorValue || '#9ea7b3');
+  const displayColor = baseColor.clone();
+  const hsl = { h: 0, s: 0, l: 0 };
+  baseColor.getHSL(hsl);
+  const neutral = hsl.s < 0.16;
+  const brightNeutral = neutral && hsl.l > 0.82;
+  const darkNeutral = neutral && hsl.l < 0.2;
+  const machinedMetal = neutral && !brightNeutral && !darkNeutral;
+  const coloredPart = !neutral;
+
+  if (coloredPart) {
+    // Keep selected swatch colors vivid under filmic tone mapping.
+    const vivid = { h: hsl.h, s: hsl.s, l: hsl.l };
+    vivid.s = Math.min(1.0, vivid.s * 1.14 + 0.015);
+    vivid.l = Math.min(0.92, vivid.l + 0.01);
+    displayColor.setHSL(vivid.h, vivid.s, vivid.l);
+  }
+
+  material.color.copy(displayColor);
+  if (brightNeutral) {
+    // Polished bright steel/chrome style with stronger studio reflections.
+    material.metalness = 1.0;
+    material.roughness = 0.19;
+    material.clearcoat = 0.0;
+    material.clearcoatRoughness = 0.4;
+    material.envMapIntensity = 1.52;
+    material.userData.skinRoughnessAmount = 0.018;
+    material.userData.skinScale = 0.09;
+  } else if (machinedMetal) {
+    material.metalness = 0.94;
+    material.roughness = 0.24;
+    material.clearcoat = 0.0;
+    material.clearcoatRoughness = 0.4;
+    material.envMapIntensity = 1.30;
+    material.userData.skinRoughnessAmount = 0.022;
+    material.userData.skinScale = 0.09;
+  } else if (darkNeutral) {
+    // Dark parts should keep a metallic sheen and avoid matte-plastic look.
+    material.metalness = 0.72;
+    material.roughness = 0.26;
+    material.clearcoat = 0.0;
+    material.clearcoatRoughness = 0.4;
+    material.envMapIntensity = 1.05;
+    material.userData.skinRoughnessAmount = 0.02;
+    material.userData.skinScale = 0.09;
+  } else {
+    // Colored components should read as true color, not gray-metal.
+    material.metalness = 0.03;
+    material.roughness = 0.28;
+    material.clearcoat = 0.06;
+    material.clearcoatRoughness = 0.24;
+    material.envMapIntensity = 0.46;
+    material.userData.skinRoughnessAmount = 0.006;
+    material.userData.skinScale = 0.08;
+  }
+  _syncMachinedSkinUniforms(material);
+  material.needsUpdate = true;
+}
+
 function makeMaterial(colorValue) {
-  return new THREE.MeshStandardMaterial({
-    color: new THREE.Color(colorValue || '#9ea7b3'),
-    metalness: 0.18,
-    roughness: 0.62,
+  const material = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#9ea7b3'),
+    metalness: 0.76,
+    roughness: 0.24,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.2,
+    envMapIntensity: 1.0,
   });
+  installMachinedSkin(material);
+  applyMaterialFinish(material, colorValue);
+  return material;
 }
 
 function _disposeMeasurementNode(node) {
@@ -529,8 +848,9 @@ function fitCameraToObject(object) {
 
   camera.position.copy(center).addScaledVector(frameDirection, cameraDistance);
 
-  camera.near = Math.max(cameraDistance / 100, 0.1);
-  camera.far = Math.max(cameraDistance * 10, 1000);
+  // Keep a tighter depth range to reduce z-fighting shimmer on polished parts.
+  camera.near = Math.max(cameraDistance / 80, 0.2);
+  camera.far = Math.max(cameraDistance * 8, 800);
   camera.updateProjectionMatrix();
 
   controls.target.copy(center);
@@ -603,6 +923,7 @@ function applyModelTransformAndFrame(refit = true) {
   currentGroup.rotateX(manualRotation.x);
   currentGroup.rotateY(manualRotation.y);
   currentGroup.rotateZ(manualRotation.z);
+  _markShadowMapDirty();
 
   alignObjectOnGrid(currentGroup);
   updateGridForObject(currentGroup);
@@ -860,7 +1181,7 @@ function _findPartMeshByName(partName) {
 
     return text;
   };
-  const compactPartKey = (value) => normalizePartKey(value).replace(/[aeiouyåäöõ]/g, '').replace(/\s+/g, '');
+  const compactPartKey = (value) => normalizePartKey(value).replace(/[aeiouyÃ¥Ã¤Ã¶Ãµ]/g, '').replace(/\s+/g, '');
 
   const targetLower = target.toLowerCase();
   const exact = currentMeshes.find((mesh) => mesh && String(mesh._partName || '').trim().toLowerCase() === targetLower);
@@ -1032,7 +1353,7 @@ function _createMeasurementLabelTexture(text, colorHex = 0x00dd00) {
   ctx.clearRect(0, 0, width, height);
   const radius = Math.round(MEAS_LABEL_RADIUS * dpr);
   _traceRoundedRectPath(ctx, border * 0.5, border * 0.5, width - border, height - border, radius);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.985)';
   ctx.fill();
   ctx.strokeStyle = colorStr;
   ctx.lineWidth = border;
@@ -1041,7 +1362,7 @@ function _createMeasurementLabelTexture(text, colorHex = 0x00dd00) {
   ctx.font = `600 ${fontPx}px "Segoe UI", Arial, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#2e3a46';
+  ctx.fillStyle = '#182533';
   ctx.fillText(valueText, width * 0.5, height * 0.5);
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -1056,6 +1377,33 @@ function _createMeasurementLabelTexture(text, colorHex = 0x00dd00) {
     aspect: width / Math.max(height, 1),
     cssHeight: height / dpr,
   };
+}
+
+function _boostMeasurementMaterial(material) {
+  if (!material) {
+    return;
+  }
+  material.toneMapped = false;
+  if (material.transparent && typeof material.opacity === 'number') {
+    material.opacity = Math.max(material.opacity, MEAS_OVERLAY_MIN_TRANSPARENT_OPACITY);
+  }
+  material.needsUpdate = true;
+}
+
+function _boostMeasurementOverlayVisuals(root) {
+  if (!root || typeof root.traverse !== 'function') {
+    return;
+  }
+  root.traverse((node) => {
+    node.renderOrder = Math.max(Number(node.renderOrder) || 0, MEAS_OVERLAY_RENDER_ORDER);
+    if (!node.material) {
+      return;
+    }
+    const materials = Array.isArray(node.material) ? node.material : [node.material];
+    for (const material of materials) {
+      _boostMeasurementMaterial(material);
+    }
+  });
 }
 
 function _updateMeasurementLabelScale(sprite) {
@@ -1351,17 +1699,55 @@ function _makeMeasurementLabel(text, colorHex = 0x00dd00, anchorPoint = null, op
 }
 
 function _makeArrowCone(tip, direction, size, color) {
-  const geometry = new THREE.ConeGeometry(size * 0.32, size, 18);
+  const geometry = new THREE.ConeGeometry(size * 0.38, size * 1.08, 20);
   const material = new THREE.MeshBasicMaterial({
     color,
-    depthTest: true,
-    depthWrite: true,
+    transparent: true,
+    opacity: 0.96,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    blending: THREE.NormalBlending,
   });
   const cone = new THREE.Mesh(geometry, material);
   cone.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.clone().normalize());
   cone.position.copy(tip).sub(direction.clone().normalize().multiplyScalar(size * 0.5));
   cone.renderOrder = 1000;
   return cone;
+}
+
+function _distanceBeamRadius(multiplier = 1.0) {
+  const base = currentMaxDim * MEAS_DISTANCE_BEAM_BASE_RADIUS_FACTOR * Math.max(multiplier, 0);
+  const minRadius = Math.max(currentMaxDim * 0.0008, MEAS_DISTANCE_BEAM_MIN_RADIUS);
+  const maxRadius = Math.max(currentMaxDim * MEAS_DISTANCE_BEAM_MAX_RADIUS_FACTOR, minRadius);
+  return THREE.MathUtils.clamp(base, minRadius, maxRadius);
+}
+
+function _makeMeasurementBeam(start, end, color, radius, opacity = 0.9) {
+  if (!(start instanceof THREE.Vector3) || !(end instanceof THREE.Vector3)) {
+    return null;
+  }
+  const segment = end.clone().sub(start);
+  const length = segment.length();
+  if (!Number.isFinite(length) || length <= 1e-6) {
+    return null;
+  }
+  const beamRadius = Math.max(Number(radius) || 0, 1e-4);
+  const geometry = new THREE.CylinderGeometry(beamRadius, beamRadius, length, 14, 1, true);
+  const material = new THREE.MeshBasicMaterial({
+    color,
+    transparent: true,
+    opacity: THREE.MathUtils.clamp(Number(opacity) || 0.9, 0.1, 1.0),
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    blending: THREE.NormalBlending,
+  });
+  const beam = new THREE.Mesh(geometry, material);
+  beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), segment.normalize());
+  beam.position.copy(start).add(end).multiplyScalar(0.5);
+  beam.renderOrder = 1000;
+  return beam;
 }
 
 function _measurementOffsetDirection(direction, center) {
@@ -1759,7 +2145,7 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
     const measuredLength = shiftedEnd.distanceTo(shiftedStart);
 
     const group = new THREE.Group();
-    const headSize = THREE.MathUtils.clamp(measuredLength * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
+    const headSize = THREE.MathUtils.clamp(measuredLength * 0.11, Math.max(currentMaxDim * 0.02, 2.2), Math.max(currentMaxDim * 0.12, 5.4));
     const midpoint = shiftedStart.clone().lerp(shiftedEnd, 0.5);
     const offsetDirection = _measurementOffsetDirection(direction, midpoint);
     const defaultOffsetDistance = THREE.MathUtils.clamp(
@@ -1773,15 +2159,21 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
 
     const lineMaterial = new THREE.LineBasicMaterial({
       color,
-      depthTest: true,
-      depthWrite: true,
+      transparent: true,
+      opacity: 1.0,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      blending: THREE.NormalBlending,
     });
     const extensionMaterial = new THREE.LineBasicMaterial({
       color,
       transparent: true,
-      opacity: 0.7,
-      depthTest: true,
-      depthWrite: true,
+      opacity: 0.95,
+      depthTest: false,
+      depthWrite: false,
+      toneMapped: false,
+      blending: THREE.NormalBlending,
     });
 
     const startExtension = new THREE.Line(
@@ -1789,12 +2181,32 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
       extensionMaterial
     );
     group.add(startExtension);
+    const startExtensionBeam = _makeMeasurementBeam(
+      shiftedStart,
+      dimensionStart,
+      color,
+      _distanceBeamRadius(0.8),
+      0.78
+    );
+    if (startExtensionBeam) {
+      group.add(startExtensionBeam);
+    }
 
     const endExtension = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([shiftedEnd, dimensionEnd]),
       extensionMaterial.clone()
     );
     group.add(endExtension);
+    const endExtensionBeam = _makeMeasurementBeam(
+      shiftedEnd,
+      dimensionEnd,
+      color,
+      _distanceBeamRadius(0.8),
+      0.78
+    );
+    if (endExtensionBeam) {
+      group.add(endExtensionBeam);
+    }
 
     const line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([dimensionStart, dimensionEnd]),
@@ -1805,6 +2217,20 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
       measurementIndex: measurmentIndex,
     };
     group.add(line);
+    const mainBeam = _makeMeasurementBeam(
+      dimensionStart,
+      dimensionEnd,
+      color,
+      _distanceBeamRadius(1.0),
+      0.92
+    );
+    if (mainBeam) {
+      mainBeam.userData = {
+        dragKind: 'distance-offset',
+        measurementIndex: measurmentIndex,
+      };
+      group.add(mainBeam);
+    }
     group.add(_makeArrowCone(dimensionStart, direction.clone().negate(), headSize, color));
     group.add(_makeArrowCone(dimensionEnd, direction, headSize, color));
     group.add(makeDragHandle(dimensionStart, 'distance-start'));
@@ -1842,7 +2268,7 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
   const measuredLength = hasAxialDirection ? Math.abs(shiftedSpan.dot(direction)) : shiftedSpan.length();
 
   const group = new THREE.Group();
-  const headSize = THREE.MathUtils.clamp(measuredLength * 0.08, Math.max(currentMaxDim * 0.015, 1.8), Math.max(currentMaxDim * 0.09, 4));
+  const headSize = THREE.MathUtils.clamp(measuredLength * 0.11, Math.max(currentMaxDim * 0.02, 2.2), Math.max(currentMaxDim * 0.12, 5.4));
   const midpoint = shiftedStart.clone().lerp(shiftedEnd, 0.5);
   const offsetDirection = _measurementOffsetDirection(direction, midpoint);
   const defaultOffsetDistance = THREE.MathUtils.clamp(
@@ -1856,15 +2282,21 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
 
   const lineMaterial = new THREE.LineBasicMaterial({
     color,
-    depthTest: true,
-    depthWrite: true,
+    transparent: true,
+    opacity: 1.0,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    blending: THREE.NormalBlending,
   });
   const extensionMaterial = new THREE.LineBasicMaterial({
     color,
     transparent: true,
-    opacity: 0.7,
-    depthTest: true,
-    depthWrite: true,
+    opacity: 0.95,
+    depthTest: false,
+    depthWrite: false,
+    toneMapped: false,
+    blending: THREE.NormalBlending,
   });
 
   const startExtension = new THREE.Line(
@@ -1872,12 +2304,32 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
     extensionMaterial
   );
   group.add(startExtension);
+  const startExtensionBeam = _makeMeasurementBeam(
+    shiftedStart,
+    dimensionStart,
+    color,
+    _distanceBeamRadius(0.8),
+    0.78
+  );
+  if (startExtensionBeam) {
+    group.add(startExtensionBeam);
+  }
 
   const endExtension = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([shiftedEnd, dimensionEnd]),
     extensionMaterial.clone()
   );
   group.add(endExtension);
+  const endExtensionBeam = _makeMeasurementBeam(
+    shiftedEnd,
+    dimensionEnd,
+    color,
+    _distanceBeamRadius(0.8),
+    0.78
+  );
+  if (endExtensionBeam) {
+    group.add(endExtensionBeam);
+  }
 
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([dimensionStart, dimensionEnd]),
@@ -1888,6 +2340,20 @@ function _makeDistanceMeasurement(definition, measurmentIndex = 0) {
     measurementIndex: measurmentIndex,
   };
   group.add(line);
+  const mainBeam = _makeMeasurementBeam(
+    dimensionStart,
+    dimensionEnd,
+    color,
+    _distanceBeamRadius(1.0),
+    0.92
+  );
+  if (mainBeam) {
+    mainBeam.userData = {
+      dragKind: 'distance-offset',
+      measurementIndex: measurmentIndex,
+    };
+    group.add(mainBeam);
+  }
   group.add(_makeArrowCone(dimensionStart, direction.clone().negate(), headSize, color));
   group.add(_makeArrowCone(dimensionEnd, direction, headSize, color));
   group.add(makeDragHandle(dimensionStart, 'distance-start'));
@@ -1983,7 +2449,7 @@ function _makeDiameterRing(definition, options = {}, measurementIndex = 0) {
           new THREE.LineBasicMaterial({
             color,
             transparent: true,
-            opacity: 0.7,
+            opacity: 0.9,
             depthTest: true,
             depthWrite: true,
           })
@@ -2160,6 +2626,7 @@ function _renderMeasurements() {
     if (node) {
       node.userData = node.userData || {};
       node.userData.measurementIndex = overlayIndex;
+      _boostMeasurementOverlayVisuals(node);
       measurementGroup.add(node);
       measurementListItems.push({
         index: overlayIndex,
@@ -2237,6 +2704,7 @@ function clearCurrentMeshes() {
 
 window.clearModel = function () {
   clearCurrentMeshes();
+  _markShadowMapDirty();
   showStatus('No model loaded.');
 };
 
@@ -2286,7 +2754,7 @@ window.loadModel = function (modelPath, label = null) {
     return;
   }
 
-  showStatus('Loading STL model…');
+  showStatus('Loading STL model...');
 
   loader.load(
     modelPath,
@@ -2297,6 +2765,8 @@ window.loadModel = function (modelPath, label = null) {
       geometry.center();
 
       const mesh = new THREE.Mesh(geometry, makeMaterial('#9ea7b3'));
+      mesh.castShadow = true;
+      mesh.receiveShadow = false;
       mesh._partName = label || 'Model';
       currentMeshes = [mesh];
       currentGroup = new THREE.Group();
@@ -2321,7 +2791,7 @@ window.loadAssembly = function (parts) {
   }
 
   clearCurrentMeshes();
-  showStatus('Loading assembly…');
+  showStatus('Loading assembly...');
 
   currentGroup = new THREE.Group();
   scene.add(currentGroup);
@@ -2365,6 +2835,8 @@ window.loadAssembly = function (parts) {
         geometry.computeVertexNormals();
 
         const mesh = new THREE.Mesh(geometry, makeMaterial(color));
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
         mesh._partIndex = index;
         mesh._partName = part?.name || `Part ${index + 1}`;
 
@@ -2555,6 +3027,7 @@ window.setPartTransforms = function (transforms) {
       THREE.MathUtils.degToRad(t.rz || 0)
     );
   }
+  _markShadowMapDirty();
   if (selectedMeshIndices.length > 0) {
     _updateSelectionProxyFromSelection();
     if (transformControl.object === selectionProxy) {
@@ -2576,7 +3049,7 @@ window.setPartColors = function (colors) {
     const mesh = currentMeshes[i];
     if (!mesh || !mesh.material || !mesh.material.color) continue;
     const colorValue = colors[i] || '#9ea7b3';
-    mesh.material.color.set(colorValue);
+    applyMaterialFinish(mesh.material, colorValue);
   }
 };
 
@@ -2699,6 +3172,7 @@ window.getMeasurementsSnapshot = function () {
 window.setRenderingEnabled = function (enabled) {
   renderingEnabled = !!enabled;
   if (renderingEnabled) {
+    _markShadowMapDirty();
     renderer.render(scene, camera);
   }
 };
@@ -2720,6 +3194,10 @@ function animate() {
   _updateMeasurementLabelScales();
   if (axisOrbitVisible) {
     _drawAxisOrbit();
+  }
+  if (_shadowMapDirty) {
+    renderer.shadowMap.needsUpdate = true;
+    _shadowMapDirty = false;
   }
   renderer.render(scene, camera);
 }

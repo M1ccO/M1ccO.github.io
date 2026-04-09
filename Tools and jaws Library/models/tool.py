@@ -23,10 +23,12 @@ class GeometryProfile:
 class Tool:
     id: str
     tool_head: str = 'HEAD1'
+    spindle_orientation: str = 'main'
     tool_type: str = 'Turning'
     description: str = ''
     geom_x: float = 0.0
     geom_z: float = 0.0
+    b_axis_angle: float = 0.0
     radius: float = 0.0
     nose_corner_radius: float = 0.0
     holder_code: str = ''

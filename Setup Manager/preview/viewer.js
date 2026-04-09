@@ -14,9 +14,128 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate = false;
+
+let _shadowMapDirty = true;
+function _markShadowMapDirty() {
+  _shadowMapDirty = true;
+}
+
+function createStudioEnvironmentMap(activeRenderer) {
+  const width = 1024;
+  const height = 512;
+  const envCanvas = document.createElement('canvas');
+  envCanvas.width = width;
+  envCanvas.height = height;
+  const ctx = envCanvas.getContext('2d');
+  if (!ctx) {
+    return null;
+  }
+
+  const base = ctx.createLinearGradient(0, 0, 0, height);
+  base.addColorStop(0.0, '#f7f9fc');
+  base.addColorStop(0.24, '#cdd4dc');
+  base.addColorStop(0.56, '#77818d');
+  base.addColorStop(1.0, '#1f252d');
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, width, height);
+
+  const drawSoftVerticalStrip = (centerX, stripWidth, alpha) => {
+    const x0 = centerX - stripWidth * 0.5;
+    const x1 = centerX + stripWidth * 0.5;
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0.0, 'rgba(255,255,255,0)');
+    g.addColorStop(0.25, `rgba(255,255,255,${alpha * 0.38})`);
+    g.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+    g.addColorStop(0.75, `rgba(255,255,255,${alpha * 0.38})`);
+    g.addColorStop(1.0, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, 0, stripWidth, height);
+  };
+
+  const drawDarkVerticalStrip = (centerX, stripWidth, alpha) => {
+    const x0 = centerX - stripWidth * 0.5;
+    const x1 = centerX + stripWidth * 0.5;
+    const g = ctx.createLinearGradient(x0, 0, x1, 0);
+    g.addColorStop(0.0, 'rgba(0,0,0,0)');
+    g.addColorStop(0.22, `rgba(0,0,0,${alpha * 0.35})`);
+    g.addColorStop(0.5, `rgba(0,0,0,${alpha})`);
+    g.addColorStop(0.78, `rgba(0,0,0,${alpha * 0.35})`);
+    g.addColorStop(1.0, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x0, 0, stripWidth, height);
+  };
+
+  drawSoftVerticalStrip(width * 0.17, width * 0.12, 0.78);
+  drawSoftVerticalStrip(width * 0.50, width * 0.08, 0.66);
+  drawSoftVerticalStrip(width * 0.83, width * 0.12, 0.74);
+
+  drawDarkVerticalStrip(width * 0.33, width * 0.08, 0.42);
+  drawDarkVerticalStrip(width * 0.66, width * 0.09, 0.38);
+
+  const sideFalloff = ctx.createLinearGradient(0, 0, width, 0);
+  sideFalloff.addColorStop(0.0, 'rgba(0,0,0,0.45)');
+  sideFalloff.addColorStop(0.12, 'rgba(0,0,0,0)');
+  sideFalloff.addColorStop(0.88, 'rgba(0,0,0,0)');
+  sideFalloff.addColorStop(1.0, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = sideFalloff;
+  ctx.fillRect(0, 0, width, height);
+
+  const topGlow = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.06,
+    6,
+    width * 0.5,
+    height * 0.06,
+    width * 0.58
+  );
+  topGlow.addColorStop(0.0, 'rgba(255,255,255,0.58)');
+  topGlow.addColorStop(1.0, 'rgba(255,255,255,0)');
+  ctx.fillStyle = topGlow;
+  ctx.fillRect(0, 0, width, height);
+
+  const bottomBand = ctx.createLinearGradient(0, height * 0.63, 0, height);
+  bottomBand.addColorStop(0.0, 'rgba(0,0,0,0)');
+  bottomBand.addColorStop(1.0, 'rgba(0,0,0,0.42)');
+  ctx.fillStyle = bottomBand;
+  ctx.fillRect(0, height * 0.63, width, height * 0.37);
+
+  const vignette = ctx.createRadialGradient(
+    width * 0.5,
+    height * 0.52,
+    width * 0.18,
+    width * 0.5,
+    height * 0.52,
+    width * 0.75
+  );
+  vignette.addColorStop(0.0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1.0, 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, width, height);
+
+  const equirect = new THREE.CanvasTexture(envCanvas);
+  equirect.mapping = THREE.EquirectangularReflectionMapping;
+  equirect.colorSpace = THREE.SRGBColorSpace;
+  equirect.needsUpdate = true;
+
+  const pmrem = new THREE.PMREMGenerator(activeRenderer);
+  pmrem.compileEquirectangularShader();
+  const envRT = pmrem.fromEquirectangular(equirect);
+  equirect.dispose();
+  pmrem.dispose();
+  return envRT;
+}
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xefefef);
+scene.background = new THREE.Color(0xd6d9de);
+const studioEnvRT = createStudioEnvironmentMap(renderer);
+if (studioEnvRT) {
+  scene.environment = studioEnvRT.texture;
+}
 
 const camera = new THREE.PerspectiveCamera(
   45,
@@ -31,21 +150,47 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.enableZoom = false;
 
-const hemi = new THREE.HemisphereLight(0xffffff, 0x8c8c8c, 1.1);
-hemi.position.set(0, 200, 0);
+const hemi = new THREE.HemisphereLight(0xf5f8ff, 0x78808a, 0.38);
+hemi.position.set(0, 220, 0);
 scene.add(hemi);
 
-const dir1 = new THREE.DirectionalLight(0xffffff, 1.1);
-dir1.position.set(120, 160, 100);
-scene.add(dir1);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.18);
+keyLight.position.set(140, 185, 130);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+keyLight.shadow.bias = -0.00006;
+keyLight.shadow.normalBias = 0.018;
+keyLight.shadow.camera.near = 20;
+keyLight.shadow.camera.far = 700;
+keyLight.shadow.camera.left = -280;
+keyLight.shadow.camera.right = 280;
+keyLight.shadow.camera.top = 280;
+keyLight.shadow.camera.bottom = -280;
+scene.add(keyLight);
 
-const dir2 = new THREE.DirectionalLight(0xffffff, 0.55);
-dir2.position.set(-120, 100, -80);
-scene.add(dir2);
+const fillLight = new THREE.DirectionalLight(0xdce7ff, 0.24);
+fillLight.position.set(-170, 120, -90);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.44);
+rimLight.position.set(-90, 95, 190);
+scene.add(rimLight);
+
+const ambient = new THREE.AmbientLight(0xffffff, 0.04);
+scene.add(ambient);
 
 const grid = new THREE.GridHelper(250, 12, 0xb5b5b5, 0xd5d5d5);
 grid.position.y = 0;
 scene.add(grid);
+
+const shadowCatcher = new THREE.Mesh(
+  new THREE.PlaneGeometry(2600, 2600),
+  new THREE.ShadowMaterial({ opacity: 0.32 })
+);
+shadowCatcher.rotation.x = -Math.PI / 2;
+shadowCatcher.position.y = -0.02;
+shadowCatcher.receiveShadow = true;
+scene.add(shadowCatcher);
 
 const loader = new STLLoader();
 
@@ -66,12 +211,180 @@ function hideStatus() {
   status.style.display = 'none';
 }
 
+const MACHINED_SKIN_KEY = 'machined-metal-skin-v2';
+
+function _syncMachinedSkinUniforms(material) {
+  const uniforms = material?.userData?._skinUniforms;
+  if (!uniforms) {
+    return;
+  }
+  uniforms.uSkinRoughnessAmount.value = material.userData.skinRoughnessAmount || 0.0;
+  uniforms.uSkinScale.value = material.userData.skinScale || 0.2;
+}
+
+function installMachinedSkin(material) {
+  if (!material || material.userData?._skinInstalled) {
+    _syncMachinedSkinUniforms(material);
+    return;
+  }
+
+  material.userData = material.userData || {};
+  material.userData._skinInstalled = true;
+
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uSkinRoughnessAmount = { value: material.userData.skinRoughnessAmount || 0.0 };
+    shader.uniforms.uSkinScale = { value: material.userData.skinScale || 0.2 };
+    material.userData._skinUniforms = shader.uniforms;
+
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vModelPos;`
+      )
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+vModelPos = position;`
+      );
+
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+varying vec3 vModelPos;
+uniform float uSkinRoughnessAmount;
+uniform float uSkinScale;
+
+float _skinHash(vec3 p) {
+  p = fract(p * 0.3183099 + vec3(0.11, 0.17, 0.23));
+  p *= 17.0;
+  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+
+float _skinNoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+
+  float n000 = _skinHash(i + vec3(0.0, 0.0, 0.0));
+  float n100 = _skinHash(i + vec3(1.0, 0.0, 0.0));
+  float n010 = _skinHash(i + vec3(0.0, 1.0, 0.0));
+  float n110 = _skinHash(i + vec3(1.0, 1.0, 0.0));
+  float n001 = _skinHash(i + vec3(0.0, 0.0, 1.0));
+  float n101 = _skinHash(i + vec3(1.0, 0.0, 1.0));
+  float n011 = _skinHash(i + vec3(0.0, 1.0, 1.0));
+  float n111 = _skinHash(i + vec3(1.0, 1.0, 1.0));
+
+  float nx00 = mix(n000, n100, f.x);
+  float nx10 = mix(n010, n110, f.x);
+  float nx01 = mix(n001, n101, f.x);
+  float nx11 = mix(n011, n111, f.x);
+  float nxy0 = mix(nx00, nx10, f.y);
+  float nxy1 = mix(nx01, nx11, f.y);
+  return mix(nxy0, nxy1, f.z);
+}`
+      )
+      .replace(
+        '#include <roughnessmap_fragment>',
+        `#include <roughnessmap_fragment>
+vec3 _skinPos = vModelPos * uSkinScale;
+float _grainA = _skinNoise(_skinPos * 2.6);
+float _grainB = _skinNoise(_skinPos * 6.2);
+float _pixelFootprint = max(max(length(dFdx(_skinPos)), length(dFdy(_skinPos))), 1e-4);
+float _aaFade = 1.0 - smoothstep(0.22, 0.85, _pixelFootprint);
+float _hiFreqMix = 1.0 - smoothstep(0.18, 0.72, _pixelFootprint);
+float _grain = (_grainA * (0.78 + 0.14 * _hiFreqMix) + _grainB * (0.22 * _hiFreqMix)) * 2.0 - 1.0;
+float _viewDistance = length(vViewPosition);
+float _detailFade = 1.0 - smoothstep(70.0, 210.0, _viewDistance);
+float _grainAmount = uSkinRoughnessAmount * mix(0.12, 0.64, _detailFade) * _aaFade;
+roughnessFactor = clamp(roughnessFactor + _grain * _grainAmount, 0.12, 1.0);`
+      );
+
+    _syncMachinedSkinUniforms(material);
+  };
+
+  material.customProgramCacheKey = () => MACHINED_SKIN_KEY;
+  material.needsUpdate = true;
+}
+
+function applyMaterialFinish(material, colorValue) {
+  if (!material || !material.color) {
+    return;
+  }
+  material.userData = material.userData || {};
+
+  const baseColor = new THREE.Color(colorValue || '#9ea7b3');
+  const displayColor = baseColor.clone();
+  const hsl = { h: 0, s: 0, l: 0 };
+  baseColor.getHSL(hsl);
+  const neutral = hsl.s < 0.16;
+  const brightNeutral = neutral && hsl.l > 0.82;
+  const darkNeutral = neutral && hsl.l < 0.2;
+  const machinedMetal = neutral && !brightNeutral && !darkNeutral;
+  const coloredPart = !neutral;
+
+  if (coloredPart) {
+    // Keep selected swatch colors vivid under filmic tone mapping.
+    const vivid = { h: hsl.h, s: hsl.s, l: hsl.l };
+    vivid.s = Math.min(1.0, vivid.s * 1.14 + 0.015);
+    vivid.l = Math.min(0.92, vivid.l + 0.01);
+    displayColor.setHSL(vivid.h, vivid.s, vivid.l);
+  }
+
+  material.color.copy(displayColor);
+  if (brightNeutral) {
+    // Polished bright steel/chrome style with stronger studio reflections.
+    material.metalness = 1.0;
+    material.roughness = 0.19;
+    material.clearcoat = 0.0;
+    material.clearcoatRoughness = 0.4;
+    material.envMapIntensity = 1.52;
+    material.userData.skinRoughnessAmount = 0.018;
+    material.userData.skinScale = 0.09;
+  } else if (machinedMetal) {
+    material.metalness = 0.94;
+    material.roughness = 0.24;
+    material.clearcoat = 0.0;
+    material.clearcoatRoughness = 0.4;
+    material.envMapIntensity = 1.30;
+    material.userData.skinRoughnessAmount = 0.022;
+    material.userData.skinScale = 0.09;
+  } else if (darkNeutral) {
+    // Dark parts should keep a metallic sheen and avoid matte-plastic look.
+    material.metalness = 0.72;
+    material.roughness = 0.26;
+    material.clearcoat = 0.0;
+    material.clearcoatRoughness = 0.4;
+    material.envMapIntensity = 1.05;
+    material.userData.skinRoughnessAmount = 0.02;
+    material.userData.skinScale = 0.09;
+  } else {
+    // Colored components should read as true color, not gray-metal.
+    material.metalness = 0.03;
+    material.roughness = 0.28;
+    material.clearcoat = 0.06;
+    material.clearcoatRoughness = 0.24;
+    material.envMapIntensity = 0.46;
+    material.userData.skinRoughnessAmount = 0.006;
+    material.userData.skinScale = 0.08;
+  }
+  _syncMachinedSkinUniforms(material);
+  material.needsUpdate = true;
+}
+
 function makeMaterial(colorValue) {
-  return new THREE.MeshStandardMaterial({
-    color: new THREE.Color(colorValue || '#9ea7b3'),
-    metalness: 0.18,
-    roughness: 0.62,
+  const material = new THREE.MeshPhysicalMaterial({
+    color: new THREE.Color('#9ea7b3'),
+    metalness: 0.76,
+    roughness: 0.24,
+    clearcoat: 0.2,
+    clearcoatRoughness: 0.2,
+    envMapIntensity: 1.0,
   });
+  installMachinedSkin(material);
+  applyMaterialFinish(material, colorValue);
+  return material;
 }
 
 function fitCameraToObject(object) {
@@ -88,8 +401,9 @@ function fitCameraToObject(object) {
 
   camera.position.copy(center).addScaledVector(frameDirection, cameraDistance);
 
-  camera.near = Math.max(cameraDistance / 100, 0.1);
-  camera.far = Math.max(cameraDistance * 10, 1000);
+  // Keep a tighter depth range to reduce z-fighting shimmer on polished parts.
+  camera.near = Math.max(cameraDistance / 80, 0.2);
+  camera.far = Math.max(cameraDistance * 8, 800);
   camera.updateProjectionMatrix();
 
   controls.target.copy(center);
@@ -162,6 +476,7 @@ function applyModelTransformAndFrame(refit = true) {
   currentGroup.rotateX(manualRotation.x);
   currentGroup.rotateY(manualRotation.y);
   currentGroup.rotateZ(manualRotation.z);
+  _markShadowMapDirty();
 
   alignObjectOnGrid(currentGroup);
   updateGridForObject(currentGroup);
@@ -200,6 +515,7 @@ function clearCurrentMeshes() {
 
 window.clearModel = function () {
   clearCurrentMeshes();
+  _markShadowMapDirty();
   showStatus('No model loaded.');
 };
 
@@ -245,7 +561,7 @@ window.loadModel = function (modelPath, label = null) {
     return;
   }
 
-  showStatus('Loading STL model…');
+  showStatus('Loading STL model...');
 
   loader.load(
     modelPath,
@@ -256,6 +572,8 @@ window.loadModel = function (modelPath, label = null) {
       geometry.center();
 
       const mesh = new THREE.Mesh(geometry, makeMaterial('#9ea7b3'));
+      mesh.castShadow = true;
+      mesh.receiveShadow = false;
       currentMeshes = [mesh];
       currentGroup = new THREE.Group();
       currentGroup.add(mesh);
@@ -279,7 +597,7 @@ window.loadAssembly = function (parts) {
   }
 
   clearCurrentMeshes();
-  showStatus('Loading assembly…');
+  showStatus('Loading assembly...');
 
   currentGroup = new THREE.Group();
   scene.add(currentGroup);
@@ -318,6 +636,8 @@ window.loadAssembly = function (parts) {
         geometry.computeVertexNormals();
 
         const mesh = new THREE.Mesh(geometry, makeMaterial(color));
+        mesh.castShadow = true;
+        mesh.receiveShadow = false;
         currentMeshes.push(mesh);
         currentGroup.add(mesh);
         loadedCount += 1;
@@ -361,6 +681,10 @@ canvas.addEventListener('wheel', (event) => {
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
+  if (_shadowMapDirty) {
+    renderer.shadowMap.needsUpdate = true;
+    _shadowMapDirty = false;
+  }
   renderer.render(scene, camera);
 }
 animate();

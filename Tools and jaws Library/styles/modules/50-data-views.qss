@@ -358,6 +358,20 @@ QFrame[diagramPanel="true"] {
     min-height: 180px;
 }
 
+/* Detail panel 3D preview: single wrapper (no inner border) with outer blue -> inner grey blend */
+QWidget[detailPreviewPanel="true"],
+QFrame[detailPreviewPanel="true"] {
+    background-color: qradialgradient(
+        cx:0.5, cy:0.5, radius:0.95, fx:0.5, fy:0.5,
+        stop:0 #d6d9de,
+        stop:0.86 #d6d9de,
+        stop:0.94 #dde8f3,
+        stop:1 #e9f2fb
+    );
+    border: none;
+    border-radius: 6px;
+}
+
 /* Generic boxed value label */
 QLabel[valueLabel="true"] {
     color: #23313c;

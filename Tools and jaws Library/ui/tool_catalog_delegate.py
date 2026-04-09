@@ -22,6 +22,7 @@ from PySide6.QtGui import (
     QPainter,
     QPen,
     QPixmap,
+    QTransform,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -31,7 +32,13 @@ from PySide6.QtWidgets import (
     QStyleOptionViewItem,
 )
 
-from config import DEFAULT_TOOL_ICON, TOOL_ICONS_DIR, TOOL_TYPE_TO_ICON
+from config import (
+    DEFAULT_TOOL_ICON,
+    MILLING_TOOL_TYPES,
+    TOOL_ICONS_DIR,
+    TOOL_TYPE_TO_ICON,
+    TURNING_TOOL_TYPES,
+)
 
 # ── Data roles stored in the model ──────────────────────────────────────
 ROLE_TOOL_ID = Qt.UserRole
@@ -92,6 +99,59 @@ def _safe_float(value) -> str:
         return '0.000'
 
 
+def _safe_float_number(value) -> float | None:
+    try:
+        return float(value)
+    except Exception:
+        return None
+
+
+def _strip_tool_id_prefix(value) -> str:
+    raw = str(value or '').strip()
+    if raw.lower().startswith('t'):
+        raw = raw[1:].strip()
+    return ''.join(ch for ch in raw if ch.isdigit())
+
+
+def _tool_id_display_value(value) -> str:
+    stripped = _strip_tool_id_prefix(value)
+    if stripped:
+        return f'T{stripped}'
+    return str(value or '').strip()
+
+
+def _is_sub_spindle(value) -> bool:
+    normalized = str(value or '').strip().lower().replace('_', ' ')
+    return normalized in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}
+
+
+def _nose_corner_or_angle_column(tool: dict, t: Callable) -> tuple[str, str]:
+    raw_tool_type = (tool.get('tool_type', '') or '').strip()
+    angle_tool_types = {'Drill', 'Spot Drill', 'Turn Drill', 'Turn Spot Drill'}
+
+    if raw_tool_type in angle_tool_types:
+        angle = _safe_float_number(tool.get('drill_nose_angle'))
+        legacy = _safe_float_number(tool.get('nose_corner_radius'))
+        # Backward compatibility for older rows where angle was stored in nose/corner.
+        if angle is None or (angle == 0.0 and legacy not in (None, 0.0)):
+            angle = legacy if legacy is not None else 0.0
+        return t('tool_library.field.nose_angle', 'Nose angle'), _safe_float(angle)
+
+    if raw_tool_type == 'Tapping':
+        return t('tool_library.field.pitch', 'Pitch'), _safe_float(tool.get('nose_corner_radius', 0))
+
+    if raw_tool_type in TURNING_TOOL_TYPES:
+        return t('tool_library.field.nose_radius', 'Nose radius'), _safe_float(tool.get('nose_corner_radius', 0))
+
+    if raw_tool_type in MILLING_TOOL_TYPES:
+        return t('tool_library.field.corner_radius', 'Corner radius'), _safe_float(tool.get('nose_corner_radius', 0))
+
+    return (
+        t('tool_library.field.nose_corner_radius_multiline', 'Nose /\nCorner R'),
+        _safe_float(tool.get('nose_corner_radius', 0)),
+    )
+
+
 def _parse_json_list(value):
     if isinstance(value, list):
         return value
@@ -117,20 +177,31 @@ def tool_icon_for_type(tool_type: str) -> QIcon:
 def _home_columns(tool: dict, t: Callable) -> list[tuple[str, str, str, int]]:
     """Return (key, header, value, weight) tuples for the home/tools view."""
     desc = (tool.get('description', '') or '').strip() or t('tool_library.common.no_description', 'No description')
+    nose_corner_header, nose_corner_value = _nose_corner_or_angle_column(tool, t)
+    raw_tool_type = (tool.get('tool_type', '') or '').strip()
+    is_turning_tool = raw_tool_type in TURNING_TOOL_TYPES
+    turning_drill_tool = raw_tool_type in {'Turn Drill', 'Turn Spot Drill'}
+    is_head1 = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper() == 'HEAD1'
+    if is_turning_tool and not turning_drill_tool and is_head1:
+        radius_header = t('tool_library.field.b_axis_angle', 'B-axis angle')
+        radius_value = _safe_float(tool.get('b_axis_angle', 0))
+    else:
+        radius_header = t('tool_library.field.radius', 'Radius')
+        radius_value = _safe_float(tool.get('radius', 0))
     return [
-        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), tool.get('id', ''), 100),
+        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), _tool_id_display_value(tool.get('id', '')), 100),
         ('tool_name', t('tool_library.row.tool_name', 'Tool name'), desc, 270),
         ('geom_x', t('tool_library.field.geom_x', 'Geom X'), _safe_float(tool.get('geom_x', 0)), 110),
         ('geom_z', t('tool_library.field.geom_z', 'Geom Z'), _safe_float(tool.get('geom_z', 0)), 110),
-        ('radius', t('tool_library.field.radius', 'Radius'), _safe_float(tool.get('radius', 0)), 95),
-        ('nose_corner_radius', t('tool_library.field.nose_corner_radius_multiline', 'Nose /\nCorner R'), _safe_float(tool.get('nose_corner_radius', 0)), 145),
+        ('radius', radius_header, radius_value, 95),
+        ('nose_corner_radius', nose_corner_header, nose_corner_value, 145),
     ]
 
 
 def _holders_columns(tool: dict, t: Callable) -> list[tuple[str, str, str, int]]:
     desc = (tool.get('description', '') or '').strip() or t('tool_library.common.no_description', 'No description')
     return [
-        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), tool.get('id', ''), 100),
+        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), _tool_id_display_value(tool.get('id', '')), 100),
         ('holder_name', t('tool_library.row.holder_name', 'Holder name'), (tool.get('holder_code', '') or '').strip() or '-', 220),
         ('tool_name', t('tool_library.row.tool_name', 'Tool name'), desc, 320),
     ]
@@ -139,7 +210,7 @@ def _holders_columns(tool: dict, t: Callable) -> list[tuple[str, str, str, int]]
 def _inserts_columns(tool: dict, t: Callable) -> list[tuple[str, str, str, int]]:
     desc = (tool.get('description', '') or '').strip() or t('tool_library.common.no_description', 'No description')
     return [
-        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), tool.get('id', ''), 100),
+        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), _tool_id_display_value(tool.get('id', '')), 100),
         ('insert_name', t('tool_library.row.insert_name', 'Insert name'), (tool.get('cutting_code', '') or '').strip() or '-', 250),
         ('tool_name', t('tool_library.row.tool_name', 'Tool name'), desc, 320),
     ]
@@ -150,7 +221,7 @@ def _assemblies_columns(tool: dict, t: Callable) -> list[tuple[str, str, str, in
     support_parts = _parse_json_list(tool.get('support_parts'))
     stl_parts = _parse_json_list(tool.get('stl_path'))
     return [
-        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), tool.get('id', ''), 100),
+        ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), _tool_id_display_value(tool.get('id', '')), 100),
         ('tool_name', t('tool_library.row.assembly_name', 'Assembly name'), desc, 260),
         ('support_parts', t('tool_library.row.support_parts', 'Support parts'), str(len(support_parts)), 130),
         ('model_parts', t('tool_library.row.model_parts', '3D parts'), str(len(stl_parts) if stl_parts else 0), 120),
@@ -270,7 +341,11 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2 + ICON_VISUAL_OFFSET_Y,
                           ICON_SLOT_W, ICON_SIZE)
         if icon is not None:
-            pm = self._cached_pixmap(icon, tool.get('tool_type', ''))
+            pm = self._cached_pixmap(
+                icon,
+                tool.get('tool_type', ''),
+                mirrored=_is_sub_spindle(tool.get('spindle_orientation', 'main')),
+            )
             if pm and not pm.isNull():
                 px = icon_rect.x() + (ICON_SLOT_W - pm.width()) // 2
                 py = icon_rect.y() + (ICON_SIZE - pm.height()) // 2
@@ -446,11 +521,13 @@ class ToolCatalogDelegate(QStyledItemDelegate):
 
     # ── icon cache ──────────────────────────────────────────────────────
 
-    def _cached_pixmap(self, icon: QIcon, tool_type: str) -> QPixmap | None:
-        key = tool_type or '__default__'
+    def _cached_pixmap(self, icon: QIcon, tool_type: str, mirrored: bool = False) -> QPixmap | None:
+        key = f"{tool_type or '__default__'}|{'mirrored' if mirrored else 'normal'}"
         if key not in self._icon_cache:
             pm = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE))
             pm = self._normalized_icon_pixmap(pm)
+            if mirrored and pm is not None and not pm.isNull():
+                pm = pm.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
             self._icon_cache[key] = pm
         return self._icon_cache.get(key)
 

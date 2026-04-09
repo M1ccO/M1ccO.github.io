@@ -6,7 +6,7 @@ from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixma
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
+    QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget, QTextEdit,
     QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QTreeWidget, QTreeWidgetItem
 )
 from config import (
@@ -358,6 +358,33 @@ class AddEditToolDialog(QDialog):
         return self._t('tool_editor.tool_head.head1', 'Head 1')
 
     @staticmethod
+    def _strip_tool_id_prefix(value: str) -> str:
+        raw = str(value or '').strip()
+        if raw.lower().startswith('t'):
+            raw = raw[1:].strip()
+        return ''.join(ch for ch in raw if ch.isdigit())
+
+    @classmethod
+    def _tool_id_storage_value(cls, value: str) -> str:
+        stripped = cls._strip_tool_id_prefix(value)
+        return f'T{stripped}' if stripped else ''
+
+    @classmethod
+    def _tool_id_display_value(cls, value: str) -> str:
+        storage = cls._tool_id_storage_value(value)
+        return storage if storage else ''
+
+    @classmethod
+    def _tool_id_editor_value(cls, value: str) -> str:
+        return cls._strip_tool_id_prefix(value)
+
+    def _localized_spindle_orientation(self, orientation: str) -> str:
+        normalized = (orientation or 'main').strip().lower()
+        if normalized in {'sub', 'sub spindle', 'subspindle'}:
+            return self._t('tool_editor.spindle_orientation.sub', 'Sub spindle')
+        return self._t('tool_editor.spindle_orientation.main', 'Main spindle')
+
+    @staticmethod
     def _set_combo_by_data(combo: QComboBox, value: str):
         target = (value or '').strip()
         for idx in range(combo.count()):
@@ -417,9 +444,17 @@ class AddEditToolDialog(QDialog):
         self.editor_header_title.setProperty('detailHeroTitle', True)
         self.editor_header_title.setWordWrap(True)
         self.editor_header_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.editor_header_title.setStyleSheet('font-size: 18px; font-weight: 700;')
         self.editor_header_id = QLabel('')
         self.editor_header_id.setProperty('detailHeroTitle', True)
         self.editor_header_id.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.editor_header_id.setStyleSheet('font-size: 18px; font-weight: 700;')
+        title_font = self.editor_header_title.font()
+        title_font.setPointSizeF(max(15.0, title_font.pointSizeF() + 1.5))
+        self.editor_header_title.setFont(title_font)
+        id_font = self.editor_header_id.font()
+        id_font.setPointSizeF(max(15.0, id_font.pointSizeF() + 1.5))
+        self.editor_header_id.setFont(id_font)
         title_row.addWidget(self.editor_header_title, 1)
         title_row.addWidget(self.editor_header_id, 0, Qt.AlignRight)
 
@@ -443,6 +478,12 @@ class AddEditToolDialog(QDialog):
         apply_secondary_button_theme(self.tool_head)
         self.tool_head.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.tool_head.setFixedWidth(118)
+        self.spindle_orientation_btn = QPushButton(self._localized_spindle_orientation('main'))
+        self.spindle_orientation_btn.setCheckable(True)
+        self.spindle_orientation_btn.clicked.connect(self._toggle_spindle_orientation)
+        apply_secondary_button_theme(self.spindle_orientation_btn)
+        self.spindle_orientation_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.spindle_orientation_btn.setFixedWidth(148)
 
         self.tool_type = QComboBox()
         for raw_type in ALL_TOOL_TYPES:
@@ -461,11 +502,13 @@ class AddEditToolDialog(QDialog):
         ttl.setSpacing(10)
         ttl.addWidget(self.tool_type)
         ttl.addWidget(self.tool_head)
+        ttl.addWidget(self.spindle_orientation_btn)
         ttl.addStretch(1)
 
         self.description = QLineEdit()
         self.geom_x = QLineEdit()
         self.geom_z = QLineEdit()
+        self.b_axis_angle = QLineEdit()
         self.radius = QLineEdit()
         self.nose_corner_radius = QLineEdit()
         self.holder_code = QLineEdit()
@@ -486,7 +529,15 @@ class AddEditToolDialog(QDialog):
         self.cutting_link = QLineEdit()
         self.cutting_add_element = QLineEdit()
         self.cutting_add_element_link = QLineEdit()
-        self.notes = QLineEdit()
+        self.notes = QTextEdit()
+        self.notes.setAcceptRichText(False)
+        self.notes.setLineWrapMode(QTextEdit.WidgetWidth)
+        self.notes.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.notes.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.notes.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.notes.setPlaceholderText(self._t('tool_editor.placeholder.notes_shift_enter', 'Use Shift+Enter for new line'))
+        self.notes.setStyleSheet('')
+        self.notes.textChanged.connect(self._update_notes_editor_height)
         self.default_pot = QLineEdit()
 
         self.holder_code_row = self._build_picker_row(
@@ -517,7 +568,7 @@ class AddEditToolDialog(QDialog):
         # Make editor controls visually closer to detail value boxes.
         for w in [
             self.tool_id, self.tool_head, self.tool_type, self.description, self.geom_x, self.geom_z,
-            self.radius, self.nose_corner_radius, self.holder_code, self.holder_link,
+            self.b_axis_angle, self.radius, self.nose_corner_radius, self.holder_code, self.holder_link,
             self.holder_add_element, self.holder_add_element_link, self.cutting_type,
             self.cutting_code, self.cutting_link, self.cutting_add_element,
             self.cutting_add_element_link, self.drill_nose_angle,
@@ -540,10 +591,14 @@ class AddEditToolDialog(QDialog):
         self.corner_or_nose_field = self._build_edit_field('', self.nose_corner_radius, key_label=self.corner_or_nose_label)
         self.mill_field = self._build_edit_field('', self.mill_cutting_edges, key_label=self.mill_row_label)
         self.mill_field.setVisible(False)
+        self.radius_field = self._build_edit_field(self._t('tool_library.field.radius', 'Radius'), self.radius)
+        self.b_axis_field = self._build_edit_field(self._t('tool_library.field.b_axis_angle', 'B-axis angle'), self.b_axis_angle)
+        self.b_axis_field.setVisible(False)
         group2 = self._build_field_group([
             self._build_edit_field(self._t('tool_library.field.geom_x', 'Geom X'), self.geom_x),
             self._build_edit_field(self._t('tool_library.field.geom_z', 'Geom Z'), self.geom_z),
-            self._build_edit_field(self._t('tool_library.field.radius', 'Radius'), self.radius),
+            self.radius_field,
+            self.b_axis_field,
             self.corner_or_nose_field,
             self.mill_field,
         ])
@@ -1115,18 +1170,32 @@ class AddEditToolDialog(QDialog):
         QApplication.instance().installEventFilter(self)
 
         for le in [
-            self.tool_id, self.description, self.geom_x, self.geom_z, self.radius,
+            self.tool_id, self.description, self.geom_x, self.geom_z, self.b_axis_angle, self.radius,
             self.nose_corner_radius, self.holder_code, self.holder_link, self.holder_add_element,
             self.holder_add_element_link, self.cutting_code, self.cutting_link,
             self.cutting_add_element, self.cutting_add_element_link,
-            self.drill_nose_angle, self.mill_cutting_edges, self.notes, self.default_pot
+            self.drill_nose_angle, self.mill_cutting_edges, self.default_pot
         ]:
             le.returnPressed.connect(le.clearFocus)
 
         self.tool_id.textChanged.connect(self._update_general_header)
+        self.tool_id.textEdited.connect(self._normalize_tool_id_input)
         self.description.textChanged.connect(self._update_general_header)
         self.tool_type.currentTextChanged.connect(self._update_general_header)
+        for numeric_editor in [
+            self.geom_x,
+            self.geom_z,
+            self.radius,
+            self.nose_corner_radius,
+            self.drill_nose_angle,
+            self.mill_cutting_edges,
+        ]:
+            numeric_editor.textEdited.connect(
+                lambda text, editor=numeric_editor: self._normalize_decimal_comma_input(editor, text)
+            )
         self._update_general_header()
+        self._update_spindle_orientation_visibility()
+        self._update_notes_editor_height()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
@@ -1134,6 +1203,11 @@ class AddEditToolDialog(QDialog):
             if focused is self.group_name_edit:
                 self._apply_group_name()
                 return True  # fully consume — prevent dialog default button from firing
+            if focused is self.notes:
+                if event.modifiers() & Qt.ShiftModifier:
+                    return False
+                focused.clearFocus()
+                return True
             if isinstance(focused, QLineEdit) and self.isAncestorOf(focused):
                 focused.clearFocus()
                 return True
@@ -1184,6 +1258,9 @@ class AddEditToolDialog(QDialog):
             widget.setFocus()
             widget.selectAll()
             return
+        if isinstance(widget, QTextEdit):
+            widget.setFocus()
+            return
         if isinstance(widget, QComboBox):
             widget.setFocus()
             return
@@ -1195,6 +1272,9 @@ class AddEditToolDialog(QDialog):
             child.selectAll()
             return
         for child in widget.findChildren(QComboBox):
+            child.setFocus()
+            return
+        for child in widget.findChildren(QTextEdit):
             child.setFocus()
             return
         for child in widget.findChildren(QPushButton):
@@ -1231,12 +1311,49 @@ class AddEditToolDialog(QDialog):
         self.tool_head.setChecked(is_head2)
         self.tool_head.setText(self._localized_tool_head('HEAD2' if is_head2 else 'HEAD1'))
         self.tool_head.blockSignals(False)
+        self._update_spindle_orientation_visibility()
 
     def _toggle_tool_head(self, checked: bool):
         self.tool_head.setText(self._localized_tool_head('HEAD2' if checked else 'HEAD1'))
+        self._update_spindle_orientation_visibility()
+        self._update_tool_type_fields()
 
     def _get_tool_head_value(self) -> str:
         return 'HEAD2' if self.tool_head.isChecked() else 'HEAD1'
+
+    def _set_spindle_orientation_value(self, orientation: str):
+        normalized = (orientation or 'main').strip().lower().replace('_', ' ')
+        is_sub = normalized in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}
+        self.spindle_orientation_btn.blockSignals(True)
+        self.spindle_orientation_btn.setChecked(is_sub)
+        self.spindle_orientation_btn.setText(self._localized_spindle_orientation('sub' if is_sub else 'main'))
+        self.spindle_orientation_btn.blockSignals(False)
+
+    def _toggle_spindle_orientation(self, checked: bool):
+        self.spindle_orientation_btn.setText(self._localized_spindle_orientation('sub' if checked else 'main'))
+
+    def _get_spindle_orientation_value(self) -> str:
+        return 'sub' if self.spindle_orientation_btn.isChecked() else 'main'
+
+    def _update_spindle_orientation_visibility(self):
+        # Orientation is relevant for tools on Head 2.
+        self.spindle_orientation_btn.setVisible(self._get_tool_head_value() == 'HEAD2')
+
+    def _update_notes_editor_height(self):
+        if not hasattr(self, 'notes'):
+            return
+        doc = self.notes.document()
+        viewport_width = max(0, self.notes.viewport().width())
+        if viewport_width > 0:
+            doc.setTextWidth(viewport_width)
+        doc_layout = doc.documentLayout()
+        doc_height = float(doc_layout.documentSize().height()) if doc_layout is not None else 0.0
+        line_height = max(16, self.notes.fontMetrics().lineSpacing())
+        minimum_doc_height = float(line_height + 8)
+        content_height = max(minimum_doc_height, doc_height)
+        frame = self.notes.frameWidth() * 2
+        target = max(30, min(220, int(round(content_height)) + frame + 4))
+        self.notes.setFixedHeight(target)
 
     def _style_general_editor(self, editor: QWidget):
         pass
@@ -1778,15 +1895,35 @@ class AddEditToolDialog(QDialog):
         if not hasattr(self, 'editor_header_title'):
             return
         description = self.description.text().strip()
-        tool_id = self.tool_id.text().strip()
+        tool_id = self._tool_id_display_value(self.tool_id.text())
         tool_type = self.tool_type.currentText().strip()
         self.editor_header_title.setText(description or self._t('tool_editor.header.new_tool', 'New tool'))
         self.editor_header_id.setText(tool_id)
         self.editor_type_badge.setText(tool_type)
 
+    def _normalize_tool_id_input(self, text: str):
+        digits = self._tool_id_editor_value(text)
+        if text == digits:
+            return
+        self.tool_id.blockSignals(True)
+        self.tool_id.setText(digits)
+        self.tool_id.blockSignals(False)
+        self.tool_id.setCursorPosition(len(digits))
+
+    def _normalize_decimal_comma_input(self, editor: QLineEdit, text: str):
+        if ',' not in text:
+            return
+        cursor_pos = editor.cursorPosition()
+        normalized = text.replace(',', '.')
+        editor.blockSignals(True)
+        editor.setText(normalized)
+        editor.blockSignals(False)
+        editor.setCursorPosition(min(len(normalized), cursor_pos))
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._reflow_general_fields()
+        self._update_notes_editor_height()
         self._update_transform_row_sizes()
         self._ensure_on_screen()
 
@@ -1796,6 +1933,7 @@ class AddEditToolDialog(QDialog):
 
     def showEvent(self, event):
         super().showEvent(event)
+        QTimer.singleShot(0, self._update_notes_editor_height)
         self._update_transform_row_sizes()
         self._ensure_on_screen()
 
@@ -2983,8 +3121,10 @@ class AddEditToolDialog(QDialog):
     def _update_tool_type_fields(self):
         selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
         cutting_type = (self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert'
+        selected_head = self._get_tool_head_value()
         turning_drill_type = self._is_turning_drill_tool_type(selected_type)
         mill_tool_type = self._is_mill_tool_type(selected_type)
+        turning_tool_type = selected_type in TURNING_TOOL_TYPES
         is_chamfer = selected_type == 'Chamfer'
         is_center_drill_tool = selected_type == 'Spot Drill'
         uses_pitch_label = selected_type == 'Tapping'
@@ -3022,6 +3162,15 @@ class AddEditToolDialog(QDialog):
             self.corner_or_nose_field.setVisible(not (is_drill_cutting and not turning_drill_type))
         self.drill_field.setVisible((is_drill_cutting and not turning_drill_type) and not geometry_uses_nose_angle)
         self.mill_field.setVisible(mill_tool_type and not is_center_drill_tool and (not is_drill_cutting or geometry_uses_nose_angle))
+
+        # Turning tools: Radius is only used by turning-drill variants.
+        # Head 1 turning tools use B-axis angle instead of Radius.
+        show_radius = (not turning_tool_type) or turning_drill_type
+        show_b_axis = turning_tool_type and not turning_drill_type and selected_head == 'HEAD1'
+        self.radius_field.setVisible(show_radius)
+        self.b_axis_field.setVisible(show_b_axis)
+
+        self._update_spindle_orientation_visibility()
         self._update_cutting_label()
         self._reflow_general_fields(force=True)
 
@@ -3035,12 +3184,14 @@ class AddEditToolDialog(QDialog):
         if not self.tool:
             return
 
-        self.tool_id.setText(self.tool.get('id', ''))
+        self.tool_id.setText(self._tool_id_editor_value(self.tool.get('id', '')))
         self._set_tool_head_value(self.tool.get('tool_head', 'HEAD1'))
+        self._set_spindle_orientation_value(self.tool.get('spindle_orientation', 'main'))
         self._set_combo_by_data(self.tool_type, self.tool.get('tool_type', 'O.D Turning'))
         self.description.setText(self.tool.get('description', ''))
         self.geom_x.setText(str(self.tool.get('geom_x', '')))
         self.geom_z.setText(str(self.tool.get('geom_z', '')))
+        self.b_axis_angle.setText(str(self.tool.get('b_axis_angle', '0')))
         self.radius.setText(str(self.tool.get('radius', '')))
         self.nose_corner_radius.setText(str(self.tool.get('nose_corner_radius', '')))
         self.holder_code.setText(self.tool.get('holder_code', ''))
@@ -3052,7 +3203,9 @@ class AddEditToolDialog(QDialog):
         self.cutting_link.setText(self.tool.get('cutting_link', ''))
         self.cutting_add_element.setText(self.tool.get('cutting_add_element', ''))
         self.cutting_add_element_link.setText(self.tool.get('cutting_add_element_link', ''))
-        self.notes.setText(self.tool.get('notes', self.tool.get('spare_parts', '')))
+        notes_value = self.tool.get('notes', self.tool.get('spare_parts', ''))
+        self.notes.setPlainText(str(notes_value or ''))
+        QTimer.singleShot(0, self._update_notes_editor_height)
         self.default_pot.setText(self.tool.get('default_pot', ''))
         self.drill_nose_angle.setText(str(self.tool.get('drill_nose_angle', '')))
         self.mill_cutting_edges.setText(str(self.tool.get('mill_cutting_edges', '')))
@@ -3260,7 +3413,7 @@ class AddEditToolDialog(QDialog):
     def get_tool_data(self):
         self._commit_active_edits()
         self._sync_preview_transform_snapshot_for_save()
-        tool_id = self.tool_id.text().strip()
+        tool_id = self._tool_id_storage_value(self.tool_id.text())
         if not tool_id and not self._group_edit_mode:
             raise ValueError(self._t('tool_editor.error.tool_id_required', 'Tool ID is required.'))
 
@@ -3274,20 +3427,29 @@ class AddEditToolDialog(QDialog):
                 raise ValueError(self._t('tool_editor.error.must_be_number', '{field_name} must be a number.', field_name=field_name))
 
         def parse_int(value, field_name):
-            text = value.text().strip()
+            text = value.text().strip().replace(',', '.')
             if not text:
                 return 0
             try:
                 return int(text)
             except ValueError:
+                try:
+                    numeric_value = float(text)
+                    if numeric_value.is_integer():
+                        return int(numeric_value)
+                except ValueError:
+                    pass
                 raise ValueError(self._t('tool_editor.error.must_be_integer', '{field_name} must be an integer.', field_name=field_name))
 
         selected_cutting = (self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert'
         selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
+        selected_head = self._get_tool_head_value()
         turning_drill_type = self._is_turning_drill_tool_type(selected_type)
         mill_tool_type = self._is_mill_tool_type(selected_type)
+        turning_tool_type = selected_type in TURNING_TOOL_TYPES
         geometry_uses_nose_angle = selected_type in {'Chamfer', 'Spot Drill'}
         show_mill_flutes = mill_tool_type and selected_type != 'Spot Drill'
+        show_radius = (not turning_tool_type) or turning_drill_type
         model_parts = self._model_table_to_parts()
         component_items = self._component_items_from_table()
         support_parts = self._spare_parts_from_table()
@@ -3295,12 +3457,14 @@ class AddEditToolDialog(QDialog):
         return {
             'uid': self.original_uid,
             'id': tool_id,
-            'tool_head': self._get_tool_head_value(),
+            'tool_head': selected_head,
+            'spindle_orientation': self._get_spindle_orientation_value() if selected_head == 'HEAD2' else 'main',
             'tool_type': selected_type,
             'description': self.description.text().strip(),
             'geom_x': parse_float(self.geom_x, self._t('tool_library.field.geom_x', 'Geom X')),
             'geom_z': parse_float(self.geom_z, self._t('tool_library.field.geom_z', 'Geom Z')),
-            'radius': parse_float(self.radius, self._t('tool_library.field.radius', 'Radius')),
+            'b_axis_angle': parse_float(self.b_axis_angle, self._t('tool_library.field.b_axis_angle', 'B-axis angle')),
+            'radius': parse_float(self.radius, self._t('tool_library.field.radius', 'Radius')) if show_radius else 0.0,
             'nose_corner_radius': parse_float(
                 self.nose_corner_radius,
                 self._t('tool_library.field.pitch', 'Pitch') if selected_type == 'Tapping' else self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R')
@@ -3314,7 +3478,7 @@ class AddEditToolDialog(QDialog):
             'cutting_link': self.cutting_link.text().strip(),
             'cutting_add_element': self.cutting_add_element.text().strip(),
             'cutting_add_element_link': self.cutting_add_element_link.text().strip(),
-            'notes': self.notes.text().strip(),
+            'notes': self.notes.toPlainText().strip(),
             'drill_nose_angle': (
                 parse_float(self.nose_corner_radius, self._t('tool_library.field.nose_angle', 'Nose angle'))
                 if turning_drill_type or geometry_uses_nose_angle

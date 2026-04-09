@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QItemSelectionModel
-from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform, QCursor
+from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
@@ -27,7 +27,13 @@ from ui.tool_catalog_delegate import (
     ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON, ROLE_TOOL_UID,
 )
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style, repolish_widget
-from shared.editor_helpers import apply_secondary_button_theme, ask_multi_edit_mode, create_dialog_buttons, setup_editor_dialog
+from shared.editor_helpers import (
+    apply_secondary_button_theme,
+    ask_multi_edit_mode,
+    create_titled_section,
+    create_dialog_buttons,
+    setup_editor_dialog,
+)
 
 from ui.stl_preview import StlPreviewWidget
 
@@ -78,6 +84,22 @@ class HomePage(QWidget):
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
+
+    @staticmethod
+    def _strip_tool_id_prefix(value: str) -> str:
+        raw = str(value or '').strip()
+        if raw.lower().startswith('t'):
+            raw = raw[1:].strip()
+        return ''.join(ch for ch in raw if ch.isdigit())
+
+    @classmethod
+    def _tool_id_storage_value(cls, value: str) -> str:
+        stripped = cls._strip_tool_id_prefix(value)
+        return f'T{stripped}' if stripped else ''
+
+    @classmethod
+    def _tool_id_display_value(cls, value: str) -> str:
+        return cls._tool_id_storage_value(value)
 
     def _warmup_preview_engine(self):
         """Pre-create a hidden preview widget so first detail-open doesn't flash."""
@@ -667,7 +689,7 @@ class HomePage(QWidget):
         self._refresh_detached_measurement_controls(overlays)
         self._apply_detached_measurement_state(overlays)
 
-        tool_id = (tool.get('id') or '').strip()
+        tool_id = self._tool_id_display_value(tool.get('id', ''))
         self._detached_preview_dialog.setWindowTitle(
             self._t('tool_library.preview.window_title_tool', '3D Preview - {tool_id}', tool_id=tool_id).rstrip(' -')
         )
@@ -818,6 +840,9 @@ class HomePage(QWidget):
 
     def eventFilter(self, obj, event):
         from PySide6.QtCore import QEvent
+        if getattr(obj, 'property', None) and obj.property('elideGroupTitle'):
+            if event.type() in (QEvent.Resize, QEvent.Show, QEvent.FontChange):
+                self._refresh_elided_group_title(obj)
         if obj is getattr(self, 'type_filter', None) or (
                 getattr(self, 'type_filter', None) and obj is self.type_filter.view()):
             # if we are currently suppressing, swallow any show events
@@ -831,6 +856,17 @@ class HomePage(QWidget):
                 if not self.tool_list.indexAt(event.pos()).isValid():
                     self._clear_selection()
         return super().eventFilter(obj, event)
+
+    def _refresh_elided_group_title(self, group):
+        if group is None or not hasattr(group, 'setTitle'):
+            return
+        full_title = str(group.property('fullGroupTitle') or group.title() or '').strip()
+        if not full_title:
+            return
+        available = max(12, group.width() - 30)
+        elided = QFontMetrics(group.font()).elidedText(full_title, Qt.ElideRight, available)
+        group.setTitle(elided)
+        group.setToolTip(full_title)
 
     def _clear_selection(self):
         """Internal helper to clear row selection and reset details."""
@@ -1171,7 +1207,8 @@ class HomePage(QWidget):
         name_label.setWordWrap(True)
         name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
-        id_label = QLabel(tool.get('id', '-'))
+        tool_id_text = self._tool_id_display_value(tool.get('id', '')) or '-'
+        id_label = QLabel(tool_id_text)
         id_label.setProperty('detailHeroTitle', True)
         id_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
@@ -1195,21 +1232,57 @@ class HomePage(QWidget):
         layout.addWidget(header)
 
         # helper to create a field widget with key and value
-        def build_field(label_text: str, value_text: str) -> QWidget:
-            field_frame = QFrame()
-            field_frame.setProperty('detailField', True)
-            field_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-            field_frame.setMinimumWidth(0)
-            flayout = QVBoxLayout(field_frame)
+        def build_field(label_text: str, value_text: str, multiline: bool = False) -> QWidget:
+            field_group = create_titled_section(label_text)
+            field_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+            field_group.setMinimumWidth(0)
+            field_group.setProperty('elideGroupTitle', True)
+            field_group.setProperty('fullGroupTitle', label_text)
+            field_group.installEventFilter(self)
+            QTimer.singleShot(0, lambda g=field_group: self._refresh_elided_group_title(g))
+
+            flayout = QVBoxLayout(field_group)
             flayout.setContentsMargins(6, 4, 6, 4)
             flayout.setSpacing(4)
-            key_lbl = self._detail_key_label(label_text)
-            key_lbl.setWordWrap(True)
-            value_lbl = self._value_label(value_text)
-            value_lbl.setProperty('detailFieldValue', True)
-            flayout.addWidget(key_lbl)
-            flayout.addWidget(value_lbl)
-            return field_frame
+
+            raw_value = '' if value_text is None else str(value_text)
+            if multiline:
+                normalized_value = (
+                    raw_value
+                    .replace('\r\n', '\n')
+                    .replace('\r', '\n')
+                    .replace('\u2028', '\n')
+                    .replace('\u2029', '\n')
+                    .replace('\\n', '\n')
+                )
+                value_edit = QLabel(normalized_value if normalized_value.strip() else '-')
+                value_edit.setWordWrap(True)
+                value_edit.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                value_edit.setFocusPolicy(Qt.NoFocus)
+                value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+                value_edit.setMinimumHeight(32)
+                value_edit.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+                value_edit.setStyleSheet(
+                    'QLabel {'
+                    '  background-color: #ffffff;'
+                    '  border: 1px solid #c8d4e0;'
+                    '  border-radius: 6px;'
+                    '  padding: 6px;'
+                    '  font-size: 10.5pt;'
+                    '}'
+                )
+                # Avoid tooltip popups over notes; the wrapped text is fully visible in-place.
+                value_edit.setToolTip('')
+            else:
+                value_edit = QLineEdit(raw_value if raw_value.strip() else '-')
+                value_edit.setReadOnly(True)
+                value_edit.setFocusPolicy(Qt.NoFocus)
+                value_edit.setCursorPosition(0)
+                value_edit.setToolTip(raw_value.strip() or '-')
+                value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+            flayout.addWidget(value_edit)
+            return field_group
 
         raw_cutting_type = tool.get('cutting_type', 'Insert')
         raw_tool_type = tool.get('tool_type', '')
@@ -1238,25 +1311,54 @@ class HomePage(QWidget):
             info.addWidget(build_field(second_label, second_value), row, 2, 1, 2, Qt.AlignTop)
             info.addWidget(build_field(third_label, third_value), row, 4, 1, 2, Qt.AlignTop)
 
-        add_two_box_row(
-            0,
-            self._t('tool_library.field.geom_x', 'Geom X'),
-            str(tool.get('geom_x', '')),
-            self._t('tool_library.field.geom_z', 'Geom Z'),
-            str(tool.get('geom_z', '')),
-        )
-
         is_milling = raw_tool_type in MILLING_TOOL_TYPES
         is_drill_cutting = raw_cutting_type in {'Drill', 'Center drill'}
+        is_drill_tool = (raw_tool_type or '').strip() == 'Drill'
         is_chamfer = (raw_tool_type or '').strip() == 'Chamfer'
         is_center_drill_tool = (raw_tool_type or '').strip() == 'Spot Drill'
         uses_pitch_label = (raw_tool_type or '').strip() == 'Tapping'
+        is_turning_tool = raw_tool_type in TURNING_TOOL_TYPES
+        show_b_axis = is_turning_tool and not turning_drill_type and tool_head == 'HEAD1'
+        uses_turning_nose_row = is_turning_tool and not turning_drill_type
+
+        if uses_turning_nose_row and not show_b_axis:
+            # HEAD2 turning tools: keep Geom X, Geom Z and Nose radius on one row.
+            add_three_box_row(
+                0,
+                self._t('tool_library.field.geom_x', 'Geom X'),
+                str(tool.get('geom_x', '')),
+                self._t('tool_library.field.geom_z', 'Geom Z'),
+                str(tool.get('geom_z', '')),
+                self._t('tool_library.field.nose_radius', 'Nose radius'),
+                str(tool.get('nose_corner_radius', '')),
+            )
+        else:
+            add_two_box_row(
+                0,
+                self._t('tool_library.field.geom_x', 'Geom X'),
+                str(tool.get('geom_x', '')),
+                self._t('tool_library.field.geom_z', 'Geom Z'),
+                str(tool.get('geom_z', '')),
+            )
+
         angle_value = str(tool.get('drill_nose_angle', ''))
         if not angle_value.strip():
             # Backward compatibility: older records may store point angle in nose_corner_radius.
             angle_value = str(tool.get('nose_corner_radius', ''))
 
-        if is_chamfer:
+        if uses_turning_nose_row:
+            if show_b_axis:
+                add_two_box_row(
+                    1,
+                    self._t('tool_library.field.b_axis_angle', 'B-axis angle'),
+                    str(tool.get('b_axis_angle', '0')),
+                    self._t('tool_library.field.nose_radius', 'Nose radius'),
+                    str(tool.get('nose_corner_radius', '')),
+                )
+                full_row = 2
+            else:
+                full_row = 1
+        elif is_chamfer:
             add_three_box_row(
                 1,
                 self._t('tool_library.field.radius', 'Radius'),
@@ -1268,6 +1370,15 @@ class HomePage(QWidget):
             )
             full_row = 2
         elif is_center_drill_tool:
+            add_two_box_row(
+                1,
+                self._t('tool_library.field.radius', 'Radius'),
+                str(tool.get('radius', '')),
+                self._t('tool_library.field.nose_angle', 'Nose angle'),
+                angle_value,
+            )
+            full_row = 2
+        elif is_drill_tool:
             add_two_box_row(
                 1,
                 self._t('tool_library.field.radius', 'Radius'),
@@ -1288,32 +1399,21 @@ class HomePage(QWidget):
             )
             full_row = 2
         else:
-            info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
             if turning_drill_type:
-                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), str(tool.get('drill_nose_angle', ''))), 1, 3, 1, 3, Qt.AlignTop)
+                info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
+                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), angle_value), 1, 3, 1, 3, Qt.AlignTop)
             elif is_drill_cutting:
-                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), str(tool.get('drill_nose_angle', ''))), 1, 3, 1, 3, Qt.AlignTop)
-            elif raw_tool_type in TURNING_TOOL_TYPES:
-                info.addWidget(build_field(self._t('tool_library.field.nose_radius', 'Nose radius'), str(tool.get('nose_corner_radius', ''))), 1, 3, 1, 3, Qt.AlignTop)
+                info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
+                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), angle_value), 1, 3, 1, 3, Qt.AlignTop)
             elif not is_drill_cutting:
+                info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
                 info.addWidget(build_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), str(tool.get('nose_corner_radius', ''))), 1, 3, 1, 3, Qt.AlignTop)
             full_row = 2
 
         # notes field - spans full width
         notes_text = tool.get('notes', tool.get('spare_parts', ''))
         if notes_text:
-            notes_field = QFrame()
-            notes_field.setProperty('detailField', True)
-            nlayout = QVBoxLayout(notes_field)
-            nlayout.setContentsMargins(6, 4, 6, 4)
-            nlayout.setSpacing(4)
-            notes_key = self._detail_key_label(self._t('tool_library.field.notes', 'Notes'))
-            notes_key.setWordWrap(False)
-            notes_val = self._value_label(notes_text)
-            notes_val.setProperty('detailFieldValue', True)
-            notes_val.setWordWrap(True)
-            nlayout.addWidget(notes_key)
-            nlayout.addWidget(notes_val)
+            notes_field = build_field(self._t('tool_library.field.notes', 'Notes'), notes_text, multiline=True)
             info.addWidget(notes_field, full_row, 0, 1, 6)
         layout.addLayout(info)
         layout.addWidget(self._build_components_panel(tool, support_parts))
@@ -1367,20 +1467,28 @@ class HomePage(QWidget):
     # Detail Panel Sections
     # ==============================
     def _build_components_panel(self, tool, support_parts):
-        frame = QFrame()
-        frame.setProperty('subCard', True)
+        frame = create_titled_section(self._t('tool_library.section.tool_components', 'Tool components'))
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         layout = QVBoxLayout(frame)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(10)
-        title = QLabel(self._t('tool_library.section.tool_components', 'Tool components'))
-        title.setProperty('detailSectionTitle', True)
-        layout.addWidget(title)
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(10)
-        grid.setVerticalSpacing(8)
-        grid.setColumnStretch(0, 1)
-        grid.setColumnStretch(1, 1)
-        row = 0
+        layout.setContentsMargins(6, 4, 6, 6)
+        layout.setSpacing(6)
+
+        body_host = QFrame()
+        body_host.setObjectName('toolComponentsBodyHost')
+        body_host.setStyleSheet(
+            'QFrame#toolComponentsBodyHost {'
+            '  background-color: #ffffff;'
+            '  border: none;'
+            '  border-radius: 4px;'
+            '}'
+        )
+        body_layout = QVBoxLayout(body_host)
+        body_layout.setContentsMargins(8, 8, 8, 8)
+        body_layout.setSpacing(6)
+
+        list_layout = QVBoxLayout()
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.setSpacing(4)
 
         def _component_key(item: dict, fallback_idx: int) -> str:
             explicit = (item.get('component_key') or '').strip()
@@ -1497,15 +1605,13 @@ class HomePage(QWidget):
                 last_group = group
                 if group:
                     group_label = QLabel(group)
-                    group_label.setProperty('detailGroupHeading', True)
+                    group_label.setProperty('detailFieldKey', True)
                     group_label.setStyleSheet(
                         'background: transparent;'
-                        'font-weight: 600; font-size: 11px; color: #5a6a7a;'
+                        'font-weight: 600; font-size: 9pt; color: #5a6a7a;'
                         'border-bottom: 1px solid #d0d8e0; padding: 4px 0 2px 0;'
-                        'margin-top: 6px;'
                     )
-                    grid.addWidget(group_label, row, 0, 1, 2)
-                    row += 1
+                    list_layout.addWidget(group_label)
 
             display_name = item.get('label', self._t('tool_library.field.part', 'Part'))
             button_text = (display_name or '').strip()
@@ -1513,37 +1619,50 @@ class HomePage(QWidget):
             component_key = _component_key(item, idx)
             linked_spares = spare_index.get(component_key, [])
 
+            row_card = QFrame()
+            row_card.setProperty('editorFieldCard', True)
+            row_layout = QHBoxLayout(row_card)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(8)
+
             btn = QPushButton(button_text)
-            btn.setProperty('assemblyPart', True)
             btn.setProperty('panelActionButton', True)
+            btn.setProperty('componentCompact', True)
             btn.setCursor(Qt.PointingHandCursor)
             btn.setToolTip((item.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=display_name))
             btn.setMinimumWidth(100)
             fm = QFontMetrics(btn.font())
-            required_width = fm.horizontalAdvance(button_text) + 50
-            btn_width = max(120, min(440, required_width))
+            required_width = fm.horizontalAdvance(button_text) + 34
+            btn_width = max(88, min(360, required_width))
             btn.setFixedWidth(btn_width)
             btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
             btn.clicked.connect(lambda _=False, p=item: self.part_clicked(p))
+            row_layout.addWidget(btn, 0)
 
-            grid.addWidget(btn, row, 0)
-
-            # Code label + optional arrow indicator for spare parts
-            code_row = QHBoxLayout()
-            code_row.setContentsMargins(0, 0, 0, 0)
-            code_row.setSpacing(6)
-            code_lbl = QLabel(item.get('code', ''))
+            raw_code = (item.get('code', '') or '').strip()
+            code_lbl = QLabel(raw_code if raw_code else '-')
+            code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
             code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
             code_style_default = (
-                'background: transparent; border: none; color: #22303c; '
-                'font-size: 12pt; font-weight: 500; padding: 0px;'
+                'background: transparent;'
+                'border: none;'
+                'padding: 0 2px;'
+                'font-size: 11pt;'
+                'color: #22303c;'
+                'font-weight: 400;'
+                'border-bottom: 1px solid transparent;'
             )
             code_style_hover = (
-                'background: transparent; border: none; color: #1f5f9a; '
-                'font-size: 12pt; font-weight: 600; padding: 0px;'
+                'background: transparent;'
+                'border: none;'
+                'padding: 0 2px;'
+                'font-size: 11pt;'
+                'color: #1f5f9a;'
+                'font-weight: 400;'
+                'border-bottom: 1px solid #1f5f9a;'
             )
             code_lbl.setStyleSheet(code_style_default)
-            code_row.addWidget(code_lbl, 1)
+            row_layout.addWidget(code_lbl, 1)
 
             if linked_spares:
                 arrow_style_default = 'background: transparent; border: none; padding: 0 4px;'
@@ -1555,62 +1674,64 @@ class HomePage(QWidget):
                 arrow_lbl.setFixedWidth(24)
                 arrow_lbl.setCursor(Qt.PointingHandCursor)
                 arrow_lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-                code_row.addWidget(arrow_lbl, 0)
+                row_layout.addWidget(arrow_lbl, 0)
                 # Make the whole code area clickable to toggle spares
                 code_lbl.setCursor(Qt.PointingHandCursor)
 
-            code_widget = QWidget()
-            code_widget.setStyleSheet('background: transparent; border: none;')
-            code_widget.setLayout(code_row)
-            grid.addWidget(code_widget, row, 1)
-            row += 1
+                def _set_code_hover(
+                    hovered: bool,
+                    label=code_lbl,
+                    default_style=code_style_default,
+                    hover_style=code_style_hover,
+                ):
+                    label.setStyleSheet(hover_style if hovered else default_style)
+
+            list_layout.addWidget(row_card)
 
             if linked_spares:
                 spare_host = QFrame()
-                spare_host.setStyleSheet(
-                    'QFrame { background: #f8fbfd; border: 1px solid #d0d8e0; '
-                    'border-radius: 4px; padding: 0px; margin: 0px; }'
-                )
+                spare_host.setProperty('editorFieldGroup', True)
                 spare_host_layout = QVBoxLayout(spare_host)
-                spare_host_layout.setContentsMargins(10, 8, 10, 8)
+                spare_host_layout.setContentsMargins(12, 4, 0, 2)
                 spare_host_layout.setSpacing(4)
                 spare_host.setVisible(False)
 
                 SPARE_BTN_WIDTH = 150
 
                 for spare in linked_spares:
-                    spare_row_layout = QHBoxLayout()
+                    spare_row = QFrame()
+                    spare_row.setProperty('editorFieldCard', True)
+                    spare_row_layout = QHBoxLayout(spare_row)
                     spare_row_layout.setContentsMargins(0, 0, 0, 0)
                     spare_row_layout.setSpacing(8)
 
                     spare_name = (spare.get('name') or self._t('tool_library.field.part', 'Part')).strip()
-                    spare_code_lbl = self._value_label((spare.get('code') or '').strip())
-                    spare_code_lbl.setStyleSheet(
-                        'background: transparent; border: none; font-size: 10pt; color: #5a6a7a;'
-                    )
-
                     spare_btn = QPushButton(spare_name)
                     spare_btn.setProperty('panelActionButton', True)
+                    spare_btn.setProperty('componentCompact', True)
                     spare_btn.setCursor(Qt.PointingHandCursor)
                     spare_btn.setToolTip((spare.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=spare_name))
-                    spare_btn.setStyleSheet('font-size: 9pt;')
                     spare_btn_fm = QFontMetrics(spare_btn.font())
                     spare_required_width = spare_btn_fm.horizontalAdvance(spare_name) + 48
-                    spare_btn.setFixedWidth(max(SPARE_BTN_WIDTH, min(440, spare_required_width)))
+                    spare_btn.setFixedWidth(max(110, min(360, spare_required_width)))
                     spare_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
                     spare_btn.clicked.connect(lambda _=False, p=spare: self.part_clicked(p))
 
+                    spare_code = (spare.get('code') or '').strip()
+                    spare_code_lbl = QLabel(spare_code if spare_code else '-')
+                    spare_code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+                    spare_code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+                    spare_code_lbl.setStyleSheet(
+                        'background: transparent;'
+                        'border: none;'
+                        'padding: 0 2px;'
+                        'font-size: 10.5pt;'
+                        'color: #22303c;'
+                    )
+
                     spare_row_layout.addWidget(spare_btn, 0)
                     spare_row_layout.addWidget(spare_code_lbl, 1)
-                    spare_host_layout.addLayout(spare_row_layout)
-
-                def _set_toggle_hover(hovered: bool, label=code_lbl):
-                    label.setStyleSheet(code_style_hover if hovered else code_style_default)
-
-                def _cursor_over_toggle(widget=code_widget):
-                    if not widget.isVisible():
-                        return False
-                    return widget.rect().contains(widget.mapFromGlobal(QCursor.pos()))
+                    spare_host_layout.addWidget(spare_row)
 
                 def _toggle_spares(
                     _e,
@@ -1619,33 +1740,19 @@ class HomePage(QWidget):
                     up=arrow_up,
                     left=arrow_left,
                     panel=frame,
-                    panel_grid=grid,
-                    set_hover=_set_toggle_hover,
-                    cursor_over=_cursor_over_toggle,
+                    set_hover=_set_code_hover,
                 ):
-                    self._component_toggle_hover_suppressed = True
-                    set_hover(False)
                     visible = not host.isVisible()
                     host.setVisible(visible)
                     arrow.setPixmap(up if visible else left)
-                    panel_grid.activate()
+                    set_hover(False)
                     panel.updateGeometry()
                     panel.update()
 
-                    def _restore_hover(owner=self, apply_hover=set_hover, is_cursor_over=cursor_over):
-                        owner._component_toggle_hover_suppressed = False
-                        apply_hover(is_cursor_over())
-
-                    QTimer.singleShot(90, _restore_hover)
-
-                def _hover_enter(_e, set_hover=_set_toggle_hover):
-                    if getattr(self, '_component_toggle_hover_suppressed', False):
-                        return
+                def _hover_enter(_e, set_hover=_set_code_hover):
                     set_hover(True)
 
-                def _hover_leave(_e, set_hover=_set_toggle_hover):
-                    if getattr(self, '_component_toggle_hover_suppressed', False):
-                        return
+                def _hover_leave(_e, set_hover=_set_code_hover):
                     set_hover(False)
 
                 code_lbl.mousePressEvent = _toggle_spares
@@ -1655,36 +1762,54 @@ class HomePage(QWidget):
                 arrow_lbl.enterEvent = _hover_enter
                 arrow_lbl.leaveEvent = _hover_leave
 
-                grid.addWidget(spare_host, row, 0, 1, 2)
-                row += 1
+                list_layout.addWidget(spare_host)
 
-        if row == 0:
-            grid.addWidget(self._value_label('-'), row, 0, 1, 2)
-        layout.addLayout(grid)
+        if not normalized:
+            empty_row = QFrame()
+            empty_row.setProperty('editorFieldCard', True)
+            empty_row_layout = QVBoxLayout(empty_row)
+            empty_row_layout.setContentsMargins(0, 0, 0, 0)
+            empty_row_layout.setSpacing(0)
+
+            empty_edit = QLineEdit('-')
+            empty_edit.setReadOnly(True)
+            empty_edit.setFocusPolicy(Qt.NoFocus)
+            empty_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            empty_row_layout.addWidget(empty_edit)
+            list_layout.addWidget(empty_row)
+
+        body_layout.addLayout(list_layout)
+        layout.addWidget(body_host)
         return frame
 
     def _build_preview_panel(self, stl_path: str | None = None):
-        frame = QFrame()
-        frame.setProperty('subCard', True)
+        frame = create_titled_section(self._t('tool_library.section.preview', 'Preview'))
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         layout = QVBoxLayout(frame)
         layout.setSpacing(10)
-        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setContentsMargins(6, 4, 6, 6)
 
-        title = QLabel(self._t('tool_library.section.preview', 'Preview'))
-        title.setProperty('detailSectionTitle', True)
-        layout.addWidget(title)
-
-        diagram = QFrame()
-        diagram.setProperty('diagramPanel', True)
-        diagram.setMinimumHeight(280)
+        diagram = QWidget()
+        diagram.setObjectName('detailPreviewGradientHost')
+        diagram.setAttribute(Qt.WA_StyledBackground, True)
+        diagram.setStyleSheet(
+            'QWidget#detailPreviewGradientHost {'
+            '  background-color: #d6d9de;'
+            '  border: none;'
+            '  border-radius: 6px;'
+            '}'
+        )
+        diagram.setMinimumHeight(300)
         diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         dlay = QVBoxLayout(diagram)
-        dlay.setContentsMargins(14, 14, 14, 14)
+        dlay.setContentsMargins(6, 6, 6, 6)
+        dlay.setSpacing(0)
 
         viewer = StlPreviewWidget() if StlPreviewWidget is not None else None
         if viewer is not None:
+            viewer.setStyleSheet('background: transparent; border: none;')
             viewer.set_control_hint_text(
                 self._t(
                     'tool_editor.hint.rotate_pan_zoom',
@@ -1693,7 +1818,7 @@ class HomePage(QWidget):
             )
         loaded = self._load_preview_content(viewer, stl_path, label='Detail Preview') if viewer is not None else False
         if viewer is not None:
-            viewer.setMinimumHeight(240)
+            viewer.setMinimumHeight(260)
             viewer.set_measurement_overlays([])
             viewer.set_measurements_visible(False)
 
@@ -1891,12 +2016,20 @@ class HomePage(QWidget):
         )
         if not ok or not new_id.strip():
             return
+        new_id_storage = self._tool_id_storage_value(new_id)
+        if not new_id_storage:
+            QMessageBox.warning(
+                self,
+                self._t('tool_library.action.copy_tool_title', 'Copy tool'),
+                self._t('tool_editor.error.tool_id_required', 'Tool ID is required.'),
+            )
+            return
         new_desc, _ = self._prompt_text(
             self._t('tool_library.action.copy_tool_title', 'Copy tool'),
             self._t('tool_library.prompt.new_description_optional', 'New description (optional):'),
         )
         allow_duplicate = False
-        if self.tool_service.tcode_exists(new_id.strip()):
+        if self.tool_service.tcode_exists(new_id_storage):
             confirm_text = self._t(
                 'tool_library.warning.duplicate_tcode',
                 'This T-code already exists, want to save the tool anyway?\n\n'
@@ -1911,11 +2044,21 @@ class HomePage(QWidget):
             allow_duplicate = True
         try:
             if self.current_tool_uid is not None:
-                copied = self.tool_service.copy_tool_by_uid(self.current_tool_uid, new_id, new_desc, allow_duplicate=allow_duplicate)
+                copied = self.tool_service.copy_tool_by_uid(
+                    self.current_tool_uid,
+                    new_id_storage,
+                    new_desc,
+                    allow_duplicate=allow_duplicate,
+                )
             else:
-                copied = self.tool_service.copy_tool(self.current_tool_id, new_id, new_desc, allow_duplicate=allow_duplicate)
+                copied = self.tool_service.copy_tool(
+                    self.current_tool_id,
+                    new_id_storage,
+                    new_desc,
+                    allow_duplicate=allow_duplicate,
+                )
             self.current_tool_uid = copied.get('uid') if isinstance(copied, dict) else None
-            self.current_tool_id = (copied.get('id') if isinstance(copied, dict) else '') or new_id.strip()
+            self.current_tool_id = (copied.get('id') if isinstance(copied, dict) else '') or new_id_storage
             self.refresh_list()
             self.populate_details(self._get_selected_tool())
         except ValueError as exc:

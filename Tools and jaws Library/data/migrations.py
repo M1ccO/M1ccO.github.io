@@ -25,10 +25,12 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
             CREATE TABLE IF NOT EXISTS tools (
                 id TEXT PRIMARY KEY,
                 tool_head TEXT DEFAULT 'HEAD1',
+                spindle_orientation TEXT DEFAULT 'main',
                 tool_type TEXT DEFAULT 'Turning',
                 description TEXT DEFAULT '',
                 geom_x REAL DEFAULT 0,
                 geom_z REAL DEFAULT 0,
+                b_axis_angle REAL DEFAULT 0,
                 radius REAL DEFAULT 0,
                 nose_corner_radius REAL DEFAULT 0,
                 holder_code TEXT DEFAULT '',
@@ -54,10 +56,12 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
     cols = table_columns(conn, 'tools')
     additions = {
         'tool_head': "TEXT DEFAULT 'HEAD1'",
+        'spindle_orientation': "TEXT DEFAULT 'main'",
         'tool_type': "TEXT DEFAULT 'Turning'",
         'description': "TEXT DEFAULT ''",
         'geom_x': 'REAL DEFAULT 0',
         'geom_z': 'REAL DEFAULT 0',
+        'b_axis_angle': 'REAL DEFAULT 0',
         'radius': 'REAL DEFAULT 0',
         'nose_corner_radius': 'REAL DEFAULT 0',
         'holder_code': "TEXT DEFAULT ''",
@@ -112,6 +116,8 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
         return
 
     has_measurement_overlays = 'measurement_overlays' in cols
+    has_spindle_orientation = 'spindle_orientation' in cols
+    has_b_axis_angle = 'b_axis_angle' in cols
 
     with conn:
         conn.execute(
@@ -120,10 +126,12 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
                 uid INTEGER PRIMARY KEY AUTOINCREMENT,
                 id TEXT NOT NULL,
                 tool_head TEXT DEFAULT 'HEAD1',
+                spindle_orientation TEXT DEFAULT 'main',
                 tool_type TEXT DEFAULT 'Turning',
                 description TEXT DEFAULT '',
                 geom_x REAL DEFAULT 0,
                 geom_z REAL DEFAULT 0,
+                b_axis_angle REAL DEFAULT 0,
                 radius REAL DEFAULT 0,
                 nose_corner_radius REAL DEFAULT 0,
                 holder_code TEXT DEFAULT '',
@@ -151,14 +159,14 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
         insert_sql = (
             """
             INSERT INTO tools_new (
-                id, tool_head, tool_type, description, geom_x, geom_z, radius,
+                id, tool_head, spindle_orientation, tool_type, description, geom_x, geom_z, b_axis_angle, radius,
                 nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                 cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                 notes, drill_nose_angle, mill_cutting_edges, spare_parts,
                 geometry_profiles, support_parts, component_items, measurement_overlays, stl_path
             )
             SELECT
-                id, tool_head, tool_type, description, geom_x, geom_z, radius,
+                id, tool_head, {spindle_orientation}, tool_type, description, geom_x, geom_z, {b_axis_angle}, radius,
                 nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
                 cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
                 notes, drill_nose_angle, mill_cutting_edges, spare_parts,
@@ -166,7 +174,9 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
             FROM tools
             """
         ).format(
-            measurement_overlays='measurement_overlays' if has_measurement_overlays else "'[]'"
+            measurement_overlays='measurement_overlays' if has_measurement_overlays else "'[]'",
+            spindle_orientation='spindle_orientation' if has_spindle_orientation else "'main'",
+            b_axis_angle='b_axis_angle' if has_b_axis_angle else '0',
         )
         conn.execute(insert_sql)
         conn.execute('DROP TABLE tools')

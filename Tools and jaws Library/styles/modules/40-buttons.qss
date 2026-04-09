@@ -95,6 +95,13 @@ QPushButton[panelActionButton="true"] {
     font-size: 10pt;
 }
 
+/* Compact variant for tool component rows: shorter without text clipping */
+QPushButton[panelActionButton="true"][componentCompact="true"] {
+    min-height: 30px;
+    padding: 0px 10px;
+    font-size: 10pt;
+}
+
 QPushButton[panelActionButton="true"]:hover {
     background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
                                       stop:0 #eaf1f6, stop:1 #ffffff);
