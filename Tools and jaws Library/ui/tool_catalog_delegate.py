@@ -127,7 +127,7 @@ def _is_sub_spindle(value) -> bool:
 
 def _nose_corner_or_angle_column(tool: dict, t: Callable) -> tuple[str, str]:
     raw_tool_type = (tool.get('tool_type', '') or '').strip()
-    angle_tool_types = {'Drill', 'Spot Drill', 'Turn Drill', 'Turn Spot Drill'}
+    angle_tool_types = {'Drill', 'Spot Drill', 'Turn Drill', 'Turn Spot Drill', 'Turn Center Drill'}
 
     if raw_tool_type in angle_tool_types:
         angle = _safe_float_number(tool.get('drill_nose_angle'))
@@ -177,24 +177,11 @@ def tool_icon_for_type(tool_type: str) -> QIcon:
 def _home_columns(tool: dict, t: Callable) -> list[tuple[str, str, str, int]]:
     """Return (key, header, value, weight) tuples for the home/tools view."""
     desc = (tool.get('description', '') or '').strip() or t('tool_library.common.no_description', 'No description')
-    nose_corner_header, nose_corner_value = _nose_corner_or_angle_column(tool, t)
-    raw_tool_type = (tool.get('tool_type', '') or '').strip()
-    is_turning_tool = raw_tool_type in TURNING_TOOL_TYPES
-    turning_drill_tool = raw_tool_type in {'Turn Drill', 'Turn Spot Drill'}
-    is_head1 = (tool.get('tool_head', 'HEAD1') or 'HEAD1').strip().upper() == 'HEAD1'
-    if is_turning_tool and not turning_drill_tool and is_head1:
-        radius_header = t('tool_library.field.b_axis_angle', 'B-axis angle')
-        radius_value = _safe_float(tool.get('b_axis_angle', 0))
-    else:
-        radius_header = t('tool_library.field.radius', 'Radius')
-        radius_value = _safe_float(tool.get('radius', 0))
     return [
         ('tool_id', t('tool_library.row.tool_id', 'Tool ID'), _tool_id_display_value(tool.get('id', '')), 100),
         ('tool_name', t('tool_library.row.tool_name', 'Tool name'), desc, 270),
         ('geom_x', t('tool_library.field.geom_x', 'Geom X'), _safe_float(tool.get('geom_x', 0)), 110),
         ('geom_z', t('tool_library.field.geom_z', 'Geom Z'), _safe_float(tool.get('geom_z', 0)), 110),
-        ('radius', radius_header, radius_value, 95),
-        ('nose_corner_radius', nose_corner_header, nose_corner_value, 145),
     ]
 
 

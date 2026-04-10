@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import Qt
@@ -21,10 +22,17 @@ from ui.widgets.common import add_shadow, apply_tool_library_combo_style
 
 
 class PreferencesDialog(QDialog):
-    def __init__(self, current_preferences: dict, translate: Callable[[str, str | None], str], parent=None):
+    def __init__(
+        self,
+        current_preferences: dict,
+        translate: Callable[[str, str | None], str],
+        parent=None,
+        active_db_path: str = "",
+    ):
         super().__init__(parent)
         self._translate = translate
         self._current = dict(current_preferences or {})
+        self._active_db_path = str(active_db_path or "").strip()
 
         self.setObjectName("appRoot")
         self.setProperty("preferencesDialog", True)
@@ -41,8 +49,10 @@ class PreferencesDialog(QDialog):
 
         self.general_tab = self._build_general_tab()
         self.models_tab = self._build_models_tab()
+        self.database_tab = self._build_database_tab()
         self.tabs.addTab(self.general_tab, self._t("preferences.tab.general", "General"))
         self.tabs.addTab(self.models_tab, self._t("preferences.tab.models_3d", "3D Models"))
+        self.tabs.addTab(self.database_tab, self._t("preferences.tab.database", "Database"))
 
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 6, 0, 0)
@@ -155,12 +165,79 @@ class PreferencesDialog(QDialog):
         layout.addStretch(1)
         return tab
 
+    def _build_database_tab(self) -> QWidget:
+        tab = QWidget()
+        layout = QVBoxLayout(tab)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        card = QFrame()
+        card.setProperty("card", True)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(16, 14, 16, 14)
+        card_layout.setSpacing(10)
+        layout.addWidget(card)
+
+        hint = QLabel(
+            self._t(
+                "preferences.database.hint",
+                "Choose the active Setup Manager database (.db). Changes apply after restart.",
+            )
+        )
+        hint.setWordWrap(True)
+        hint.setProperty("detailHint", True)
+        card_layout.addWidget(hint)
+
+        warning = QLabel(
+            self._t(
+                "preferences.database.warning",
+                "Warning: Setup Manager work links depend on matching tool and jaw IDs in the currently configured Tool Library and Jaws Library databases. Changing only the Setup database may leave some work references unresolved.",
+            )
+        )
+        warning.setWordWrap(True)
+        warning.setProperty("detailHint", True)
+        card_layout.addWidget(warning)
+
+        self.setup_db_path_edit = QLineEdit()
+        self.setup_db_path_edit.setMinimumWidth(260)
+        self.setup_db_path_edit.setPlaceholderText(
+            self._t("preferences.database.path.placeholder", "Path to setup_manager.db")
+        )
+        self.setup_db_browse = QPushButton(self._t("preferences.models.browse", "BROWSE"))
+        self.setup_db_browse.setProperty("panelActionButton", True)
+        self.setup_db_browse.clicked.connect(self._pick_setup_database)
+        add_shadow(self.setup_db_browse)
+        card_layout.addWidget(
+            self._path_row(
+                self._t("preferences.database.path", "Setup DB"),
+                self.setup_db_path_edit,
+                self.setup_db_browse,
+            )
+        )
+
+        self.active_db_path_edit = QLineEdit()
+        self.active_db_path_edit.setReadOnly(True)
+        self.active_db_path_edit.setFocusPolicy(Qt.NoFocus)
+        self.active_db_path_edit.setMinimumWidth(260)
+        self.active_db_path_edit.setPlaceholderText(
+            self._t("preferences.database.active_runtime.placeholder", "No active database path")
+        )
+        card_layout.addWidget(
+            self._line_row(
+                self._t("preferences.database.active_runtime", "Active Runtime DB"),
+                self.active_db_path_edit,
+            )
+        )
+
+        layout.addStretch(1)
+        return tab
+
     def preferences_payload(self) -> dict:
         return {
             "language": self.language_combo.currentData() or "en",
             "color_theme": self.theme_combo.currentData() or "classic",
             "tools_models_root": self.tools_models_root.text().strip(),
             "jaws_models_root": self.jaws_models_root.text().strip(),
+            "setup_db_path": self.setup_db_path_edit.text().strip(),
             "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
             "enable_drawings_tab": self.drawings_tab_cb.isChecked(),
         }
@@ -170,6 +247,9 @@ class PreferencesDialog(QDialog):
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
         self.tools_models_root.setText(str(self._current.get("tools_models_root", "")))
         self.jaws_models_root.setText(str(self._current.get("jaws_models_root", "")))
+        self.setup_db_path_edit.setText(str(self._current.get("setup_db_path", "")))
+        self.active_db_path_edit.setText(self._active_db_path)
+        self.active_db_path_edit.setToolTip(self._active_db_path or "")
         self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
         self.drawings_tab_cb.setChecked(bool(self._current.get("enable_drawings_tab", True)))
 
@@ -193,6 +273,19 @@ class PreferencesDialog(QDialog):
         if chosen:
             self.jaws_models_root.setText(chosen)
 
+    def _pick_setup_database(self):
+        start_dir = self.setup_db_path_edit.text().strip()
+        if not start_dir:
+            start_dir = str(Path.home())
+        chosen, _ = QFileDialog.getOpenFileName(
+            self,
+            self._t("preferences.database.select", "Select Setup Manager database"),
+            start_dir,
+            self._t("preferences.database.file_filter", "SQLite Database (*.db);;All Files (*.*)"),
+        )
+        if chosen:
+            self.setup_db_path_edit.setText(chosen)
+
     @staticmethod
     def _set_combo_by_data(combo: QComboBox, value: str):
         target = str(value or "").strip()
@@ -215,6 +308,22 @@ class PreferencesDialog(QDialog):
         combo.setFixedHeight(36)
         layout.addWidget(label)
         layout.addWidget(combo, 1)
+        return row
+
+    def _line_row(self, label_text: str, line_edit: QLineEdit) -> QFrame:
+        row = QFrame()
+        row.setProperty("editorFieldCard", True)
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+        label = QLabel(label_text)
+        label.setProperty("detailFieldKey", True)
+        label.setMinimumWidth(130)
+        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        line_edit.setMinimumWidth(220)
+        line_edit.setFixedHeight(36)
+        layout.addWidget(label)
+        layout.addWidget(line_edit, 1)
         return row
 
     def _path_row(self, label_text: str, line_edit: QLineEdit, browse_btn: QPushButton) -> QFrame:

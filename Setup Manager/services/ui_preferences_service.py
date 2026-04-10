@@ -19,6 +19,7 @@ DEFAULT_UI_PREFERENCES = {
     "color_theme": "classic",
     "tools_models_root": str(_DEFAULT_TOOLS_ROOT),
     "jaws_models_root": str(_DEFAULT_JAWS_ROOT),
+    "setup_db_path": "",
     "enable_assembly_transform": False,
     "enable_drawings_tab": True,
 }
@@ -52,6 +53,12 @@ def _normalize_preferences(payload: dict | None) -> dict:
     jaws_root = str(data.get("jaws_models_root") or DEFAULT_UI_PREFERENCES["jaws_models_root"]).strip()
     data["tools_models_root"] = str(Path(tools_root).expanduser().resolve())
     data["jaws_models_root"] = str(Path(jaws_root).expanduser().resolve())
+
+    setup_db_path = str(data.get("setup_db_path") or "").strip()
+    if setup_db_path:
+        data["setup_db_path"] = str(Path(setup_db_path).expanduser().resolve())
+    else:
+        data["setup_db_path"] = ""
 
     data["enable_assembly_transform"] = bool(data.get("enable_assembly_transform", False))
     data["enable_drawings_tab"] = bool(data.get("enable_drawings_tab", True))

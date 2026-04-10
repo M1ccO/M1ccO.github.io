@@ -1077,7 +1077,7 @@ class HomePage(QWidget):
     @staticmethod
     def _is_turning_drill_tool_type(raw_tool_type: str) -> bool:
         normalized = (raw_tool_type or '').strip().lower()
-        return normalized in {'turn drill', 'turn spot drill'}
+        return normalized in {'turn drill', 'turn spot drill', 'turn center drill'}
 
     @staticmethod
     def _is_mill_tool_type(raw_tool_type: str) -> bool:
@@ -1319,10 +1319,10 @@ class HomePage(QWidget):
         uses_pitch_label = (raw_tool_type or '').strip() == 'Tapping'
         is_turning_tool = raw_tool_type in TURNING_TOOL_TYPES
         show_b_axis = is_turning_tool and not turning_drill_type and tool_head == 'HEAD1'
-        uses_turning_nose_row = is_turning_tool and not turning_drill_type
+        is_head2_turning_non_drill = tool_head == 'HEAD2' and is_turning_tool and not turning_drill_type
 
-        if uses_turning_nose_row and not show_b_axis:
-            # HEAD2 turning tools: keep Geom X, Geom Z and Nose radius on one row.
+        if is_head2_turning_non_drill:
+            # HEAD2 turning tools: one row with Geom X, Geom Z, and Nirkonsade.
             add_three_box_row(
                 0,
                 self._t('tool_library.field.geom_x', 'Geom X'),
@@ -1346,7 +1346,18 @@ class HomePage(QWidget):
             # Backward compatibility: older records may store point angle in nose_corner_radius.
             angle_value = str(tool.get('nose_corner_radius', ''))
 
-        if uses_turning_nose_row:
+        if turning_drill_type:
+            # Turn drills / turn center drills:
+            # row 1 = Geom X + Geom Z, row 2 = Radius + Nose angle.
+            add_two_box_row(
+                1,
+                self._t('tool_library.field.radius', 'Radius'),
+                str(tool.get('radius', '')),
+                self._t('tool_library.field.nose_angle', 'Nose angle'),
+                angle_value,
+            )
+            full_row = 2
+        elif is_turning_tool:
             if show_b_axis:
                 add_two_box_row(
                     1,
@@ -1356,6 +1367,8 @@ class HomePage(QWidget):
                     str(tool.get('nose_corner_radius', '')),
                 )
                 full_row = 2
+            elif is_head2_turning_non_drill:
+                full_row = 1
             else:
                 full_row = 1
         elif is_chamfer:
@@ -1399,10 +1412,7 @@ class HomePage(QWidget):
             )
             full_row = 2
         else:
-            if turning_drill_type:
-                info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
-                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), angle_value), 1, 3, 1, 3, Qt.AlignTop)
-            elif is_drill_cutting:
+            if is_drill_cutting:
                 info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
                 info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), angle_value), 1, 3, 1, 3, Qt.AlignTop)
             elif not is_drill_cutting:

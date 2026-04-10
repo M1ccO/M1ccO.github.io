@@ -1,4 +1,5 @@
 ﻿import os
+import json
 import shutil
 import sys
 from pathlib import Path
@@ -119,16 +120,39 @@ I18N_DIR = APP_DIR / "i18n"
 if not I18N_DIR.exists():
     I18N_DIR = SOURCE_DIR / "i18n"
 
+
+def _read_setup_db_override() -> Path | None:
+    """Read optional setup DB path override from shared UI preferences."""
+    if not SHARED_UI_PREFERENCES_PATH.exists():
+        return None
+    try:
+        payload = json.loads(SHARED_UI_PREFERENCES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    candidate = str((payload or {}).get("setup_db_path") or "").strip()
+    if not candidate:
+        return None
+    try:
+        path = Path(candidate).expanduser().resolve()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        return path
+    except Exception:
+        return None
+
 if IS_FROZEN:
     source_like_db = SOURCE_DIR.parent / "databases" / "setup_manager.db"
     workspace_like_db = SOURCE_DIR.parent.parent / "Setup Manager" / "databases" / "setup_manager.db"
+    override_db = _read_setup_db_override()
     DB_PATH = _first_existing_path(
+        override_db if override_db is not None else DB_DIR / "setup_manager.db",
         source_like_db,
         workspace_like_db,
         DB_DIR / "setup_manager.db",
     )
 else:
-    DB_PATH = DB_DIR / "setup_manager.db"
+    override_db = _read_setup_db_override()
+    DB_PATH = override_db if override_db is not None else DB_DIR / "setup_manager.db"
 TOOL_LIBRARY_PROJECT_DIR = _first_existing_dir(
     SIBLING_PROJECTS_DIR / "Tools and jaws Library",
     SOURCE_DIR.parent / "Tools and jaws Library",

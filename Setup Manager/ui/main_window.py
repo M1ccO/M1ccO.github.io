@@ -586,11 +586,17 @@ class MainWindow(QMainWindow):
         self._open_tool_library_module("jaws")
 
     def _open_preferences(self):
-        dialog = PreferencesDialog(self.ui_preferences, self._t, parent=self)
+        dialog = PreferencesDialog(
+            self.ui_preferences,
+            self._t,
+            parent=self,
+            active_db_path=str(getattr(self.work_service.db, "path", "") or ""),
+        )
         if dialog.exec() != PreferencesDialog.Accepted:
             return
 
         previous_language = self.ui_preferences.get("language", "en")
+        previous_setup_db = str(self.ui_preferences.get("setup_db_path", "") or "").strip()
         self.ui_preferences = self.ui_preferences_service.save(dialog.preferences_payload())
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         if hasattr(self.print_service, "set_translator"):
@@ -613,6 +619,16 @@ class MainWindow(QMainWindow):
                 self,
                 self._t("preferences.restart_title", "Restart Required"),
                 self._t("preferences.restart_body", "Language changes will be applied after restarting the app."),
+            )
+        current_setup_db = str(self.ui_preferences.get("setup_db_path", "") or "").strip()
+        if current_setup_db != previous_setup_db:
+            QMessageBox.information(
+                self,
+                self._t("preferences.restart_title", "Restart Required"),
+                self._t(
+                    "preferences.restart_db_body",
+                    "Database path changes will be applied after restarting the app.",
+                ),
             )
 
     def _refresh_localized_labels(self):
