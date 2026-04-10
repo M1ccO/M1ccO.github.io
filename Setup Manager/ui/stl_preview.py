@@ -10,7 +10,10 @@ from config import (
     SHARED_UI_PREFERENCES_PATH,
     TOOL_MODELS_ROOT_DEFAULT,
 )
-from shared.model_paths import read_model_roots, resolve_model_path
+try:
+    from shared.model_paths import read_model_roots, resolve_model_path
+except ModuleNotFoundError:
+    from model_paths import read_model_roots, resolve_model_path
 
 
 class ScrollFriendlyWebView(QWebEngineView):

@@ -1,0 +1,379 @@
+WORK EDITOR SELECTOR REWORK
+Goal + Current Technical Implementation Status
+Date: 2026-04-10
+
+==================================================
+1) GOAL TO IMPLEMENT (TARGET BEHAVIOR)
+==================================================
+
+1.1 Product objective
+- Build one consistent selection workflow where Work Editor uses the ACTUAL Tool Library and ACTUAL Jaws Library UIs.
+- Do not maintain a second "look-alike" selector implementation.
+- Keep existing library capability (search/filter/details/3D/edit actions) available, while adding assignment-oriented behavior for Work Editor.
+
+1.2 UX principles
+- Single source of truth: library pages and styles are reused, not duplicated.
+- Assignment-first: users can build Work Editor assignments quickly without leaving library context.
+- Predictable targeting: user always knows which HEAD/SPINDLE or SP slot is being edited.
+- Reversible actions: clear visual feedback, safe cancel, no silent destructive behavior.
+
+1.3 Scope in Work Editor entry points
+- YLEISET tab:
+  - "Tools & Jaws Selector" starts a chained flow:
+    1) Tool selection stage
+    2) Automatic transition to Jaw selection stage
+    3) Return to Work Editor
+- Tool IDs tab:
+  - "Select Tools" opens tool selector stage only.
+- Spindles/Jaws tab:
+  - "Select Jaws" opens jaw selector stage only.
+- Existing in-tab manual row edit actions remain available.
+
+1.4 Tool selector target behavior (inside ACTUAL Tool Library window)
+- Open behavior:
+  - Opens real Tool Library module with selector session context.
+  - Shows current target context (HEAD1/HEAD2 and SP1/SP2).
+- Layout behavior:
+  - Left side remains real tool catalog with existing search/filter/type/head behavior.
+  - Right side changes from detail-only usage to assignment area behavior in selector mode.
+- Assignment area requirements:
+  - Supports drag from catalog -> assignment list.
+  - Supports drag reorder within assignment list.
+  - Supports drop insertion between existing rows (explicit insertion location indicator).
+  - Supports replacing or appending behavior defined by drop position.
+  - Supports multi-selection drag (when multiple tools selected).
+- Duplicate policy:
+  - Disallow duplicate same tool inside same (HEAD, spindle) bucket.
+  - Allow same tool in different buckets.
+- Row content requirements:
+  - Mini-card row format consistent with Setup Card intent.
+  - Shows order index, tool id/name, and optional meta (pot/comment/edit markers).
+- Row edit requirements:
+  - Double-click row opens row edit for:
+    - comment
+    - pot
+    - override_id (T-code)
+    - override_description
+  - Edits persist in assignment payload returned to Work Editor.
+
+1.5 Jaw selector target behavior (inside ACTUAL Jaws Library window)
+- Open behavior:
+  - Opens real Jaws Library module with selector session context.
+- Assignment area requirements:
+  - Two fixed targets: SP1 and SP2.
+  - Drag jaw from catalog to SP1/SP2 target.
+  - Re-drop on same slot replaces previous jaw selection.
+- Stop-screw handling:
+  - If selected jaw is spiked, stop-screw input is editable for that slot.
+  - If jaw is not spiked, stop-screw input is hidden/disabled/ignored for that slot.
+  - Existing stop-screw value is preserved unless explicitly changed.
+
+1.6 Selector mode vs details mode
+- Real library keeps details and 3D preview capability.
+- In selector mode, right panel prioritizes assignment interaction.
+- Details mode remains accessible (toggle or equivalent) without leaving selector session.
+- Switching between selector/details modes must not lose current in-session assignment state.
+
+1.7 Context and targeting rules
+- Tool targeting context:
+  - HEAD selection: HEAD1 or HEAD2.
+  - Spindle selection: SP1(main) or SP2(sub).
+  - Active context is clearly visible in selector UI.
+- Jaw targeting context:
+  - Active jaw slot context: SP1 or SP2.
+- Default context resolution:
+  - Uses launching tab/state (or current focused list) as default.
+  - User can switch target context inside selector session.
+
+1.8 Combined flow state machine (YLEISET button)
+- Start -> ToolSelector(Open)
+- ToolSelector:
+  - Cancel => return to Work Editor, no chained jaw stage
+  - Complete/Apply => JawSelector(Open)
+- JawSelector:
+  - Cancel => return to Work Editor; tool changes from previous stage remain (if already applied)
+  - Complete/Apply => return to Work Editor
+- Return state:
+  - Work Editor refreshes lists and keeps current tab/state as sensible default.
+
+1.9 Work Editor in-tab list visual target
+- Tool rows in Work Editor must visually match mini-card language used in Setup Cards:
+  - compact row height
+  - consistent paddings and border radius
+  - icon scale matching card typography
+  - clean title/subtitle alignment (no overlap, clipping, or vertical drift)
+  - selected state highlight consistent with catalog cards
+- "No oversized/broken card layouts" is a hard acceptance requirement.
+
+1.10 Data contract and persistence constraints
+- Persisted work schema MUST stay unchanged:
+  - head1_tool_assignments
+  - head2_tool_assignments
+  - main_jaw_id
+  - sub_jaw_id
+  - main_stop_screws
+  - sub_stop_screws
+- No DB migration.
+- Preserve compatibility fields:
+  - tool_uid when available
+  - override fields
+  - deleted-tool placeholder behavior
+
+1.11 Save/cancel semantics
+- Selector cancel:
+  - must not apply new selection changes for that stage.
+- Selector complete/apply:
+  - applies stage results to Work Editor in-memory state.
+- Work Editor final Save:
+  - persists resulting state to DB.
+- Work Editor Cancel:
+  - discards in-memory changes from selector sessions opened in that dialog instance.
+
+1.12 Error handling and resilience
+- If external library is unavailable:
+  - show clear warning and keep user in Work Editor.
+- If callback payload is malformed:
+  - show warning and do not corrupt current assignments.
+- If selected items no longer exist in DB:
+  - keep assignment id references and show missing/deleted visual marker as existing behavior expects.
+
+1.13 Performance and responsiveness
+- Opening selector from Work Editor should feel immediate (reuse running library instance when possible).
+- Drag/drop and reordering operations should be smooth with no noticeable lag at normal list sizes.
+
+1.14 Non-goals
+- No database schema redesign.
+- No removal of normal Tool Library/Jaws Library CRUD workflows.
+- No replacement of existing Work Editor manual edit controls.
+
+1.15 Definition of done (acceptance checklist)
+- A) Tools selector from Work Editor opens real Tool Library.
+- B) Jaws selector from Work Editor opens real Jaws Library.
+- C) In selector mode, right-side assignment area supports:
+  - drag add
+  - drag insert between rows
+  - drag reorder
+- D) Tool row double-click editing works and persists in assignment payload.
+- E) Duplicate rules are enforced per bucket exactly as specified.
+- F) YLEISET combined flow chains Tools -> Jaws automatically on complete.
+- G) SP1/SP2 jaw assignment and spiked-jaw stop-screw behavior work.
+- H) Work Editor tool list cards visually match intended mini-card style and are not oversized/misaligned.
+- I) Save/reload regression passes:
+  - assignments
+  - overrides
+  - jaw selections
+  - stop screws
+  - print output compatibility.
+
+==================================================
+2) TECHNICAL IMPLEMENTATIONS COMPLETED SO FAR
+==================================================
+
+A) Setup Manager -> External Library selector bridge
+File: Setup Manager/ui/work_editor_dialog.py
+
+Implemented:
+- Removed runtime dependency on custom selector dialogs for active flow.
+- Added local selector callback server per WorkEditorDialog instance (QLocalServer).
+- Added request/session tracking with unique request_id per selector request.
+- Added Tool Library IPC launch/send path:
+  - Sends payload to tool_library_single_instance via QLocalSocket.
+  - Payload includes selector mode metadata:
+    - selector_mode (tools/jaws)
+    - selector_callback_server
+    - selector_request_id
+    - selector_head (optional)
+    - selector_spindle (optional)
+- Added fallback launch and retry logic when Tool Library is not already running.
+- Added callback payload handling:
+  - command=selector_result validation
+  - request_id correlation
+  - kind-based routing (tools/jaws)
+- Added assignment application logic:
+  - Tools: appends selected tools to target (head, spindle) bucket
+  - Duplicate prevention within same bucket by uid/id key
+  - Preserves assignment schema fields (comment/pot/override fields initialized)
+  - Same tool still allowed in different buckets
+  - Jaws: applies selected jaw to requested spindle (main/sub)
+- Added combined flow chaining:
+  - YLEISET combined button now opens tools selector and auto-opens jaws selector on valid tool callback.
+- Added selector bridge cleanup on close/destroy.
+
+Also implemented:
+- Local MiniAssignmentCard/tool-icon helpers moved into work_editor_dialog.py
+  to keep row rendering functional without custom selector module dependency.
+
+
+B) Tool Library / Jaws Library external selector session support
+Files:
+- Tools and jaws Library/ui/main_window.py
+- Tools and jaws Library/ui/home_page.py
+- Tools and jaws Library/ui/jaw_page.py
+
+Implemented:
+- Added selector session state in Tool Library MainWindow:
+  - selector_mode
+  - selector_callback_server
+  - selector_request_id
+  - selector_head
+  - selector_spindle
+- Added footer action button "Use Selected" (hidden by default, visible in selector mode).
+- apply_external_request now parses selector payload fields from Setup Manager.
+- "Use Selected" sends callback payload to Setup Manager callback server:
+  - command: selector_result
+  - request_id
+  - kind (tools/jaws)
+  - selected items payload
+- After successful callback send, Tool Library returns to Setup Manager via existing back flow.
+- Added selected item export helpers:
+  - HomePage: selected_tools_for_setup_assignment()
+  - JawPage: selected_jaws_for_setup_assignment()
+- Updated tools-side send path to read from active tools page if user is in tools subviews.
+
+
+C) Work Editor visual styling pass (partial)
+File: Setup Manager/styles/modules/50-data-views.qss
+
+Implemented:
+- Added/adjusted WorkEditor-specific miniAssignmentCard and toolIdsOrderList styles.
+- Added tighter selected/hover states and row spacing adjustments.
+- Added badge/meta visual styles for mini card rows.
+
+Result:
+- Styling changed, but current visual result still does NOT match intended final mini-card look.
+- Current state can appear too large/misaligned (as reported).
+
+
+D) Additional compatibility fix
+File: Setup Manager/ui/stl_preview.py
+
+Implemented:
+- Added import fallback:
+  - try shared.model_paths
+  - fallback to model_paths
+- Fixes startup crash: ModuleNotFoundError: No module named 'shared'
+
+
+E) i18n updates (partial and mixed quality)
+Files:
+- Setup Manager/i18n/en.json
+- Setup Manager/i18n/fi.json
+
+Implemented:
+- Added selector-related keys used by new flow.
+- Some Finnish selector labels were corrected.
+
+Note:
+- Existing encoding noise exists in fi file in broader legacy content; not fully cleaned in this pass.
+
+==================================================
+3) CURRENT MISMATCHES / OPEN GAPS
+==================================================
+
+These are not yet at target behavior:
+
+1. Drag-and-drop assignment area in place of Tool Library details panel
+- Not implemented yet.
+- Current implementation uses callback-based "Use Selected" transfer from real library,
+  but does not replace details panel with in-library assignment drop zone.
+
+2. In-library insertion drag/drop between existing assigned rows
+- Not implemented in actual Tool Library UI yet.
+
+3. Work Editor tool mini-card sizing/visual parity
+- Current cards are still too large/misaligned vs expected target.
+- Needs another focused visual/layout pass.
+
+4. Full jaw assignment interaction parity (SP1/SP2 slot UX inside real library panel)
+- Not fully implemented in-panel as originally envisioned.
+
+
+==================================================
+4) SUMMARY
+==================================================
+
+What is now working:
+- Work Editor can open the real Tool/Jaws Library and receive selected items back via callback.
+- Combined Tools -> Jaws chain flow is wired.
+
+What is still missing relative to agreed final UX:
+- The drag/drop selector experience inside the actual library detail-side area.
+- Correct final mini-card visual behavior in Work Editor list.
+
+==================================================
+5) LATEST FIX ATTEMPT (2026-04-10)
+==================================================
+
+A) Tool Library selector-mode right panel now implemented (actual library UI)
+File: Tools and jaws Library/ui/home_page.py
+
+Implemented now:
+- Added selector context API for MainWindow integration:
+  - set_selector_context(active, head, spindle)
+  - selector_assigned_tools_for_setup_assignment()
+- Added selector/details mode toggle buttons in right-panel header.
+- Added selector assignment panel in right side (instead of details when selector mode is active by default).
+- Implemented drag from tool catalog to assignment panel using custom mime payload.
+- Implemented internal drag reorder in assignment panel.
+- Implemented insertion-at-drop-position behavior.
+- Implemented duplicate prevention in assignment list by tool_uid/tool_id key.
+- Implemented remove + clear actions for assignment list.
+- Kept existing selected_tools_for_setup_assignment() for fallback compatibility.
+
+B) Jaws Library selector-mode slot panel now implemented (actual library UI)
+File: Tools and jaws Library/ui/jaw_page.py
+
+Implemented now:
+- Added selector context API for MainWindow integration:
+  - set_selector_context(active, spindle)
+  - selector_assigned_jaws_for_setup_assignment()
+- Added selector/details mode toggle buttons in right-panel header.
+- Added selector assignment panel with two fixed slots:
+  - SP1 slot
+  - SP2 slot
+- Implemented drag from jaw catalog to slot.
+- Implemented replace behavior when dropping onto an already-filled slot.
+- Added clear per-slot + clear-all behavior.
+- Kept existing selected_jaws_for_setup_assignment() for fallback compatibility.
+
+C) MainWindow now uses selector assignment payloads first
+File: Tools and jaws Library/ui/main_window.py
+
+Implemented now:
+- In selector mode, MainWindow pushes selector context into pages.
+- Use Selected callback now prefers:
+  - tools: selector_assigned_tools_for_setup_assignment() if available
+  - jaws: selector_assigned_jaws_for_setup_assignment() if available
+- Falls back to legacy selected row payload if assignment panel is empty.
+
+D) Work Editor mini-card compactness fix
+Files:
+- Setup Manager/styles/modules/50-data-views.qss
+- Setup Manager/ui/work_editor_dialog.py
+
+Implemented now:
+- Reduced miniAssignmentCard min-height and text sizes.
+- Tightened list item padding/margins in toolIdsOrderList.
+- Reduced card internal vertical padding.
+- Updated row size hint from 58 to 50 to match compact style.
+
+E) Validation completed for this pass
+- Python import checks passed for:
+  - Setup Manager main/work editor modules
+  - Tool/Jaw library main/page modules
+- py_compile passed for edited Python files.
+
+==================================================
+6) REMAINING GAPS AFTER LATEST FIX ATTEMPT
+==================================================
+
+1) Tool-row inline edit inside Tool Library selector panel
+- Not implemented yet in the new right assignment panel.
+- Work Editor-side row editing still exists and works.
+
+2) Jaw selector stop-screw editing inside library selector panel
+- Not implemented yet in library panel itself.
+- Stop-screw editing remains in Work Editor spindles section.
+
+3) Exact visual parity still needs screenshot-based final polish
+- Cards are now compacted, but final pixel-perfect parity with Setup Card mini-cards should be verified in live UI.

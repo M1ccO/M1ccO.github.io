@@ -7,8 +7,8 @@ from pathlib import Path
 
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt
-from PySide6.QtGui import QIcon, QImage, QPixmap, QStandardItem, QStandardItemModel, QTransform
+from PySide6.QtCore import QEvent, QModelIndex, QSize, Qt, QMimeData, Signal
+from PySide6.QtGui import QColor, QDrag, QIcon, QImage, QPixmap, QStandardItem, QStandardItemModel, QTransform
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
@@ -43,6 +43,7 @@ from shared.editor_helpers import (
     create_titled_section,
     create_dialog_buttons,
     setup_editor_dialog,
+    style_panel_action_button,
 )
 
 
@@ -75,6 +76,222 @@ def _jaw_icon_pixmap(jaw: dict, icon_target_size: QSize) -> QPixmap:
     return QIcon(str(TOOL_ICONS_DIR / 'jaw_icon.png')).pixmap(icon_target_size)
 from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget
+from shared.mini_assignment_card import MiniAssignmentCard
+
+SELECTOR_JAW_MIME = 'application/x-tool-library-jaw-assignment'
+
+
+class _JawCatalogListView(QListView):
+    def startDrag(self, supportedActions):
+        selection_model = self.selectionModel()
+        if selection_model is None:
+            return
+        indexes = sorted(selection_model.selectedRows(), key=lambda idx: idx.row())
+        if not indexes:
+            current = self.currentIndex()
+            if current.isValid():
+                indexes = [current]
+        if not indexes:
+            return
+
+        payload: list[dict] = []
+        for index in indexes:
+            jaw_id = str(index.data(ROLE_JAW_ID) or '').strip()
+            if not jaw_id:
+                continue
+            jaw_data = index.data(ROLE_JAW_DATA) or {}
+            payload.append(
+                {
+                    'jaw_id': jaw_id,
+                    'jaw_type': str(jaw_data.get('jaw_type') if isinstance(jaw_data, dict) else '').strip(),
+                }
+            )
+        if not payload:
+            return
+        mime = QMimeData()
+        mime.setData(SELECTOR_JAW_MIME, json.dumps(payload).encode('utf-8'))
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        # Build a semi-transparent ghost card showing the first jaw
+        first = payload[0]
+        ghost_text = first.get('jaw_id', '')
+        jaw_type = first.get('jaw_type', '')
+        if jaw_type:
+            ghost_text = f'{ghost_text} - {jaw_type}'
+        if len(payload) > 1:
+            ghost_text += f'  (+{len(payload) - 1})'
+        from PySide6.QtGui import QFont, QPainter
+        pixmap = QPixmap(220, 40)
+        pixmap.fill(QColor(0, 0, 0, 0))
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setOpacity(0.75)
+        painter.setBrush(QColor('#f0f6fc'))
+        painter.setPen(QColor('#637282'))
+        painter.drawRoundedRect(1, 1, 218, 38, 6, 6)
+        painter.setOpacity(1.0)
+        painter.setPen(QColor('#22303c'))
+        font = QFont()
+        font.setPointSizeF(9.0)
+        font.setWeight(QFont.DemiBold)
+        painter.setFont(font)
+        painter.drawText(10, 4, 200, 32, Qt.AlignVCenter | Qt.TextSingleLine, ghost_text)
+        painter.end()
+        drag.setPixmap(pixmap)
+        drag.setHotSpot(pixmap.rect().center())
+
+        drag.exec(Qt.CopyAction)
+
+
+class _JawAssignmentSlot(QFrame):
+    jawDropped = Signal(str, dict)
+
+    def __init__(self, slot_key: str, title: str, parent=None):
+        super().__init__(parent)
+        self._slot_key = slot_key
+        self._assignment: dict | None = None
+        self._drop_placeholder = 'Drop jaw here'
+        self._assignment_card: MiniAssignmentCard | None = None
+        self.setAcceptDrops(True)
+        self.setProperty('jawSelectorSlot', True)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(6)
+
+        self.title_label = QLabel(title)
+        self.title_label.setProperty('detailFieldKey', True)
+        layout.addWidget(self.title_label)
+
+        self.drop_surface = QFrame()
+        self.drop_surface.setProperty('jawSelectorDropSurface', True)
+        self._drop_layout = QVBoxLayout(self.drop_surface)
+        self._drop_layout.setContentsMargins(0, 0, 0, 0)
+        self._drop_layout.setSpacing(0)
+
+        self.value_label = QLabel('')
+        self.value_label.setProperty('jawSelectorDropValue', True)
+        self.value_label.setWordWrap(True)
+        self._drop_layout.addWidget(self.value_label)
+        layout.addWidget(self.drop_surface)
+
+        self.clear_btn = QPushButton('Clear')
+        self.clear_btn.setProperty('panelActionButton', True)
+        self.clear_btn.setMinimumWidth(88)
+        style_panel_action_button(self.clear_btn)
+        self.clear_btn.clicked.connect(self._clear_assignment_requested)
+        layout.addWidget(self.clear_btn, 0, Qt.AlignLeft)
+        self._refresh_ui()
+
+    def set_title(self, title: str):
+        self.title_label.setText(title)
+
+    def set_clear_text(self, label: str):
+        self.clear_btn.setText(label)
+
+    def set_drop_placeholder_text(self, text: str):
+        self._drop_placeholder = str(text or 'Drop jaw here')
+        self._refresh_ui()
+
+    def assignment(self) -> dict | None:
+        return dict(self._assignment) if isinstance(self._assignment, dict) else None
+
+    def set_assignment(self, jaw: dict | None):
+        normalized = None
+        if isinstance(jaw, dict):
+            jaw_id = str(jaw.get('jaw_id') or jaw.get('id') or '').strip()
+            if jaw_id:
+                normalized = {
+                    'jaw_id': jaw_id,
+                    'jaw_type': str(jaw.get('jaw_type') or '').strip(),
+                }
+        self._assignment = normalized
+        self._refresh_ui()
+
+    def _refresh_ui(self):
+        if isinstance(self._assignment, dict):
+            jaw_id = str(self._assignment.get('jaw_id') or '').strip()
+            jaw_type = str(self._assignment.get('jaw_type') or '').strip()
+            title = f'{jaw_id}  -  {jaw_type}' if jaw_type else jaw_id
+            if self._assignment_card is None:
+                icon = jaw_icon_for_row(self._assignment)
+                self._assignment_card = MiniAssignmentCard(
+                    icon=icon,
+                    title=title,
+                    subtitle='',
+                    badges=[],
+                    editable=False,
+                    compact=True,
+                    parent=self.drop_surface,
+                )
+                self._drop_layout.addWidget(self._assignment_card)
+            else:
+                icon = jaw_icon_for_row(self._assignment)
+                if icon is not None and not icon.isNull():
+                    self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(22, 22)))
+                self._assignment_card.title_label.setText(title)
+            self._assignment_card.subtitle_label.setVisible(False)
+            self._assignment_card.set_badges([])
+            self._assignment_card.setVisible(True)
+            self.value_label.setVisible(False)
+            self.clear_btn.setEnabled(True)
+            self.drop_surface.setProperty('hasAssignment', True)
+            repolish_widget(self.drop_surface)
+            return
+        self.value_label.setText(self._drop_placeholder)
+        self.value_label.setVisible(True)
+        if self._assignment_card is not None:
+            self._assignment_card.setVisible(False)
+        self.clear_btn.setEnabled(False)
+        self.drop_surface.setProperty('hasAssignment', False)
+        repolish_widget(self.drop_surface)
+
+    def _clear_assignment_requested(self):
+        self.set_assignment(None)
+        self.jawDropped.emit(self._slot_key, {})
+
+    @staticmethod
+    def _normalized_first_dropped_jaw(mime: QMimeData) -> dict | None:
+        if not mime.hasFormat(SELECTOR_JAW_MIME):
+            return None
+        try:
+            payload = json.loads(bytes(mime.data(SELECTOR_JAW_MIME)).decode('utf-8'))
+        except Exception:
+            payload = []
+        if not isinstance(payload, list):
+            return None
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            jaw_id = str(item.get('jaw_id') or item.get('id') or '').strip()
+            if not jaw_id:
+                continue
+            return {
+                'jaw_id': jaw_id,
+                'jaw_type': str(item.get('jaw_type') or '').strip(),
+            }
+        return None
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dropEvent(self, event):
+        jaw = self._normalized_first_dropped_jaw(event.mimeData())
+        if jaw is None:
+            event.ignore()
+            return
+        self.jawDropped.emit(self._slot_key, jaw)
+        event.acceptProposedAction()
 
 
 CATALOG_CARD_HEIGHT = 74
@@ -474,6 +691,11 @@ class JawPage(QWidget):
         self._master_filter_ids: set[str] = set()
         self._master_filter_active = False
         self._type_filter_values = ['all', 'soft', 'hard_group', 'special']
+        self._selector_active = False
+        self._selector_spindle = ''
+        self._selector_panel_mode = 'details'
+        self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
+        self._selector_saved_details_hidden = True
         self._build_ui()
         self.refresh_list()
 
@@ -539,6 +761,8 @@ class JawPage(QWidget):
         self.detail_section_label.setProperty('detailSectionTitle', True)
         self.detail_section_label.setStyleSheet('padding: 0 2px 0 0; font-size: 18px;')
         detail_top.addWidget(self.detail_section_label)
+
+        detail_top.addStretch(1)
 
         self.detail_close_btn = QToolButton()
         self.detail_close_btn.setIcon(self.close_icon)
@@ -608,11 +832,12 @@ class JawPage(QWidget):
         list_layout.setContentsMargins(0, 0, 0, 0)
         list_layout.setSpacing(10)
 
-        self.jaw_list = QListView()
+        self.jaw_list = _JawCatalogListView()
         self.jaw_list.setObjectName('toolCatalog')
         self.jaw_list.setVerticalScrollMode(QListView.ScrollPerPixel)
         self.jaw_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.jaw_list.setSelectionMode(QListView.ExtendedSelection)
+        self.jaw_list.setDragEnabled(True)
         self.jaw_list.setMouseTracking(True)
         self.jaw_list.setStyleSheet(
             "QListView#toolCatalog { border: none; outline: none; padding: 8px; }"
@@ -659,6 +884,118 @@ class JawPage(QWidget):
 
         detail_card_layout.addWidget(self.detail_scroll, 1)
         detail_layout.addWidget(self.detail_card, 1)
+
+        self.selector_card = QFrame()
+        self.selector_card.setProperty('card', True)
+        self.selector_card.setProperty('selectorContext', True)
+        self.selector_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.selector_card.setVisible(False)
+        selector_card_layout = QVBoxLayout(self.selector_card)
+        selector_card_layout.setContentsMargins(0, 0, 0, 0)
+        selector_card_layout.setSpacing(0)
+
+        self.selector_scroll = QScrollArea()
+        self.selector_scroll.setWidgetResizable(True)
+        self.selector_scroll.setFrameShape(QFrame.NoFrame)
+        self.selector_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.selector_panel = QWidget()
+        self.selector_panel.setProperty('selectorPanel', True)
+        self.selector_panel.setMinimumWidth(0)
+        self.selector_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        selector_layout = QVBoxLayout(self.selector_panel)
+        selector_layout.setContentsMargins(10, 10, 10, 10)
+        selector_layout.setSpacing(8)
+
+        self.selector_info_header = QFrame()
+        self.selector_info_header.setProperty('detailHeader', True)
+        self.selector_info_header.setProperty('selectorInfoHeader', True)
+        self.selector_info_header.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        selector_info_layout = QVBoxLayout(self.selector_info_header)
+        selector_info_layout.setContentsMargins(14, 14, 14, 12)
+        selector_info_layout.setSpacing(4)
+
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(0)
+        title_row.addStretch(1)
+        self.selector_header_title_label = QLabel(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+        self.selector_header_title_label.setProperty('selectorInfoTitle', True)
+        self.selector_header_title_label.setAlignment(Qt.AlignCenter)
+        title_row.addWidget(self.selector_header_title_label, 0, Qt.AlignCenter)
+        title_row.addStretch(1)
+        selector_info_layout.addLayout(title_row)
+
+        badge_row = QHBoxLayout()
+        badge_row.setContentsMargins(0, 0, 0, 0)
+        badge_row.setSpacing(10)
+        self.selector_spindle_value_label = QLabel('SP1')
+        self.selector_spindle_value_label.setProperty('toolBadge', True)
+        badge_row.addWidget(self.selector_spindle_value_label, 0, Qt.AlignLeft)
+        badge_row.addStretch(1)
+        self.selector_module_value_label = QLabel(self._t('tool_library.selector.jaws', 'Jaws'))
+        self.selector_module_value_label.setProperty('toolBadge', True)
+        badge_row.addWidget(self.selector_module_value_label, 0, Qt.AlignRight)
+        selector_info_layout.addLayout(badge_row)
+        selector_layout.addWidget(self.selector_info_header, 0)
+
+        # ── Toggle button (SELECTOR / DETAILS) — above the subheading ──
+        ctx_row = QHBoxLayout()
+        ctx_row.setContentsMargins(0, 0, 0, 0)
+        ctx_row.setSpacing(10)
+        ctx_row.addStretch(1)
+
+        self.selector_toggle_btn = QPushButton(self._t('tool_library.selector.mode_details', 'DETAILS'))
+        self.selector_toggle_btn.setProperty('panelActionButton', True)
+        self.selector_toggle_btn.setFixedHeight(30)
+        self.selector_toggle_btn.setMinimumWidth(120)
+        self.selector_toggle_btn.setMaximumWidth(140)
+        self.selector_toggle_btn.setCheckable(True)
+        self.selector_toggle_btn.setChecked(True)
+        self.selector_toggle_btn.setVisible(False)
+        self.selector_toggle_btn.clicked.connect(self._on_selector_toggle_clicked)
+        style_panel_action_button(self.selector_toggle_btn)
+        ctx_row.addWidget(self.selector_toggle_btn, 0)
+
+        self.selector_spindle_btn = QPushButton('SP1')
+        self.selector_spindle_btn.setProperty('panelActionButton', True)
+        self.selector_spindle_btn.setCheckable(True)
+        self.selector_spindle_btn.setMinimumWidth(120)
+        self.selector_spindle_btn.setMaximumWidth(140)
+        self.selector_spindle_btn.setFixedHeight(30)
+        self.selector_spindle_btn.setProperty('spindle', 'main')
+        self.selector_spindle_btn.clicked.connect(self._toggle_selector_spindle)
+        style_panel_action_button(self.selector_spindle_btn)
+        ctx_row.addWidget(self.selector_spindle_btn, 0)
+        ctx_row.addStretch(1)
+        selector_layout.addLayout(ctx_row)
+
+        self.selector_hint_label = QLabel(
+            self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.')
+        )
+        self.selector_hint_label.setWordWrap(True)
+        self.selector_hint_label.setProperty('detailHint', True)
+        selector_layout.addWidget(self.selector_hint_label)
+
+        self.selector_sp1_slot = _JawAssignmentSlot('main', self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
+        self.selector_sp2_slot = _JawAssignmentSlot('sub', self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'))
+        self.selector_sp1_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
+        self.selector_sp2_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
+        self.selector_sp1_slot.jawDropped.connect(self._on_selector_jaw_dropped)
+        self.selector_sp2_slot.jawDropped.connect(self._on_selector_jaw_dropped)
+        selector_layout.addWidget(self.selector_sp1_slot)
+        selector_layout.addWidget(self.selector_sp2_slot)
+
+        self.selector_clear_all_btn = QPushButton(self._t('tool_library.selector.clear', 'Clear'))
+        self.selector_clear_all_btn.setProperty('panelActionButton', True)
+        self.selector_clear_all_btn.setMinimumWidth(92)
+        style_panel_action_button(self.selector_clear_all_btn)
+        self.selector_clear_all_btn.clicked.connect(self._clear_selector_assignments)
+        selector_layout.addWidget(self.selector_clear_all_btn, 0, Qt.AlignLeft)
+
+        self.selector_scroll.setWidget(self.selector_panel)
+        selector_card_layout.addWidget(self.selector_scroll, 1)
+        detail_layout.addWidget(self.selector_card, 1)
+
         self.splitter.addWidget(self.detail_container)
 
         self.detail_container.hide()
@@ -668,9 +1005,9 @@ class JawPage(QWidget):
         content.addWidget(self.splitter, 1)
         root.addLayout(content, 1)
 
-        bar_bottom = QFrame()
-        bar_bottom.setProperty('bottomBar', True)
-        actions = QHBoxLayout(bar_bottom)
+        self.button_bar = QFrame()
+        self.button_bar.setProperty('bottomBar', True)
+        actions = QHBoxLayout(self.button_bar)
         actions.setContentsMargins(10, 8, 10, 8)
         actions.setSpacing(8)
 
@@ -707,9 +1044,31 @@ class JawPage(QWidget):
         actions.addWidget(self.edit_btn)
         actions.addWidget(self.delete_btn)
         actions.addWidget(self.copy_btn)
-        root.addWidget(bar_bottom)
+        root.addWidget(self.button_bar)
+
+        # ── Selector bottom bar (VALMIS / PERUUTA) — shown in selector mode ──
+        self.selector_bottom_bar = QFrame()
+        self.selector_bottom_bar.setProperty('bottomBar', True)
+        self.selector_bottom_bar.setVisible(False)
+        sel_bar_layout = QHBoxLayout(self.selector_bottom_bar)
+        sel_bar_layout.setContentsMargins(10, 8, 10, 8)
+        sel_bar_layout.setSpacing(8)
+        sel_bar_layout.addStretch(1)
+
+        self.selector_cancel_btn = QPushButton(self._t('tool_library.selector.cancel', 'CANCEL'))
+        self.selector_cancel_btn.setProperty('panelActionButton', True)
+        self.selector_cancel_btn.clicked.connect(self._on_selector_cancel)
+        sel_bar_layout.addWidget(self.selector_cancel_btn)
+
+        self.selector_done_btn = QPushButton(self._t('tool_library.selector.done', 'DONE'))
+        self.selector_done_btn.setProperty('panelActionButton', True)
+        self.selector_done_btn.setProperty('primaryAction', True)
+        self.selector_done_btn.clicked.connect(self._on_selector_done)
+        sel_bar_layout.addWidget(self.selector_done_btn)
+        root.addWidget(self.selector_bottom_bar)
 
         self._set_view_mode('all', refresh=False)
+        self._refresh_selector_slots()
 
     def _on_module_switch_clicked(self):
         if callable(self._module_switch_callback):
@@ -728,6 +1087,166 @@ class JawPage(QWidget):
         self._master_filter_ids = {str(j).strip() for j in (jaw_ids or []) if str(j).strip()}
         self._master_filter_active = bool(active) and bool(self._master_filter_ids)
         self.refresh_list()
+
+    @staticmethod
+    def _normalize_selector_spindle(value: str | None) -> str:
+        return 'sub' if str(value or '').strip().lower() == 'sub' else 'main'
+
+    @staticmethod
+    def _selector_spindle_label(spindle: str) -> str:
+        return 'SP2' if str(spindle or '').strip().lower() == 'sub' else 'SP1'
+
+    @staticmethod
+    def _normalize_selector_jaw(jaw: dict | None) -> dict | None:
+        if not isinstance(jaw, dict):
+            return None
+        jaw_id = str(jaw.get('jaw_id') or jaw.get('id') or '').strip()
+        if not jaw_id:
+            return None
+        return {
+            'jaw_id': jaw_id,
+            'jaw_type': str(jaw.get('jaw_type') or '').strip(),
+        }
+
+    def _selector_context_text(self) -> str:
+        active_spindle = self._selector_spindle_label(self._selector_spindle)
+        return self._t(
+            'tool_library.selector.jaw_context',
+            'Drop jaws to SP1 and SP2 slots. Active spindle: {spindle}',
+            spindle=active_spindle,
+        )
+
+    def _update_selector_spindle_ui(self):
+        spindle = self._normalize_selector_spindle(self._selector_spindle)
+        if hasattr(self, 'selector_spindle_btn'):
+            self.selector_spindle_btn.setProperty('spindle', spindle)
+            self.selector_spindle_btn.setChecked(spindle == 'sub')
+            self.selector_spindle_btn.setText(self._selector_spindle_label(spindle))
+        if hasattr(self, 'selector_spindle_value_label'):
+            self.selector_spindle_value_label.setText(self._selector_spindle_label(spindle))
+
+    def _toggle_selector_spindle(self):
+        if not self._selector_active or not hasattr(self, 'selector_spindle_btn'):
+            return
+        self._selector_spindle = 'sub' if self.selector_spindle_btn.isChecked() else 'main'
+        self._update_selector_spindle_ui()
+
+    def _refresh_selector_slots(self):
+        if not hasattr(self, 'selector_sp1_slot'):
+            return
+        self.selector_sp1_slot.set_assignment(self._selector_assignments.get('main'))
+        self.selector_sp2_slot.set_assignment(self._selector_assignments.get('sub'))
+
+    def _on_selector_jaw_dropped(self, slot_key: str, jaw: dict):
+        normalized_slot = self._normalize_selector_spindle(slot_key)
+        normalized_jaw = self._normalize_selector_jaw(jaw)
+        self._selector_assignments[normalized_slot] = normalized_jaw
+        self._refresh_selector_slots()
+
+    def _clear_selector_assignments(self):
+        self._selector_assignments = {'main': None, 'sub': None}
+        self._refresh_selector_slots()
+
+    def _on_selector_cancel(self):
+        """Cancel selector — notify main window to clear the session."""
+        main_win = self.window()
+        if hasattr(main_win, '_clear_selector_session'):
+            main_win._clear_selector_session()
+        if hasattr(main_win, '_back_to_setup_manager'):
+            main_win._back_to_setup_manager()
+
+    def _on_selector_done(self):
+        """Send selection — delegate to main window."""
+        main_win = self.window()
+        if hasattr(main_win, '_send_selector_selection'):
+            main_win._send_selector_selection()
+
+    def _on_selector_toggle_clicked(self):
+        if not self._selector_active:
+            return
+        if self.selector_toggle_btn.isChecked():
+            self._set_selector_panel_mode('selector')
+        else:
+            self._set_selector_panel_mode('details')
+
+    def _set_selector_panel_mode(self, mode: str):
+        if not self._selector_active:
+            self._selector_panel_mode = 'details'
+            if hasattr(self, 'selector_toggle_btn'):
+                self.selector_toggle_btn.setChecked(False)
+            if hasattr(self, 'selector_card'):
+                self.selector_card.setVisible(False)
+            if hasattr(self, 'detail_card'):
+                self.detail_card.setVisible(True)
+            return
+
+        target_mode = 'details' if str(mode or '').strip().lower() == 'details' else 'selector'
+        self._selector_panel_mode = target_mode
+        self._details_hidden = False
+        self.detail_container.show()
+        self.detail_header_container.show()
+        if not self._last_splitter_sizes:
+            total = max(600, self.splitter.width())
+            self._last_splitter_sizes = [int(total * 0.62), int(total * 0.38)]
+        self.splitter.setSizes(self._last_splitter_sizes)
+
+        if target_mode == 'details':
+            self.detail_card.setVisible(True)
+            self.selector_card.setVisible(False)
+            self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
+            self.selector_toggle_btn.setChecked(False)
+            self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_selector', 'SELECTOR'))
+        else:
+            self.detail_card.setVisible(False)
+            self.selector_card.setVisible(True)
+            self.detail_section_label.setText(self._t('tool_library.selector.selection_title', 'Selection'))
+            self.selector_toggle_btn.setChecked(True)
+            self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_details', 'DETAILS'))
+
+    def set_selector_context(self, active: bool, spindle: str = '') -> None:
+        was_active = self._selector_active
+        self._selector_active = bool(active)
+        self._selector_spindle = self._normalize_selector_spindle(spindle)
+        self._update_selector_spindle_ui()
+        self.selector_toggle_btn.setVisible(self._selector_active)
+        self.toggle_details_btn.setEnabled(not self._selector_active)
+
+        # Toggle bottom bars
+        self.button_bar.setVisible(not self._selector_active)
+        self.selector_bottom_bar.setVisible(self._selector_active)
+
+        if self._selector_active:
+            if not was_active:
+                self._selector_saved_details_hidden = self._details_hidden
+            self._selector_assignments = {'main': None, 'sub': None}
+            self._refresh_selector_slots()
+            self._set_selector_panel_mode('selector')
+            return
+
+        self._details_hidden = self._selector_saved_details_hidden
+        self._selector_assignments = {'main': None, 'sub': None}
+        self._refresh_selector_slots()
+        self._set_selector_panel_mode('details')
+        self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
+        if self._details_hidden:
+            self.detail_container.hide()
+            self.detail_header_container.hide()
+            self.splitter.setSizes([1, 0])
+        else:
+            self.detail_container.show()
+            self.detail_header_container.show()
+            if not self._last_splitter_sizes:
+                total = max(600, self.splitter.width())
+                self._last_splitter_sizes = [int(total * 0.62), int(total * 0.38)]
+            self.splitter.setSizes(self._last_splitter_sizes)
+
+    def selector_assigned_jaws_for_setup_assignment(self) -> list[dict]:
+        payload: list[dict] = []
+        for slot in ('main', 'sub'):
+            jaw = self._normalize_selector_jaw(self._selector_assignments.get(slot))
+            if jaw is not None:
+                payload.append(jaw)
+        return payload
 
     def _toggle_search(self):
         show = self.search_toggle.isChecked()
@@ -852,6 +1371,22 @@ class JawPage(QWidget):
             if jaw_id and jaw_id not in jaw_ids:
                 jaw_ids.append(jaw_id)
         return jaw_ids
+
+    def selected_jaws_for_setup_assignment(self) -> list[dict]:
+        model = self.jaw_list.selectionModel()
+        if model is None:
+            return []
+        indexes = sorted(model.selectedIndexes(), key=lambda idx: idx.row())
+        payload: list[dict] = []
+        for index in indexes:
+            jaw_id = str(index.data(ROLE_JAW_ID) or '').strip()
+            jaw_data = index.data(ROLE_JAW_DATA) or {}
+            jaw_type = str((jaw_data.get('jaw_type') if isinstance(jaw_data, dict) else None) or '').strip()
+            payload.append({
+                'jaw_id': jaw_id,
+                'jaw_type': jaw_type,
+            })
+        return payload
 
     def _on_multi_selection_changed(self, _selected, _deselected):
         self._update_selection_count_label()
@@ -1230,7 +1765,7 @@ class JawPage(QWidget):
             item.setData(jaw_id, ROLE_JAW_ID)
             item.setData(jaw, ROLE_JAW_DATA)
             item.setData(jaw_icon_for_row(jaw), ROLE_JAW_ICON)
-            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled)
             self._jaw_model.appendRow(item)
         self._jaw_model.blockSignals(False)
 
@@ -1262,6 +1797,9 @@ class JawPage(QWidget):
         self.hide_details()
 
     def show_details(self):
+        if self._selector_active:
+            self._set_selector_panel_mode('details')
+            return
         self._details_hidden = False
         self.detail_container.show()
         self.detail_header_container.show()
@@ -1272,6 +1810,9 @@ class JawPage(QWidget):
         self.refresh_list()
 
     def hide_details(self):
+        if self._selector_active:
+            self._set_selector_panel_mode('selector')
+            return
         self._details_hidden = True
         if self.detail_container.isVisible():
             self._last_splitter_sizes = self.splitter.sizes()
@@ -1454,6 +1995,34 @@ class JawPage(QWidget):
             )
         if hasattr(self, 'detail_section_label'):
             self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
+        if hasattr(self, 'selector_toggle_btn'):
+            if self._selector_active and self._selector_panel_mode == 'selector':
+                self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_details', 'DETAILS'))
+            else:
+                self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_selector', 'SELECTOR'))
+        if hasattr(self, 'selector_hint_label'):
+            self.selector_hint_label.setText(
+                self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.')
+            )
+        if hasattr(self, 'selector_header_title_label'):
+            self.selector_header_title_label.setText(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+        if hasattr(self, 'selector_module_value_label'):
+            self.selector_module_value_label.setText(self._t('tool_library.selector.jaws', 'Jaws'))
+        if hasattr(self, 'selector_sp1_slot'):
+            self.selector_sp1_slot.set_title(self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
+            self.selector_sp1_slot.set_clear_text(self._t('tool_library.selector.clear', 'Clear'))
+            self.selector_sp1_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
+        if hasattr(self, 'selector_sp2_slot'):
+            self.selector_sp2_slot.set_title(self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'))
+            self.selector_sp2_slot.set_clear_text(self._t('tool_library.selector.clear', 'Clear'))
+            self.selector_sp2_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
+        if hasattr(self, 'selector_clear_all_btn'):
+            self.selector_clear_all_btn.setText(self._t('tool_library.selector.clear', 'Clear'))
+        if hasattr(self, 'selector_done_btn'):
+            self.selector_done_btn.setText(self._t('tool_library.selector.done', 'DONE'))
+        if hasattr(self, 'selector_cancel_btn'):
+            self.selector_cancel_btn.setText(self._t('tool_library.selector.cancel', 'CANCEL'))
+        self._update_selector_spindle_ui()
         if hasattr(self, 'edit_btn'):
             self.edit_btn.setText(self._t('jaw_library.action.edit_jaw_button', 'EDIT JAW'))
         if hasattr(self, 'delete_btn'):
@@ -1470,6 +2039,7 @@ class JawPage(QWidget):
         self._build_type_filter_items()
         for mode, btn in self.view_buttons:
             btn.setText(self._nav_mode_title(mode))
+        self._refresh_selector_slots()
         self._update_selection_count_label()
         self.refresh_list()
         if self.current_jaw_id:

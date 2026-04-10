@@ -6,6 +6,7 @@ from PySide6.QtCore import (
     QEvent,
     QPoint,
     QSize,
+    Signal,
     Qt,
     QTimer,
     QProcess,
@@ -30,9 +31,6 @@ from PySide6.QtWidgets import (
     QToolButton,
     QVBoxLayout,
     QWidget,
-    QStyle,
-    QStyleOptionComboBox,
-    QStylePainter,
     QSizePolicy,
 )
 from config import (
@@ -55,11 +53,12 @@ from services.jaw_service import JawService
 from services.localization_service import LocalizationService
 from services.tool_service import ToolService
 from services.ui_preferences_service import UiPreferencesService
+from shared.editor_helpers import style_panel_action_button
 from ui.export_page import ExportPage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style, clear_focused_dropdown_on_outside_click
+from ui.widgets.common import clear_focused_dropdown_on_outside_click
 
 
 THEME_PALETTES = {
@@ -74,25 +73,67 @@ THEME_PALETTES = {
 }
 
 
-class RailFilterCombo(QComboBox):
-    def paintEvent(self, _event):
-        painter = QStylePainter(self)
-        option = QStyleOptionComboBox()
-        self.initStyleOption(option)
+class RailHeadToggleButton(QPushButton):
+    currentIndexChanged = Signal(int)
 
-        painter.drawComplexControl(QStyle.CC_ComboBox, option)
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._items: list[tuple[str, str]] = []
+        self._current_index = -1
+        self._last_single_value = 'HEAD1'
+        self.setContextMenuPolicy(Qt.NoContextMenu)
 
-        arrow_rect = self.style().subControlRect(
-            QStyle.CC_ComboBox,
-            option,
-            QStyle.SC_ComboBoxArrow,
-            self,
-        )
-        full_text_rect = self.rect().adjusted(8, 0, -arrow_rect.width() - 4, 0)
-        max_text_width = max(8, full_text_rect.width())
-        text = self.fontMetrics().elidedText(self.currentText(), Qt.ElideRight, max_text_width)
-        painter.drawText(full_text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-        painter.end()
+    def set_options(self, items: list[tuple[str, str]]):
+        current_value = self.currentData() or self._last_single_value or 'HEAD1'
+        self._items = [(str(text), str(data).strip().upper()) for text, data in items]
+        if current_value not in {data for _, data in self._items}:
+            current_value = 'HEAD1'
+        self.setCurrentData(current_value, emit_signal=False)
+
+    def count(self) -> int:
+        return len(self._items)
+
+    def currentData(self):
+        if 0 <= self._current_index < len(self._items):
+            return self._items[self._current_index][1]
+        return None
+
+    def currentText(self) -> str:
+        if 0 <= self._current_index < len(self._items):
+            return self._items[self._current_index][0]
+        return ''
+
+    def setCurrentData(self, value: str, emit_signal: bool = True):
+        normalized = str(value or 'HEAD1').strip().upper()
+        if normalized not in {'HEAD1/2', 'HEAD1', 'HEAD2'}:
+            normalized = 'HEAD1'
+        for idx, (text, data) in enumerate(self._items):
+            if data != normalized:
+                continue
+            changed = idx != self._current_index
+            self._current_index = idx
+            if normalized in {'HEAD1', 'HEAD2'}:
+                self._last_single_value = normalized
+            self.setText(text)
+            self.update()
+            if changed and emit_signal and not self.signalsBlocked():
+                self.currentIndexChanged.emit(idx)
+            return
+
+    def mouseReleaseEvent(self, event):
+        if not self.isEnabled() or not self.rect().contains(event.pos()):
+            super().mouseReleaseEvent(event)
+            return
+        if event.button() == Qt.RightButton:
+            self.setCurrentData('HEAD1/2')
+            event.accept()
+            return
+        if event.button() == Qt.LeftButton:
+            next_value = 'HEAD2' if (self._last_single_value or 'HEAD1') == 'HEAD1' else 'HEAD1'
+            self.setCurrentData(next_value)
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
 
 
 class PlaceholderPage(QWidget):
@@ -145,6 +186,13 @@ class MainWindow(QMainWindow):
         self._master_filter_active = bool(launch_master_filter.get('active', False)) and self._master_filter_enabled
         self._master_filter_tool_ids = {str(v).strip() for v in (launch_master_filter.get('tool_ids') or []) if str(v).strip()}
         self._master_filter_jaw_ids = {str(v).strip() for v in (launch_master_filter.get('jaw_ids') or []) if str(v).strip()}
+        self._selector_mode = ''
+        self._selector_callback_server = ''
+        self._selector_request_id = ''
+        self._selector_head = ''
+        self._selector_spindle = ''
+        self._selector_initial_assignments: list[dict] = []
+        self._selector_initial_assignment_buckets: dict[str, list[dict]] = {}
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.export_service, self.settings_service)
@@ -387,15 +435,15 @@ class MainWindow(QMainWindow):
         self.nav_frame.setParent(self.nav_slot)
         self.nav_frame.move(0, 0)
 
-        self.tool_head_filter_combo = RailFilterCombo()
+        self.tool_head_filter_combo = RailHeadToggleButton()
         self.tool_head_filter_combo.setObjectName('toolHeadRailFilter')
         self.tool_head_filter_combo.setFixedWidth(RAIL_HEAD_DROPDOWN_WIDTH)
         self.tool_head_filter_combo.setCursor(Qt.PointingHandCursor)
         combo_policy = self.tool_head_filter_combo.sizePolicy()
         combo_policy.setRetainSizeWhenHidden(True)
         self.tool_head_filter_combo.setSizePolicy(combo_policy)
-        add_shadow(self.tool_head_filter_combo)
-        apply_shared_dropdown_style(self.tool_head_filter_combo)
+        self.tool_head_filter_combo.setToolTip(self._t('tool_library.head_filter.toggle_tip', 'Left click toggles HEAD1 and HEAD2. Right click shows both heads.'))
+        style_panel_action_button(self.tool_head_filter_combo)
         self._rebuild_head_filter_combo_items()
         self.tool_head_filter_combo.currentIndexChanged.connect(self._on_global_tool_head_changed)
         toggle_layout.addSpacing(10)
@@ -425,6 +473,11 @@ class MainWindow(QMainWindow):
         self.master_filter_toggle.setVisible(self._master_filter_enabled)
         self.master_filter_toggle.clicked.connect(self._on_master_filter_toggled)
         footer_layout.addWidget(self.master_filter_toggle, 0, Qt.AlignHCenter)
+
+        self.selector_send_btn = QPushButton(self._t('tool_library.selector.done', 'DONE'))
+        self.selector_send_btn.setProperty('selectorPrimaryActionButton', True)
+        self.selector_send_btn.setVisible(False)
+        self.selector_send_btn.clicked.connect(self._send_selector_selection)
 
         self.back_to_setup_btn = QToolButton()
         self.back_to_setup_btn.setProperty('topBarIconButton', True)
@@ -739,20 +792,17 @@ class MainWindow(QMainWindow):
         self._apply_module_mode('tools')
 
     def _rebuild_head_filter_combo_items(self):
-        current_data = str(self.tool_head_filter_combo.currentData() or 'HEAD1/2').strip().upper()
+        current_data = str(self.tool_head_filter_combo.currentData() or 'HEAD1').strip().upper()
         if current_data not in {'HEAD1/2', 'HEAD1', 'HEAD2'}:
-            current_data = 'HEAD1/2'
+            current_data = 'HEAD1'
 
         self.tool_head_filter_combo.blockSignals(True)
-        self.tool_head_filter_combo.clear()
-        self.tool_head_filter_combo.addItem(self._t('tool_library.head_filter.all', 'HEAD1/2'), 'HEAD1/2')
-        self.tool_head_filter_combo.addItem(self._t('tool_library.head_filter.head1', 'HEAD1'), 'HEAD1')
-        self.tool_head_filter_combo.addItem(self._t('tool_library.head_filter.head2', 'HEAD2'), 'HEAD2')
-
-        for idx in range(self.tool_head_filter_combo.count()):
-            if (self.tool_head_filter_combo.itemData(idx) or '').strip().upper() == current_data:
-                self.tool_head_filter_combo.setCurrentIndex(idx)
-                break
+        self.tool_head_filter_combo.set_options([
+            (self._t('tool_library.head_filter.all', 'HEAD1/2'), 'HEAD1/2'),
+            (self._t('tool_library.head_filter.head1', 'HEAD1'), 'HEAD1'),
+            (self._t('tool_library.head_filter.head2', 'HEAD2'), 'HEAD2'),
+        ])
+        self.tool_head_filter_combo.setCurrentData(current_data, emit_signal=False)
         self.tool_head_filter_combo.blockSignals(False)
 
     def _on_nav_button_clicked(self, index: int):
@@ -765,10 +815,16 @@ class MainWindow(QMainWindow):
         self._refresh_nav_button_icons()
 
     def _on_global_tool_head_changed(self, _index: int):
-        head_value = str(self.tool_head_filter_combo.currentData() or 'HEAD1/2').strip().upper()
+        head_value = str(self.tool_head_filter_combo.currentData() or 'HEAD1').strip().upper()
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
             page.set_head_filter_value(head_value, refresh=False)
             page.refresh_list()
+        # Keep selector HEAD in sync with the dropdown
+        if self._selector_mode == 'tools' and head_value in ('HEAD1', 'HEAD2'):
+            self._selector_head = head_value
+            for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
+                if hasattr(page, 'update_selector_head'):
+                    page.update_selector_head(head_value)
 
     def _apply_master_filter_to_pages(self):
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
@@ -821,8 +877,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, "master_filter_toggle"):
             self.master_filter_toggle.setToolTip(self._t("tool_library.master_filter.button", "MASTER FILTER"))
             self._update_master_filter_toggle_visual()
+        self._update_selector_action_button()
         if hasattr(self, "tool_head_filter_combo"):
             self._rebuild_head_filter_combo_items()
+            self.tool_head_filter_combo.setToolTip(self._t('tool_library.head_filter.toggle_tip', 'Left click toggles HEAD1 and HEAD2. Right click shows both heads.'))
         if hasattr(self, "home_page"):
             self.home_page.set_page_title(self._t("tool_library.rail_title.tools", "Tool Library"))
             if hasattr(self.home_page, "apply_localization"):
@@ -1004,6 +1062,150 @@ class MainWindow(QMainWindow):
                 'Could not locate a launchable Setup Manager instance.',
             )
 
+    def _clear_selector_session(self):
+        self._selector_mode = ''
+        self._selector_callback_server = ''
+        self._selector_request_id = ''
+        self._selector_head = ''
+        self._selector_spindle = ''
+        self._selector_initial_assignments = []
+        self._selector_initial_assignment_buckets = {}
+        self._update_selector_action_button()
+        self._apply_selector_context_to_pages()
+        # Remove stay-on-top hint so the window behaves normally
+        self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+        self.show()
+
+    def _selector_context_suffix(self) -> str:
+        parts = [part for part in [self._selector_head, self._selector_spindle] if part]
+        return ' / '.join(parts)
+
+    def _update_selector_action_button(self):
+        if not hasattr(self, 'selector_send_btn'):
+            return
+        self.selector_send_btn.setVisible(False)
+        self.selector_send_btn.setToolTip('')
+
+    def _apply_selector_context_to_pages(self):
+        tools_selector_active = self._selector_mode == 'tools'
+        jaws_selector_active = self._selector_mode == 'jaws'
+        selector_head = self._selector_head
+        selector_spindle = self._selector_spindle
+        selector_assignments = self._selector_initial_assignments if tools_selector_active else []
+        selector_assignment_buckets = self._selector_initial_assignment_buckets if tools_selector_active else {}
+
+        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
+            if hasattr(page, 'set_selector_context'):
+                page.set_selector_context(
+                    tools_selector_active,
+                    selector_head,
+                    selector_spindle,
+                    selector_assignments,
+                    selector_assignment_buckets,
+                )
+        if hasattr(self.jaws_page, 'set_selector_context'):
+            self.jaws_page.set_selector_context(jaws_selector_active, selector_spindle)
+
+    def _send_selector_selection(self):
+        if self._selector_mode not in ('tools', 'jaws'):
+            return
+
+        if self._selector_mode == 'jaws':
+            selected_items = []
+            if hasattr(self.jaws_page, 'selector_assigned_jaws_for_setup_assignment'):
+                selected_items = self.jaws_page.selector_assigned_jaws_for_setup_assignment()
+            if not selected_items:
+                selected_items = self.jaws_page.selected_jaws_for_setup_assignment()
+            kind = 'jaws'
+        else:
+            active_page = self.stack.currentWidget() if hasattr(self, 'stack') else None
+            selected_items = []
+            selector_head = self._selector_head
+            selector_spindle = self._selector_spindle
+            if hasattr(active_page, 'selector_assigned_tools_for_setup_assignment'):
+                selected_items = active_page.selector_assigned_tools_for_setup_assignment()
+            if hasattr(active_page, 'selector_current_target_for_setup_assignment'):
+                target = active_page.selector_current_target_for_setup_assignment()
+                if isinstance(target, dict):
+                    target_head = str(target.get('head') or '').strip().upper()
+                    target_spindle = str(target.get('spindle') or '').strip().lower()
+                    if target_head in {'HEAD1', 'HEAD2'}:
+                        selector_head = target_head
+                    if target_spindle in {'main', 'sub'}:
+                        selector_spindle = target_spindle
+            if not selected_items and hasattr(active_page, 'selected_tools_for_setup_assignment'):
+                selected_items = active_page.selected_tools_for_setup_assignment()
+            if not selected_items:
+                selected_items = self.home_page.selected_tools_for_setup_assignment()
+            kind = 'tools'
+
+        if not selected_items:
+            QMessageBox.information(
+                self,
+                self._t('tool_library.selector.no_selection.title', 'Nothing selected'),
+                self._t(
+                    'tool_library.selector.no_selection.body',
+                    'Select at least one {kind} before sending the selection back.',
+                    kind=self._t('tool_library.selector.tools', 'tools') if kind == 'tools' else self._t('tool_library.selector.jaws', 'jaws'),
+                ),
+            )
+            return
+
+        if not self._selector_callback_server:
+            QMessageBox.warning(
+                self,
+                self._t('tool_library.selector.callback_missing.title', 'Selection callback unavailable'),
+                self._t(
+                    'tool_library.selector.callback_missing.body',
+                    'The selection callback server name is missing.',
+                ),
+            )
+            return
+
+        payload = {
+            'command': 'selector_result',
+            'request_id': self._selector_request_id,
+            'kind': kind,
+            'items': selected_items,
+            'selected_items': selected_items,
+        }
+        if kind == 'tools':
+            payload['selector_head'] = selector_head
+            payload['selector_spindle'] = selector_spindle
+
+        socket = QLocalSocket()
+        socket.connectToServer(self._selector_callback_server)
+        if not socket.waitForConnected(300):
+            QMessageBox.warning(
+                self,
+                self._t('tool_library.selector.callback_failed.title', 'Selection callback unavailable'),
+                self._t(
+                    'tool_library.selector.callback_failed.body',
+                    'Could not connect to the selection callback server.',
+                ),
+            )
+            return
+
+        try:
+            socket.write(json.dumps(payload).encode('utf-8'))
+            socket.flush()
+            if not socket.waitForBytesWritten(300):
+                raise RuntimeError('Selection payload was not written to the callback socket.')
+        except Exception:
+            QMessageBox.warning(
+                self,
+                self._t('tool_library.selector.callback_failed.title', 'Selection callback unavailable'),
+                self._t(
+                    'tool_library.selector.callback_failed.body',
+                    'Could not send the selected items back to Setup Manager.',
+                ),
+            )
+            return
+        finally:
+            socket.disconnectFromServer()
+
+        self._back_to_setup_manager()
+
     def navigate_to(self, kind: str, item_id: str = ""):
         """Deep-link: switch to jaw or tools module and select the given item."""
         if kind == "jaw":
@@ -1043,8 +1245,45 @@ class MainWindow(QMainWindow):
                 self._apply_master_filter_to_pages()
                 self._update_master_filter_toggle_visual()
 
+        selector_mode = str(payload.get('selector_mode', '') or '').strip().lower()
+        if selector_mode in ('tools', 'jaws'):
+            self._selector_mode = selector_mode
+            self._selector_callback_server = str(payload.get('selector_callback_server', '') or '').strip()
+            self._selector_request_id = str(payload.get('selector_request_id', '') or '').strip()
+            self._selector_head = str(payload.get('selector_head', '') or '').strip()
+            self._selector_spindle = str(payload.get('selector_spindle', '') or '').strip()
+            raw_assignments = payload.get('current_assignments') if selector_mode == 'tools' else []
+            self._selector_initial_assignments = [
+                dict(item) for item in (raw_assignments or []) if isinstance(item, dict)
+            ]
+            raw_assignment_buckets = payload.get('current_assignments_by_target') if selector_mode == 'tools' else {}
+            if isinstance(raw_assignment_buckets, dict):
+                self._selector_initial_assignment_buckets = {
+                    str(key): [
+                        dict(item)
+                        for item in value
+                        if isinstance(item, dict)
+                    ]
+                    for key, value in raw_assignment_buckets.items()
+                    if isinstance(value, list)
+                }
+            else:
+                self._selector_initial_assignment_buckets = {}
+            self._update_selector_action_button()
+            self._apply_selector_context_to_pages()
+            # Bring window on top of Work Editor
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+        else:
+            self._clear_selector_session()
+            # Remove stay-on-top when exiting selector mode
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+            self.show()
+
         # Switch module if requested.
-        module = str(payload.get('module', '')).strip()
+        module = selector_mode if selector_mode in ('tools', 'jaws') else str(payload.get('module', '')).strip()
         if module in ('tools', 'jaws'):
             self._apply_module_mode(module)
 
