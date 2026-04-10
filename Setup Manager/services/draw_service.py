@@ -250,16 +250,18 @@ class DrawService:
         conn.row_factory = sqlite3.Row
         try:
             includes_tool_type = True
+            includes_spindle_orientation = True
             if head_filter:
                 try:
                     rows = conn.execute(
-                        "SELECT uid, id, description, tool_type, default_pot FROM tools WHERE tool_head = ? COLLATE NOCASE"
+                        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
                         " ORDER BY id COLLATE NOCASE ASC, uid DESC",
                         (head_filter,),
                     ).fetchall()
                 except Exception:
                     # tool_head and/or tool_type/default_pot may not exist in all DB versions.
                     includes_tool_type = False
+                    includes_spindle_orientation = False
                     try:
                         rows = conn.execute(
                             "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
@@ -273,10 +275,11 @@ class DrawService:
             else:
                 try:
                     rows = conn.execute(
-                        "SELECT uid, id, description, tool_type, default_pot FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+                        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
                     ).fetchall()
                 except Exception:
                     includes_tool_type = False
+                    includes_spindle_orientation = False
                     rows = conn.execute(
                         "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
                     ).fetchall()
@@ -295,6 +298,12 @@ class DrawService:
                         default_pot = (row["default_pot"] or "").strip()
                     except (IndexError, KeyError):
                         pass
+                spindle_orientation = ""
+                if includes_spindle_orientation:
+                    try:
+                        spindle_orientation = (row["spindle_orientation"] or "").strip()
+                    except (IndexError, KeyError):
+                        pass
                 refs.append(
                     {
                         "uid": row["uid"] if "uid" in row.keys() else None,
@@ -302,6 +311,7 @@ class DrawService:
                         "description": (row["description"] or "").strip(),
                         "tool_type": tool_type,
                         "default_pot": default_pot,
+                        "spindle_orientation": spindle_orientation,
                     }
                 )
         finally:
@@ -330,7 +340,7 @@ class DrawService:
         conn.row_factory = sqlite3.Row
         try:
             rows = conn.execute(
-                "SELECT jaw_id, jaw_type, clamping_diameter_text FROM jaws ORDER BY jaw_id COLLATE NOCASE ASC"
+                "SELECT jaw_id, jaw_type, clamping_diameter_text, spindle_side FROM jaws ORDER BY jaw_id COLLATE NOCASE ASC"
             ).fetchall()
             for row in rows:
                 jaw_type = (row["jaw_type"] or "").strip()
@@ -345,6 +355,7 @@ class DrawService:
                         "id": (row["jaw_id"] or "").strip(),
                         "description": details,
                         "jaw_type": jaw_type,
+                        "spindle_side": (row["spindle_side"] or "").strip(),
                     }
                 )
         finally:

@@ -138,11 +138,13 @@ class _JawSelectorPanel(QWidget):
         translate: Callable[[str, str | None], str] | None = None,
         filter_placeholder_key: str = "work_editor.jaw.filter_placeholder",
         filter_placeholder_default: str = "Filter jaws...",
+        spindle_side_filter: str | None = None,
     ):
         super().__init__(parent)
         self._translate = translate or _noop_translate
         self._filter_placeholder_key = filter_placeholder_key
         self._filter_placeholder_default = filter_placeholder_default
+        self._spindle_side_filter = spindle_side_filter  # e.g. 'Main spindle' or 'Sub spindle'
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
@@ -261,6 +263,11 @@ class _JawSelectorPanel(QWidget):
             jaw_id = (jaw.get("id") or "").strip()
             if not jaw_id:
                 continue
+            # Filter by spindle side if a filter is set; jaws with 'Both' always pass.
+            if self._spindle_side_filter:
+                jaw_side = (jaw.get("spindle_side") or "").strip()
+                if jaw_side and jaw_side.lower() not in (self._spindle_side_filter.lower(), "both"):
+                    continue
             description = (jaw.get("description") or "").strip()
             label = f"{jaw_id}  \u2014  {description}" if description else jaw_id
             if q and q not in label.lower():
@@ -318,9 +325,11 @@ class _ToolPickerDialog(QDialog):
         current_ids: list,
         parent=None,
         translate: Callable[[str, str | None], str] | None = None,
+        spindle_orientation_filter: str | None = None,
     ):
         super().__init__(parent)
         self._translate = translate or _noop_translate
+        self._spindle_orientation_filter = (spindle_orientation_filter or "").strip().lower()
         self.setWindowTitle(self._t("work_editor.tool_picker.title", "Select Tools"))
         self.resize(760, 560)
         self.setProperty("toolPickerDialog", True)
@@ -367,7 +376,7 @@ class _ToolPickerDialog(QDialog):
         self._style_combo_popup(self.type_filter)
         self.type_filter.addItem(self._t("work_editor.tool_picker.all_types", "All types"), "")
         for tool_type in self._tool_types():
-            self.type_filter.addItem(tool_type, tool_type)
+            self.type_filter.addItem(self._localized_tool_type(tool_type), tool_type)
         self.type_filter.currentIndexChanged.connect(self._build_list)
         controls.addWidget(self.type_filter, 0)
 
@@ -411,13 +420,35 @@ class _ToolPickerDialog(QDialog):
     def _style_combo_popup(self, combo: QComboBox):
         apply_tool_library_combo_style(combo)
 
+    def _localized_tool_type(self, tool_type: str) -> str:
+        raw = (tool_type or "").strip()
+        if not raw:
+            return ""
+        normalized = raw.lower().replace(".", "_").replace("/", "_").replace(" ", "_")
+        while "__" in normalized:
+            normalized = normalized.replace("__", "_")
+        return self._t(f"work_editor.tool_type.{normalized}", raw)
+
+    @staticmethod
+    def _normalize_spindle_orientation(value: str) -> str:
+        text = (value or "").strip().lower()
+        if not text:
+            return ""
+        if "both" in text or "molem" in text:
+            return "both"
+        if text in ("sub", "sp2") or "sub" in text or "vasta" in text:
+            return "sub"
+        if text in ("main", "sp1") or "main" in text or "pää" in text or "paa" in text:
+            return "main"
+        return text
+
     def _tool_types(self) -> list:
         values = {
             (tool.get("tool_type") or "").strip()
             for tool in (self._all_tools or [])
             if (tool.get("tool_type") or "").strip()
         }
-        return sorted(values, key=lambda value: value.lower())
+        return sorted(values, key=lambda value: self._localized_tool_type(value).lower())
 
     def _toggle_search(self):
         show = self.search_toggle_btn.isChecked()
@@ -438,6 +469,11 @@ class _ToolPickerDialog(QDialog):
         self._build_list()
 
     def _matches_filters(self, tool: dict) -> bool:
+        if self._spindle_orientation_filter:
+            tool_spindle = self._normalize_spindle_orientation(tool.get("spindle_orientation") or "")
+            if tool_spindle and tool_spindle not in (self._spindle_orientation_filter, "both"):
+                return False
+
         tool_type = (tool.get("tool_type") or "").strip()
         selected_type = self.type_filter.currentData() if hasattr(self, "type_filter") else ""
         if selected_type and tool_type.lower() != str(selected_type).lower():
@@ -448,7 +484,8 @@ class _ToolPickerDialog(QDialog):
             return True
         tool_id = (tool.get("id") or "").strip()
         description = (tool.get("description") or "").strip()
-        text = f"{tool_id} {description} {tool_type}".lower()
+        localized_type = self._localized_tool_type(tool_type)
+        text = f"{tool_id} {description} {tool_type} {localized_type}".lower()
         return query in text
 
     @staticmethod
@@ -577,11 +614,13 @@ class _OrderedToolList(QWidget):
     def __init__(
         self,
         head_label: str,
+        head_key: str,
         parent=None,
         translate: Callable[[str, str | None], str] | None = None,
     ):
         super().__init__(parent)
         self._translate = translate or _noop_translate
+        self._head_key = (head_key or "").strip().upper()
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
@@ -905,7 +944,14 @@ class _OrderedToolList(QWidget):
 
     def _open_picker(self):
         current_keys = [self._assignment_key(item) for item in self._current_assignments() if self._assignment_key(item)]
-        dlg = _ToolPickerDialog(self._all_tools, current_keys, self, translate=self._t)
+        spindle_filter = self._current_spindle() if self._head_key == "HEAD2" else None
+        dlg = _ToolPickerDialog(
+            self._all_tools,
+            current_keys,
+            self,
+            translate=self._t,
+            spindle_orientation_filter=spindle_filter,
+        )
         if dlg.exec() != QDialog.Accepted:
             return
         selected_tools = dlg.get_selected_tools()
@@ -1358,16 +1404,18 @@ class WorkEditorDialog(QDialog):
         layout.setSpacing(12)
 
         self.main_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.spindles.sp1_jaw", "SP1 Jaw"),
+            self._t("work_editor.spindles.sp1_jaw", "Pääkara"),
             translate=self._t,
             filter_placeholder_key="work_editor.jaw.filter_sp1_placeholder",
-            filter_placeholder_default="Filter SP1 jaws...",
+            filter_placeholder_default="Suodata Pääkara-leukoja...",
+            spindle_side_filter="Main spindle",
         )
         self.sub_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.spindles.sp2_jaw", "SP2 Jaw"),
+            self._t("work_editor.spindles.sp2_jaw", "Vastakara"),
             translate=self._t,
             filter_placeholder_key="work_editor.jaw.filter_sp2_placeholder",
-            filter_placeholder_default="Filter SP2 jaws...",
+            filter_placeholder_default="Suodata Vastakara-leukoja...",
+            spindle_side_filter="Sub spindle",
         )
         self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -1491,10 +1539,12 @@ class WorkEditorDialog(QDialog):
 
         self.head1_ordered = _OrderedToolList(
             self._t("work_editor.tools.head1", "Head 1 Tools"),
+            "HEAD1",
             translate=self._t,
         )
         self.head2_ordered = _OrderedToolList(
             self._t("work_editor.tools.head2", "Head 2 Tools"),
+            "HEAD2",
             translate=self._t,
         )
         self.head1_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)

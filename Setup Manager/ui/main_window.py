@@ -1,6 +1,7 @@
 ﻿import ctypes
 import json
 from pathlib import Path
+import sqlite3
 import shutil
 import sys
 
@@ -12,12 +13,14 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QComboBox,
+    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QMainWindow,
     QMessageBox,
+    QPlainTextEdit,
     QPushButton,
     QSplitter,
     QStackedWidget,
@@ -53,7 +56,11 @@ from ui.preferences_dialog import PreferencesDialog
 from ui.setup_page import SetupPage
 from services.localization_service import LocalizationService
 from services.ui_preferences_service import UiPreferencesService
-from ui.widgets.common import clear_focused_dropdown_on_outside_click
+from ui.widgets.common import add_shadow, clear_focused_dropdown_on_outside_click
+try:
+    from shared.editor_helpers import create_titled_section, setup_editor_dialog
+except ModuleNotFoundError:
+    from editor_helpers import create_titled_section, setup_editor_dialog
 
 
 THEME_PALETTES = {
@@ -129,7 +136,7 @@ class MainWindow(QMainWindow):
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
         root = QHBoxLayout(central)
-        root.setContentsMargins(0, 0, 0, 0)
+        root.setContentsMargins(0, 0, 12, 0)
         root.setSpacing(0)
 
         self.nav_rail = QFrame()
@@ -591,6 +598,7 @@ class MainWindow(QMainWindow):
             self._t,
             parent=self,
             active_db_path=str(getattr(self.work_service.db, "path", "") or ""),
+            on_check_compatibility=self._check_setup_db_compatibility,
         )
         if dialog.exec() != PreferencesDialog.Accepted:
             return
@@ -630,6 +638,235 @@ class MainWindow(QMainWindow):
                     "Database path changes will be applied after restarting the app.",
                 ),
             )
+
+    def _check_setup_db_compatibility(self, database_path: str):
+        target_path = Path(str(database_path or "").strip()).expanduser()
+        if not str(target_path).strip():
+            QMessageBox.warning(
+                self,
+                self._t("preferences.database.compatibility.title", "Compatibility Check"),
+                self._t("preferences.database.compatibility.empty_path", "No Setup database path was provided."),
+            )
+            return
+        if not target_path.exists():
+            QMessageBox.warning(
+                self,
+                self._t("preferences.database.compatibility.title", "Compatibility Check"),
+                self._t(
+                    "preferences.database.compatibility.missing_path",
+                    "The selected Setup database was not found:\n{path}",
+                    path=str(target_path),
+                ),
+            )
+            return
+
+        tool_refs = self.draw_service.list_tool_refs(force_reload=True, dedupe_by_id=False)
+        jaw_refs = self.draw_service.list_jaw_refs(force_reload=True)
+        tool_ids = {str(item.get("id") or "").strip() for item in tool_refs if str(item.get("id") or "").strip()}
+        tool_uids = {
+            int(item.get("uid")): item
+            for item in tool_refs
+            if item.get("uid") is not None and str(item.get("uid")).strip()
+        }
+        jaw_ids = {str(item.get("id") or "").strip() for item in jaw_refs if str(item.get("id") or "").strip()}
+
+        try:
+            conn = sqlite3.connect(str(target_path))
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT * FROM works ORDER BY work_id COLLATE NOCASE ASC").fetchall()
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                self._t("preferences.database.compatibility.title", "Compatibility Check"),
+                self._t(
+                    "preferences.database.compatibility.failed",
+                    "Could not read the selected Setup database:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+        works = [self.work_service._row_to_work(row) for row in rows]
+
+        total_works = len(works)
+        fully_resolved = 0
+        works_with_issues = 0
+        jaw_match_count = 0
+        tool_uid_match_count = 0
+        tool_id_fallback_count = 0
+        missing_jaw_count = 0
+        missing_tool_count = 0
+        issue_lines = []
+
+        for work in works:
+            work_id = str(work.get("work_id") or "").strip() or "(no work ID)"
+            local_missing = []
+
+            for label, jaw_id in (
+                (self._t("work_editor.ref.main_jaw", "Main jaw"), str(work.get("main_jaw_id") or "").strip()),
+                (self._t("work_editor.ref.sub_jaw", "Sub jaw"), str(work.get("sub_jaw_id") or "").strip()),
+            ):
+                if not jaw_id:
+                    continue
+                if jaw_id in jaw_ids:
+                    jaw_match_count += 1
+                else:
+                    missing_jaw_count += 1
+                    local_missing.append(f"{label}: {jaw_id}")
+
+            for head_label, assignments in (
+                (self._t("work_editor.ref.head1_tool", "Head 1 tool"), work.get("head1_tool_assignments") or []),
+                (self._t("work_editor.ref.head2_tool", "Head 2 tool"), work.get("head2_tool_assignments") or []),
+            ):
+                for assignment in assignments:
+                    tool_id = str((assignment or {}).get("tool_id") or "").strip()
+                    raw_uid = (assignment or {}).get("tool_uid")
+                    matched = False
+                    if raw_uid is not None and str(raw_uid).strip():
+                        try:
+                            if int(raw_uid) in tool_uids:
+                                tool_uid_match_count += 1
+                                matched = True
+                        except Exception:
+                            pass
+                    if not matched and tool_id and tool_id in tool_ids:
+                        tool_id_fallback_count += 1
+                        matched = True
+                    if not matched and tool_id:
+                        missing_tool_count += 1
+                        uid_text = f" [uid {raw_uid}]" if raw_uid is not None and str(raw_uid).strip() else ""
+                        local_missing.append(f"{head_label}: {tool_id}{uid_text}")
+
+            if local_missing:
+                works_with_issues += 1
+                issue_lines.append(f"{work_id}: " + "; ".join(local_missing))
+            else:
+                fully_resolved += 1
+
+        summary = self._t(
+            "preferences.database.compatibility.summary",
+            "Works checked: {total}\nFully resolved: {resolved}\nWorks with issues: {issues}\n\nJaw matches: {jaw_matches}\nTool matches by UID: {tool_uid_matches}\nTool matches by ID fallback: {tool_id_fallbacks}\nMissing jaws: {missing_jaws}\nMissing tools: {missing_tools}",
+            total=total_works,
+            resolved=fully_resolved,
+            issues=works_with_issues,
+            jaw_matches=jaw_match_count,
+            tool_uid_matches=tool_uid_match_count,
+            tool_id_fallbacks=tool_id_fallback_count,
+            missing_jaws=missing_jaw_count,
+            missing_tools=missing_tool_count,
+        )
+
+        informative = self._t(
+            "preferences.database.compatibility.informative",
+            "Setup DB: {setup_db}\nTool DB: {tool_db}\nJaw DB: {jaw_db}",
+            setup_db=str(target_path),
+            tool_db=str(self.draw_service.tool_db_path),
+            jaw_db=str(self.draw_service.jaw_db_path),
+        )
+        self._show_compatibility_report_dialog(
+            title=self._t("preferences.database.compatibility.title", "Compatibility Check"),
+            summary=summary,
+            informative=informative,
+            details="\n".join(issue_lines[:200]),
+            has_issues=bool(works_with_issues),
+        )
+
+    def _show_compatibility_report_dialog(
+        self,
+        *,
+        title: str,
+        summary: str,
+        informative: str,
+        details: str,
+        has_issues: bool,
+    ):
+        dialog = QDialog(self)
+        setup_editor_dialog(dialog)
+        dialog.setObjectName("compatibilityReportDialog")
+        dialog.setProperty("preferencesDialog", True)
+        dialog.setAttribute(Qt.WA_StyledBackground, True)
+        dialog.setStyleSheet(
+            "QDialog#compatibilityReportDialog {"
+            " background-color: #ffffff;"
+            "}"
+        )
+        dialog.setModal(True)
+        dialog.setWindowTitle(title)
+        dialog.resize(700, 560)
+
+        root = QVBoxLayout(dialog)
+        root.setContentsMargins(14, 14, 14, 14)
+        root.setSpacing(12)
+
+        summary_group = create_titled_section(self._t("preferences.database.compatibility.summary_title", "Summary"))
+        summary_layout = QVBoxLayout(summary_group)
+        summary_layout.setContentsMargins(12, 12, 12, 12)
+        summary_layout.setSpacing(8)
+
+        status_label = QLabel(
+            self._t(
+                "preferences.database.compatibility.status_warning",
+                "Compatibility issues were found.",
+            )
+            if has_issues
+            else self._t(
+                "preferences.database.compatibility.status_ok",
+                "All checked work references resolved successfully.",
+            )
+        )
+        status_label.setProperty("detailHint", True)
+        status_label.setWordWrap(True)
+        summary_layout.addWidget(status_label)
+
+        summary_text = QPlainTextEdit()
+        summary_text.setReadOnly(True)
+        summary_text.setPlainText(summary)
+        summary_text.setMinimumHeight(180)
+        summary_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
+        summary_layout.addWidget(summary_text)
+        root.addWidget(summary_group)
+
+        db_group = create_titled_section(self._t("preferences.database.compatibility.paths_title", "Database Paths"))
+        db_layout = QVBoxLayout(db_group)
+        db_layout.setContentsMargins(12, 12, 12, 12)
+        db_layout.setSpacing(8)
+        info_text = QPlainTextEdit()
+        info_text.setReadOnly(True)
+        info_text.setPlainText(informative)
+        info_text.setMinimumHeight(120)
+        info_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
+        db_layout.addWidget(info_text)
+        root.addWidget(db_group)
+
+        if details:
+            details_group = create_titled_section(self._t("preferences.database.compatibility.details_title", "Issue Details"))
+            details_layout = QVBoxLayout(details_group)
+            details_layout.setContentsMargins(12, 12, 12, 12)
+            details_layout.setSpacing(8)
+            details_text = QPlainTextEdit()
+            details_text.setReadOnly(True)
+            details_text.setPlainText(details)
+            details_text.setMinimumHeight(140)
+            details_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
+            details_layout.addWidget(details_text)
+            root.addWidget(details_group, 1)
+
+        button_row = QHBoxLayout()
+        button_row.addStretch(1)
+        ok_btn = QPushButton(self._t("common.ok", "OK"))
+        ok_btn.setProperty("panelActionButton", True)
+        ok_btn.setProperty("primaryAction", True)
+        add_shadow(ok_btn)
+        ok_btn.clicked.connect(dialog.accept)
+        button_row.addWidget(ok_btn)
+        root.addLayout(button_row)
+
+        dialog.exec()
 
     def _refresh_localized_labels(self):
         self.setWindowTitle(self._t("setup_manager.window_title", APP_TITLE))

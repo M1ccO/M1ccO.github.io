@@ -1081,14 +1081,7 @@ class PrintService:
 
         work_id = self._safe((work or {}).get("work_id"))
 
-        pdf.setFont("Helvetica-Bold", 37)
-        pdf.setFillColorRGB(0.10, 0.19, 0.29)
-        pdf.drawString(margin, page_h - 44, work_id)
-
-        pdf.setFont("Helvetica", 15.5)
-        pdf.setFillColorRGB(0.28, 0.34, 0.40)
         generated_ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-        pdf.drawRightString(page_w - margin, page_h - 36, self._t("print.generated_at", "Generated {ts}", ts=generated_ts))
 
         date_raw = self._to_text((entry or {}).get("date"))
         date_display = date_raw
@@ -1099,14 +1092,15 @@ class PrintService:
                 date_display = date_raw
 
 
-        # Draw header background with light blue
-        header_bg_rgb = self._hex_to_rgb(self._LOGBOOK_HEADER_COLOR)
-        pdf.setFillColorRGB(*header_bg_rgb)
-        pdf.rect(margin, page_h - 65, content_w, 55, stroke=0, fill=1)
+        # Draw header frame only (transparent fill) using the same border tone/radius
+        # as other card sections.
+        pdf.setStrokeColorRGB(0.84, 0.86, 0.89)
+        pdf.setLineWidth(0.9)
+        pdf.roundRect(margin, page_h - 65, content_w, 55, 5, stroke=1, fill=0)
 
-        # Draw work ID with monthly color gradient
+        # Card header uses fixed colors (no monthly logbook palette dependency).
         pdf.setFont("Helvetica-Bold", 37)
-        pdf.setFillColorRGB(*monthly_color_rgb)
+        pdf.setFillColorRGB(0.10, 0.19, 0.29)
         pdf.drawString(margin + 8, page_h - 48, work_id)
 
         # Draw timestamp with original color

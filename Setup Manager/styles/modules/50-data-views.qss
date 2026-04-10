@@ -290,15 +290,18 @@ QDialog[workEditorDialog="true"] QFrame[toolIdsPanel="true"] QLabel {
 
 /* Work Editor: visible but not harsh input borders */
 QDialog[workEditorDialog="true"] QLineEdit,
-QDialog[workEditorDialog="true"] QTextEdit {
+QDialog[workEditorDialog="true"] QTextEdit,
+QDialog[workEditorDialog="true"] QDateEdit {
     background: #ffffff;
     border: 1px solid #a0b4c8;
 }
 QDialog[workEditorDialog="true"] QLineEdit:focus,
-QDialog[workEditorDialog="true"] QTextEdit:focus {
+QDialog[workEditorDialog="true"] QTextEdit:focus,
+QDialog[workEditorDialog="true"] QDateEdit:focus {
     border: 1px solid #1e88e5;
 }
-QDialog[workEditorDialog="true"] QLineEdit:disabled {
+QDialog[workEditorDialog="true"] QLineEdit:disabled,
+QDialog[workEditorDialog="true"] QDateEdit:disabled {
     border: 1px solid #c4cfd8;
 }
 

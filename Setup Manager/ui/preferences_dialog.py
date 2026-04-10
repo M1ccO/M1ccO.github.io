@@ -28,11 +28,13 @@ class PreferencesDialog(QDialog):
         translate: Callable[[str, str | None], str],
         parent=None,
         active_db_path: str = "",
+        on_check_compatibility: Callable[[str], None] | None = None,
     ):
         super().__init__(parent)
         self._translate = translate
         self._current = dict(current_preferences or {})
         self._active_db_path = str(active_db_path or "").strip()
+        self._on_check_compatibility = on_check_compatibility
 
         self.setObjectName("appRoot")
         self.setProperty("preferencesDialog", True)
@@ -228,6 +230,14 @@ class PreferencesDialog(QDialog):
             )
         )
 
+        self.check_compatibility_btn = QPushButton(
+            self._t("preferences.database.check_compatibility", "CHECK COMPATIBILITY")
+        )
+        self.check_compatibility_btn.setProperty("panelActionButton", True)
+        self.check_compatibility_btn.clicked.connect(self._check_compatibility)
+        add_shadow(self.check_compatibility_btn)
+        card_layout.addWidget(self.check_compatibility_btn, 0, Qt.AlignLeft)
+
         layout.addStretch(1)
         return tab
 
@@ -285,6 +295,12 @@ class PreferencesDialog(QDialog):
         )
         if chosen:
             self.setup_db_path_edit.setText(chosen)
+
+    def _check_compatibility(self):
+        if not callable(self._on_check_compatibility):
+            return
+        target_path = self.setup_db_path_edit.text().strip() or self._active_db_path
+        self._on_check_compatibility(target_path)
 
     @staticmethod
     def _set_combo_by_data(combo: QComboBox, value: str):

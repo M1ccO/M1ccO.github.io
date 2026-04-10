@@ -5,6 +5,8 @@ Extracted from work_editor_dialog patterns so that tool_editor and jaw_editor
 dialogs stay visually consistent without duplicating boilerplate.
 """
 
+from pathlib import Path
+
 from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
@@ -51,6 +53,7 @@ _TITLED_SECTION_STYLESHEET = (
 
 _CHECKBOX_EDGE_COLOR = '#8aa0b6'
 _CHECKBOX_EDGE_HOVER_COLOR = '#6f86a0'
+_CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parent / 'assets' / 'check_mark.svg').as_posix()
 
 
 # ── Shadow helper ────────────────────────────────────────────────────────
@@ -91,11 +94,7 @@ def apply_shared_checkbox_style(
     indicator_size: int = 16,
     min_height: int = 0,
 ) -> QCheckBox:
-    """Apply a shared checkbox look with visible box edges and native checkmark.
-
-    Only the unchecked indicator is styled so checked state keeps Qt's default
-    check mark rendering.
-    """
+    """Apply a shared checkbox look with visible box edges and checkmark icon."""
     checkbox_style = [
         'QCheckBox {'
         '  background: transparent;'
@@ -121,6 +120,10 @@ def apply_shared_checkbox_style(
         f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
         '  border-radius: 3px;'
         '  background: #ffffff;'
+        f'  image: url("{_CHECKBOX_CHECK_ICON}");'
+        '}',
+        'QCheckBox::indicator:checked:hover {'
+        f'  border: 1px solid {_CHECKBOX_EDGE_HOVER_COLOR};'
         '}',
         'QCheckBox::indicator:unchecked:hover {'
         f'  border: 1px solid {_CHECKBOX_EDGE_HOVER_COLOR};'

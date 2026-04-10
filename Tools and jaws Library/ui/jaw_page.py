@@ -1,5 +1,7 @@
+import json
 import numpy as np
 import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -30,7 +32,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import TOOL_ICONS_DIR
+from config import TOOL_ICONS_DIR, SHARED_UI_PREFERENCES_PATH, PROJECTS_DIR
 from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_ICON, ROLE_JAW_ID, jaw_icon_for_row
 from ui.jaw_editor_dialog import AddEditJawDialog
 from shared.editor_helpers import (
@@ -77,6 +79,39 @@ from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown
 
 CATALOG_CARD_HEIGHT = 74
 CATALOG_ITEM_HEIGHT = 78
+
+
+def _lookup_setup_db_used_in_works(jaw_id: str) -> str:
+    """Return pipe-separated drawing IDs of Setup Manager works that use jaw_id."""
+    if not jaw_id:
+        return ''
+    # Resolve Setup Manager DB path from shared preferences, then fall back to defaults.
+    db_path: Path | None = None
+    try:
+        if SHARED_UI_PREFERENCES_PATH.exists():
+            prefs = json.loads(SHARED_UI_PREFERENCES_PATH.read_text(encoding='utf-8'))
+            candidate = str((prefs or {}).get('setup_db_path', '') or '').strip()
+            if candidate:
+                db_path = Path(candidate)
+    except Exception:
+        pass
+    if db_path is None or not db_path.exists():
+        # Fallback: sibling 'Setup Manager/databases/setup_manager.db'
+        db_path = PROJECTS_DIR / 'Setup Manager' / 'databases' / 'setup_manager.db'
+    if not db_path.exists():
+        return ''
+    try:
+        uri = f'file:{db_path.as_posix()}?mode=ro&immutable=1'
+        conn = sqlite3.connect(uri, uri=True)
+        rows = conn.execute(
+            'SELECT DISTINCT drawing_id FROM works '
+            'WHERE (main_jaw_id = ? OR sub_jaw_id = ?) AND drawing_id != ""',
+            (jaw_id, jaw_id),
+        ).fetchall()
+        conn.close()
+        return ' | '.join(r[0] for r in rows if r[0])
+    except Exception:
+        return ''
 
 
 class JawRowWidget(QFrame):
@@ -955,7 +990,7 @@ class JawPage(QWidget):
                 widget.deleteLater()
 
     def _split_used_in_works(self, value: str) -> list[str]:
-        return [p.strip() for p in (value or '').split(',') if p.strip()]
+        return [p.strip() for p in (value or '').split('|') if p.strip()]
 
     def populate_details(self, jaw):
         self._clear_details()
@@ -1027,33 +1062,57 @@ class JawPage(QWidget):
                 self._split_used_in_works(value_text),
             )
 
-        # Base two-column field matrix.
-        pairs = [
-            (self._t('jaw_library.field.jaw_id', 'Jaw ID'), jaw.get('jaw_id', '')),
-            (
-                self._t('jaw_library.field.spindle_side', 'Spindle side'),
-                self._localized_spindle_side(jaw.get('spindle_side', '')),
-            ),
-            (self._t('jaw_library.field.clamping_diameter', 'Clamping diameter'), jaw.get('clamping_diameter_text', '')),
-            (self._t('jaw_library.field.clamping_length', 'Clamping length'), jaw.get('clamping_length', '')),
-            (self._t('jaw_library.field.turning_ring', 'Turning ring'), jaw.get('turning_washer', '')),
-            (self._t('jaw_library.field.last_modified', 'Last modified'), jaw.get('last_modified', '')),
-        ]
+        # Explicit 2-column row layout.
+        is_spiked = 'spiked' in (jaw.get('jaw_type') or '').lower()
 
         info = QGridLayout()
         info.setHorizontalSpacing(14)
         info.setVerticalSpacing(8)
-        total       = len(pairs)
-        left_count  = (total + 1) // 2
-        right_count = total - left_count
-        for i in range(left_count):
-            info.addWidget(build_field(*pairs[i]), i, 0, 1, 2, Qt.AlignTop)
-        for j in range(right_count):
-            info.addWidget(build_field(*pairs[left_count + j]), j, 2, 1, 2, Qt.AlignTop)
 
-        used_in_works_row = max(left_count, right_count)
-        used_in_works_field = build_used_in_works_field(jaw.get('used_in_work', ''))
-        info.addWidget(used_in_works_field, used_in_works_row, 0, 1, 4, Qt.AlignTop)
+        # Row 0: Leuka ID | Kara
+        info.addWidget(
+            build_field(self._t('jaw_library.field.jaw_id', 'Jaw ID'), jaw.get('jaw_id', '')),
+            0, 0, 1, 2, Qt.AlignTop,
+        )
+        info.addWidget(
+            build_field(
+                self._t('jaw_library.field.spindle_side', 'Spindle side'),
+                self._localized_spindle_side(jaw.get('spindle_side', '')),
+            ),
+            0, 2, 1, 2, Qt.AlignTop,
+        )
+
+        # Row 1: Kiinnityshalkaisija | Kiinnityspituus
+        info.addWidget(
+            build_field(self._t('jaw_library.field.clamping_diameter', 'Clamping diameter'), jaw.get('clamping_diameter_text', '')),
+            1, 0, 1, 2, Qt.AlignTop,
+        )
+        info.addWidget(
+            build_field(self._t('jaw_library.field.clamping_length', 'Clamping length'), jaw.get('clamping_length', '')),
+            1, 2, 1, 2, Qt.AlignTop,
+        )
+
+        # Row 2: Sorvausrengas | Viimeksi muokattu (hidden for spiked jaws)
+        if is_spiked:
+            info.addWidget(
+                build_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), jaw.get('turning_washer', '')),
+                2, 0, 1, 4, Qt.AlignTop,
+            )
+        else:
+            info.addWidget(
+                build_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), jaw.get('turning_washer', '')),
+                2, 0, 1, 2, Qt.AlignTop,
+            )
+            info.addWidget(
+                build_field(self._t('jaw_library.field.last_modified', 'Last modified'), jaw.get('last_modified', '')),
+                2, 2, 1, 2, Qt.AlignTop,
+            )
+
+        next_row = 3
+
+        used_in_works_value = _lookup_setup_db_used_in_works(jaw.get('jaw_id', ''))
+        used_in_works_field = build_used_in_works_field(used_in_works_value)
+        info.addWidget(used_in_works_field, next_row, 0, 1, 4, Qt.AlignTop)
 
         notes_text = (jaw.get('notes', '') or '').strip()
         if notes_text:
@@ -1062,7 +1121,7 @@ class JawPage(QWidget):
                 notes_text,
                 multiline=True,
             )
-            info.addWidget(notes_field, used_in_works_row + 1, 0, 1, 4, Qt.AlignTop)
+            info.addWidget(notes_field, next_row + 1, 0, 1, 4, Qt.AlignTop)
 
         layout.addLayout(info)
 
@@ -1246,11 +1305,15 @@ class JawPage(QWidget):
         else:
             self.hide_details()
 
-    def _save_from_dialog(self, dlg):
+    def _save_from_dialog(self, dlg, original_jaw_id: str | None = None):
         try:
             data = dlg.get_jaw_data()
             self.jaw_service.save_jaw(data)
-            self.current_jaw_id = data['jaw_id']
+            new_jaw_id = data['jaw_id']
+            # If the Jaw ID was renamed during edit, remove the old record.
+            if original_jaw_id and original_jaw_id != new_jaw_id:
+                self.jaw_service.delete_jaw(original_jaw_id)
+            self.current_jaw_id = new_jaw_id
             self.refresh_list()
             self.populate_details(self.jaw_service.get_jaw(self.current_jaw_id))
         except ValueError as exc:
@@ -1280,7 +1343,7 @@ class JawPage(QWidget):
         jaw = self.jaw_service.get_jaw(selected_ids[0])
         dlg = AddEditJawDialog(self, jaw=jaw, translate=self._t)
         if dlg.exec() == QDialog.Accepted:
-            self._save_from_dialog(dlg)
+            self._save_from_dialog(dlg, original_jaw_id=jaw.get('jaw_id', ''))
 
     def delete_jaw(self):
         if not self.current_jaw_id:

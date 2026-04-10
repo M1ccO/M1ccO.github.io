@@ -302,7 +302,7 @@
     "jaw_library.action.delete_jaw_button": "POISTA LEUKA",
     "jaw_library.field.last_modified": "Viimeksi muokattu",
     "jaw_library.message.select_jaw_first": "Valitse ensin leuka.",
-    "jaw_library.field.turning_ring": "Kääntörengas",
+    "jaw_library.field.turning_ring": "Sorvausrengas",
     "jaw_library.field.used_in_works": "Käytössä töissä:",
     "jaw_library.filter.soft_jaws": "Pehmeät leuat",
     "jaw_library.nav.hard_group": "Kovat / piikki / erikois",

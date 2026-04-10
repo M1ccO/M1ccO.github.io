@@ -7,7 +7,6 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QFrame,
-    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -32,7 +31,6 @@ from shared.editor_helpers import (
     apply_secondary_button_theme,
     build_editor_field_card,
     focus_editor_widget,
-    reflow_fields_grid,
 )
 
 
@@ -193,15 +191,6 @@ class AddEditJawDialog(QDialog):
         header_layout.addLayout(meta_row)
         form_layout.addWidget(header)
 
-        # Fields host
-        self.general_fields_host = QWidget()
-        self.general_fields_host.setProperty('editorFieldsHost', True)
-        self.general_fields_grid = QGridLayout(self.general_fields_host)
-        self.general_fields_grid.setContentsMargins(0, 0, 0, 0)
-        self.general_fields_grid.setHorizontalSpacing(12)
-        self.general_fields_grid.setVerticalSpacing(8)
-        form_layout.addWidget(self.general_fields_host)
-
         # Build field widgets
         self.jaw_id = QLineEdit()
         self.jaw_type = QComboBox()
@@ -212,7 +201,6 @@ class AddEditJawDialog(QDialog):
             self.spindle_side.addItem(self._localized_spindle_side(raw_side), raw_side)
         self.clamping_diameter_text = QLineEdit()
         self.clamping_length = QLineEdit()
-        self.used_in_work = QLineEdit()
         self.turning_washer = QLineEdit()
         self.last_modified = QLineEdit()
         self.notes = QLineEdit()
@@ -231,32 +219,52 @@ class AddEditJawDialog(QDialog):
         for w in [
             self.jaw_id, self.jaw_type, self.spindle_side,
             self.clamping_diameter_text, self.clamping_length,
-            self.used_in_work, self.turning_washer, self.last_modified,
+            self.turning_washer, self.last_modified,
             self.notes,
         ]:
             self._style_field_editor(w)
 
-        self._general_field_order = []
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.jaw_id', 'Jaw ID'), self.jaw_id))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.jaw_type', 'Jaw type'), self.jaw_type))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.spindle_side', 'Spindle side'), self.spindle_side))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.clamping_diameter', 'Clamping diameter'), self.clamping_diameter_text))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.clamping_length', 'Clamping length'), self.clamping_length))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.used_in_works', 'Used in works:'), self.used_in_work))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), self.turning_washer))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.last_modified', 'Last modified'), self.last_modified))
-        self._general_field_order.append(self._build_edit_field(self._t('jaw_library.field.notes', 'Notes'), self.notes))
+        # Group 1: Identity
+        group1 = self._build_field_group([
+            self._build_edit_field(self._t('jaw_library.field.jaw_id', 'Jaw ID'), self.jaw_id),
+            self._build_edit_field(self._t('jaw_library.field.jaw_type', 'Jaw type'), self.jaw_type),
+            self._build_edit_field(self._t('jaw_library.field.spindle_side', 'Spindle side'), self.spindle_side),
+        ])
 
-        self._reflow_general_fields()
+        # Group 2: Clamping geometry
+        group2 = self._build_field_group([
+            self._build_edit_field(self._t('jaw_library.field.clamping_diameter', 'Clamping diameter'), self.clamping_diameter_text),
+            self._build_edit_field(self._t('jaw_library.field.clamping_length', 'Clamping length'), self.clamping_length),
+            self._build_edit_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), self.turning_washer),
+        ])
+
+        # Group 3: Meta
+        self._last_modified_field = self._build_edit_field(self._t('jaw_library.field.last_modified', 'Last modified'), self.last_modified)
+        group3 = self._build_field_group([
+            self._last_modified_field,
+            self._build_edit_field(self._t('jaw_library.field.notes', 'Notes'), self.notes),
+        ])
+
+        self._general_field_order = []  # kept for compatibility
+
+        form_layout.addWidget(group1)
+        form_layout.addWidget(group2)
+        form_layout.addWidget(group3)
 
         general_content_layout.addWidget(form_frame)
         general_content_layout.addStretch(1)
 
         self.jaw_id.textChanged.connect(self._update_header)
         self.jaw_type.currentTextChanged.connect(self._update_header)
+        self.jaw_type.currentTextChanged.connect(self._update_spiked_fields)
         self._update_header()
+        self._update_spiked_fields()
 
         return tab
+
+    def _update_spiked_fields(self):
+        is_spiked = (self.jaw_type.currentData() or '') == 'Spiked jaws'
+        self._last_modified_field.setVisible(not is_spiked)
 
     def _build_edit_field(self, title: str, editor: QWidget) -> QFrame:
         return build_editor_field_card(
@@ -269,29 +277,21 @@ class AddEditJawDialog(QDialog):
             focus_handler=self._focus_editor,
         )
 
+    def _build_field_group(self, fields: list) -> QFrame:
+        group = QFrame()
+        group.setProperty('editorFieldGroup', True)
+        layout = QVBoxLayout(group)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.setSpacing(4)
+        for f in fields:
+            layout.addWidget(f)
+        return group
+
     def _focus_editor(self, widget: QWidget):
         focus_editor_widget(widget)
 
     def _style_field_editor(self, editor: QWidget):
         pass
-
-    def _reflow_general_fields(self, force: bool = False):
-        if not hasattr(self, 'general_fields_grid'):
-            return
-        columns = 1
-        if not force and columns == self._general_field_columns:
-            return
-        self._general_field_columns = columns
-        reflow_fields_grid(
-            self.general_fields_grid,
-            self._general_field_order,
-            columns,
-            scroll=getattr(self, 'general_scroll', None),
-        )
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._reflow_general_fields()
 
     def _build_model_tab(self):
         tab = QWidget()
@@ -375,7 +375,6 @@ class AddEditJawDialog(QDialog):
         self._set_combo_by_data(self.spindle_side, self.jaw.get('spindle_side', 'Main spindle'))
         self.clamping_diameter_text.setText(self.jaw.get('clamping_diameter_text', ''))
         self.clamping_length.setText(self.jaw.get('clamping_length', ''))
-        self.used_in_work.setText(self.jaw.get('used_in_work', ''))
         self.turning_washer.setText(self.jaw.get('turning_washer', ''))
         self.last_modified.setText(self.jaw.get('last_modified', ''))
         self.notes.setText(self.jaw.get('notes', ''))
@@ -455,7 +454,7 @@ class AddEditJawDialog(QDialog):
             'spindle_side': self.spindle_side.currentData() or self.spindle_side.currentText(),
             'clamping_diameter_text': self.clamping_diameter_text.text().strip(),
             'clamping_length': self.clamping_length.text().strip(),
-            'used_in_work': self.used_in_work.text().strip(),
+            'used_in_work': '',
             'turning_washer': self.turning_washer.text().strip(),
             'last_modified': self.last_modified.text().strip(),
             'notes': self.notes.text().strip(),
