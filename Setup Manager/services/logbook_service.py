@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import date, datetime
 
 import openpyxl
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
@@ -167,15 +167,92 @@ class LogbookService:
         with self.db.conn:
             self.db.conn.execute("DELETE FROM logbook WHERE id = ?", (int(entry_id),))
 
-    def export_entries_to_excel(self, entries, output_path):
+    def count_entries_for_work(self, work_id: str) -> int:
+        row = self.db.conn.execute(
+            "SELECT COUNT(*) FROM logbook WHERE work_id = ?", (str(work_id).strip(),)
+        ).fetchone()
+        return int(row[0]) if row else 0
+
+    def delete_entries_for_work(self, work_id: str):
+        with self.db.conn:
+            self.db.conn.execute("DELETE FROM logbook WHERE work_id = ?", (str(work_id).strip(),))
+
+    @staticmethod
+    def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
+        hex_color = hex_color.lstrip('#')
+        return int(hex_color[0:2], 16), int(hex_color[2:4], 16), int(hex_color[4:6], 16)
+
+    @staticmethod
+    def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
+        return f"{rgb[0]:02X}{rgb[1]:02X}{rgb[2]:02X}"
+
+    @staticmethod
+    def _blend_rgb(rgb1: tuple[int, int, int], rgb2: tuple[int, int, int], ratio: float) -> tuple[int, int, int]:
+        ratio = max(0.0, min(1.0, ratio))
+        return (
+            int(round(rgb1[0] + (rgb2[0] - rgb1[0]) * ratio)),
+            int(round(rgb1[1] + (rgb2[1] - rgb1[1]) * ratio)),
+            int(round(rgb1[2] + (rgb2[2] - rgb1[2]) * ratio)),
+        )
+
+    @staticmethod
+    def _days_in_month(year: int, month: int) -> int:
+        if month == 12:
+            next_month = datetime(year + 1, 1, 1)
+        else:
+            next_month = datetime(year, month + 1, 1)
+        current_month = datetime(year, month, 1)
+        return (next_month - current_month).days
+
+    def _date_gradient_fill(self, date_text: str) -> PatternFill:
+        # Moderate monthly palette; first day more saturated, last day lighter.
+        month_palette = [
+            '#5B7BA8', '#7E6FA3', '#6D9A6B', '#5E90A3', '#A28F5F', '#A07A61',
+            '#5E96A8', '#7B77A2', '#7D9A66', '#A07966', '#6F86A0', '#8A7A66',
+        ]
+        try:
+            dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+            base_rgb = self._hex_to_rgb(month_palette[dt.month - 1])
+            white_rgb = (255, 255, 255)
+            dim_rgb = (240, 245, 250)
+            month_days = self._days_in_month(dt.year, dt.month)
+            progress = (dt.day - 1) / max(1, month_days - 1)
+            # Keep saturation moderate by blending base toward dim color first.
+            moderated = self._blend_rgb(base_rgb, dim_rgb, 0.35)
+            final_rgb = self._blend_rgb(moderated, white_rgb, progress * 0.70)
+            return PatternFill(fill_type='solid', fgColor=self._rgb_to_hex(final_rgb))
+        except Exception:
+            return PatternFill(fill_type='solid', fgColor='EEF3F8')
+
+    @staticmethod
+    def _coerce_number(val):
+        """Return val as int if it is a pure integer string with no leading zeros, else return as-is."""
+        s = str(val).strip() if val is not None else ''
+        if s and s.isdigit() and not (len(s) > 1 and s[0] == '0'):
+            try:
+                return int(s)
+            except ValueError:
+                pass
+        return val
+
+    @staticmethod
+    def _format_date_dmy(date_text: str) -> str:
+        """Convert ISO date string 'YYYY-MM-DD' to 'DD/MM/YYYY' for display in Excel."""
+        try:
+            dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+            return dt.strftime('%d/%m/%Y')
+        except Exception:
+            return date_text or ''
+
+    def export_entries_to_excel(self, entries, output_path, headers=None):
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Logbook"
 
-        headers = ["Date", "Serial", "Work ID", "Order", "Quantity", "Notes"]
+        headers = list(headers or ["Date", "Serial", "Work ID", "Order", "Quantity", "Notes"])
         ws.append(headers)
-        header_fill = PatternFill(fill_type='solid', fgColor='1F4E78')
-        header_font = Font(color='FFFFFF', bold=True)
+        header_fill = PatternFill(fill_type='solid', fgColor='CFE4F8')
+        header_font = Font(name='Segoe UI', color='16334E', bold=True)
         thin = Side(style='thin', color='D0D7DE')
         border = Border(left=thin, right=thin, top=thin, bottom=thin)
         for col in range(1, len(headers) + 1):
@@ -185,39 +262,30 @@ class LogbookService:
             cell.alignment = Alignment(horizontal='center', vertical='center')
             cell.border = border
 
-        unique_work_ids = []
-        for entry in entries or []:
-            work_id = str(entry.get('work_id', '') or '').strip()
-            if work_id and work_id not in unique_work_ids:
-                unique_work_ids.append(work_id)
-        work_fill = {
-            work_id: PatternFill(fill_type='solid', fgColor=self._ROW_COLORS[idx % len(self._ROW_COLORS)])
-            for idx, work_id in enumerate(sorted(unique_work_ids))
-        }
-
+        body_font = Font(name='Segoe UI')
         for item in entries:
             ws.append(
                 [
-                    item.get("date", ""),
-                    item.get("batch_serial", ""),
                     item.get("work_id", ""),
-                    item.get("order_number", ""),
+                    self._coerce_number(item.get("order_number", "")),
+                    self._format_date_dmy(item.get("date", "")),
+                    item.get("batch_serial", ""),
                     item.get("quantity", 0),
                     item.get("notes", ""),
                 ]
             )
             row_idx = ws.max_row
-            fill = work_fill.get(str(item.get('work_id', '') or '').strip())
+            fill = self._date_gradient_fill(str(item.get('date', '') or '').strip())
             for col in range(1, len(headers) + 1):
                 cell = ws.cell(row=row_idx, column=col)
                 cell.border = border
-                if fill is not None:
-                    cell.fill = fill
+                cell.fill = fill
+                cell.font = body_font
                 if col == 5 and isinstance(cell.value, int):
                     cell.number_format = '0'
-                    cell.alignment = Alignment(horizontal='right', vertical='center')
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
                 else:
-                    cell.alignment = Alignment(horizontal='left', vertical='center')
+                    cell.alignment = Alignment(horizontal='center', vertical='center')
 
         ws.freeze_panes = 'A2'
         ws.auto_filter.ref = ws.dimensions
@@ -230,7 +298,9 @@ class LogbookService:
                 if value is None:
                     continue
                 max_len = max(max_len, len(str(value)))
-            ws.column_dimensions[letter].width = min(max(max_len + 2, 12), 48)
+            notes_col = len(headers)
+            col_min = 22 if idx == notes_col else 12
+            ws.column_dimensions[letter].width = min(max(max_len + 2, col_min), 48)
 
         ws.row_dimensions[1].height = 24
         for row_idx in range(2, ws.max_row + 1):

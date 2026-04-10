@@ -38,6 +38,7 @@ from config import (
     TOOL_LIBRARY_TOOL_ICONS_DIR,
     TOOL_TYPE_TO_ICON,
     DEFAULT_TOOL_ICON,
+    TEMP_DIR,
 )
 from ui.widgets.common import AutoShrinkLabel, repolish_widget, styled_list_item_height
 from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID, SetupCatalogDelegate
@@ -548,6 +549,7 @@ class LogEntryDialog(QDialog):
 class SetupPage(QWidget):
     logbookChanged = Signal()
     openLibraryMasterFilterRequested = Signal(object, object)
+    openLibraryWithModuleRequested = Signal(object, object, str)  # tool_ids, jaw_ids, module
     libraryLaunchContextChanged = Signal(object)
 
     def __init__(
@@ -569,12 +571,10 @@ class SetupPage(QWidget):
         self.drawings_enabled = True  # updated by main_window from preferences
         self.current_work_id = None
         self.latest_entries_by_work = {}
-        self._details_open = False
         self._search_visible = False
-        self._last_detail_sizes: list = []  # remembers splitter sizes when detail was last visible
         self._min_list_panel_width = 340
-        self._min_detail_panel_width = 420
         self._clamping_splitter = False
+        self._last_mouse_button = None  # Track mouse button for double-click handling
         self._row_headers = {
             "work_id": self._t("setup_page.row.work_id", "Work ID"),
             "drawing": self._t("setup_page.row.drawing", "Drawing"),
@@ -597,6 +597,7 @@ class SetupPage(QWidget):
             for key, (translation_key, default) in self._section_title_keys.items()
         }
         self._detail_section_title_labels: dict[str, QLabel] = {}
+        self._details_open = False
         self._tool_db_mtime = self._safe_mtime(self.draw_service.tool_db_path)
         self._jaw_db_mtime = self._safe_mtime(self.draw_service.jaw_db_path)
 
@@ -631,39 +632,12 @@ class SetupPage(QWidget):
         self.search_input.setFixedWidth(220)
         controls.addWidget(self.search_input)
 
-        self.detail_toggle_btn = QToolButton()
-        self.detail_toggle_btn.setProperty("topBarIconButton", True)
-        self.detail_toggle_btn.setCheckable(True)
-        self.detail_toggle_btn.setToolTip(self._t("setup_page.details_toggle_tip", "Show/hide work details"))
-        self.detail_toggle_btn.setIcon(_toolbar_icon_with_svg_render_fallback("tooltip", 28))
-        self.detail_toggle_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.detail_toggle_btn.setIconSize(QSize(28, 28))
-        self.detail_toggle_btn.setFixedSize(36, 36)
-        self.detail_toggle_btn.setAutoRaise(True)
-        self.detail_toggle_btn.clicked.connect(self._on_detail_toggle_clicked)
-        controls.addWidget(self.detail_toggle_btn)
-
         self.make_logbook_entry_btn = QPushButton(self._t("setup_page.make_logbook_entry", "Make logbook entry"))
         self.make_logbook_entry_btn.setProperty("panelActionButton", True)
         self.make_logbook_entry_btn.setProperty("secondaryAction", True)
         self.make_logbook_entry_btn.setFixedHeight(30)
+        self.make_logbook_entry_btn.setFixedWidth(260)
         self.make_logbook_entry_btn.clicked.connect(self.add_log_entry)
-
-        self.detail_close_btn = QToolButton()
-        self.detail_close_btn.setProperty("topBarIconButton", True)
-        self.detail_close_btn.setToolTip(self._t("setup_page.close_details_tip", "Close details"))
-        if not self.close_icon.isNull():
-            self.detail_close_btn.setIcon(self.close_icon)
-            self.detail_close_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-            self.detail_close_btn.setIconSize(QSize(28, 28))
-            self.detail_close_btn.setFixedSize(36, 36)
-        else:
-            self.detail_close_btn.setText("X")
-            self.detail_close_btn.setFixedSize(36, 36)
-        self.detail_close_btn.setAutoRaise(True)
-        self.detail_close_btn.clicked.connect(self.hide_details)
-        self.detail_close_btn.hide()
-        controls.addStretch(1)
 
         self.new_btn = QPushButton(self._t("setup_page.new_work", "New Work"))
         self.edit_btn = QPushButton(self._t("setup_page.edit_work", "Edit Work"))
@@ -673,6 +647,7 @@ class SetupPage(QWidget):
         self.print_btn.setProperty("panelActionButton", True)
         self.print_btn.setProperty("secondaryAction", True)
         self.print_btn.setFixedHeight(30)
+        self.print_btn.setFixedWidth(260)
 
         self.new_btn.clicked.connect(self.create_work)
         self.edit_btn.clicked.connect(self.edit_work)
@@ -680,9 +655,9 @@ class SetupPage(QWidget):
         self.copy_btn.clicked.connect(self.duplicate_work)
         self.print_btn.clicked.connect(self.view_setup_card)
 
+        controls.addStretch(1)
         controls.addWidget(self.print_btn)
         controls.addWidget(self.make_logbook_entry_btn)
-        controls.addWidget(self.detail_close_btn)
         root.addWidget(controls_frame)
 
         splitter = QSplitter(Qt.Horizontal)
@@ -730,107 +705,9 @@ class SetupPage(QWidget):
         list_shell_container.setMinimumWidth(self._min_list_panel_width)
         splitter.addWidget(list_shell_container)
 
-        detail_host = QWidget()
-        detail_host.setProperty("detailPaneHost", True)
-        detail_layout = QVBoxLayout(detail_host)
-        detail_layout.setContentsMargins(0, 0, 0, 0)
-        detail_layout.setSpacing(2)
-
-        # Hero header - mirror Tool Library detail style with a bordered heading field.
-        detail_hero = QFrame()
-        detail_hero.setProperty("detailHeader", True)
-        hero_layout = QVBoxLayout(detail_hero)
-        hero_layout.setContentsMargins(14, 14, 14, 12)
-        hero_layout.setSpacing(6)
-
-        heading_field = QFrame()
-        heading_field.setProperty("detailField", True)
-        heading_field.setProperty("detailHeroField", True)
-        heading_layout = QVBoxLayout(heading_field)
-        heading_layout.setContentsMargins(10, 8, 10, 8)
-        heading_layout.setSpacing(4)
-
-        self.detail_heading_key = QLabel(self._t("setup_page.field.drawing_id", "Drawing ID"))
-        self.detail_heading_key.setProperty("detailFieldKey", True)
-
-        self.detail_id_label = QLabel("-")
-        self.detail_id_label.setProperty("detailHeroTitle", True)
-        self.detail_id_label.setWordWrap(False)
-        self.detail_id_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-
-        self.detail_description_label = QLabel("-")
-        self.detail_description_label.setProperty("detailHeroSubtitle", True)
-        self.detail_description_label.setWordWrap(True)
-        self.detail_description_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-
-        heading_layout.addWidget(self.detail_heading_key)
-        heading_layout.addWidget(self.detail_id_label)
-        heading_layout.addWidget(self.detail_description_label)
-        hero_layout.addWidget(heading_field)
-
-        # Wrap the hero and all section cards in one scroll area so everything scrolls together
-        detail_scroll = QScrollArea()
-        detail_scroll.setObjectName("detailScrollArea")
-        detail_scroll.setWidgetResizable(True)
-        detail_scroll.setFrameShape(QFrame.NoFrame)
-        detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        detail_scroll_content = QWidget()
-        detail_scroll_content.setProperty("detailContentHost", True)
-        detail_scroll_content.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        detail_scroll_layout = QVBoxLayout(detail_scroll_content)
-        detail_scroll_layout.setContentsMargins(0, 0, 0, 0)
-        detail_scroll_layout.setSpacing(8)
-        detail_scroll_layout.addWidget(detail_hero)
-
-        self.detail_sections = {}
-        for key, title in self._section_titles.items():
-            card = QFrame()
-            card.setProperty("subCard", True)
-            card_layout = QVBoxLayout(card)
-            card_layout.setContentsMargins(14, 12, 14, 12)
-            card_layout.setSpacing(8)
-            title_label = QLabel(title)
-            title_label.setProperty("detailSectionTitle", True)
-            card_layout.addWidget(title_label)
-            detail_scroll_layout.addWidget(card)
-            self.detail_sections[key] = card_layout
-            self._detail_section_title_labels[key] = title_label
-
-        detail_scroll_layout.addStretch(1)
-        detail_scroll.setWidget(detail_scroll_content)
-
-        self.detail_card = QFrame()
-        self.detail_card.setProperty("card", True)
-        detail_card_layout = QVBoxLayout(self.detail_card)
-        detail_card_layout.setContentsMargins(0, 0, 0, 0)
-        detail_card_layout.setSpacing(0)
-        detail_card_layout.addWidget(detail_scroll, 1)
-        detail_layout.addWidget(self.detail_card, 1)
-
-        self.detail_scroll = detail_scroll
-        self.detail_scroll_content = detail_scroll_content
-        self.detail_scroll.viewport().installEventFilter(self)
-
-        self.detail_host = detail_host
-        detail_host.setMinimumWidth(self._min_detail_panel_width)
-        detail_host.setVisible(False)
-
-        splitter.addWidget(detail_host)
         splitter.setChildrenCollapsible(False)
         splitter.setCollapsible(0, False)
-        splitter.setCollapsible(1, False)
-        splitter.setStretchFactor(0, 3)
-        splitter.setStretchFactor(1, 2)
-        self._setup_splitter = splitter
-        splitter.setSizes([1, 0])
-        splitter.splitterMoved.connect(self._on_splitter_moved)
-
-        splitter_host = QWidget()
-        splitter_host_layout = QVBoxLayout(splitter_host)
-        splitter_host_layout.setContentsMargins(0, 0, 12, 0)
-        splitter_host_layout.setSpacing(0)
-        splitter_host_layout.addWidget(splitter)
-        root.addWidget(splitter_host, 1)
+        root.addWidget(splitter, 1)
 
         button_bar = QFrame()
         button_bar.setProperty("bottomBar", True)
@@ -911,17 +788,13 @@ class SetupPage(QWidget):
             label.setText(self._section_titles.get(key, label.text()))
         self.search_toggle_btn.setToolTip(self._t("setup_page.search_toggle_tip", "Show/hide search"))
         self.search_input.setPlaceholderText(self._t("setup_page.search_placeholder", "Search works..."))
-        self.detail_toggle_btn.setToolTip(self._t("setup_page.details_toggle_tip", "Show/hide work details"))
         self.make_logbook_entry_btn.setText(self._t("setup_page.make_logbook_entry", "Make logbook entry"))
-        self.detail_close_btn.setToolTip(self._t("setup_page.close_details_tip", "Close details"))
         self.new_btn.setText(self._t("setup_page.new_work", "New Work"))
         self.edit_btn.setText(self._t("setup_page.edit_work", "Edit Work"))
         self.delete_btn.setText(self._t("setup_page.delete_work", "Delete Work"))
         self.copy_btn.setText(self._t("setup_page.duplicate", "Duplicate"))
         self.print_btn.setText(self._t("setup_page.view_setup_card", "View Setup Card"))
         self._update_selection_count_label()
-        if self._details_open:
-            self._refresh_details()
         self.refresh_works()
 
     def _format_lookup(self, item_id, ref_lookup):
@@ -998,15 +871,10 @@ class SetupPage(QWidget):
             self.work_list.setCurrentIndex(restored_index)
             self.work_list.scrollTo(restored_index)
             self._set_selected_card(self.current_work_id)
-            if details_were_open:
-                self.show_details()
-            else:
-                self.hide_details()
             selected_work = self.work_service.get_work(self.current_work_id)
             self._emit_library_launch_context(selected_work)
         else:
             self._set_selected_card(None)
-            self.hide_details()
             self._emit_library_launch_context(None)
 
     def _selected_work_id(self):
@@ -1174,45 +1042,16 @@ class SetupPage(QWidget):
         return QModelIndex()
 
     def eventFilter(self, obj, event):
-        if hasattr(self, "detail_scroll") and obj is self.detail_scroll.viewport() and event.type() == QEvent.Resize:
-            self._sync_detail_content_width()
         if obj is self.work_list.viewport() and event.type() == QEvent.Resize:
             self._sync_work_row_widths()
             QTimer.singleShot(0, self._sync_work_row_widths)
         if obj in (self.work_list, self.work_list.viewport()):
             if event.type() == QEvent.MouseButtonPress:
-                # If the press starts on/near the splitter handle, let splitter drag begin
-                # and do not treat it as an empty-list click that clears selection.
-                if self._is_press_near_splitter_handle(event):
-                    return False
+                # Track which mouse button was pressed for double-click handling
+                self._last_mouse_button = event.button()
                 if not self.work_list.indexAt(event.pos()).isValid():
                     self._clear_selection()
         return super().eventFilter(obj, event)
-
-    def _is_press_near_splitter_handle(self, event) -> bool:
-        if not hasattr(self, "_setup_splitter") or self._setup_splitter is None:
-            return False
-        if not self._details_open:
-            return False
-        handle = self._setup_splitter.handle(1)
-        if handle is None:
-            return False
-        handle_rect = handle.geometry().adjusted(-10, 0, 10, 0)
-        if hasattr(event, "globalPosition"):
-            global_pos = event.globalPosition().toPoint()
-        elif hasattr(event, "globalPos"):
-            global_pos = event.globalPos()
-        else:
-            return False
-        pos_in_splitter = self._setup_splitter.mapFromGlobal(global_pos)
-        return handle_rect.contains(pos_in_splitter)
-
-    def _sync_detail_content_width(self):
-        if not hasattr(self, "detail_scroll_content") or not hasattr(self, "detail_scroll"):
-            return
-        viewport_width = max(0, self.detail_scroll.viewport().width())
-        right_margin = 8
-        self.detail_scroll_content.setFixedWidth(max(0, viewport_width - right_margin))
 
     def _clear_selection(self):
         self.work_list.selectionModel().clearSelection()
@@ -1222,7 +1061,6 @@ class SetupPage(QWidget):
         self._set_selected_card(None)
         self._update_open_library_viewer_visibility(None)
         self._emit_library_launch_context(None)
-        self.hide_details()
 
     def _on_selection_changed(self, current, _previous):
         work_id = current.data(ROLE_WORK_ID) if current and current.isValid() else None
@@ -1232,118 +1070,47 @@ class SetupPage(QWidget):
         selected_work = self.work_service.get_work(work_id) if work_id else None
         self._update_open_library_viewer_visibility(selected_work)
         self._emit_library_launch_context(selected_work)
-        if self._details_open:
-            self._refresh_details()
 
     def _on_item_double_clicked(self, item):
+        """Handle double-click on setup card to open filtered libraries."""
         work_id = item.data(ROLE_WORK_ID) if item and item.isValid() else None
         if not work_id:
             return
-        # Double-click selected row toggles details open/closed.
-        if self._details_open and self.current_work_id == work_id:
-            self.hide_details()
+        
+        work = self.work_service.get_work(work_id)
+        if not work:
             return
-        self.current_work_id = work_id
-        self._set_selected_card(work_id)
-        self.show_details()
+        
+        tool_ids, jaw_ids = self._collect_library_filter_ids(work)
+        
+        # Determine which button was pressed based on last recorded mouse button
+        if self._last_mouse_button == Qt.RightButton:
+            # Right double-click: open Jaws Library
+            self.openLibraryWithModuleRequested.emit(tool_ids, jaw_ids, "jaws")
+        else:
+            # Left double-click (default): open Tools Library
+            self.openLibraryWithModuleRequested.emit(tool_ids, jaw_ids, "tools")
+        
+        self._last_mouse_button = None
 
     def _on_detail_toggle_clicked(self):
-        if self._details_open:
-            self.hide_details()
-            return
-        work_id = self._selected_work_id()
-        if not work_id:
-            QMessageBox.information(
-                self,
-                self._t("setup_page.message.no_work_title", "No work"),
-                self._t("setup_page.message.select_work_first", "Select a work first."),
-            )
-            self.detail_toggle_btn.setChecked(False)
-            return
-        self.current_work_id = work_id
-        self.show_details()
+        return
 
     def show_details(self):
-        if not self.current_work_id:
-            return
-        self._details_open = True
-        self.detail_host.setVisible(True)
-        self.detail_close_btn.show()
-        self.detail_toggle_btn.setChecked(True)
-        if hasattr(self, "_setup_splitter"):
-            if self._last_detail_sizes and sum(self._last_detail_sizes) > 0:
-                self._setup_splitter.setSizes(self._last_detail_sizes)
-            else:
-                total = max(700, self._setup_splitter.width())
-                # Keep first-open detail panel intentionally narrow and consistent.
-                detail_width = min(420, max(320, int(total * 0.30)))
-                self._setup_splitter.setSizes([max(1, total - detail_width), detail_width])
-            self._sync_detail_content_width()
-        self._sync_work_row_modes()
-        self._refresh_details()
+        return
 
     def hide_details(self):
-        if hasattr(self, "_setup_splitter") and self._details_open:
-            sizes = self._setup_splitter.sizes()
-            if sizes and sizes[1] > 0:
-                self._last_detail_sizes = sizes
-        self._details_open = False
-        self.detail_host.setVisible(False)
-        self.detail_close_btn.hide()
-        self.detail_toggle_btn.setChecked(False)
-        if hasattr(self, "_setup_splitter"):
-            self._setup_splitter.setSizes([1, 0])
-        self._sync_work_row_modes()
+        return
 
     def _on_splitter_moved(self, pos: int, index: int):
-        """Save current splitter ratio whenever the user drags it."""
-        if not self._details_open or not hasattr(self, "_setup_splitter"):
-            return
-        if self._clamping_splitter:
-            return
-        sizes = self._setup_splitter.sizes()
-        if not sizes:
-            return
-
-        if sizes[1] <= 0:
-            total = max(1, sum(sizes))
-            clamped_right = min(max(self._min_detail_panel_width, 1), max(1, total - self._min_list_panel_width))
-            clamped_left = max(self._min_list_panel_width, total - clamped_right)
-            self._clamping_splitter = True
-            try:
-                self._setup_splitter.setSizes([clamped_left, clamped_right])
-            finally:
-                self._clamping_splitter = False
-            sizes = self._setup_splitter.sizes()
-            if not sizes or sizes[1] <= 0:
-                return
-
-        left, right = sizes[0], sizes[1]
-        clamped_left = max(self._min_list_panel_width, left)
-        clamped_right = max(self._min_detail_panel_width, right)
-        total = left + right
-        if clamped_left + clamped_right > total:
-            clamped_right = max(self._min_detail_panel_width, total - clamped_left)
-            if clamped_left + clamped_right > total:
-                clamped_left = max(self._min_list_panel_width, total - clamped_right)
-
-        if clamped_left != left or clamped_right != right:
-            self._clamping_splitter = True
-            try:
-                self._setup_splitter.setSizes([clamped_left, clamped_right])
-            finally:
-                self._clamping_splitter = False
-            sizes = self._setup_splitter.sizes()
-
-        if sizes and sizes[1] > 0:
-            self._last_detail_sizes = sizes
+        return
 
     def _set_selected_card(self, work_id):
         _ = work_id
         self.work_list.viewport().update()
 
     def _sync_work_row_modes(self):
-        compact = bool(self._details_open)
+        compact = False
         self._work_delegate.set_compact_mode(compact)
         self._sync_work_row_widths()
         QTimer.singleShot(0, self._sync_work_row_widths)
@@ -1723,6 +1490,25 @@ class SetupPage(QWidget):
         work_id = self._selected_work_id()
         if not work_id:
             return
+
+        logbook_count = self.logbook_service.count_entries_for_work(work_id)
+
+        # Always take a backup before any destructive action.
+        try:
+            self._create_db_backup("work_delete")
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                self._t("setup_page.message.backup_failed_title", "Backup failed"),
+                self._t(
+                    "setup_page.message.backup_failed_body",
+                    "Could not create a backup before deleting:\n{error}",
+                    error=str(exc),
+                ),
+            )
+            return
+
+        # Primary confirmation: delete the work.
         answer = QMessageBox.question(
             self,
             self._t("setup_page.message.delete_work_title", "Delete work"),
@@ -1732,7 +1518,37 @@ class SetupPage(QWidget):
         )
         if answer != QMessageBox.Yes:
             return
+
+        # If logbook entries exist, ask what to do with them.
+        delete_logbook = False
+        if logbook_count > 0:
+            box = QMessageBox(self)
+            box.setIcon(QMessageBox.Question)
+            box.setWindowTitle(self._t("setup_page.message.delete_logbook_title", "Delete logbook entries?"))
+            box.setText(
+                self._t(
+                    "setup_page.message.delete_logbook_body",
+                    "Work '{work_id}' has {count} logbook entr{plural}.\n\nDo you also want to delete those logbook entries?",
+                    work_id=work_id,
+                    count=logbook_count,
+                    plural="y" if logbook_count == 1 else "ies",
+                )
+            )
+            yes_btn = box.addButton(
+                self._t("setup_page.message.delete_logbook_yes", "Delete logbook entries too"),
+                QMessageBox.DestructiveRole,
+            )
+            keep_btn = box.addButton(
+                self._t("setup_page.message.delete_logbook_keep", "Keep logbook entries"),
+                QMessageBox.AcceptRole,
+            )
+            box.setDefaultButton(keep_btn)
+            box.exec()
+            delete_logbook = box.clickedButton() is yes_btn
+
         self.work_service.delete_work(work_id)
+        if delete_logbook:
+            self.logbook_service.delete_entries_for_work(work_id)
         self.refresh_works()
 
     def duplicate_work(self):
@@ -1808,10 +1624,10 @@ class SetupPage(QWidget):
                         self._t("setup_page.message.logbook_created", "Logbook entry created."),
                     )
                     return
-                preview_dir = Path(tempfile.gettempdir()) / "setup_cards"
+                preview_dir = TEMP_DIR / "setup_cards"
                 preview_dir.mkdir(parents=True, exist_ok=True)
-                entry_no = created_entry.get("id") if isinstance(created_entry, dict) else "latest"
-                output_path = preview_dir / f"logbook_entry_card_{work_id}_{entry_no}.pdf"
+                date_stamp = datetime.now().strftime('%d-%m-%Y')
+                output_path = preview_dir / f"logbook-export__{date_stamp}.pdf"
                 self.print_service.generate_logbook_entry_card(work, created_entry, output_path)
                 saved_notice = QMessageBox(self)
                 saved_notice.setIcon(QMessageBox.Information)
@@ -1903,9 +1719,10 @@ class SetupPage(QWidget):
                 return
 
         try:
-            preview_dir = Path(tempfile.gettempdir()) / "setup_cards"
+            preview_dir = TEMP_DIR / "setup_cards"
             preview_dir.mkdir(parents=True, exist_ok=True)
-            output_path = preview_dir / f"setup_card_{work_id}.pdf"
+            date_stamp = datetime.now().strftime('%d-%m-%Y')
+            output_path = preview_dir / f"setup-card__{date_stamp}.pdf"
             self.print_service.generate_setup_card(work, entry, output_path)
             if not self.draw_service.open_drawing(output_path):
                 QMessageBox.warning(

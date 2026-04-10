@@ -513,7 +513,7 @@ class LogbookPage(QWidget):
 
         self.table.resizeColumnsToContents()
         # Ensure minimum readable column widths
-        min_widths = {0: 116, 1: 82, 2: 126, 3: 118, 4: 62, 5: 90}
+        min_widths = {0: 130, 1: 82, 2: 210, 3: 118, 4: 96, 5: 150}
         for col, mw in min_widths.items():
             if self.table.columnWidth(col) < mw:
                 self.table.setColumnWidth(col, mw)
@@ -705,16 +705,26 @@ class LogbookPage(QWidget):
                 self._t("logbook_page.export.no_data_body", "There are no entries to export."),
             )
             return
+        date_stamp = datetime.now().strftime('%d-%m-%Y')
+        default_name = f"logbook-export__{date_stamp}.xlsx"
         path, _ = QFileDialog.getSaveFileName(
             self,
             self._t("logbook_page.export.dialog_title", "Export logbook"),
-            str(Path.home() / "setup_logbook.xlsx"),
+            str(Path.home() / default_name),
             self._t("logbook_page.export.filter", "Excel Files (*.xlsx)"),
         )
         if not path:
             return
         try:
-            self.logbook_service.export_entries_to_excel(self.entries, path)
+            headers = [
+                self._t("setup_page.field.work_id", "Work ID"),
+                self._t("logbook_page.col.order", "Order"),
+                self._t("logbook_page.col.date", "Date"),
+                self._t("logbook_page.col.serial", "Serial"),
+                self._t("logbook_page.col.qty", "Qty"),
+                self._t("setup_page.field.notes", "Notes"),
+            ]
+            self.logbook_service.export_entries_to_excel(self.entries, path, headers=headers)
             QMessageBox.information(
                 self,
                 self._t("logbook_page.export.done_title", "Exported"),

@@ -14,6 +14,25 @@ class PrintService:
         "Y": (58 / 255.0, 110 / 255.0, 69 / 255.0),   # #3A6E45
         "C": (201 / 255.0, 106 / 255.0, 18 / 255.0),  # #C96A12
     }
+    
+    # Monthly color palette - moderate saturation. Each month gets a color for gradient effects.
+    _MONTH_COLORS_HEX = [
+        "#5B7BA8",  # January - muted blue
+        "#8B6B8F",  # February - muted purple
+        "#7A9B6B",  # March - muted green
+        "#6B8FA8",  # April - muted cyan-blue
+        "#A89B6B",  # May - muted gold
+        "#9B8B6B",  # June - muted warm brown
+        "#6B8FA8",  # July - muted blue-cyan
+        "#8A7B9B",  # August - muted purple-blue
+        "#8B9B6B",  # September - muted olive
+        "#A87B6B",  # October - muted rust
+        "#7B8BA8",  # November - muted slate
+        "#8B7B6B",  # December - muted brown
+    ]
+    
+    # Header color - light blue
+    _LOGBOOK_HEADER_COLOR = "#C5D9F1"  # Light blue for header section
 
     def __init__(self, app_title="Setup Manager"):
         self.app_title = app_title
@@ -58,6 +77,58 @@ class PrintService:
         if coord:
             return coord
         return "-"
+
+    @staticmethod
+    def _hex_to_rgb(hex_color: str) -> tuple[float, float, float]:
+        """Convert hex color (#RRGGBB) to RGB tuple with values 0-1."""
+        hex_color = hex_color.lstrip('#')
+        r = int(hex_color[0:2], 16) / 255.0
+        g = int(hex_color[2:4], 16) / 255.0
+        b = int(hex_color[4:6], 16) / 255.0
+        return (r, g, b)
+
+    @staticmethod
+    def _blend_rgb(rgb1: tuple[float, float, float], rgb2: tuple[float, float, float], ratio: float) -> tuple[float, float, float]:
+        """Blend two RGB colors. ratio=0 gives rgb1, ratio=1 gives rgb2."""
+        r = rgb1[0] + (rgb2[0] - rgb1[0]) * ratio
+        g = rgb1[1] + (rgb2[1] - rgb1[1]) * ratio
+        b = rgb1[2] + (rgb2[2] - rgb1[2]) * ratio
+        return (r, g, b)
+
+    @classmethod
+    def _get_logbook_color_for_date(cls, date_str: str) -> tuple[float, float, float]:
+        """
+        Get RGB color for a logbook entry based on the date.
+        Gradient: 1st of month (saturated) to last day of month (desaturated).
+        """
+        try:
+            date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+            month = date_obj.month - 1  # 0-11
+            day = date_obj.day
+            
+            # Calculate days in the month
+            if month == 11:  # December
+                next_month = datetime(date_obj.year + 1, 1, 1)
+            else:
+                next_month = datetime(date_obj.year, month + 2, 1)
+            days_in_month = (next_month - datetime(date_obj.year, month + 1, 1)).days
+            
+            # Base color for the month
+            month_color_hex = cls._MONTH_COLORS_HEX[month]
+            month_rgb = cls._hex_to_rgb(month_color_hex)
+            
+            # White color for desaturation
+            white_rgb = (1.0, 1.0, 1.0)
+            
+            # Calculate saturation level: 1st day = 0 (full saturation), last day = 1 (full desaturation)
+            saturation_ratio = (day - 1) / max(1, days_in_month - 1)
+            
+            # Blend from saturated color to white
+            result_rgb = cls._blend_rgb(month_rgb, white_rgb, saturation_ratio)
+            return result_rgb
+        except Exception:
+            # Fallback color if date parsing fails
+            return cls._hex_to_rgb("#8B8B8B")  # Gray
 
     def _tool_data(self, tool_id, tool_uid=None):
         tool_id = self._to_text(tool_id)
@@ -1026,6 +1097,22 @@ class PrintService:
                 date_display = datetime.strptime(date_raw, "%Y-%m-%d").strftime("%d/%m/%Y")
             except Exception:
                 date_display = date_raw
+
+
+        # Draw header background with light blue
+        header_bg_rgb = self._hex_to_rgb(self._LOGBOOK_HEADER_COLOR)
+        pdf.setFillColorRGB(*header_bg_rgb)
+        pdf.rect(margin, page_h - 65, content_w, 55, stroke=0, fill=1)
+
+        # Draw work ID with monthly color gradient
+        pdf.setFont("Helvetica-Bold", 37)
+        pdf.setFillColorRGB(*monthly_color_rgb)
+        pdf.drawString(margin + 8, page_h - 48, work_id)
+
+        # Draw timestamp with original color
+        pdf.setFont("Helvetica", 13)
+        pdf.setFillColorRGB(0.28, 0.34, 0.40)
+        pdf.drawRightString(page_w - margin - 8, page_h - 42, self._t("print.generated_at", "Generated {ts}", ts=generated_ts))
 
         details_lines = [
             self._t("print.logbook.line.work_id", "Work ID: {value}", value=self._safe((entry or {}).get('work_id'))),

@@ -550,6 +550,10 @@ class MainWindow(QMainWindow):
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
             self._clear_active_page_selection_on_background_click(obj)
+        if event.type() == QEvent.MouseButtonDblClick and event.button() == Qt.RightButton:
+            if isinstance(obj, QWidget) and obj.window() is self:
+                self._back_to_setup_manager()
+                return True
         if hasattr(self, '_nav_hover_widgets') and obj in self._nav_hover_widgets:
             if event.type() == QEvent.Enter:
                 self._show_nav()

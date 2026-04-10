@@ -33,6 +33,7 @@ if IS_FROZEN:
     USER_DATA_DIR = local_appdata / APP_TITLE
     DB_DIR = USER_DATA_DIR / "databases"
     DRAWINGS_DIR = USER_DATA_DIR / "drawings"
+    TEMP_DIR = USER_DATA_DIR / "temp"
     TOOL_LIBRARY_USER_DB_DIR = local_appdata / "Tools and jaws Library" / "databases"
     TOOL_LIBRARY_INSTALL_DIR = local_appdata / "Programs" / "Tools and jaws Library"
     exe_dir = Path(sys.executable).resolve().parent
@@ -48,12 +49,14 @@ else:
     USER_DATA_DIR = SOURCE_DIR
     DB_DIR = SOURCE_DIR / "databases"
     DRAWINGS_DIR = SOURCE_DIR / "drawings"
+    TEMP_DIR = SOURCE_DIR / "temp"
     TOOL_LIBRARY_USER_DB_DIR = PROJECTS_DIR / "Tools and jaws Library" / "databases"
     TOOL_LIBRARY_INSTALL_DIR = PROJECTS_DIR / "Tools and jaws Library"
     SIBLING_PROJECTS_DIR = PROJECTS_DIR
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DRAWINGS_DIR.mkdir(parents=True, exist_ok=True)
+TEMP_DIR.mkdir(parents=True, exist_ok=True)
 _shared_dir = str(PROJECTS_DIR / 'shared')
 if _shared_dir not in sys.path:
     sys.path.insert(0, _shared_dir)

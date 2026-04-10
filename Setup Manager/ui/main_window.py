@@ -218,6 +218,7 @@ class MainWindow(QMainWindow):
         self.setup_page.logbookChanged.connect(self.logbook_page.refresh_entries)
         self.logbook_page.logbookChanged.connect(self.setup_page.refresh_works)
         self.setup_page.openLibraryMasterFilterRequested.connect(self._open_tool_library_with_master_filter)
+        self.setup_page.openLibraryWithModuleRequested.connect(self._open_tool_library_with_master_filter)
         self.setup_page.libraryLaunchContextChanged.connect(self._on_setup_launch_context_changed)
         self.setup_page.libraryLaunchContextChanged.connect(self.drawing_page.set_setup_context)
 
@@ -419,13 +420,30 @@ class MainWindow(QMainWindow):
         """Open Tool Library in launch-scoped master filter mode."""
         safe_tools = [str(t).strip() for t in (tool_ids or []) if str(t).strip()]
         safe_jaws = [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]
-        if not safe_tools and not safe_jaws:
+
+        # Keep module filtering strict even when one side has no linked IDs.
+        # The Tool/Jaw pages treat empty filter lists as "show all", so we
+        # pass a guaranteed non-matching sentinel to force an empty result set.
+        no_match_id = "__NO_MATCH_LINKED_ITEMS__"
+        selected_module = "jaws" if module == "jaws" else "tools"
+        if not safe_tools:
+            safe_tools = [no_match_id]
+        if not safe_jaws:
+            safe_jaws = [no_match_id]
+
+        if selected_module == "tools" and tool_ids is not None and not [str(t).strip() for t in (tool_ids or []) if str(t).strip()]:
+            safe_tools = [no_match_id]
             QMessageBox.information(
                 self,
                 self._t("setup_manager.viewer.title", "Viewer"),
-                self._t("setup_manager.viewer.no_links", "No jaw/tool links were found for this setup."),
+                self._t("setup_manager.viewer.no_tools", "No tools selected for this work."),
             )
-            return
+        if selected_module == "jaws" and jaw_ids is not None and not [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]:
+            QMessageBox.information(
+                self,
+                self._t("setup_manager.viewer.title", "Viewer"),
+                self._t("setup_manager.viewer.no_jaws", "No jaws selected for this work."),
+            )
 
         x, y, width, height = self._current_window_rect()
         _allow_set_foreground()
@@ -437,7 +455,7 @@ class MainWindow(QMainWindow):
             "master_filter_tools": safe_tools,
             "master_filter_jaws": safe_jaws,
             "master_filter_active": True,
-            "module": "jaws" if module == "jaws" else "tools",
+            "module": selected_module,
         }
         if self._send_to_tool_library(payload):
             def _finish_handoff():
@@ -493,14 +511,17 @@ class MainWindow(QMainWindow):
         for idx, button in enumerate(getattr(self, "nav_buttons", [])):
             if idx == 0:
                 text = self._t("setup_manager.nav.setups", "SETUPS")
+                button.setVisible(True)
             elif idx == 1:
                 key = "setup_manager.nav.show_drawing" if self._launch_context.get("selected") else "setup_manager.nav.drawings"
                 default = "SHOW DRAWING" if self._launch_context.get("selected") else "DRAWINGS"
                 text = self._t(key, default)
+                button.setVisible(drawings_enabled)
                 button.setEnabled(drawings_enabled)
                 button.setToolTip("" if drawings_enabled else self._t("preferences.drawings_tab_disabled_hint", "Drawings tab is disabled in Preferences."))
             else:
                 text = self._t("setup_manager.nav.logbook", "LOGBOOK")
+                button.setVisible(True)
             button.setText(text)
 
     def _update_launch_actions(self):
