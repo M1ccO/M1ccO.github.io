@@ -19,9 +19,11 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -325,6 +327,75 @@ def reflow_fields_grid(
         )
 
 
+# ── Detail field card helpers ───────────────────────────────────────────
+
+def focus_editor_widget(widget: QWidget):
+    """Focus the most relevant input inside *widget*.
+
+    Used by detail-field labels so clicking a key label focuses its editor.
+    """
+    if isinstance(widget, QLineEdit):
+        widget.setFocus()
+        widget.selectAll()
+        return
+    if isinstance(widget, QTextEdit):
+        widget.setFocus()
+        return
+    if isinstance(widget, QComboBox):
+        widget.setFocus()
+        return
+    if isinstance(widget, QPushButton):
+        widget.setFocus()
+        return
+
+    for child in widget.findChildren(QLineEdit):
+        child.setFocus()
+        child.selectAll()
+        return
+    for child in widget.findChildren(QComboBox):
+        child.setFocus()
+        return
+    for child in widget.findChildren(QTextEdit):
+        child.setFocus()
+        return
+    for child in widget.findChildren(QPushButton):
+        child.setFocus()
+        return
+
+
+def build_editor_field_card(
+    title: str,
+    editor: QWidget,
+    *,
+    key_label: QLabel | None = None,
+    label_min_width: int = 200,
+    label_max_width: int = 200,
+    label_word_wrap: bool = True,
+    label_top_align: bool = True,
+    focus_handler=None,
+) -> QFrame:
+    """Create a standard editor field row used in Tool/Jaw detail panels."""
+    frame = QFrame()
+    frame.setProperty('editorFieldCard', True)
+    layout = QHBoxLayout(frame)
+    layout.setContentsMargins(2, 2, 2, 2)
+    layout.setSpacing(8)
+
+    label = key_label if key_label is not None else QLabel(title)
+    label.setProperty('detailFieldKey', True)
+    label.setWordWrap(bool(label_word_wrap))
+    label.setAlignment(Qt.AlignLeft | (Qt.AlignTop if label_top_align else Qt.AlignVCenter))
+    label.setMinimumWidth(max(0, int(label_min_width)))
+    label.setMaximumWidth(max(0, int(label_max_width)))
+    if focus_handler is not None:
+        label.mousePressEvent = lambda _event, w=editor: focus_handler(w)
+
+    layout.addWidget(label, 0)
+    layout.addWidget(editor, 1)
+    frame._field_label = label
+    return frame
+
+
 # ── Picker row builder ──────────────────────────────────────────────────
 
 def build_picker_row(editor, handler, tooltip: str, icon_path) -> QWidget:
@@ -340,3 +411,84 @@ def build_picker_row(editor, handler, tooltip: str, icon_path) -> QWidget:
     btn.clicked.connect(handler)
     lay.addWidget(btn)
     return row
+
+
+# ── Detail display helpers ─────────────────────────────────────────────
+
+def _normalize_multiline_detail_value(value) -> str:
+    raw_value = '' if value is None else str(value)
+    return (
+        raw_value
+        .replace('\r\n', '\n')
+        .replace('\r', '\n')
+        .replace('\u2028', '\n')
+        .replace('\u2029', '\n')
+        .replace('\\n', '\n')
+    )
+
+
+def _build_readonly_detail_line(value_text: str, *, tooltip: bool = True) -> QLineEdit:
+    line = QLineEdit(value_text if value_text.strip() else '-')
+    line.setReadOnly(True)
+    line.setFocusPolicy(Qt.NoFocus)
+    line.setCursorPosition(0)
+    line.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    line.setToolTip(value_text.strip() or '-') if tooltip else line.setToolTip('')
+    return line
+
+
+def build_titled_detail_field(label_text: str, value_text: str, *, multiline: bool = False) -> QGroupBox:
+    """Create the Tool-style titled readonly detail field."""
+    field_group = create_titled_section(label_text)
+    field_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+    field_group.setMinimumWidth(0)
+
+    flayout = QVBoxLayout(field_group)
+    flayout.setContentsMargins(6, 4, 6, 4)
+    flayout.setSpacing(4)
+
+    if multiline:
+        normalized = _normalize_multiline_detail_value(value_text)
+        value_label = QLabel(normalized if normalized.strip() else '-')
+        value_label.setWordWrap(True)
+        value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        value_label.setFocusPolicy(Qt.NoFocus)
+        value_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        value_label.setMinimumHeight(32)
+        value_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        value_label.setStyleSheet(
+            'QLabel {'
+            '  background-color: #ffffff;'
+            '  border: 1px solid #c8d4e0;'
+            '  border-radius: 6px;'
+            '  padding: 6px;'
+            '  font-size: 10.5pt;'
+            '}'
+        )
+        value_label.setToolTip('')
+        flayout.addWidget(value_label)
+    else:
+        flayout.addWidget(_build_readonly_detail_line('' if value_text is None else str(value_text)))
+
+    return field_group
+
+
+def build_titled_detail_list_field(label_text: str, values: list[str]) -> QGroupBox:
+    """Create a Tool-style titled readonly field with multiple stacked lines."""
+    field_group = create_titled_section(label_text)
+    field_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+    field_group.setMinimumWidth(0)
+
+    flayout = QVBoxLayout(field_group)
+    flayout.setContentsMargins(6, 4, 6, 4)
+    flayout.setSpacing(6)
+
+    normalized = [str(v).strip() for v in (values or []) if str(v).strip()]
+    if not normalized:
+        flayout.addWidget(_build_readonly_detail_line('-', tooltip=False))
+        return field_group
+
+    for value in normalized:
+        flayout.addWidget(_build_readonly_detail_line(value))
+
+    return field_group

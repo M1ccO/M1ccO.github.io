@@ -30,6 +30,8 @@ from shared.editor_helpers import (
     setup_editor_dialog,
     create_dialog_buttons,
     apply_secondary_button_theme,
+    build_editor_field_card,
+    focus_editor_widget,
     reflow_fields_grid,
 )
 
@@ -257,20 +259,18 @@ class AddEditJawDialog(QDialog):
         return tab
 
     def _build_edit_field(self, title: str, editor: QWidget) -> QFrame:
-        frame = QFrame()
-        frame.setProperty('editorFieldCard', True)
-        lay = QHBoxLayout(frame)
-        lay.setContentsMargins(2, 2, 2, 2)
-        lay.setSpacing(8)
-        label = QLabel(title)
-        label.setProperty('detailFieldKey', True)
-        label.setWordWrap(False)
-        label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        label.setMinimumWidth(210)
-        label.setMaximumWidth(210)
-        lay.addWidget(label, 0)
-        lay.addWidget(editor, 1)
-        return frame
+        return build_editor_field_card(
+            title,
+            editor,
+            label_min_width=200,
+            label_max_width=200,
+            label_word_wrap=True,
+            label_top_align=True,
+            focus_handler=self._focus_editor,
+        )
+
+    def _focus_editor(self, widget: QWidget):
+        focus_editor_widget(widget)
 
     def _style_field_editor(self, editor: QWidget):
         pass

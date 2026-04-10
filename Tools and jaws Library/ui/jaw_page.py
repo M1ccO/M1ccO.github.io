@@ -33,7 +33,15 @@ from PySide6.QtWidgets import (
 from config import TOOL_ICONS_DIR
 from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_ICON, ROLE_JAW_ID, jaw_icon_for_row
 from ui.jaw_editor_dialog import AddEditJawDialog
-from shared.editor_helpers import apply_secondary_button_theme, ask_multi_edit_mode, create_dialog_buttons, setup_editor_dialog
+from shared.editor_helpers import (
+    apply_secondary_button_theme,
+    ask_multi_edit_mode,
+    build_titled_detail_field,
+    build_titled_detail_list_field,
+    create_titled_section,
+    create_dialog_buttons,
+    setup_editor_dialog,
+)
 
 
 def _load_transparent_icon(path, threshold: int = 220) -> QPixmap:
@@ -1009,67 +1017,15 @@ class JawPage(QWidget):
         h_layout.addLayout(badge_row)
         layout.addWidget(header)
 
-        # detailField grid â€” same card-box style as Tool Library
-        def build_field(label_text, value_text):
-            field_frame = QFrame()
-            field_frame.setProperty('detailField', True)
-            field_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-            fl = QVBoxLayout(field_frame)
-            fl.setContentsMargins(6, 4, 6, 4)
-            fl.setSpacing(4)
-            klbl = QLabel(label_text)
-            klbl.setProperty('detailFieldKey', True)
-            klbl.setWordWrap(False)
-            vlbl = QLabel(value_text if value_text else '-')
-            vlbl.setProperty('detailValue', True)
-            vlbl.setProperty('detailFieldValue', True)
-            vlbl.setWordWrap(True)
-            vlbl.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-            vlbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            fl.addWidget(klbl)
-            fl.addWidget(vlbl)
-            return field_frame
+        # Use the same shared titled-field style as Tool Library detail panel.
+        def build_field(label_text: str, value_text: str):
+            return build_titled_detail_field(label_text, '' if value_text is None else str(value_text))
 
         def build_used_in_works_field(value_text: str):
-            field_frame = QFrame()
-            field_frame.setProperty('detailField', True)
-            field_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-            fl = QVBoxLayout(field_frame)
-            fl.setContentsMargins(6, 4, 6, 4)
-            fl.setSpacing(4)
-
-            klbl = QLabel(self._t('jaw_library.field.used_in_works', 'Used in works:'))
-            klbl.setProperty('detailFieldKey', True)
-            klbl.setWordWrap(False)
-            fl.addWidget(klbl)
-
-            works = self._split_used_in_works(value_text)
-            if not works:
-                empty = QLabel('-')
-                empty.setProperty('detailValue', True)
-                empty.setProperty('detailFieldValue', True)
-                empty.setWordWrap(True)
-                empty.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                empty.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                fl.addWidget(empty)
-                return field_frame
-
-            for idx, work in enumerate(works):
-                value = QLabel(work)
-                value.setProperty('detailValue', True)
-                value.setProperty('detailFieldValue', True)
-                value.setWordWrap(True)
-                value.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                value.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                fl.addWidget(value)
-                if idx < len(works) - 1:
-                    sep = QFrame()
-                    sep.setFrameShape(QFrame.HLine)
-                    sep.setFrameShadow(QFrame.Plain)
-                    sep.setStyleSheet('QFrame { color: #D8D8D8; background-color: #D8D8D8; border: none; min-height: 1px; max-height: 1px; }')
-                    fl.addWidget(sep)
-
-            return field_frame
+            return build_titled_detail_list_field(
+                self._t('jaw_library.field.used_in_works', 'Used in works:'),
+                self._split_used_in_works(value_text),
+            )
 
         # Base two-column field matrix.
         pairs = [
@@ -1101,70 +1057,84 @@ class JawPage(QWidget):
 
         notes_text = (jaw.get('notes', '') or '').strip()
         if notes_text:
-            notes_field = QFrame()
-            notes_field.setProperty('detailField', True)
-            nl = QVBoxLayout(notes_field)
-            nl.setContentsMargins(6, 4, 6, 4)
-            nl.setSpacing(4)
-            nk = QLabel(self._t('jaw_library.field.notes', 'Notes'))
-            nk.setProperty('detailFieldKey', True)
-            nk.setWordWrap(False)
-            nv = QLabel(notes_text)
-            nv.setProperty('detailValue', True)
-            nv.setProperty('detailFieldValue', True)
-            nv.setWordWrap(True)
-            nv.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            nl.addWidget(nk)
-            nl.addWidget(nv)
+            notes_field = build_titled_detail_field(
+                self._t('jaw_library.field.notes', 'Notes'),
+                notes_text,
+                multiline=True,
+            )
             info.addWidget(notes_field, used_in_works_row + 1, 0, 1, 4, Qt.AlignTop)
 
         layout.addLayout(info)
 
-        # Preview panel â€” diagramPanel wrapper matches Tool Library style
-        preview_card = QFrame()
-        preview_card.setProperty('subCard', True)
+        # Preview panel — mirrored wrapper structure from Tool Library.
+        preview_card = create_titled_section(self._t('tool_library.section.preview', 'Preview'))
+        preview_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         p_layout = QVBoxLayout(preview_card)
-        p_layout.setContentsMargins(12, 12, 12, 12)
         p_layout.setSpacing(10)
-        p_title = QLabel(self._t('tool_library.section.preview', 'Preview'))
-        p_title.setProperty('detailSectionTitle', True)
-        p_layout.addWidget(p_title)
+        p_layout.setContentsMargins(6, 4, 6, 6)
 
-        diagram = QFrame()
-        diagram.setProperty('diagramPanel', True)
-        diagram.setMinimumHeight(180)
+        diagram = QWidget()
+        diagram.setObjectName('detailPreviewGradientHost')
+        diagram.setAttribute(Qt.WA_StyledBackground, True)
+        diagram.setStyleSheet(
+            'QWidget#detailPreviewGradientHost {'
+            '  background-color: #d6d9de;'
+            '  border: none;'
+            '  border-radius: 6px;'
+            '}'
+        )
+        diagram.setMinimumHeight(300)
+        diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         d_layout = QVBoxLayout(diagram)
-        d_layout.setContentsMargins(14, 14, 14, 14)
+        d_layout.setContentsMargins(6, 6, 6, 6)
+        d_layout.setSpacing(0)
 
-        stl_path = jaw.get('stl_path', '')
+        stl_path = (jaw.get('stl_path', '') or '').strip()
+        viewer = None
+        loaded = False
         if stl_path:
             viewer = StlPreviewWidget()
+            viewer.setStyleSheet('background: transparent; border: none;')
             viewer.set_control_hint_text(
                 self._t(
                     'tool_editor.hint.rotate_pan_zoom',
                     'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
                 )
             )
-            viewer.load_stl(stl_path, label=jaw.get('jaw_id', self._t('jaw_library.preview.jaw_label', 'Jaw')))
-            # Apply jaw-specific saved preview orientation
-            plane = (jaw.get('preview_plane', '') or 'XZ').strip()
-            if plane not in ('XZ', 'XY', 'YZ'):
-                plane = 'XZ'
-            viewer.set_alignment_plane(plane)
-            for axis, key in (('x', 'preview_rot_x'), ('y', 'preview_rot_y'), ('z', 'preview_rot_z')):
-                deg = int(jaw.get(key, 0) or 0) % 360
-                if deg:
-                    viewer.rotate_model(axis, deg)
-            d_layout.addWidget(viewer, 1)
-        else:
-            txt = QLabel(self._t('tool_library.preview.none_assigned', 'No 3D model assigned.'))
+            loaded = bool(
+                viewer.load_stl(
+                    stl_path,
+                    label=jaw.get('jaw_id', self._t('jaw_library.preview.jaw_label', 'Jaw')),
+                )
+            )
+            if loaded:
+                plane = (jaw.get('preview_plane', '') or 'XZ').strip()
+                if plane not in ('XZ', 'XY', 'YZ'):
+                    plane = 'XZ'
+                viewer.set_alignment_plane(plane)
+                for axis, key in (('x', 'preview_rot_x'), ('y', 'preview_rot_y'), ('z', 'preview_rot_z')):
+                    deg = int(jaw.get(key, 0) or 0) % 360
+                    if deg:
+                        viewer.rotate_model(axis, deg)
+                viewer.setMinimumHeight(260)
+                d_layout.addWidget(viewer, 1)
+
+        if not loaded:
+            txt = QLabel(
+                self._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
+                if stl_path else
+                self._t('tool_library.preview.none_assigned', 'No 3D model assigned.')
+            )
             txt.setProperty('detailHint', True)
+            txt.setWordWrap(True)
             txt.setAlignment(Qt.AlignCenter)
             d_layout.addStretch(1)
             d_layout.addWidget(txt)
             d_layout.addStretch(1)
 
-        p_layout.addWidget(diagram)
+        p_layout.addWidget(diagram, 1)
         layout.addWidget(preview_card)
         layout.addStretch(1)
         self.detail_layout.addWidget(card)
