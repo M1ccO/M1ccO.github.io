@@ -41,8 +41,15 @@ from shared.editor_helpers import (
 from shared.mini_assignment_card import MiniAssignmentCard
 
 from ui.stl_preview import StlPreviewWidget
-
-SELECTOR_TOOL_MIME = 'application/x-tool-library-tool-assignment'
+from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
+from ui.selector_state_helpers import (
+    default_selector_splitter_sizes,
+    normalize_selector_bucket,
+    normalize_selector_mode,
+    selector_assignments_for_target,
+    selector_bucket_map,
+)
+from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 
 
 class _ToolCatalogListView(QListView):
@@ -82,7 +89,7 @@ class _ToolCatalogListView(QListView):
             return
 
         mime = QMimeData()
-        mime.setData(SELECTOR_TOOL_MIME, json.dumps(payload).encode('utf-8'))
+        encode_selector_payload(mime, SELECTOR_TOOL_MIME, payload)
         drag = QDrag(self)
         drag.setMimeData(mime)
 
@@ -140,7 +147,17 @@ class _ToolAssignmentListWidget(QListWidget):
 
         mime = self.model().mimeData(indexes)
         if mime is None:
-            return
+            mime = QMimeData()
+
+        payload: list[dict] = []
+        for index in indexes:
+            item = self.item(index.row())
+            if item is None:
+                continue
+            assignment = item.data(Qt.UserRole)
+            if isinstance(assignment, dict):
+                payload.append(dict(assignment))
+        encode_selector_payload(mime, SELECTOR_TOOL_MIME, payload)
 
         drag = QDrag(self)
         drag.setMimeData(mime)
@@ -149,7 +166,9 @@ class _ToolAssignmentListWidget(QListWidget):
         ghost_item = self.item(first_row)
         ghost_widget = self.itemWidget(ghost_item) if ghost_item is not None else None
         if isinstance(ghost_widget, QWidget):
-            grabbed = ghost_widget.grab()
+            card_widget = ghost_widget.findChild(MiniAssignmentCard)
+            preview_widget = card_widget if isinstance(card_widget, QWidget) else ghost_widget
+            grabbed = preview_widget.grab()
             if not grabbed.isNull():
                 translucent = QPixmap(grabbed.size())
                 translucent.fill(Qt.transparent)
@@ -182,10 +201,7 @@ class _ToolAssignmentListWidget(QListWidget):
 
     def dropEvent(self, event):
         if event.mimeData().hasFormat(SELECTOR_TOOL_MIME) and event.source() is not self:
-            try:
-                dropped = json.loads(bytes(event.mimeData().data(SELECTOR_TOOL_MIME)).decode('utf-8'))
-            except Exception:
-                dropped = []
+            dropped = decode_tool_payload(event.mimeData())
             point = event.position().toPoint() if hasattr(event, 'position') else event.pos()
             row = self.indexAt(point).row()
             if row < 0:
@@ -203,6 +219,38 @@ class _ToolAssignmentListWidget(QListWidget):
             self.clearSelection()
             self.setCurrentRow(-1)
         super().mousePressEvent(event)
+
+
+class _SelectorToolRemoveDropButton(QPushButton):
+    toolsDropped = Signal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+
+    @staticmethod
+    def _payload_tool_keys(mime: QMimeData) -> list[tuple[str, str | None]]:
+        return tool_payload_keys(mime)
+
+    def dragEnterEvent(self, event):
+        if self._payload_tool_keys(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if self._payload_tool_keys(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dropEvent(self, event):
+        tool_keys = self._payload_tool_keys(event.mimeData())
+        if not tool_keys:
+            event.ignore()
+            return
+        self.toolsDropped.emit(tool_keys)
+        event.acceptProposedAction()
 
 
 class _SelectorAssignmentRowWidget(MiniAssignmentCard):
@@ -698,7 +746,7 @@ class HomePage(QWidget):
         self.selector_move_down_btn.clicked.connect(self._move_selector_down)
         selector_actions.addWidget(self.selector_move_down_btn)
 
-        self.selector_remove_btn = QPushButton()
+        self.selector_remove_btn = _SelectorToolRemoveDropButton()
         style_icon_action_button(
             self.selector_remove_btn,
             TOOL_ICONS_DIR / 'delete.svg',
@@ -706,6 +754,7 @@ class HomePage(QWidget):
             danger=True,
         )
         self.selector_remove_btn.clicked.connect(self._remove_selector_assignment)
+        self.selector_remove_btn.toolsDropped.connect(self._remove_selector_assignments_by_keys)
         selector_actions.addWidget(self.selector_remove_btn)
 
         self.selector_comment_btn = QPushButton()
@@ -863,7 +912,7 @@ class HomePage(QWidget):
 
     @staticmethod
     def _selector_spindle_label(spindle: str) -> str:
-        return 'SP2' if str(spindle or '').strip().lower() == 'sub' else 'SP1'
+        return selector_spindle_label(spindle)
 
     @staticmethod
     def _normalize_selector_head_value(head: str) -> str:
@@ -871,8 +920,7 @@ class HomePage(QWidget):
 
     @staticmethod
     def _normalize_selector_spindle_value(spindle: str) -> str:
-        raw = str(spindle or '').strip().lower()
-        return 'sub' if raw in {'sub', 'sp2', '2'} else 'main'
+        return normalize_selector_spindle(spindle)
 
     @classmethod
     def _selector_target_key(cls, head: str, spindle: str) -> str:
@@ -886,12 +934,10 @@ class HomePage(QWidget):
         self._selector_assignments_by_target[key] = [dict(item) for item in self._selector_assigned_tools]
 
     def _load_selector_bucket_for_current_target(self) -> None:
-        key = self._selector_current_target_key()
-        self._selector_assigned_tools = [
-            dict(item)
-            for item in self._selector_assignments_by_target.get(key, [])
-            if isinstance(item, dict)
-        ]
+        self._selector_assigned_tools = selector_assignments_for_target(
+            self._selector_assignments_by_target,
+            self._selector_current_target_key(),
+        )
 
     def _current_selector_spindle_value(self) -> str:
         if hasattr(self, 'selector_spindle_btn'):
@@ -916,7 +962,7 @@ class HomePage(QWidget):
             self.selector_spindle_value_label.setText(self._selector_spindle_label(spindle))
 
     def _set_selector_spindle_value(self, spindle: str):
-        normalized = 'sub' if str(spindle or '').strip().lower() == 'sub' else 'main'
+        normalized = normalize_selector_spindle(spindle)
         self._selector_spindle = normalized
         if hasattr(self, 'selector_spindle_btn'):
             self.selector_spindle_btn.setProperty('spindle', normalized)
@@ -957,7 +1003,7 @@ class HomePage(QWidget):
         single_selected = len(selected_rows) == 1
         current_row = selected_rows[0] if single_selected else -1
         has_items = bool(getattr(self, 'selector_assignment_list', None) and self.selector_assignment_list.count() > 0)
-        self.selector_remove_btn.setEnabled(has_row)
+        self.selector_remove_btn.setEnabled(has_row or has_items)
         self.selector_move_up_btn.setEnabled(single_selected and current_row > 0)
         self.selector_move_down_btn.setEnabled(single_selected and current_row < self.selector_assignment_list.count() - 1)
         self.selector_comment_btn.setEnabled(single_selected)
@@ -1091,6 +1137,26 @@ class HomePage(QWidget):
         if self.selector_assignment_list.count() > 0:
             self.selector_assignment_list.setCurrentRow(min(rows[0], self.selector_assignment_list.count() - 1))
 
+    def _remove_selector_assignments_by_keys(self, tool_keys: list[tuple[str, str | None]]):
+        if not tool_keys:
+            return
+        target_counts: dict[tuple[str, str | None], int] = {}
+        for key in tool_keys:
+            target_counts[key] = target_counts.get(key, 0) + 1
+        remaining: list[dict] = []
+        for assignment in self._selector_assigned_tools:
+            tool_id = str(assignment.get('tool_id') or '').strip()
+            tool_uid_raw = assignment.get('tool_uid')
+            tool_uid = str(tool_uid_raw).strip() if tool_uid_raw is not None and str(tool_uid_raw).strip() else None
+            key = (tool_id, tool_uid)
+            if tool_id and target_counts.get(key, 0) > 0:
+                target_counts[key] -= 1
+                continue
+            remaining.append(assignment)
+        if len(remaining) != len(self._selector_assigned_tools):
+            self._selector_assigned_tools = remaining
+            self._rebuild_selector_assignment_list()
+
     def _clear_selector_assignments(self):
         self._selector_assigned_tools = []
         if hasattr(self, 'selector_assignment_list'):
@@ -1221,14 +1287,13 @@ class HomePage(QWidget):
                 self.detail_card.setVisible(True)
             return
 
-        target_mode = 'details' if str(mode or '').strip().lower() == 'details' else 'selector'
+        target_mode = normalize_selector_mode(mode)
         self._selector_panel_mode = target_mode
         self._details_hidden = False
         self.detail_container.show()
         self.detail_header_container.show()
         if not self._last_splitter_sizes:
-            total = max(600, self.splitter.width())
-            self._last_splitter_sizes = [int(total * 0.62), int(total * 0.38)]
+            self._last_splitter_sizes = default_selector_splitter_sizes(self.splitter.width())
         self.splitter.setSizes(self._last_splitter_sizes)
 
         if target_mode == 'details':
@@ -1273,39 +1338,18 @@ class HomePage(QWidget):
         if self._selector_active:
             if not was_active:
                 self._selector_saved_details_hidden = self._details_hidden
-            loaded_buckets: dict[str, list[dict]] = {}
-
-            def _normalized_bucket(items: list[dict] | None) -> list[dict]:
-                out: list[dict] = []
-                seen_keys: set[str] = set()
-                for item in items or []:
-                    normalized = self._normalize_selector_tool(item)
-                    if normalized is None:
-                        continue
-                    key = self._selector_tool_key(normalized)
-                    if key and key in seen_keys:
-                        continue
-                    if key:
-                        seen_keys.add(key)
-                    out.append(normalized)
-                return out
-
-            if isinstance(initial_assignment_buckets, dict):
-                for raw_key, raw_items in initial_assignment_buckets.items():
-                    if not isinstance(raw_items, list):
-                        continue
-                    head_part = 'HEAD1'
-                    spindle_part = 'main'
-                    key_text = str(raw_key or '').strip()
-                    if ':' in key_text:
-                        head_part, spindle_part = key_text.split(':', 1)
-                    elif '/' in key_text:
-                        head_part, spindle_part = key_text.split('/', 1)
-                    target_key = self._selector_target_key(head_part, spindle_part)
-                    loaded_buckets[target_key] = _normalized_bucket(raw_items)
-
+            loaded_buckets = selector_bucket_map(
+                initial_assignment_buckets,
+                self._normalize_selector_tool,
+                self._selector_tool_key,
+                self._selector_target_key,
+            )
             if not loaded_buckets and isinstance(initial_assignments, list):
-                loaded_buckets[self._selector_current_target_key()] = _normalized_bucket(initial_assignments)
+                loaded_buckets[self._selector_current_target_key()] = normalize_selector_bucket(
+                    initial_assignments,
+                    self._normalize_selector_tool,
+                    self._selector_tool_key,
+                )
 
             self._selector_assignments_by_target = loaded_buckets
             self._load_selector_bucket_for_current_target()
@@ -1333,8 +1377,7 @@ class HomePage(QWidget):
             self.detail_container.show()
             self.detail_header_container.show()
             if not self._last_splitter_sizes:
-                total = max(600, self.splitter.width())
-                self._last_splitter_sizes = [int(total * 0.62), int(total * 0.38)]
+                self._last_splitter_sizes = default_selector_splitter_sizes(self.splitter.width())
             self.splitter.setSizes(self._last_splitter_sizes)
             self._update_row_type_visibility(False)
 

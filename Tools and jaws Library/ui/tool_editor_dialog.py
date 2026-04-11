@@ -25,6 +25,17 @@ from ui.stl_preview import StlPreviewWidget
 from ui.measurement_editor_dialog import MeasurementEditorDialog
 from ui.widgets.color_picker_dialog import ColorPickerDialog
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
+from ui.tool_editor_support import (
+    ToolEditorPayloadAdapter,
+    build_tool_type_field_state,
+    component_display_for_key,
+    component_dropdown_values,
+    component_items_from_rows,
+    is_mill_tool_type,
+    is_turning_drill_tool_type,
+    known_components_from_tools,
+    spare_parts_from_rows,
+)
 from shared.editor_helpers import (
     add_shadow,
     setup_editor_dialog,
@@ -36,6 +47,9 @@ from shared.editor_helpers import (
     style_icon_action_button,
     style_move_arrow_button,
     reflow_fields_grid,
+    focus_editor_widget,
+    build_editor_field_card,
+    build_editor_field_group,
     build_picker_row,
 )
 
@@ -312,6 +326,14 @@ class AddEditToolDialog(QDialog):
         self._spare_refresh_timer.setSingleShot(True)
         self._spare_refresh_timer.setInterval(75)
         self._spare_refresh_timer.timeout.connect(self._refresh_spare_component_dropdowns)
+        self._payload_adapter = ToolEditorPayloadAdapter(
+            translate=self._t,
+            localized_cutting_type=self._localized_cutting_type,
+            tool_id_editor_value=self._tool_id_editor_value,
+            tool_id_storage_value=self._tool_id_storage_value,
+            turning_tool_types=TURNING_TOOL_TYPES,
+            milling_tool_types=MILLING_TOOL_TYPES,
+        )
         self.setWindowTitle(self._dialog_title())
         self.resize(1120, 760)
         self.setMinimumSize(900, 660)
@@ -1226,60 +1248,22 @@ class AddEditToolDialog(QDialog):
         super().hideEvent(event)
 
     def _build_edit_field(self, title: str, editor: QWidget, key_label: QLabel | None = None) -> QFrame:
-        frame = QFrame()
-        frame.setProperty('editorFieldCard', True)
-        layout = QHBoxLayout(frame)
-        layout.setContentsMargins(2, 2, 2, 2)
-        layout.setSpacing(8)
-        label = key_label if key_label is not None else QLabel(title)
-        label.setProperty('detailFieldKey', True)
-        label.setWordWrap(True)
-        label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        label.setMinimumWidth(200)
-        label.setMaximumWidth(200)
-        label.mousePressEvent = lambda event, w=editor: self._focus_editor(w)
-        layout.addWidget(label, 0)
-        layout.addWidget(editor, 1)
-        frame._field_label = label
-        return frame
+        return build_editor_field_card(
+            title,
+            editor,
+            key_label=key_label,
+            label_min_width=200,
+            label_max_width=200,
+            label_word_wrap=True,
+            label_top_align=True,
+            focus_handler=self._focus_editor,
+        )
 
     def _build_field_group(self, fields: list) -> QFrame:
-        group = QFrame()
-        group.setProperty('editorFieldGroup', True)
-        layout = QVBoxLayout(group)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-        for f in fields:
-            layout.addWidget(f)
-        return group
+        return build_editor_field_group(fields)
 
     def _focus_editor(self, widget: QWidget):
-        if isinstance(widget, QLineEdit):
-            widget.setFocus()
-            widget.selectAll()
-            return
-        if isinstance(widget, QTextEdit):
-            widget.setFocus()
-            return
-        if isinstance(widget, QComboBox):
-            widget.setFocus()
-            return
-        if isinstance(widget, QPushButton):
-            widget.setFocus()
-            return
-        for child in widget.findChildren(QLineEdit):
-            child.setFocus()
-            child.selectAll()
-            return
-        for child in widget.findChildren(QComboBox):
-            child.setFocus()
-            return
-        for child in widget.findChildren(QTextEdit):
-            child.setFocus()
-            return
-        for child in widget.findChildren(QPushButton):
-            child.setFocus()
-            return
+        focus_editor_widget(widget)
 
     def _swap_field_pair(self, hide_field: QFrame, show_field: QFrame):
         hide_field.setVisible(False)
@@ -1384,94 +1368,11 @@ class AddEditToolDialog(QDialog):
             tools = service.list_tools()
         except Exception:
             return []
-
-        entries = []
-
-        def add_entry(kind: str, name: str, code: str, link: str, source: str):
-            code = (code or '').strip()
-            link = (link or '').strip()
-            if not code:
-                return
-            entries.append({
-                'kind': kind,
-                'name': (name or kind.title()).strip(),
-                'code': code,
-                'link': link,
-                'source': source,
-            })
-
-        for tool in tools:
-            source = (tool.get('id', '') or '').strip()
-
-            component_items = tool.get('component_items', [])
-            if isinstance(component_items, str):
-                try:
-                    component_items = json.loads(component_items or '[]')
-                except Exception:
-                    component_items = []
-
-            if isinstance(component_items, list) and component_items:
-                for item in component_items:
-                    if not isinstance(item, dict):
-                        continue
-                    role = (item.get('role') or '').strip().lower()
-                    if role not in {'holder', 'cutting', 'support'}:
-                        continue
-                    add_entry(
-                        role,
-                        item.get('label', self._t('tool_library.field.part', 'Part')),
-                        item.get('code', ''),
-                        item.get('link', ''),
-                        source,
-                    )
-            else:
-                add_entry('holder', self._t('tool_library.field.holder', 'Holder'), tool.get('holder_code', ''), tool.get('holder_link', ''), source)
-                add_entry('holder-extra', self._t('tool_library.field.add_element', 'Add. Element'), tool.get('holder_add_element', ''), tool.get('holder_add_element_link', ''), source)
-                cutting_name = (tool.get('cutting_type', 'Insert') or 'Insert').strip()
-                add_entry('cutting', self._localized_cutting_type(cutting_name), tool.get('cutting_code', ''), tool.get('cutting_link', ''), source)
-                add_entry(
-                    'cutting-extra',
-                    self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=self._localized_cutting_type(cutting_name)),
-                    tool.get('cutting_add_element', ''),
-                    tool.get('cutting_add_element_link', ''),
-                    source,
-                )
-
-            support_parts = tool.get('support_parts', [])
-            if isinstance(support_parts, str):
-                try:
-                    support_parts = json.loads(support_parts or '[]')
-                except Exception:
-                    support_parts = []
-            if isinstance(support_parts, list):
-                for part in support_parts:
-                    if isinstance(part, str):
-                        try:
-                            part = json.loads(part)
-                        except Exception:
-                            part = {'name': part, 'code': '', 'link': ''}
-                    if not isinstance(part, dict):
-                        continue
-                    add_entry(
-                        'support',
-                        part.get('name', self._t('tool_library.field.part', 'Part')),
-                        part.get('code', ''),
-                        part.get('link', ''),
-                        source,
-                    )
-
-        dedup = {}
-        for entry in entries:
-            key = (
-                entry.get('kind', ''),
-                entry.get('name', ''),
-                entry.get('code', ''),
-                entry.get('link', ''),
-                entry.get('source', ''),
-            )
-            if key not in dedup:
-                dedup[key] = entry
-        return list(dedup.values())
+        return known_components_from_tools(
+            tools,
+            translate=self._t,
+            localized_cutting_type=self._localized_cutting_type,
+        )
 
     def _open_component_picker(self, title: str, allowed_kinds: tuple[str, ...]) -> dict | None:
         entries = [e for e in self._iter_known_components() if e.get('kind') in allowed_kinds]
@@ -1563,39 +1464,10 @@ class AddEditToolDialog(QDialog):
         )
 
     def _component_dropdown_values(self):
-        values = []
-        seen = set()
-        for entry in self.parts_table.row_dicts():
-            role = (entry.get('role') or 'component').strip().lower()
-            label = (entry.get('label') or '').strip()
-            code = (entry.get('code') or '').strip()
-            if not code:
-                continue
-            key = f"{role}:{code}"
-            if key in seen:
-                continue
-            seen.add(key)
-            display = f"{label} ({code})" if label else code
-            values.append((display, key))
-        return values
+        return component_dropdown_values(self.parts_table.row_dicts())
 
     def _component_display_for_key(self, key: str) -> str:
-        """Return a user-friendly display string for a component_key like 'holder:CODE'."""
-        key = (key or '').strip()
-        if not key:
-            return '-'
-        for entry in self.parts_table.row_dicts():
-            role = (entry.get('role') or 'component').strip().lower()
-            label = (entry.get('label') or '').strip()
-            code = (entry.get('code') or '').strip()
-            if not code:
-                continue
-            if f"{role}:{code}" == key:
-                return f"{label} ({code})" if label else code
-        # Fallback: strip the role prefix for readability
-        if ':' in key:
-            return key.split(':', 1)[1]
-        return key
+        return component_display_for_key(key, self.parts_table.row_dicts())
 
     def _get_spare_component_key(self, row: int) -> str:
         return str(self.spare_parts_table.cell_user_data(row, 'linked_component', Qt.UserRole, '') or '').strip()
@@ -3111,25 +2983,22 @@ class AddEditToolDialog(QDialog):
 
     @staticmethod
     def _is_turning_drill_tool_type(raw_tool_type: str) -> bool:
-        normalized = (raw_tool_type or '').strip().lower()
-        return normalized in {'turn drill', 'turn spot drill'}
+        return is_turning_drill_tool_type(raw_tool_type)
 
     @staticmethod
     def _is_mill_tool_type(raw_tool_type: str) -> bool:
-        return (raw_tool_type or '').strip() in MILLING_TOOL_TYPES
+        return is_mill_tool_type(raw_tool_type, MILLING_TOOL_TYPES)
 
     def _update_tool_type_fields(self):
-        selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
-        cutting_type = (self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert'
-        selected_head = self._get_tool_head_value()
-        turning_drill_type = self._is_turning_drill_tool_type(selected_type)
-        mill_tool_type = self._is_mill_tool_type(selected_type)
-        turning_tool_type = selected_type in TURNING_TOOL_TYPES
-        is_chamfer = selected_type == 'Chamfer'
-        is_center_drill_tool = selected_type == 'Spot Drill'
-        uses_pitch_label = selected_type == 'Tapping'
+        field_state = build_tool_type_field_state(
+            selected_type=(self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning',
+            cutting_type=(self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert',
+            selected_head=self._get_tool_head_value(),
+            turning_tool_types=TURNING_TOOL_TYPES,
+            milling_tool_types=MILLING_TOOL_TYPES,
+        )
 
-        if turning_drill_type:
+        if field_state.turning_drill_type:
             if not self._turning_drill_geometry_mode:
                 drill_angle_text = self.drill_nose_angle.text().strip()
                 if drill_angle_text:
@@ -3142,33 +3011,22 @@ class AddEditToolDialog(QDialog):
                 if geometry_angle_text:
                     self.drill_nose_angle.setText(geometry_angle_text)
             self._turning_drill_geometry_mode = False
-            if uses_pitch_label:
+            if field_state.corner_label_kind == 'pitch':
                 self.corner_or_nose_label.setText(self._t('tool_library.field.pitch', 'Pitch'))
-            elif selected_type in TURNING_TOOL_TYPES:
+            elif field_state.corner_label_kind == 'nose_radius':
                 self.corner_or_nose_label.setText(self._t('tool_library.field.nose_radius', 'Nose radius'))
-            elif is_chamfer or is_center_drill_tool:
+            elif field_state.corner_label_kind == 'nose_angle':
                 self.corner_or_nose_label.setText(self._t('tool_library.field.nose_angle', 'Nose angle'))
-            elif selected_type in MILLING_TOOL_TYPES:
+            elif field_state.corner_label_kind == 'corner_radius':
                 self.corner_or_nose_label.setText(self._t('tool_library.field.corner_radius', 'Corner radius'))
             else:
                 self.corner_or_nose_label.setText(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'))
 
-        # For non-turning drill tools, keep optional drill angle in cutting component section.
-        is_drill_cutting = cutting_type in {'Drill', 'Center drill'}
-        geometry_uses_nose_angle = is_chamfer or is_center_drill_tool
-        if geometry_uses_nose_angle:
-            self.corner_or_nose_field.setVisible(True)
-        else:
-            self.corner_or_nose_field.setVisible(not (is_drill_cutting and not turning_drill_type))
-        self.drill_field.setVisible((is_drill_cutting and not turning_drill_type) and not geometry_uses_nose_angle)
-        self.mill_field.setVisible(mill_tool_type and not is_center_drill_tool and (not is_drill_cutting or geometry_uses_nose_angle))
-
-        # Turning tools: Radius is only used by turning-drill variants.
-        # Head 1 turning tools use B-axis angle instead of Radius.
-        show_radius = (not turning_tool_type) or turning_drill_type
-        show_b_axis = turning_tool_type and not turning_drill_type and selected_head == 'HEAD1'
-        self.radius_field.setVisible(show_radius)
-        self.b_axis_field.setVisible(show_b_axis)
+        self.corner_or_nose_field.setVisible(field_state.show_corner_or_nose)
+        self.drill_field.setVisible(field_state.show_drill_field)
+        self.mill_field.setVisible(field_state.show_mill_field)
+        self.radius_field.setVisible(field_state.show_radius)
+        self.b_axis_field.setVisible(field_state.show_b_axis)
 
         self._update_spindle_orientation_visibility()
         self._update_cutting_label()
@@ -3183,315 +3041,25 @@ class AddEditToolDialog(QDialog):
     def _load_tool(self):
         if not self.tool:
             return
-
-        self.tool_id.setText(self._tool_id_editor_value(self.tool.get('id', '')))
-        self._set_tool_head_value(self.tool.get('tool_head', 'HEAD1'))
-        self._set_spindle_orientation_value(self.tool.get('spindle_orientation', 'main'))
-        self._set_combo_by_data(self.tool_type, self.tool.get('tool_type', 'O.D Turning'))
-        self.description.setText(self.tool.get('description', ''))
-        self.geom_x.setText(str(self.tool.get('geom_x', '')))
-        self.geom_z.setText(str(self.tool.get('geom_z', '')))
-        self.b_axis_angle.setText(str(self.tool.get('b_axis_angle', '0')))
-        self.radius.setText(str(self.tool.get('radius', '')))
-        self.nose_corner_radius.setText(str(self.tool.get('nose_corner_radius', '')))
-        self.holder_code.setText(self.tool.get('holder_code', ''))
-        self.holder_link.setText(self.tool.get('holder_link', ''))
-        self.holder_add_element.setText(self.tool.get('holder_add_element', ''))
-        self.holder_add_element_link.setText(self.tool.get('holder_add_element_link', ''))
-        self._set_combo_by_data(self.cutting_type, self.tool.get('cutting_type', 'Insert'))
-        self.cutting_code.setText(self.tool.get('cutting_code', ''))
-        self.cutting_link.setText(self.tool.get('cutting_link', ''))
-        self.cutting_add_element.setText(self.tool.get('cutting_add_element', ''))
-        self.cutting_add_element_link.setText(self.tool.get('cutting_add_element_link', ''))
-        notes_value = self.tool.get('notes', self.tool.get('spare_parts', ''))
-        self.notes.setPlainText(str(notes_value or ''))
+        self._payload_adapter.load_into_dialog(self, self.tool)
         QTimer.singleShot(0, self._update_notes_editor_height)
-        self.default_pot.setText(self.tool.get('default_pot', ''))
-        self.drill_nose_angle.setText(str(self.tool.get('drill_nose_angle', '')))
-        self.mill_cutting_edges.setText(str(self.tool.get('mill_cutting_edges', '')))
-
-        component_items = self.tool.get('component_items', [])
-        if isinstance(component_items, str):
-            try:
-                component_items = json.loads(component_items or '[]')
-            except Exception:
-                component_items = []
-        if not isinstance(component_items, list):
-            component_items = []
-
-        if not component_items:
-            # Legacy fallback for older rows without component_items.
-            cutting_type = (self.tool.get('cutting_type', 'Insert') or 'Insert').strip() or 'Insert'
-            component_items = [
-                {
-                    'role': 'holder',
-                    'label': self._t('tool_library.field.holder', 'Holder'),
-                    'code': self.tool.get('holder_code', ''),
-                    'link': self.tool.get('holder_link', ''),
-                },
-                {
-                    'role': 'holder',
-                    'label': self._t('tool_library.field.add_element', 'Add. Element'),
-                    'code': self.tool.get('holder_add_element', ''),
-                    'link': self.tool.get('holder_add_element_link', ''),
-                },
-                {
-                    'role': 'cutting',
-                    'label': cutting_type,
-                    'code': self.tool.get('cutting_code', ''),
-                    'link': self.tool.get('cutting_link', ''),
-                },
-                {
-                    'role': 'cutting',
-                    'label': self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=self._localized_cutting_type(cutting_type)),
-                    'code': self.tool.get('cutting_add_element', ''),
-                    'link': self.tool.get('cutting_add_element_link', ''),
-                },
-            ]
-
-        for item in component_items:
-            if not isinstance(item, dict):
-                continue
-            role = (item.get('role') or '').strip().lower()
-            if role not in {'holder', 'cutting', 'support'}:
-                continue
-            code = (item.get('code') or '').strip()
-            if not code:
-                continue
-            self.parts_table.add_empty_row([
-                role,
-                (item.get('label') or '').strip() or self._t('tool_library.field.part', 'Part'),
-                code,
-                (item.get('link') or '').strip(),
-                (item.get('group') or '').strip(),
-            ])
-
-        spare_parts = self.tool.get('support_parts', [])
-        if isinstance(spare_parts, str):
-            try:
-                spare_parts = json.loads(spare_parts or '[]')
-            except Exception:
-                spare_parts = []
-        if isinstance(spare_parts, list):
-            for part in spare_parts:
-                if isinstance(part, str):
-                    try:
-                        part = json.loads(part)
-                    except Exception:
-                        part = {'name': part, 'code': '', 'link': '', 'component_key': '', 'group': ''}
-                if not isinstance(part, dict):
-                    continue
-                self._add_spare_part_row(part)
-
-        self._refresh_spare_component_dropdowns()
-
-        # Load 3D model data from stl_path
-        stl_data = self.tool.get('stl_path', '')
-        model_parts = []
-
-        if isinstance(stl_data, str) and stl_data.strip():
-            try:
-                parsed = json.loads(stl_data)
-                if isinstance(parsed, list):
-                    model_parts = parsed
-                elif isinstance(parsed, str):
-                    model_parts = [{'name': self._t('tool_editor.model.default_name', 'Model'), 'file': parsed, 'color': '#9ea7b3'}]
-            except Exception:
-                model_parts = [{'name': self._t('tool_editor.model.default_name', 'Model'), 'file': stl_data, 'color': '#9ea7b3'}]
-
-        self._suspend_preview_refresh = True
-        try:
-            for part in model_parts:
-                self._add_model_row({
-                    'name': part.get('name', ''),
-                    'file': part.get('file', ''),
-                    'color': part.get('color', self._default_color_for_part_name(part.get('name', ''))),
-                })
-        finally:
-            self._suspend_preview_refresh = False
-
-        # Load per-part transforms
-        self._part_transforms = {}
-        self._saved_part_transforms = {}
-        for i, part in enumerate(model_parts):
-            t = {}
-            for src, dst in [('offset_x', 'x'), ('offset_y', 'y'), ('offset_z', 'z'),
-                             ('rot_x', 'rx'), ('rot_y', 'ry'), ('rot_z', 'rz')]:
-                v = part.get(src, 0)
-                if v:
-                    t[dst] = v
-            normalized = self._normalized_transform_dict(t)
-            compact = self._compact_transform_dict(normalized)
-            if compact:
-                self._part_transforms[i] = dict(compact)
-                self._saved_part_transforms[i] = dict(compact)
-
-        self._load_measurement_overlays(self.tool.get('measurement_overlays', []))
-
-        # Reset so the final _update_tool_type_fields() initializes the geometry field
-        # cleanly, regardless of signal order during combo population in _load_tool.
-        self._turning_drill_geometry_mode = False
-        tool_type = (self.tool.get('tool_type', '') or '').strip()
-        if self._is_turning_drill_tool_type(tool_type):
-            self.nose_corner_radius.setText(str(self.tool.get('drill_nose_angle', '')))
-        elif tool_type in {'Chamfer', 'Spot Drill'}:
-            angle_text = str(self.tool.get('drill_nose_angle', '')).strip()
-            if angle_text:
-                self.nose_corner_radius.setText(angle_text)
-        self._update_tool_type_fields()
-        self._refresh_models_preview()
         if self._assembly_transform_enabled:
-            selection_model = self.model_table.selectionModel()
-            if selection_model is not None:
-                rows = sorted(index.row() for index in selection_model.selectedRows())
-                if not rows:
-                    current_row = self.model_table.currentRow()
-                    if current_row >= 0:
-                        rows = [current_row]
-                self._selected_part_indices = rows
-                self._selected_part_index = rows[-1] if rows else -1
-            self._refresh_transform_selection_state()
-            self.models_preview.select_parts(self._selected_part_indices)
             QTimer.singleShot(0, lambda: self._request_preview_transform_snapshot(refresh_selection=True))
 
     def _component_items_from_table(self):
-        items = []
-        for entry in self.parts_table.row_dicts():
-            role = (entry.get('role') or 'support').strip().lower()
-            if role not in {'holder', 'cutting', 'support'}:
-                role = 'support'
-            code = (entry.get('code') or '').strip()
-            if not code:
-                continue
-            label = (entry.get('label') or '').strip()
-            if not label:
-                if role == 'holder':
-                    label = self._t('tool_library.field.holder', 'Holder')
-                elif role == 'cutting':
-                    label = self._localized_cutting_type('Insert')
-                else:
-                    label = self._t('tool_library.field.part', 'Part')
-
-            items.append(
-                {
-                    'role': role,
-                    'label': label,
-                    'code': code,
-                    'link': (entry.get('link') or '').strip(),
-                    'group': (entry.get('group') or '').strip(),
-                    'component_key': f"{role}:{code}",
-                    'order': len(items),
-                }
-            )
-        return items
+        return component_items_from_rows(
+            self.parts_table.row_dicts(),
+            translate=self._t,
+            localized_cutting_type=self._localized_cutting_type,
+        )
 
     def _spare_parts_from_table(self):
-        result = []
+        rows = []
         for row in range(self.spare_parts_table.rowCount()):
             entry = self.spare_parts_table.row_dict(row)
-
-            name = (entry.get('name') or '').strip()
-            code = (entry.get('code') or '').strip()
-            link = (entry.get('link') or '').strip()
-            component_key = self._get_spare_component_key(row)
-            group = (entry.get('group') or '').strip()
-
-            if not (name or code or link or component_key):
-                continue
-
-            result.append(
-                {
-                    'name': name,
-                    'code': code,
-                    'link': link,
-                    'component_key': component_key,
-                    'group': group,
-                }
-            )
-        return result
+            entry['component_key'] = self._get_spare_component_key(row)
+            rows.append(entry)
+        return spare_parts_from_rows(rows)
 
     def get_tool_data(self):
-        self._commit_active_edits()
-        self._sync_preview_transform_snapshot_for_save()
-        tool_id = self._tool_id_storage_value(self.tool_id.text())
-        if not tool_id and not self._group_edit_mode:
-            raise ValueError(self._t('tool_editor.error.tool_id_required', 'Tool ID is required.'))
-
-        def parse_float(value, field_name):
-            text = value.text().strip()
-            if not text:
-                return 0.0
-            try:
-                return float(text.replace(',', '.'))
-            except ValueError:
-                raise ValueError(self._t('tool_editor.error.must_be_number', '{field_name} must be a number.', field_name=field_name))
-
-        def parse_int(value, field_name):
-            text = value.text().strip().replace(',', '.')
-            if not text:
-                return 0
-            try:
-                return int(text)
-            except ValueError:
-                try:
-                    numeric_value = float(text)
-                    if numeric_value.is_integer():
-                        return int(numeric_value)
-                except ValueError:
-                    pass
-                raise ValueError(self._t('tool_editor.error.must_be_integer', '{field_name} must be an integer.', field_name=field_name))
-
-        selected_cutting = (self.cutting_type.currentData() or self.cutting_type.currentText() or 'Insert').strip() or 'Insert'
-        selected_type = (self.tool_type.currentData() or self.tool_type.currentText() or 'O.D Turning').strip() or 'O.D Turning'
-        selected_head = self._get_tool_head_value()
-        turning_drill_type = self._is_turning_drill_tool_type(selected_type)
-        mill_tool_type = self._is_mill_tool_type(selected_type)
-        turning_tool_type = selected_type in TURNING_TOOL_TYPES
-        geometry_uses_nose_angle = selected_type in {'Chamfer', 'Spot Drill'}
-        show_mill_flutes = mill_tool_type and selected_type != 'Spot Drill'
-        show_radius = (not turning_tool_type) or turning_drill_type
-        model_parts = self._model_table_to_parts()
-        component_items = self._component_items_from_table()
-        support_parts = self._spare_parts_from_table()
-
-        return {
-            'uid': self.original_uid,
-            'id': tool_id,
-            'tool_head': selected_head,
-            'spindle_orientation': self._get_spindle_orientation_value() if selected_head == 'HEAD2' else 'main',
-            'tool_type': selected_type,
-            'description': self.description.text().strip(),
-            'geom_x': parse_float(self.geom_x, self._t('tool_library.field.geom_x', 'Geom X')),
-            'geom_z': parse_float(self.geom_z, self._t('tool_library.field.geom_z', 'Geom Z')),
-            'b_axis_angle': parse_float(self.b_axis_angle, self._t('tool_library.field.b_axis_angle', 'B-axis angle')),
-            'radius': parse_float(self.radius, self._t('tool_library.field.radius', 'Radius')) if show_radius else 0.0,
-            'nose_corner_radius': parse_float(
-                self.nose_corner_radius,
-                self._t('tool_library.field.pitch', 'Pitch') if selected_type == 'Tapping' else self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R')
-            ) if (not turning_drill_type and not geometry_uses_nose_angle) else 0.0,
-            'holder_code': self.holder_code.text().strip(),
-            'holder_link': self.holder_link.text().strip(),
-            'holder_add_element': self.holder_add_element.text().strip(),
-            'holder_add_element_link': self.holder_add_element_link.text().strip(),
-            'cutting_type': selected_cutting,
-            'cutting_code': self.cutting_code.text().strip(),
-            'cutting_link': self.cutting_link.text().strip(),
-            'cutting_add_element': self.cutting_add_element.text().strip(),
-            'cutting_add_element_link': self.cutting_add_element_link.text().strip(),
-            'notes': self.notes.toPlainText().strip(),
-            'drill_nose_angle': (
-                parse_float(self.nose_corner_radius, self._t('tool_library.field.nose_angle', 'Nose angle'))
-                if turning_drill_type or geometry_uses_nose_angle
-                else (
-                    parse_float(self.drill_nose_angle, self._t('tool_library.field.nose_angle', 'Nose angle'))
-                    if selected_cutting in {'Drill', 'Center drill'} or selected_type == 'Chamfer'
-                    else 0.0
-                )
-            ),
-            'mill_cutting_edges': parse_int(self.mill_cutting_edges, self._t('tool_library.field.number_of_flutes', 'Number of flutes')) if show_mill_flutes else 0,
-            'support_parts': support_parts,
-            'component_items': component_items,
-            'measurement_overlays': self._measurement_overlays_from_tables(),
-            'stl_path': json.dumps(model_parts) if model_parts else '',
-            'default_pot': self.default_pot.text().strip(),
-        }
+        return self._payload_adapter.collect_from_dialog(self)

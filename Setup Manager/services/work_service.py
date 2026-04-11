@@ -134,7 +134,9 @@ class WorkService:
         )
         data["head1_tool_ids"] = self._tool_ids_from_assignments(data["head1_tool_assignments"])
         data["head2_tool_ids"] = self._tool_ids_from_assignments(data["head2_tool_assignments"])
-        # Backward compatibility for older rows: derive per-row coords from legacy head zero.
+        # Older rows only stored one zero coordinate per head. Keep deriving the
+        # per-spindle view from those legacy values so the editor/profile layer
+        # can evolve without forcing a schema rewrite.
         data["head1_main_coord"] = (data.get("head1_main_coord") or data.get("head1_zero") or "").strip()
         data["head1_sub_coord"] = (data.get("head1_sub_coord") or data.get("head1_zero") or "").strip()
         data["head2_main_coord"] = (data.get("head2_main_coord") or data.get("head2_zero") or "").strip()
@@ -197,6 +199,8 @@ class WorkService:
         existing = self.get_work(work_id)
         created_at = payload.get("created_at") or (existing.get("created_at") if existing else now_iso)
 
+        # The UI may be profile-driven, but persistence stays on the additive
+        # legacy schema for compatibility with existing databases and exports.
         row = {
             "work_id": work_id,
             "drawing_id": (payload.get("drawing_id") or "").strip(),

@@ -11,6 +11,7 @@ from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtGui import QColor, QIcon
 from PySide6.QtWidgets import (
     QApplication,
+    QBoxLayout,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -65,6 +66,62 @@ def add_shadow(widget, blur_radius=6, x_offset=0, y_offset=1):
     effect.setOffset(x_offset, y_offset)
     effect.setColor(_SHADOW_COLOR)
     widget.setGraphicsEffect(effect)
+
+
+class ResponsiveColumnsHost(QWidget):
+    """Lay out panels side-by-side when wide and stack them when narrow."""
+
+    def __init__(
+        self,
+        switch_width: int = 980,
+        parent=None,
+        separator_property: str | None = None,
+    ):
+        super().__init__(parent)
+        self._switch_width = switch_width
+        self._separator_property = separator_property
+        self._added_widgets = 0
+        self._separators: list[QFrame] = []
+        self._layout = QBoxLayout(QBoxLayout.LeftToRight, self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(16)
+
+    def add_widget(self, widget: QWidget, stretch: int = 1):
+        if self._separator_property and self._added_widgets > 0:
+            separator = QFrame()
+            separator.setProperty(self._separator_property, True)
+            separator.setFrameShadow(QFrame.Plain)
+            separator.setLineWidth(1)
+            self._separators.append(separator)
+            self._layout.addWidget(separator, 0)
+        self._layout.addWidget(widget, stretch)
+        self._added_widgets += 1
+        self._update_separator_shapes()
+
+    def _update_separator_shapes(self):
+        if not self._separators:
+            return
+        is_vertical = self._layout.direction() == QBoxLayout.LeftToRight
+        for separator in self._separators:
+            if is_vertical:
+                separator.setFrameShape(QFrame.VLine)
+                separator.setFixedWidth(1)
+                separator.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+            else:
+                separator.setFrameShape(QFrame.HLine)
+                separator.setFixedHeight(1)
+                separator.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        direction = (
+            QBoxLayout.TopToBottom
+            if event.size().width() < self._switch_width
+            else QBoxLayout.LeftToRight
+        )
+        if self._layout.direction() != direction:
+            self._layout.setDirection(direction)
+        self._update_separator_shapes()
 
 
 # ── Dialog setup ─────────────────────────────────────────────────────────
@@ -397,6 +454,18 @@ def build_editor_field_card(
     layout.addWidget(editor, 1)
     frame._field_label = label
     return frame
+
+
+def build_editor_field_group(fields: list[QWidget]) -> QFrame:
+    """Create a standard vertical group for related editor field cards."""
+    group = QFrame()
+    group.setProperty('editorFieldGroup', True)
+    layout = QVBoxLayout(group)
+    layout.setContentsMargins(6, 6, 6, 6)
+    layout.setSpacing(4)
+    for field in fields:
+        layout.addWidget(field)
+    return group
 
 
 # ── Picker row builder ──────────────────────────────────────────────────

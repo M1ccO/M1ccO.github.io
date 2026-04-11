@@ -30,6 +30,7 @@ from shared.editor_helpers import (
     create_dialog_buttons,
     apply_secondary_button_theme,
     build_editor_field_card,
+    build_editor_field_group,
     focus_editor_widget,
 )
 
@@ -278,14 +279,7 @@ class AddEditJawDialog(QDialog):
         )
 
     def _build_field_group(self, fields: list) -> QFrame:
-        group = QFrame()
-        group.setProperty('editorFieldGroup', True)
-        layout = QVBoxLayout(group)
-        layout.setContentsMargins(6, 6, 6, 6)
-        layout.setSpacing(4)
-        for f in fields:
-            layout.addWidget(f)
-        return group
+        return build_editor_field_group(fields)
 
     def _focus_editor(self, widget: QWidget):
         focus_editor_widget(widget)
