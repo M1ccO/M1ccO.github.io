@@ -1,5 +1,4 @@
 import json
-import numpy as np
 import shutil
 import sqlite3
 from datetime import datetime
@@ -8,7 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QModelIndex, QPoint, QSize, Qt, QMimeData, Signal, QTimer
-from PySide6.QtGui import QColor, QDrag, QIcon, QImage, QPainter, QPixmap, QStandardItem, QStandardItemModel, QTransform
+from PySide6.QtGui import QColor, QDrag, QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -44,50 +43,16 @@ from shared.editor_helpers import (
     create_dialog_buttons,
     setup_editor_dialog,
 )
-
-
-def _load_transparent_icon(path, threshold: int = 220) -> QPixmap:
-    """Load a PNG and replace near-white pixels with transparency using numpy."""
-    img = QImage(str(path))
-    if img.isNull():
-        return QPixmap()
-    img = img.convertToFormat(QImage.Format_ARGB32)
-    w, h = img.width(), img.height()
-    arr = np.frombuffer(img.constBits(), dtype=np.uint8).copy().reshape((h, w, 4))
-    # Format_ARGB32 memory layout on little-endian: [B, G, R, A]
-    near_white = (arr[:, :, 2] >= threshold) & (arr[:, :, 1] >= threshold) & (arr[:, :, 0] >= threshold)
-    arr[near_white, 3] = 0
-    out = QImage(arr.tobytes(), w, h, w * 4, QImage.Format_ARGB32)
-    return QPixmap.fromImage(out)
-
-
-_DEFAULT_JAW_ICON = 'hard_jaw.png'
-
-
-def _jaw_icon_pixmap(jaw: dict, icon_target_size: QSize) -> QPixmap:
-    icon_path = TOOL_ICONS_DIR / _DEFAULT_JAW_ICON
-    spindle_side = (jaw.get('spindle_side') or '').strip()
-    if icon_path.exists():
-        pixmap = _load_transparent_icon(icon_path)
-        if spindle_side == 'Sub spindle':
-            pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
-        return pixmap.scaled(icon_target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-    return QIcon(str(TOOL_ICONS_DIR / 'jaw_icon.png')).pixmap(icon_target_size)
 from ui.stl_preview import StlPreviewWidget
-from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget
+from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 from shared.mini_assignment_card import MiniAssignmentCard
 from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
 from ui.selector_state_helpers import (
-    default_selector_splitter_sizes,
     has_any_selector_assignment,
-    normalize_selector_mode,
-    normalized_slot_payload,
-    prune_selected_slots,
-    slot_assignments_state,
-    toggle_selector_slot_selection,
 )
 from ui.selector_ui_helpers import event_point, normalize_selector_spindle, selector_spindle_label, widget_contains_global_point
 from ui.jaw_page_support import (
+    SelectorSlotController,
     apply_jaw_detail_grid_rules,
     jaw_preview_alignment_plane,
     jaw_preview_label,
@@ -432,11 +397,6 @@ class _SelectorRemoveDropButton(QPushButton):
         self.jawsDropped.emit(jaw_ids)
         event.acceptProposedAction()
 
-
-CATALOG_CARD_HEIGHT = 74
-CATALOG_ITEM_HEIGHT = 78
-
-
 def _lookup_setup_db_used_in_works(jaw_id: str) -> str:
     """Return pipe-separated drawing IDs of Setup Manager works that use jaw_id."""
     if not jaw_id:
@@ -468,334 +428,6 @@ def _lookup_setup_db_used_in_works(jaw_id: str) -> str:
         return ' | '.join(r[0] for r in rows if r[0])
     except Exception:
         return ''
-
-
-class JawRowWidget(QFrame):
-    def __init__(self, jaw: dict, parent=None, translate=None):
-        super().__init__(parent)
-        self.jaw = jaw
-        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
-        self.setProperty('toolListCard', True)
-        self.setProperty('catalogRowCard', True)
-        self.setProperty('selected', False)
-        self._val_labels: list[QLabel] = []
-        self._head_labels: list[QLabel] = []
-        self._col_layouts: list[QVBoxLayout] = []
-        self._build_ui()
-
-    def _card_columns(self):
-        dash = '-'
-        return [
-            ('jaw_id', self._t('jaw_library.row.jaw_id', 'Jaw ID'), self.jaw.get('jaw_id', ''), 180),
-            (
-                'jaw_type',
-                self._t('jaw_library.row.jaw_type', 'Jaw type'),
-                self._t(
-                    f"jaw_library.jaw_type.{(self.jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
-                    self.jaw.get('jaw_type', ''),
-                ),
-                210,
-            ),
-            ('diameter', self._t('jaw_library.row.clamping_diameter', 'Clamping diameter'), self.jaw.get('clamping_diameter_text', '') or dash, 190),
-            ('length', self._t('jaw_library.row.clamping_length', 'Clamping length'), self.jaw.get('clamping_length', '') or dash, 180),
-        ]
-
-    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
-        return self._translate(key, default, **kwargs)
-
-    def _value(self, text: str) -> QLabel:
-        lbl = AutoShrinkLabel(text)
-        lbl.setProperty('toolCardValue', True)
-        lbl.setProperty('catalogRowValue', True)
-        lbl.setAlignment(Qt.AlignCenter)
-        return lbl
-
-    def _build_ui(self):
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 2, 10, 2)
-        layout.setSpacing(10)
-
-        icon_label = QLabel()
-        icon_label.setProperty("catalogRowIcon", True)
-        icon_target_size = QSize(40, 40)
-        pixmap = _jaw_icon_pixmap(self.jaw, icon_target_size)
-        icon_label.setPixmap(pixmap)
-        icon_label.setAlignment(Qt.AlignCenter)
-        icon_label.setStyleSheet('background-color: transparent;')
-        layout.addWidget(icon_label, 0, Qt.AlignVCenter)
-
-        for _key, title, value, weight in self._card_columns():
-            col = QVBoxLayout()
-            col.setContentsMargins(0, 0, 0, 0)
-            col.setSpacing(0)
-            self._col_layouts.append(col)
-
-            head = QLabel(title)
-            head.setProperty('toolCardHeader', True)
-            head.setProperty('catalogRowHeader', True)
-            head.setAlignment(Qt.AlignCenter)
-            head.setWordWrap(True)
-
-            val = self._value(value)
-
-            wrap = QWidget()
-            wrap.setProperty('toolCardColumn', True)
-            wrap.setStyleSheet('background: transparent;')
-            wrap.setLayout(col)
-            wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-
-            col.addWidget(head)
-            col.addWidget(val)
-            layout.addWidget(wrap, weight, Qt.AlignVCenter)
-
-            self._head_labels.append(head)
-            self._val_labels.append(val)
-
-        layout.addStretch(1)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        w = event.size().width()
-        lay = self.layout()
-        if lay is None:
-            return
-        if w < 560:
-            lay.setContentsMargins(7, 2, 7, 2)
-            lay.setSpacing(7)
-            v_size, h_size, col_spacing = 11.5, 8.6, 0
-        else:
-            lay.setContentsMargins(10, 2, 10, 2)
-            lay.setSpacing(10)
-            v_size, h_size, col_spacing = 12.8, 9.4, 0
-        for col in self._col_layouts:
-            col.setSpacing(col_spacing)
-        for lbl in self._val_labels:
-            f = lbl.font()
-            f.setPointSizeF(v_size)
-            lbl.setFont(f)
-        for lbl in self._head_labels:
-            f = lbl.font()
-            f.setPointSizeF(h_size)
-            lbl.setFont(f)
-
-
-class ResponsiveJawRowWidget(QFrame):
-    def __init__(self, jaw: dict, parent=None, translate=None):
-        super().__init__(parent)
-        self.jaw = jaw
-        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
-        self.setProperty('toolListCard', True)
-        self.setProperty('catalogRowCard', True)
-        self.setProperty('selected', False)
-        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        self._val_labels: list[QLabel] = []
-        self._head_labels: list[QLabel] = []
-        self._col_layouts: list[QVBoxLayout] = []
-        self._column_wraps: dict[str, QWidget] = {}
-        self._column_values: dict[str, QLabel] = {}
-        self._column_texts: dict[str, str] = {}
-        self._compact_breakpoint = 620
-        self._reduced_breakpoint = 560
-        self._single_column_breakpoint = 345
-        self._icon_only_breakpoint = 220
-        self._icon_label = None
-        self._icon_wrap = None
-        self._details_open_context = False
-        self._build_ui()
-
-    def _card_columns(self):
-        dash = '-'
-        jaw_type_text = self._t(
-            f"jaw_library.jaw_type.{(self.jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
-            self.jaw.get('jaw_type', ''),
-        )
-        return [
-            ('jaw_id', self._t('jaw_library.row.jaw_id', 'Jaw ID'), self.jaw.get('jaw_id', ''), 180),
-            ('jaw_type', self._t('jaw_library.row.jaw_type', 'Jaw type'), jaw_type_text, 210),
-            ('diameter', self._t('jaw_library.row.clamping_diameter_multiline', 'Clamping\ndiameter'), self.jaw.get('clamping_diameter_text', '') or dash, 190),
-            ('length', self._t('jaw_library.row.clamping_length_multiline', 'Clamping\nlength'), self.jaw.get('clamping_length', '') or dash, 180),
-        ]
-
-    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
-        return self._translate(key, default, **kwargs)
-
-    def _value(self, text: str) -> QLabel:
-        lbl = AutoShrinkLabel(text)
-        lbl.setProperty('toolCardValue', True)
-        lbl.setProperty('catalogRowValue', True)
-        lbl.setAlignment(Qt.AlignCenter)
-        return lbl
-
-    @staticmethod
-    def _split_responsive_token(text: str) -> str:
-        value = (text or '').strip()
-        if not value or len(value) <= 8:
-            return value
-        if '-' in value:
-            pivot = value.find('-') + 1
-            if 1 < pivot < len(value):
-                return f"{value[:pivot]}\n{value[pivot:]}"
-        pivot = max(4, len(value) // 2)
-        return f"{value[:pivot]}\n{value[pivot:]}"
-
-    def _build_ui(self):
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 2, 10, 2)
-        layout.setSpacing(10)
-
-        icon_label = QLabel()
-        icon_label.setProperty("catalogRowIcon", True)
-        icon_target_size = QSize(40, 40)
-        pixmap = _jaw_icon_pixmap(self.jaw, icon_target_size)
-        icon_label.setPixmap(pixmap)
-        icon_label.setAlignment(Qt.AlignCenter)
-        icon_label.setStyleSheet('background-color: transparent;')
-        self._icon_label = icon_label
-        icon_wrap = QWidget()
-        icon_wrap.setStyleSheet('background-color: transparent;')
-        icon_wrap_layout = QHBoxLayout(icon_wrap)
-        icon_wrap_layout.setContentsMargins(0, 0, 0, 0)
-        icon_wrap_layout.setSpacing(0)
-        icon_wrap_layout.addStretch(1)
-        icon_wrap_layout.addWidget(icon_label, 0, Qt.AlignVCenter)
-        icon_wrap_layout.addStretch(1)
-        icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        self._icon_wrap = icon_wrap
-        layout.addWidget(icon_wrap, 0, Qt.AlignVCenter)
-
-        for key, title, value, weight in self._card_columns():
-            col = QVBoxLayout()
-            col.setContentsMargins(0, 0, 0, 0)
-            col.setSpacing(-2)
-            self._col_layouts.append(col)
-
-            head = QLabel(title)
-            head.setProperty('toolCardHeader', True)
-            head.setProperty('catalogRowHeader', True)
-            head.setWordWrap(True)
-            if key in {'diameter', 'length'}:
-                head.setProperty('catalogRowHeaderWrap', True)
-                head.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-            else:
-                head.setAlignment(Qt.AlignCenter)
-
-            val = self._value(value)
-
-            wrap = QWidget()
-            wrap.setProperty('toolCardColumn', True)
-            wrap.setStyleSheet('background: transparent;')
-            wrap.setLayout(col)
-            wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-            self._column_wraps[key] = wrap
-            self._column_values[key] = val
-            self._column_texts[key] = value
-
-            col.addWidget(head)
-            col.addWidget(val)
-            layout.addWidget(wrap, weight, Qt.AlignVCenter)
-
-            self._head_labels.append(head)
-            self._val_labels.append(val)
-
-        layout.addStretch(1)
-
-    def _apply_column_visibility(self, width: int):
-        if width <= 1:
-            visible_keys = {'jaw_id', 'jaw_type', 'diameter', 'length'}
-        elif width < self._single_column_breakpoint:
-            visible_keys = {'jaw_id'}
-        elif width < self._reduced_breakpoint:
-            visible_keys = {'jaw_id', 'jaw_type', 'diameter'}
-        else:
-            visible_keys = {'jaw_id', 'jaw_type', 'diameter', 'length'}
-
-        for key, wrap in self._column_wraps.items():
-            wrap.setVisible(key in visible_keys)
-
-    def _set_row_responsive_properties(self, narrow: bool, tight: bool, tiny: bool):
-        changed = False
-        for key, value in (('rowNarrow', narrow), ('rowTight', tight), ('rowTiny', tiny)):
-            if bool(self.property(key)) != bool(value):
-                self.setProperty(key, bool(value))
-                changed = True
-        if changed:
-            repolish_widget(self)
-            for lbl in self._val_labels + self._head_labels:
-                repolish_widget(lbl)
-
-    def _apply_responsive_layout(self, width: int):
-        lay = self.layout()
-        if lay is None:
-            return
-
-        single_column_mode = width < self._single_column_breakpoint
-        icon_only_mode = width < self._icon_only_breakpoint
-        jaw_id_wrap_mode = (width < 260) and not icon_only_mode
-        row_narrow = width < 560
-        row_tight = width < 430
-        row_tiny = width < 330
-        self._set_row_responsive_properties(row_narrow, row_tight, row_tiny)
-
-        if single_column_mode:
-            lay.setContentsMargins(8, 2, 8, 2)
-            lay.setSpacing(4)
-            col_spacing = 0
-        elif width < 520:
-            lay.setContentsMargins(7, 2, 7, 2)
-            lay.setSpacing(7)
-            col_spacing = 0
-        else:
-            lay.setContentsMargins(10, 2, 10, 2)
-            lay.setSpacing(10)
-            col_spacing = 0
-
-        self._apply_column_visibility(width)
-
-        jaw_id = self._column_values.get('jaw_id')
-        jaw_id_wrap = self._column_wraps.get('jaw_id')
-        jaw_id_visible = bool(jaw_id_wrap.isVisible()) if jaw_id_wrap is not None else False
-        if jaw_id is not None and jaw_id_visible:
-            jaw_id.setText(self._split_responsive_token(self._column_texts.get('jaw_id', '')) if jaw_id_wrap_mode else self._column_texts.get('jaw_id', ''))
-            jaw_id.setWordWrap(jaw_id_wrap_mode)
-            jaw_id.setMinimumHeight(36 if jaw_id_wrap_mode else 28)
-            jaw_id.setMaximumHeight(36 if jaw_id_wrap_mode else 28)
-            wrap_changed = bool(jaw_id.property('nameWrap')) != bool(jaw_id_wrap_mode)
-            tiny_changed = bool(jaw_id.property('nameTiny')) != bool(jaw_id_wrap_mode)
-            if wrap_changed:
-                jaw_id.setProperty('nameWrap', bool(jaw_id_wrap_mode))
-            if tiny_changed:
-                jaw_id.setProperty('nameTiny', bool(jaw_id_wrap_mode))
-            if wrap_changed or tiny_changed:
-                repolish_widget(jaw_id)
-        elif jaw_id is not None:
-            jaw_id.setText(self._column_texts.get('jaw_id', ''))
-            jaw_id.setWordWrap(False)
-            if bool(jaw_id.property('nameWrap')) or bool(jaw_id.property('nameTiny')):
-                jaw_id.setProperty('nameWrap', False)
-                jaw_id.setProperty('nameTiny', False)
-                repolish_widget(jaw_id)
-
-        for col in self._col_layouts:
-            col.setSpacing(col_spacing)
-
-        if self._icon_label is not None:
-            if icon_only_mode:
-                self._icon_label.setFixedSize(36, 36)
-            else:
-                self._icon_label.setFixedSize(40, 40)
-
-        if self._icon_wrap is not None:
-            if icon_only_mode:
-                self._icon_wrap.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-                self._icon_wrap.setMinimumWidth(0)
-                self._icon_wrap.setMaximumWidth(16777215)
-            else:
-                self._icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-                self._icon_wrap.setFixedWidth(48)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._apply_responsive_layout(event.size().width())
 
 
 class JawPage(QWidget):
@@ -832,6 +464,7 @@ class JawPage(QWidget):
         self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
         self._selector_selected_slots: set[str] = set()
         self._selector_saved_details_hidden = True
+        self._selector_slot_controller = SelectorSlotController(self)
         self._build_ui()
         self.refresh_list()
 
@@ -1219,65 +852,18 @@ class JawPage(QWidget):
     def _selector_spindle_label(spindle: str) -> str:
         return selector_spindle_label(spindle)
 
-    @staticmethod
-    def _normalize_selector_jaw(jaw: dict | None) -> dict | None:
-        if not isinstance(jaw, dict):
-            return None
-        jaw_id = str(jaw.get('jaw_id') or jaw.get('id') or '').strip()
-        if not jaw_id:
-            return None
-        normalized = {
-            'jaw_id': jaw_id,
-            'jaw_type': str(jaw.get('jaw_type') or '').strip(),
-        }
-        spindle_side = str(jaw.get('spindle_side') or '').strip()
-        if spindle_side:
-            normalized['spindle_side'] = spindle_side
-        return normalized
+    def _normalize_selector_jaw(self, jaw: dict | None) -> dict | None:
+        return self._selector_slot_controller.normalize_selector_jaw(jaw)
 
-    @staticmethod
-    def _normalize_jaw_spindle_side(value: str | None) -> str:
-        raw = str(value or '').strip().lower()
-        if not raw:
-            return 'both'
-        if raw in {'sp1', '1'}:
-            return 'main'
-        if raw in {'sp2', '2'}:
-            return 'sub'
-        if 'both' in raw or 'molem' in raw:
-            return 'both'
-        if 'sub' in raw or 'vasta' in raw or 'counter' in raw:
-            return 'sub'
-        if 'main' in raw or 'pää' in raw or 'paa' in raw:
-            return 'main'
-        return 'both'
+    def _normalize_jaw_spindle_side(self, value: str | None) -> str:
+        return self._selector_slot_controller.normalize_jaw_spindle_side(value)
 
     def _jaw_supports_selector_slot(self, jaw: dict | None, slot: str) -> bool:
-        side = self._normalize_jaw_spindle_side((jaw or {}).get('spindle_side') if isinstance(jaw, dict) else '')
-        target = self._normalize_selector_spindle(slot)
-        if side == 'both':
-            return True
-        return side == target
+        return self._selector_slot_controller.jaw_supports_selector_slot(jaw, slot)
 
     def _selector_assignments_from_initial(self, initial_assignments: list[dict] | None) -> dict[str, dict | None]:
         """Map Setup Manager payload rows into stable SP1/SP2 slot assignments."""
-        assignments = slot_assignments_state(None)
-        pending: list[dict] = []
-        for item in initial_assignments or []:
-            if not isinstance(item, dict):
-                continue
-            normalized = self._normalize_selector_jaw(item)
-            if normalized is None:
-                continue
-            spindle = normalize_selector_spindle(item.get('spindle') or item.get('slot') or '')
-            if spindle in assignments and assignments.get(spindle) is None:
-                assignments[spindle] = normalized
-            else:
-                pending.append(normalized)
-        for slot in ('main', 'sub'):
-            if assignments.get(slot) is None and pending:
-                assignments[slot] = pending.pop(0)
-        return assignments
+        return self._selector_slot_controller.selector_assignments_from_initial(initial_assignments)
 
     def _update_selector_spindle_ui(self):
         spindle = self._normalize_selector_spindle(self._selector_spindle)
@@ -1285,14 +871,7 @@ class JawPage(QWidget):
             self.selector_spindle_value_label.setText(self._selector_spindle_label(spindle))
 
     def _refresh_selector_slots(self):
-        if not hasattr(self, 'selector_sp1_slot'):
-            return
-        self._selector_assignments = slot_assignments_state(self._selector_assignments)
-        self.selector_sp1_slot.set_assignment(self._selector_assignments.get('main'))
-        self.selector_sp2_slot.set_assignment(self._selector_assignments.get('sub'))
-        self._selector_selected_slots = prune_selected_slots(self._selector_selected_slots, self._selector_assignments)
-        self._apply_selector_slot_selection()
-        self._update_selector_remove_button()
+        self._selector_slot_controller.refresh_selector_slots()
 
     def _apply_selector_slot_selection(self):
         if hasattr(self, 'selector_sp1_slot'):
@@ -1301,16 +880,7 @@ class JawPage(QWidget):
             self.selector_sp2_slot.set_selected('sub' in self._selector_selected_slots)
 
     def _on_selector_slot_clicked(self, slot_key: str, ctrl_pressed: bool):
-        slot = self._normalize_selector_spindle(slot_key)
-        has_assignment = self._selector_assignments.get(slot) is not None
-        self._selector_selected_slots = toggle_selector_slot_selection(
-            self._selector_selected_slots,
-            slot,
-            has_assignment=has_assignment,
-            ctrl_pressed=ctrl_pressed,
-        )
-        self._apply_selector_slot_selection()
-        self._update_selector_remove_button()
+        self._selector_slot_controller.on_selector_slot_clicked(slot_key, ctrl_pressed)
 
     def _update_selector_remove_button(self):
         if not hasattr(self, 'selector_remove_btn'):
@@ -1321,39 +891,13 @@ class JawPage(QWidget):
         self.selector_remove_btn.setEnabled(enabled)
 
     def _on_selector_jaw_dropped(self, slot_key: str, jaw: dict):
-        normalized_slot = self._normalize_selector_spindle(slot_key)
-        normalized_jaw = self._normalize_selector_jaw(jaw)
-        if normalized_jaw is not None and not self._jaw_supports_selector_slot(normalized_jaw, normalized_slot):
-            slot_widget = self.selector_sp1_slot if normalized_slot == 'main' else self.selector_sp2_slot
-            if slot_widget is not None:
-                slot_widget.flash_invalid_drop()
-            return
-        self._selector_assignments[normalized_slot] = normalized_jaw
-        self._selector_selected_slots = {normalized_slot} if normalized_jaw is not None else set()
-        self._refresh_selector_slots()
+        self._selector_slot_controller.on_selector_jaw_dropped(slot_key, jaw)
 
     def _remove_selected_selector_jaws(self):
-        if not self._selector_selected_slots:
-            return
-        for slot in list(self._selector_selected_slots):
-            self._selector_assignments[slot] = None
-        self._selector_selected_slots.clear()
-        self._refresh_selector_slots()
+        self._selector_slot_controller.remove_selected_selector_jaws()
 
     def _remove_selector_jaws_by_ids(self, jaw_ids: list[str]):
-        targets = {str(jaw_id).strip() for jaw_id in jaw_ids if str(jaw_id).strip()}
-        if not targets:
-            return
-        changed = False
-        for slot_key in ('main', 'sub'):
-            jaw = self._selector_assignments.get(slot_key)
-            jaw_id = str((jaw or {}).get('jaw_id') or '').strip() if isinstance(jaw, dict) else ''
-            if jaw_id and jaw_id in targets:
-                self._selector_assignments[slot_key] = None
-                changed = True
-        if changed:
-            self._selector_selected_slots.clear()
-            self._refresh_selector_slots()
+        self._selector_slot_controller.remove_selector_jaws_by_ids(jaw_ids)
 
     def _on_selector_remove_drop(self, jaw_ids: list[str]):
         self._remove_selector_jaws_by_ids(jaw_ids)
@@ -1393,43 +937,7 @@ class JawPage(QWidget):
             self._set_selector_panel_mode('details')
 
     def _set_selector_panel_mode(self, mode: str):
-        if not self._selector_active:
-            self._selector_panel_mode = 'details'
-            if hasattr(self, 'selector_toggle_btn'):
-                self.selector_toggle_btn.setChecked(False)
-            if hasattr(self, 'selector_card'):
-                self.selector_card.setVisible(False)
-            if hasattr(self, 'detail_card'):
-                self.detail_card.setVisible(True)
-            return
-
-        target_mode = normalize_selector_mode(mode)
-        self._selector_panel_mode = target_mode
-        self._details_hidden = False
-        self.detail_container.show()
-        self.detail_header_container.show()
-        if not self._last_splitter_sizes:
-            self._last_splitter_sizes = default_selector_splitter_sizes(self.splitter.width())
-        self.splitter.setSizes(self._last_splitter_sizes)
-
-        if target_mode == 'details':
-            self.detail_card.setVisible(True)
-            self.selector_card.setVisible(False)
-            if hasattr(self, '_detail_container_layout'):
-                self._detail_container_layout.setStretch(0, 1)
-                self._detail_container_layout.setStretch(1, 0)
-            self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
-            self.selector_toggle_btn.setChecked(False)
-            self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_selector', 'SELECTOR'))
-        else:
-            self.detail_card.setVisible(False)
-            self.selector_card.setVisible(True)
-            if hasattr(self, '_detail_container_layout'):
-                self._detail_container_layout.setStretch(0, 0)
-                self._detail_container_layout.setStretch(1, 1)
-            self.detail_section_label.setText(self._t('tool_library.selector.selection_title', 'Selection'))
-            self.selector_toggle_btn.setChecked(True)
-            self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_details', 'DETAILS'))
+        self._selector_slot_controller.set_selector_panel_mode(mode)
 
     def set_selector_context(
         self,
@@ -1437,51 +945,15 @@ class JawPage(QWidget):
         spindle: str = '',
         initial_assignments: list[dict] | None = None,
     ) -> None:
-        was_active = self._selector_active
-        self._selector_active = bool(active)
-        self._selector_spindle = self._normalize_selector_spindle(spindle)
-        self._update_selector_spindle_ui()
-        self.selector_toggle_btn.setVisible(self._selector_active)
-        self.toggle_details_btn.setEnabled(not self._selector_active)
-
-        # Toggle bottom bars
-        self.button_bar.setVisible(not self._selector_active)
-        self.selector_bottom_bar.setVisible(self._selector_active)
-
-        if self._selector_active:
-            if not was_active:
-                self._selector_saved_details_hidden = self._details_hidden
-            self._selector_assignments = self._selector_assignments_from_initial(initial_assignments)
-            self._selector_selected_slots.clear()
-            self._refresh_selector_slots()
-            self._set_selector_panel_mode('selector')
-            return
-
-        self._details_hidden = self._selector_saved_details_hidden
-        self._selector_assignments = slot_assignments_state(None)
-        self._selector_selected_slots.clear()
-        self._refresh_selector_slots()
-        self._set_selector_panel_mode('details')
-        self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
-        if self._details_hidden:
-            self.detail_container.hide()
-            self.detail_header_container.hide()
-            self.splitter.setSizes([1, 0])
-        else:
-            self.detail_container.show()
-            self.detail_header_container.show()
-            if not self._last_splitter_sizes:
-                self._last_splitter_sizes = default_selector_splitter_sizes(self.splitter.width())
-            self.splitter.setSizes(self._last_splitter_sizes)
+        self._selector_slot_controller.set_selector_context(
+            active,
+            spindle=spindle,
+            initial_assignments=initial_assignments,
+        )
 
     def selector_assigned_jaws_for_setup_assignment(self) -> list[dict]:
         """Return slot assignments with slot key included so Setup Manager can correlate correctly."""
-        payload: list[dict] = []
-        for slot in ('main', 'sub'):
-            normalized = self._normalize_selector_jaw(self._selector_assignments.get(slot))
-            if normalized is not None:
-                payload.append({**normalized, 'slot': slot})
-        return payload
+        return self._selector_slot_controller.selector_assigned_jaws_for_setup_assignment()
 
     def _toggle_search(self):
         show = self.search_toggle.isChecked()

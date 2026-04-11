@@ -7,6 +7,7 @@ from .preview_rules import (
     jaw_preview_rotation_steps,
     jaw_preview_stl_path,
 )
+from .selector_slot_controller import SelectorSlotController
 
 __all__ = [
     "apply_jaw_detail_grid_rules",
@@ -14,4 +15,5 @@ __all__ = [
     "jaw_preview_label",
     "jaw_preview_rotation_steps",
     "jaw_preview_stl_path",
+    "SelectorSlotController",
 ]

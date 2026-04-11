@@ -42,13 +42,10 @@ from ui.stl_preview import StlPreviewWidget
 from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
-    normalize_selector_bucket,
     normalize_selector_mode,
-    selector_assignments_for_target,
-    selector_bucket_map,
 )
 from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
-from ui.home_page_support import apply_tool_detail_layout_rules
+from ui.home_page_support import SelectorAssignmentState, apply_tool_detail_layout_rules
 from ui.shared.selector_panel_builders import (
     apply_selector_icon_button,
     build_selector_actions_row,
@@ -369,6 +366,9 @@ class HomePage(QWidget):
         self._selector_assigned_tools: list[dict] = []
         self._selector_assignments_by_target: dict[str, list[dict]] = {}
         self._selector_saved_details_hidden = True
+        self._selector_assignment_state = SelectorAssignmentState(
+            normalize_head=self._normalize_selector_head_value,
+        )
         self._build_ui()
         self._warmup_preview_engine()
         self.refresh_list()
@@ -839,39 +839,11 @@ class HomePage(QWidget):
         self._master_filter_active = bool(active) and bool(self._master_filter_ids)
         self.refresh_list()
 
-    @staticmethod
-    def _selector_tool_key(tool: dict | None) -> str:
-        if not isinstance(tool, dict):
-            return ''
-        tool_uid = tool.get('tool_uid', tool.get('uid'))
-        if tool_uid is not None and str(tool_uid).strip():
-            return f'uid:{tool_uid}'
-        tool_id = str(tool.get('tool_id') or tool.get('id') or '').strip()
-        return f'id:{tool_id}' if tool_id else ''
+    def _selector_tool_key(self, tool: dict | None) -> str:
+        return self._selector_assignment_state.selector_tool_key(tool)
 
-    @staticmethod
-    def _normalize_selector_tool(tool: dict | None) -> dict | None:
-        if not isinstance(tool, dict):
-            return None
-        tool_id = str(tool.get('tool_id') or tool.get('id') or '').strip()
-        if not tool_id:
-            return None
-        normalized = {'tool_id': tool_id}
-        tool_uid = tool.get('tool_uid', tool.get('uid'))
-        try:
-            parsed_uid = int(tool_uid) if tool_uid is not None and str(tool_uid).strip() else None
-        except Exception:
-            parsed_uid = None
-        if parsed_uid is not None:
-            normalized['tool_uid'] = parsed_uid
-        for key in ('description', 'tool_type', 'default_pot'):
-            value = str(tool.get(key) or '').strip()
-            if value:
-                normalized[key] = value
-        comment = str(tool.get('comment') or '').strip()
-        if comment:
-            normalized['comment'] = comment
-        return normalized
+    def _normalize_selector_tool(self, tool: dict | None) -> dict | None:
+        return self._selector_assignment_state.normalize_selector_tool(tool)
 
     @staticmethod
     def _selector_spindle_label(spindle: str) -> str:
@@ -918,21 +890,28 @@ class HomePage(QWidget):
         mirrored = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
         return QIcon(mirrored)
 
-    @classmethod
-    def _selector_target_key(cls, head: str, spindle: str) -> str:
-        return f"{cls._normalize_selector_head_value(head)}:{cls._normalize_selector_spindle_value(spindle)}"
+    def _selector_target_key(self, head: str, spindle: str) -> str:
+        return self._selector_assignment_state.selector_target_key(head, spindle)
 
     def _selector_current_target_key(self) -> str:
-        return self._selector_target_key(self._selector_head or 'HEAD1', self._current_selector_spindle_value())
+        return self._selector_assignment_state.current_target_key(
+            self._selector_head or 'HEAD1',
+            self._current_selector_spindle_value(),
+        )
 
     def _store_selector_bucket_for_current_target(self) -> None:
-        key = self._selector_current_target_key()
-        self._selector_assignments_by_target[key] = [dict(item) for item in self._selector_assigned_tools]
+        self._selector_assignment_state.store_bucket_for_target(
+            self._selector_assignments_by_target,
+            self._selector_assigned_tools,
+            head=self._selector_head or 'HEAD1',
+            spindle=self._current_selector_spindle_value(),
+        )
 
     def _load_selector_bucket_for_current_target(self) -> None:
-        self._selector_assigned_tools = selector_assignments_for_target(
+        self._selector_assigned_tools = self._selector_assignment_state.load_bucket_for_target(
             self._selector_assignments_by_target,
-            self._selector_current_target_key(),
+            head=self._selector_head or 'HEAD1',
+            spindle=self._current_selector_spindle_value(),
         )
 
     def _current_selector_spindle_value(self) -> str:
@@ -1088,32 +1067,16 @@ class HomePage(QWidget):
         self._update_selector_assignment_buttons()
 
     def _on_selector_tools_dropped(self, dropped_items: list, insert_row: int):
-        if not isinstance(dropped_items, list):
+        updated, selected_row = self._selector_assignment_state.apply_dropped_tools(
+            self._selector_assigned_tools,
+            dropped_items,
+            insert_row,
+        )
+        if selected_row is None:
             return
-
-        existing_keys = {
-            self._selector_tool_key(item)
-            for item in self._selector_assigned_tools
-            if self._selector_tool_key(item)
-        }
-        insert_at = insert_row if isinstance(insert_row, int) and insert_row >= 0 else len(self._selector_assigned_tools)
-        insert_at = min(insert_at, len(self._selector_assigned_tools))
-        added = False
-        for tool in dropped_items:
-            normalized = self._normalize_selector_tool(tool)
-            if normalized is None:
-                continue
-            key = self._selector_tool_key(normalized)
-            if not key or key in existing_keys:
-                continue
-            self._selector_assigned_tools.insert(insert_at, normalized)
-            existing_keys.add(key)
-            insert_at += 1
-            added = True
-
-        if added:
-            self._rebuild_selector_assignment_list()
-            self.selector_assignment_list.setCurrentRow(min(insert_at - 1, self.selector_assignment_list.count() - 1))
+        self._selector_assigned_tools = updated
+        self._rebuild_selector_assignment_list()
+        self.selector_assignment_list.setCurrentRow(selected_row)
 
     def _remove_selector_assignment(self):
         rows = self._selector_selected_rows()
@@ -1127,24 +1090,14 @@ class HomePage(QWidget):
             self.selector_assignment_list.setCurrentRow(min(rows[0], self.selector_assignment_list.count() - 1))
 
     def _remove_selector_assignments_by_keys(self, tool_keys: list[tuple[str, str | None]]):
-        if not tool_keys:
+        remaining = self._selector_assignment_state.remove_assignments_by_keys(
+            self._selector_assigned_tools,
+            tool_keys,
+        )
+        if len(remaining) == len(self._selector_assigned_tools):
             return
-        target_counts: dict[tuple[str, str | None], int] = {}
-        for key in tool_keys:
-            target_counts[key] = target_counts.get(key, 0) + 1
-        remaining: list[dict] = []
-        for assignment in self._selector_assigned_tools:
-            tool_id = str(assignment.get('tool_id') or '').strip()
-            tool_uid_raw = assignment.get('tool_uid')
-            tool_uid = str(tool_uid_raw).strip() if tool_uid_raw is not None and str(tool_uid_raw).strip() else None
-            key = (tool_id, tool_uid)
-            if tool_id and target_counts.get(key, 0) > 0:
-                target_counts[key] -= 1
-                continue
-            remaining.append(assignment)
-        if len(remaining) != len(self._selector_assigned_tools):
-            self._selector_assigned_tools = remaining
-            self._rebuild_selector_assignment_list()
+        self._selector_assigned_tools = remaining
+        self._rebuild_selector_assignment_list()
 
     def _move_selector_up(self):
         selected_rows = self._selector_selected_rows()
@@ -1310,8 +1263,6 @@ class HomePage(QWidget):
     ) -> None:
         was_active = self._selector_active
         self._selector_active = bool(active)
-        self._selector_head = self._normalize_selector_head_value(str(head or '').strip().upper())
-        self._set_selector_spindle_value(str(spindle or '').strip().lower())
         self.selector_toggle_btn.setVisible(self._selector_active)
         self.toggle_details_btn.setEnabled(not self._selector_active)
 
@@ -1322,21 +1273,16 @@ class HomePage(QWidget):
         if self._selector_active:
             if not was_active:
                 self._selector_saved_details_hidden = self._details_hidden
-            loaded_buckets = selector_bucket_map(
-                initial_assignment_buckets,
-                self._normalize_selector_tool,
-                self._selector_tool_key,
-                self._selector_target_key,
+            context = self._selector_assignment_state.prepare_context(
+                head=str(head or '').strip().upper(),
+                spindle=str(spindle or '').strip().lower(),
+                initial_assignments=initial_assignments,
+                initial_assignment_buckets=initial_assignment_buckets,
             )
-            if not loaded_buckets and isinstance(initial_assignments, list):
-                loaded_buckets[self._selector_current_target_key()] = normalize_selector_bucket(
-                    initial_assignments,
-                    self._normalize_selector_tool,
-                    self._selector_tool_key,
-                )
-
-            self._selector_assignments_by_target = loaded_buckets
-            self._load_selector_bucket_for_current_target()
+            self._selector_head = context.head
+            self._set_selector_spindle_value(context.spindle)
+            self._selector_assignments_by_target = context.buckets
+            self._selector_assigned_tools = context.assignments
             self._update_selector_spindle_button_text()
             self._update_selector_context_header()
             self._update_selector_assignments_section_title()
@@ -1345,6 +1291,8 @@ class HomePage(QWidget):
             self._set_selector_panel_mode('selector')
             return
 
+        self._selector_head = self._normalize_selector_head_value(str(head or '').strip().upper())
+        self._set_selector_spindle_value(str(spindle or '').strip().lower())
         self._details_hidden = self._selector_saved_details_hidden
         self._selector_assigned_tools = []
         self._selector_assignments_by_target = {}
@@ -1371,39 +1319,17 @@ class HomePage(QWidget):
         # Sync the active bucket from the UI and persist it before reading all buckets.
         self._sync_selector_assignment_order()
         self._store_selector_bucket_for_current_target()
-        head = self._normalize_selector_head_value(self._selector_head or 'HEAD1')
-        payload: list[dict] = []
-        for key, tools in self._selector_assignments_by_target.items():
-            parts = key.split(':', 1)
-            bucket_head = self._normalize_selector_head_value(parts[0]) if parts else head
-            bucket_spindle = self._normalize_selector_spindle_value(parts[1]) if len(parts) > 1 else 'main'
-            if bucket_head != head:
-                continue  # only include the currently active head
-            for item in tools:
-                entry = dict(item)
-                entry['spindle'] = bucket_spindle
-                entry['head'] = head
-                payload.append(entry)
-        return payload
+        return self._selector_assignment_state.setup_assignment_payload(
+            self._selector_assignments_by_target,
+            head=self._selector_head or 'HEAD1',
+        )
 
     def selector_assignment_buckets_for_setup_assignment(self) -> dict[str, list[dict]]:
         """Return per-target buckets (already persisted by selector_assigned_tools_for_setup_assignment)."""
-        head = self._normalize_selector_head_value(self._selector_head or 'HEAD1')
-        result: dict[str, list[dict]] = {}
-        for key, tools in self._selector_assignments_by_target.items():
-            parts = key.split(':', 1)
-            bucket_head = self._normalize_selector_head_value(parts[0]) if parts else head
-            bucket_spindle = self._normalize_selector_spindle_value(parts[1]) if len(parts) > 1 else 'main'
-            if bucket_head != head:
-                continue
-            normalized: list[dict] = []
-            for item in tools:
-                entry = dict(item)
-                entry['spindle'] = bucket_spindle
-                entry['head'] = head
-                normalized.append(entry)
-            result[key] = normalized
-        return result
+        return self._selector_assignment_state.setup_assignment_buckets(
+            self._selector_assignments_by_target,
+            head=self._selector_head or 'HEAD1',
+        )
 
     def update_selector_head(self, head: str) -> None:
         """Update the selector HEAD target (called when the HEAD dropdown changes)."""
