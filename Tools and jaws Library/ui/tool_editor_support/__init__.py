@@ -18,14 +18,18 @@ from .measurement_rules import (
     normalize_xyz_text,
     parse_measurement_overlays,
 )
+from .transform_rules import all_part_transforms_payload, compact_transform_dict, normalize_transform_dict
 from .tool_type_rules import ToolTypeFieldState, build_tool_type_field_state, is_mill_tool_type, is_turning_drill_tool_type
 
 __all__ = [
+    "all_part_transforms_payload",
+    "compact_transform_dict",
     "empty_measurement_editor_state",
     "measurement_overlays_from_state",
     "normalize_distance_space",
     "normalize_float_value",
     "normalize_measurement_editor_state",
+    "normalize_transform_dict",
     "normalize_xyz_text",
     "parse_measurement_overlays",
     "ToolEditorPayloadAdapter",

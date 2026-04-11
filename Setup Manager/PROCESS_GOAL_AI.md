@@ -1,52 +1,69 @@
 # Process Goal + Status (AI Resume)
 
 ## Objective
-Refactor main modules to reduce size/duplication, keep behavior stable, and prepare profile-driven machine variants without breaking DB compatibility.
+Make main modules smaller and more modular, keep runtime behavior stable, and prepare profile-driven machine variants without breaking current DB contracts.
 
-## Done
-- `Tools and jaws Library/ui/jaw_page.py`
-  - `_build_ui` split into focused builders.
-  - `populate_details` split (`_build_empty_details_card`, `_build_jaw_detail_header`, `_build_jaw_preview_card`).
-  - integrated `jaw_page_support` detail/preview rule helpers.
-  - fixed selector-context signature mismatch causing Setup Manager -> Tool/Jaw open failure.
-  - dead-path cleanup completed (unused helper methods/branches removed).
+## Completed
 - `Tools and jaws Library/ui/home_page.py`
-  - selector panel partially modularized with shared builders.
-  - dead imports and dead helper methods removed.
-- Shared selector UI builders added:
-  - `Tools and jaws Library/ui/shared/selector_panel_builders.py`
-  - `Tools and jaws Library/ui/shared/__init__.py`
-  - used by `home_page.py` and `jaw_page.py`.
-- MainWindow selector-session normalization extracted:
-  - `Tools and jaws Library/ui/main_window_support/selector_session.py`
-  - `Tools and jaws Library/ui/main_window_support/__init__.py`
-  - `ui/main_window.py` now uses helper state mapping.
-- Multi-file dead-import cleanup done in:
-  - `export_page.py`, `jaw_editor_dialog.py`, `jaw_export_page.py`, `main_window.py`, `tool_editor_dialog.py`.
-- Setup docs updated:
-  - `Setup Manager/README.md` (compact technical)
-  - `Setup Manager/README_AI.md` (AI quick spec)
+  - Large UI construction moved behind support modules:
+    - `ui/home_page_support/topbar_builder.py`
+    - `ui/home_page_support/selector_card_builder.py`
+    - `ui/home_page_support/components_panel_builder.py`
+    - `ui/home_page_support/detail_fields_builder.py`
+    - `ui/home_page_support/preview_panel_builder.py`
+  - Selector assignment state extracted earlier to:
+    - `ui/home_page_support/selector_assignment_state.py`
+  - Main file now delegates major blocks instead of inline-building them.
 
-## Not Done (Open Work)
-- Full machine-profile capability layer (stations/axes/features gating) not completed.
-- Full compatibility view-model layer over legacy schema not completed.
-- Remaining oversized modules still need deeper split:
-  - `tool_editor_dialog.py`
-  - `work_editor_dialog.py`
-- Wider regression coverage (automated tests) still missing; validation mostly compile + runtime smoke.
+- `Tools and jaws Library/ui/jaw_page.py`
+  - Selector-slot orchestration extracted to:
+    - `ui/jaw_page_support/selector_slot_controller.py`
+  - Dead legacy classes/constants removed (unused row widget paths).
 
-## Next
-1. `tool_editor_dialog.py` + `tool_editor_support/*`
-   - run strict zero-reference sweep, remove dead compatibility paths.
-   - extract repeated tab/form row builders to shared support module.
-2. `Setup Manager/ui/work_editor_dialog.py`
-   - continue profile/spec-driven extraction for large hardcoded page blocks.
-3. Add lightweight regression harness:
-   - selector payload mapping tests
-   - profile/view-model normalization tests
-   - save/load compatibility smoke tests.
+- `Tools and jaws Library/ui/tool_editor_dialog.py`
+  - Tool-type detail branching extracted to:
+    - `ui/tool_editor_support/detail_layout_rules.py`
+  - Measurement overlay normalization/serialization extracted to:
+    - `ui/tool_editor_support/measurement_rules.py`
+  - Transform normalization/compaction extracted to:
+    - `ui/tool_editor_support/transform_rules.py`
+  - Dead helper methods/import paths removed from dialog.
 
-## Constraints (Keep)
-- Python + PySide6.
-- DB compatibility-first, additive migrations only.
-- Setup Manager remains reference consumer; Tool/Jaw master data ownership stays in Tools and jaws Library.
+- Shared and wiring
+  - `ui/shared/selector_panel_builders.py` reused by Home/Jaw flows.
+  - `ui/main_window_support/selector_session.py` in use for selector session mapping.
+  - `__init__.py` exports updated in support packages to make extracted modules first-class.
+
+- Stability and verification
+  - Repeated `py_compile` and `compileall` passes done on edited modules.
+  - Offscreen smoke checks passed for `HomePage`, `JawPage`, `AddEditToolDialog`.
+  - Setup Manager -> Tools/Jaws open-path regression fixed (selector-context mismatch issue).
+
+## Open
+- Machine-profile capability layer is still partial:
+  - no full central profile contract yet for station/axis/feature gating.
+- Compatibility view-model layer is still partial:
+  - legacy schema adapters are improved but not fully centralized for all editors.
+- `Setup Manager/ui/work_editor_dialog.py` still oversized and needs the same extraction depth.
+- Automated regression suite is still missing (current checks are compile + smoke).
+
+## Next (Priority)
+1. `Setup Manager/ui/work_editor_dialog.py`
+   - extract large UI sections + selector/jaw hardcoded construction into `work_editor_support/*`.
+   - keep schema and service interfaces unchanged.
+2. Machine profile core
+   - add explicit profile capability object (spindles, heads/stations, axis/features toggles).
+   - use profile gating instead of scattered conditionals.
+3. Compatibility adapters
+   - centralize work/tool/jaw payload normalization + serialization.
+4. Lightweight tests
+   - selector payload mapping
+   - profile gating behavior
+   - save/load compatibility smoke fixtures.
+
+## Constraints
+- Keep Python + PySide6 core.
+- Keep DB compatibility-first (additive-only if migration needed).
+- Keep ownership split:
+  - Setup Manager consumes references
+  - Tools/Jaws Library remains master-data source.

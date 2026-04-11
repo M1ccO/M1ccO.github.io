@@ -26,12 +26,15 @@ from ui.tool_editor_support.general_tab import build_general_tab
 from ui.tool_editor_support.models_tab import build_models_tab
 from ui.tool_editor_support import (
     ToolEditorPayloadAdapter,
+    all_part_transforms_payload,
     build_tool_type_field_state,
+    compact_transform_dict,
     component_display_for_key,
     component_dropdown_values,
     is_mill_tool_type,
     is_turning_drill_tool_type,
     known_components_from_tools,
+    normalize_transform_dict,
 )
 from ui.tool_editor_support.detail_layout_rules import build_tool_type_layout_update
 from ui.tool_editor_support.measurement_rules import (
@@ -1492,8 +1495,8 @@ class AddEditToolDialog(QDialog):
             return False
 
     def _on_viewer_transform_changed(self, index: int, transform: dict):
-        self._part_transforms[index] = self._compact_transform_dict(
-            self._normalized_transform_dict(transform)
+        self._part_transforms[index] = compact_transform_dict(
+            normalize_transform_dict(transform)
         )
         if index in self._selected_part_indices:
             self._refresh_transform_selection_state()
@@ -1537,39 +1540,12 @@ class AddEditToolDialog(QDialog):
         self.model_table.blockSignals(False)
         selection_model.blockSignals(False)
 
-    @staticmethod
-    def _normalized_transform_dict(transform: dict | None) -> dict:
-        src = transform if isinstance(transform, dict) else {}
-        return {
-            'x': float(src.get('x', 0) or 0),
-            'y': float(src.get('y', 0) or 0),
-            'z': float(src.get('z', 0) or 0),
-            'rx': float(src.get('rx', 0) or 0),
-            'ry': float(src.get('ry', 0) or 0),
-            'rz': float(src.get('rz', 0) or 0),
-        }
-
     def _saved_transform_for_index(self, index: int) -> dict:
-        return self._normalized_transform_dict(self._saved_part_transforms.get(index, {}))
+        return normalize_transform_dict(self._saved_part_transforms.get(index, {}))
 
     def _display_transform_for_index(self, index: int, transform: dict) -> dict:
         _ = index  # keep index arg for future per-part display modes
-        return self._normalized_transform_dict(transform)
-
-    @staticmethod
-    def _compact_transform_dict(transform: dict) -> dict:
-        compact = {}
-        for key in ('x', 'y', 'z', 'rx', 'ry', 'rz'):
-            value = float(transform.get(key, 0) or 0)
-            if abs(value) > 1e-9:
-                compact[key] = value
-        return compact
-
-    def _all_part_transforms_payload(self) -> list[dict]:
-        payload = []
-        for i in range(self.model_table.rowCount()):
-            payload.append(self._normalized_transform_dict(self._part_transforms.get(i, {})))
-        return payload
+        return normalize_transform_dict(transform)
 
     def _apply_preview_transforms_snapshot(self, snapshot, *, refresh_selection: bool = False) -> bool:
         if not isinstance(snapshot, list):
@@ -1585,7 +1561,7 @@ class AddEditToolDialog(QDialog):
             raw = snapshot[index]
             if not isinstance(raw, dict):
                 continue
-            compact = self._compact_transform_dict(self._normalized_transform_dict(raw))
+            compact = compact_transform_dict(normalize_transform_dict(raw))
             if compact:
                 transformed[index] = compact
         self._part_transforms = transformed
@@ -1752,8 +1728,10 @@ class AddEditToolDialog(QDialog):
         if target == 'saved':
             for idx in indices:
                 baseline = self._saved_transform_for_index(idx)
-                self._part_transforms[idx] = self._compact_transform_dict(baseline)
-            self.models_preview.set_part_transforms(self._all_part_transforms_payload())
+                self._part_transforms[idx] = compact_transform_dict(baseline)
+            self.models_preview.set_part_transforms(
+                all_part_transforms_payload(self._part_transforms, self.model_table.rowCount())
+            )
             self._refresh_transform_selection_state()
             return
         self.models_preview.reset_selected_part_transform()
@@ -1768,7 +1746,7 @@ class AddEditToolDialog(QDialog):
         except ValueError:
             return
         index = self._selected_part_index
-        t = self._normalized_transform_dict(self._part_transforms.get(index, {}))
+        t = normalize_transform_dict(self._part_transforms.get(index, {}))
         if self._current_transform_mode == 'translate':
             t['x'] = vx
             t['y'] = vy
@@ -1777,8 +1755,10 @@ class AddEditToolDialog(QDialog):
             t['rx'] = vx
             t['ry'] = vy
             t['rz'] = vz
-        self._part_transforms[index] = self._compact_transform_dict(t)
-        self.models_preview.set_part_transforms(self._all_part_transforms_payload())
+        self._part_transforms[index] = compact_transform_dict(t)
+        self.models_preview.set_part_transforms(
+            all_part_transforms_payload(self._part_transforms, self.model_table.rowCount())
+        )
 
     def _on_model_table_selection_changed(self):
         if not self._assembly_transform_enabled:
