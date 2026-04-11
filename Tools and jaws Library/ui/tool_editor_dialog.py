@@ -25,6 +25,9 @@ from ui.stl_preview import StlPreviewWidget
 from ui.measurement_editor_dialog import MeasurementEditorDialog
 from ui.widgets.color_picker_dialog import ColorPickerDialog
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
+from ui.tool_editor_support.components_tab import build_components_tab, build_spare_parts_tab
+from ui.tool_editor_support.general_tab import build_general_tab
+from ui.tool_editor_support.models_tab import build_models_tab
 from ui.tool_editor_support import (
     ToolEditorPayloadAdapter,
     build_tool_type_field_state,
