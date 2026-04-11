@@ -43,8 +43,6 @@ from shared.editor_helpers import (
     create_titled_section,
     create_dialog_buttons,
     setup_editor_dialog,
-    style_icon_action_button,
-    style_panel_action_button,
 )
 
 
@@ -95,6 +93,14 @@ from ui.jaw_page_support import (
     jaw_preview_label,
     jaw_preview_rotation_steps,
     jaw_preview_stl_path,
+)
+from ui.shared.selector_panel_builders import (
+    apply_selector_icon_button,
+    build_selector_actions_row,
+    build_selector_card_shell,
+    build_selector_info_header,
+    build_selector_hint_label,
+    build_selector_toggle_button,
 )
 
 
@@ -235,9 +241,6 @@ class _JawAssignmentSlot(QGroupBox):
         self._selected = bool(selected)
         if self._assignment_card is not None:
             self._assignment_card.set_selected(self._selected)
-
-    def is_selected(self) -> bool:
-        return self._selected
 
     def assignment(self) -> dict | None:
         return dict(self._assignment) if isinstance(self._assignment, dict) else None
@@ -758,10 +761,6 @@ class ResponsiveJawRowWidget(QFrame):
                 self._icon_wrap.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
                 self._icon_wrap.setFixedWidth(48)
 
-    def set_detail_context(self, details_hidden: bool):
-        self._details_open_context = not bool(details_hidden)
-        self._apply_responsive_layout(max(1, self.width()))
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._apply_responsive_layout(event.size().width())
@@ -1019,57 +1018,21 @@ class JawPage(QWidget):
         return self.detail_container
 
     def _build_selector_card(self) -> QFrame:
-        self.selector_card = QFrame()
-        self.selector_card.setProperty('card', True)
-        self.selector_card.setProperty('selectorContext', True)
-        self.selector_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        self.selector_card.setVisible(False)
+        self.selector_card, self.selector_scroll, self.selector_panel, selector_layout = build_selector_card_shell(spacing=6)
         selector_card_layout = QVBoxLayout(self.selector_card)
         selector_card_layout.setContentsMargins(0, 0, 0, 0)
         selector_card_layout.setSpacing(0)
-
-        self.selector_scroll = QScrollArea()
-        self.selector_scroll.setWidgetResizable(True)
-        self.selector_scroll.setFrameShape(QFrame.NoFrame)
-        self.selector_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.selector_panel = QWidget()
-        self.selector_panel.setProperty('selectorPanel', True)
-        self.selector_panel.setMinimumWidth(0)
-        self.selector_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-        selector_layout = QVBoxLayout(self.selector_panel)
-        selector_layout.setContentsMargins(10, 10, 10, 10)
-        selector_layout.setSpacing(6)
-
-        self.selector_info_header = QFrame()
-        self.selector_info_header.setProperty('detailHeader', True)
-        self.selector_info_header.setProperty('selectorInfoHeader', True)
-        self.selector_info_header.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        selector_info_layout = QVBoxLayout(self.selector_info_header)
-        selector_info_layout.setContentsMargins(14, 14, 14, 12)
-        selector_info_layout.setSpacing(4)
-
-        title_row = QHBoxLayout()
-        title_row.setContentsMargins(0, 0, 0, 0)
-        title_row.setSpacing(0)
-        title_row.addStretch(1)
-        self.selector_header_title_label = QLabel(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
-        self.selector_header_title_label.setProperty('selectorInfoTitle', True)
-        self.selector_header_title_label.setAlignment(Qt.AlignCenter)
-        title_row.addWidget(self.selector_header_title_label, 0, Qt.AlignCenter)
-        title_row.addStretch(1)
-        selector_info_layout.addLayout(title_row)
-
-        badge_row = QHBoxLayout()
-        badge_row.setContentsMargins(0, 0, 0, 0)
-        badge_row.setSpacing(10)
-        self.selector_spindle_value_label = QLabel('SP1')
-        self.selector_spindle_value_label.setProperty('toolBadge', True)
-        badge_row.addWidget(self.selector_spindle_value_label, 0, Qt.AlignLeft)
-        badge_row.addStretch(1)
-        self.selector_module_value_label = QLabel(self._t('tool_library.selector.jaws', 'Jaws'))
-        self.selector_module_value_label.setProperty('toolBadge', True)
-        badge_row.addWidget(self.selector_module_value_label, 0, Qt.AlignRight)
-        selector_info_layout.addLayout(badge_row)
+        (
+            self.selector_info_header,
+            self.selector_header_title_label,
+            self.selector_spindle_value_label,
+            self.selector_module_value_label,
+        ) = build_selector_info_header(
+            title_text=self._t('jaw_library.selector.header_title', 'Jaw Selector'),
+            left_badge_text='SP1',
+            right_badge_text=self._t('tool_library.selector.jaws', 'Jaws'),
+            fixed_height_policy=True,
+        )
         selector_layout.addWidget(self.selector_info_header, 0)
 
         ctx_row = QHBoxLayout()
@@ -1077,29 +1040,18 @@ class JawPage(QWidget):
         ctx_row.setSpacing(10)
         ctx_row.addStretch(1)
 
-        self.selector_toggle_btn = QPushButton(self._t('tool_library.selector.mode_details', 'DETAILS'))
-        self.selector_toggle_btn.setProperty('panelActionButton', True)
-        self.selector_toggle_btn.setFixedHeight(30)
-        self.selector_toggle_btn.setMinimumWidth(120)
-        self.selector_toggle_btn.setMaximumWidth(140)
-        self.selector_toggle_btn.setCheckable(True)
-        self.selector_toggle_btn.setChecked(True)
-        self.selector_toggle_btn.setVisible(False)
-        self.selector_toggle_btn.clicked.connect(self._on_selector_toggle_clicked)
-        style_panel_action_button(self.selector_toggle_btn)
+        self.selector_toggle_btn = build_selector_toggle_button(
+            text=self._t('tool_library.selector.mode_details', 'DETAILS'),
+            on_clicked=self._on_selector_toggle_clicked,
+        )
         ctx_row.addWidget(self.selector_toggle_btn, 0)
         ctx_row.addStretch(1)
         selector_layout.addLayout(ctx_row)
 
-        self.selector_hint_label = QLabel(
-            self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.')
+        self.selector_hint_label = build_selector_hint_label(
+            text=self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.'),
+            multiline=False,
         )
-        self.selector_hint_label.setWordWrap(False)
-        self.selector_hint_label.setProperty('detailHint', True)
-        self.selector_hint_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.selector_hint_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.selector_hint_label.setFixedHeight(24)
-        self.selector_hint_label.setStyleSheet('margin: 0px; padding: 0px; background: transparent;')
         selector_layout.addWidget(self.selector_hint_label, 0)
 
         self.selector_sp1_slot = _JawAssignmentSlot('main', self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
@@ -1116,16 +1068,18 @@ class JawPage(QWidget):
         selector_layout.addWidget(self.selector_sp2_slot)
 
         self.selector_remove_btn = _SelectorRemoveDropButton()
-        style_icon_action_button(
+        apply_selector_icon_button(
             self.selector_remove_btn,
-            TOOL_ICONS_DIR / 'delete.svg',
-            self._t('tool_library.selector.remove', 'Remove'),
+            icon_path=TOOL_ICONS_DIR / 'delete.svg',
+            tooltip=self._t('tool_library.selector.remove', 'Remove'),
             danger=True,
         )
         self.selector_remove_btn.clicked.connect(self._remove_selected_selector_jaws)
         self.selector_remove_btn.jawsDropped.connect(self._on_selector_remove_drop)
-        selector_layout.addWidget(self.selector_remove_btn, 0, Qt.AlignLeft)
-        selector_layout.addStretch(1)
+        selector_actions = build_selector_actions_row(spacing=4)
+        selector_actions.addWidget(self.selector_remove_btn, 0, Qt.AlignLeft)
+        selector_actions.addStretch(1)
+        selector_layout.addLayout(selector_actions)
 
         self.selector_scroll.setWidget(self.selector_panel)
         selector_card_layout.addWidget(self.selector_scroll, 1)

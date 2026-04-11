@@ -11,7 +11,7 @@ from PySide6.QtCore import (
     QProcess,
 )
 from PySide6.QtNetwork import QLocalSocket
-from PySide6.QtGui import QColor, QCursor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QAbstractButton,
     QAbstractItemView,
@@ -57,6 +57,7 @@ from ui.export_page import ExportPage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
+from ui.main_window_support import empty_selector_session_state, selector_session_from_payload
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 
 
@@ -268,20 +269,6 @@ class MainWindow(QMainWindow):
         if path.suffix.lower() == '.svg':
             return QIcon(str(path))
         return QIcon(self._clean_icon_pixmap(str(path), target_size))
-
-    def _mirrored_icon_by_name(self, icon_name: str, target_size: QSize | None = None, rotation: int = 0) -> QIcon:
-        path = self._resolve_icon_path(icon_name)
-        if path is None:
-            return QIcon()
-        if target_size is None:
-            target_size = QSize(34, 34)
-        pm = self._pixmap_by_path(path, target_size)
-        if pm.isNull():
-            return QIcon()
-        transform = QTransform().scale(-1, 1)
-        if rotation:
-            transform = transform.rotate(rotation)
-        return QIcon(pm.transformed(transform, Qt.SmoothTransformation))
 
     def _nav_icon_render_options(self, icon_name: str) -> tuple[QSize, int]:
         size = QSize(*NAV_ICON_DEFAULT_SIZE)
@@ -576,11 +563,6 @@ class MainWindow(QMainWindow):
     def _set_nav_button_opacity(self, opacity: float):
         _ = opacity
 
-    def _animate_nav(self, show: bool):
-        self._nav_revealed = show
-        self.nav_frame.move(0, 0)
-        self._set_nav_button_opacity(1.0)
-
     def _show_nav(self):
         self._nav_hide_timer.stop()
         self._nav_revealed = True
@@ -591,12 +573,6 @@ class MainWindow(QMainWindow):
         self._nav_revealed = True
         self.nav_frame.move(0, 0)
         self._set_nav_button_opacity(1.0)
-
-    def _cursor_inside_nav_zone(self) -> bool:
-        if not self.toggle_rail.isVisible():
-            return False
-        local_pos = self.toggle_rail.mapFromGlobal(QCursor.pos())
-        return self.toggle_rail.rect().adjusted(-2, -2, 2, 2).contains(local_pos)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
@@ -1062,22 +1038,29 @@ class MainWindow(QMainWindow):
             )
 
     def _clear_selector_session(self):
-        self._selector_mode = ''
-        self._selector_callback_server = ''
-        self._selector_request_id = ''
-        self._selector_head = ''
-        self._selector_spindle = ''
-        self._selector_initial_assignments = []
-        self._selector_initial_assignment_buckets = {}
+        self._set_selector_session_state(empty_selector_session_state())
         self._update_selector_action_button()
         self._apply_selector_context_to_pages()
         # Remove stay-on-top hint so the window behaves normally
         self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
         self.show()
 
-    def _selector_context_suffix(self) -> str:
-        parts = [part for part in [self._selector_head, self._selector_spindle] if part]
-        return ' / '.join(parts)
+    def _set_selector_session_state(self, state: dict) -> None:
+        self._selector_mode = str(state.get('mode') or '').strip().lower()
+        self._selector_callback_server = str(state.get('callback_server') or '').strip()
+        self._selector_request_id = str(state.get('request_id') or '').strip()
+        self._selector_head = str(state.get('head') or '').strip()
+        self._selector_spindle = str(state.get('spindle') or '').strip()
+        self._selector_initial_assignments = [dict(item) for item in (state.get('assignments') or []) if isinstance(item, dict)]
+        raw_buckets = state.get('assignment_buckets') or {}
+        if isinstance(raw_buckets, dict):
+            self._selector_initial_assignment_buckets = {
+                str(key): [dict(item) for item in value if isinstance(item, dict)]
+                for key, value in raw_buckets.items()
+                if isinstance(value, list)
+            }
+        else:
+            self._selector_initial_assignment_buckets = {}
 
     def _update_selector_action_button(self):
         if not hasattr(self, 'selector_send_btn'):
@@ -1244,30 +1227,10 @@ class MainWindow(QMainWindow):
                 self._apply_master_filter_to_pages()
                 self._update_master_filter_toggle_visual()
 
-        selector_mode = str(payload.get('selector_mode', '') or '').strip().lower()
-        if selector_mode in ('tools', 'jaws'):
-            self._selector_mode = selector_mode
-            self._selector_callback_server = str(payload.get('selector_callback_server', '') or '').strip()
-            self._selector_request_id = str(payload.get('selector_request_id', '') or '').strip()
-            self._selector_head = str(payload.get('selector_head', '') or '').strip()
-            self._selector_spindle = str(payload.get('selector_spindle', '') or '').strip()
-            raw_assignments = payload.get('current_assignments') if selector_mode in ('tools', 'jaws') else []
-            self._selector_initial_assignments = [
-                dict(item) for item in (raw_assignments or []) if isinstance(item, dict)
-            ]
-            raw_assignment_buckets = payload.get('current_assignments_by_target') if selector_mode == 'tools' else {}
-            if isinstance(raw_assignment_buckets, dict):
-                self._selector_initial_assignment_buckets = {
-                    str(key): [
-                        dict(item)
-                        for item in value
-                        if isinstance(item, dict)
-                    ]
-                    for key, value in raw_assignment_buckets.items()
-                    if isinstance(value, list)
-                }
-            else:
-                self._selector_initial_assignment_buckets = {}
+        selector_state = selector_session_from_payload(payload)
+        selector_mode = str(selector_state.get('mode') or '')
+        if selector_state.get('active'):
+            self._set_selector_session_state(selector_state)
             self._update_selector_action_button()
             self._apply_selector_context_to_pages()
             # Bring window on top of Work Editor
