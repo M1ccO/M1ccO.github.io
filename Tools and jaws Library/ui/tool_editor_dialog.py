@@ -30,19 +30,16 @@ from ui.tool_editor_support import (
     build_tool_type_field_state,
     component_display_for_key,
     component_dropdown_values,
-    component_items_from_rows,
     is_mill_tool_type,
     is_turning_drill_tool_type,
     known_components_from_tools,
-    spare_parts_from_rows,
 )
+from ui.tool_editor_support.detail_layout_rules import build_tool_type_layout_update
 from shared.editor_helpers import (
     setup_editor_dialog,
     create_dialog_buttons,
     apply_secondary_button_theme,
     make_arrow_button,
-    style_panel_action_button,
-    reflow_fields_grid,
     focus_editor_widget,
     build_editor_field_card,
     build_editor_field_group,
@@ -317,6 +314,7 @@ class AddEditToolDialog(QDialog):
         self._general_field_columns = None
         self._clamping_screen_bounds = False
         self._turning_drill_geometry_mode = False
+        self._spindle_orientation_mode = 'main'
         self._suspend_preview_refresh = False
         self._spare_refresh_timer = QTimer(self)
         self._spare_refresh_timer.setSingleShot(True)
@@ -398,6 +396,8 @@ class AddEditToolDialog(QDialog):
 
     def _localized_spindle_orientation(self, orientation: str) -> str:
         normalized = (orientation or 'main').strip().lower()
+        if normalized in {'both', 'both spindles', 'main/sub'}:
+            return self._t('tool_editor.spindle_orientation.both', 'Both spindles')
         if normalized in {'sub', 'sub spindle', 'subspindle'}:
             return self._t('tool_editor.spindle_orientation.sub', 'Sub spindle')
         return self._t('tool_editor.spindle_orientation.main', 'Main spindle')
@@ -532,10 +532,6 @@ class AddEditToolDialog(QDialog):
     def _focus_editor(self, widget: QWidget):
         focus_editor_widget(widget)
 
-    def _swap_field_pair(self, hide_field: QFrame, show_field: QFrame):
-        hide_field.setVisible(False)
-        show_field.setVisible(True)
-
     def _style_combo(self, combo: QComboBox):
         apply_shared_dropdown_style(combo)
         self._configure_combo_popup(combo, max_rows=8, row_height=44)
@@ -574,17 +570,31 @@ class AddEditToolDialog(QDialog):
 
     def _set_spindle_orientation_value(self, orientation: str):
         normalized = (orientation or 'main').strip().lower().replace('_', ' ')
-        is_sub = normalized in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}
+        if normalized in {'both', 'both spindles', 'main/sub'}:
+            mode = 'both'
+        elif normalized in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}:
+            mode = 'sub'
+        else:
+            mode = 'main'
+        self._spindle_orientation_mode = mode
         self.spindle_orientation_btn.blockSignals(True)
-        self.spindle_orientation_btn.setChecked(is_sub)
-        self.spindle_orientation_btn.setText(self._localized_spindle_orientation('sub' if is_sub else 'main'))
+        self.spindle_orientation_btn.setChecked(mode == 'sub')
+        self.spindle_orientation_btn.setText(self._localized_spindle_orientation(mode))
         self.spindle_orientation_btn.blockSignals(False)
 
     def _toggle_spindle_orientation(self, checked: bool):
-        self.spindle_orientation_btn.setText(self._localized_spindle_orientation('sub' if checked else 'main'))
+        self._spindle_orientation_mode = 'sub' if checked else 'main'
+        self.spindle_orientation_btn.setText(self._localized_spindle_orientation(self._spindle_orientation_mode))
+
+    def _set_spindle_orientation_both(self):
+        self._spindle_orientation_mode = 'both'
+        self.spindle_orientation_btn.blockSignals(True)
+        self.spindle_orientation_btn.setChecked(False)
+        self.spindle_orientation_btn.setText(self._localized_spindle_orientation('both'))
+        self.spindle_orientation_btn.blockSignals(False)
 
     def _get_spindle_orientation_value(self) -> str:
-        return 'sub' if self.spindle_orientation_btn.isChecked() else 'main'
+        return self._spindle_orientation_mode if self._spindle_orientation_mode in {'main', 'sub', 'both'} else 'main'
 
     def _update_spindle_orientation_visibility(self):
         # Orientation is relevant for tools on Head 2.
@@ -612,9 +622,6 @@ class AddEditToolDialog(QDialog):
     def _make_arrow_button(self, icon_name: str, tooltip: str) -> QPushButton:
         icon_path = TOOL_ICONS_DIR / icon_name
         return make_arrow_button(icon_path, tooltip)
-
-    def _style_panel_action_button(self, btn: QPushButton):
-        style_panel_action_button(btn)
 
     def _build_picker_row(self, editor: QLineEdit, handler, tooltip: str) -> QWidget:
         icon_path = TOOL_ICONS_DIR / 'menu_open.svg'
@@ -1270,35 +1277,6 @@ class AddEditToolDialog(QDialog):
         self.model_table.setCurrentCell(row, 0)
         self._refresh_measurement_part_dropdowns()
         self._refresh_models_preview()
-
-    def _browse_model_file_for_row(self, row: int):
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            self._t('tool_editor.dialog.select_stl_model', 'Select STL model'),
-            str(self._tools_models_root()),
-            self._t('jaw_editor.dialog.stl_filter', 'STL Files (*.stl)')
-        )
-        if not file_path:
-            return
-
-        name_item = self.model_table.item(row, 0)
-        file_item = self.model_table.item(row, 1)
-
-        if file_item is None:
-            file_item = QTableWidgetItem()
-            self.model_table.setItem(row, 1, file_item)
-
-        file_item.setData(Qt.UserRole, file_path)
-        file_item.setText(self._display_model_path(file_path))
-
-        if name_item is None or not name_item.text().strip():
-            if name_item is None:
-                name_item = QTableWidgetItem()
-                self.model_table.setItem(row, 0, name_item)
-            name_item.setText(self._guess_part_name_from_file(file_path))
-
-        self._refresh_models_preview()
-
 
     def _remove_model_row(self):
         row = self.model_table.currentRow()
@@ -1964,40 +1942,6 @@ class AddEditToolDialog(QDialog):
         for row in range(self.ring_measurements_table.rowCount()):
             self._ensure_measurement_part_combo(self.ring_measurements_table, row, 'part')
 
-    def _add_distance_measurement_row(self, values=None):
-        row_data = {
-            'name': self._t('tool_editor.measurements.default_distance', 'Distance'),
-            'start_part': '',
-            'start_xyz': '0, 0, 0',
-            'end_part': '',
-            'end_xyz': '0, 0, 0',
-        }
-        if isinstance(values, dict):
-            row_data.update(values)
-        self.distance_measurements_table.add_row_dict(row_data)
-        row = self.distance_measurements_table.rowCount() - 1
-        if row >= 0:
-            self._refresh_measurement_part_dropdowns()
-            self.distance_measurements_table.setCurrentCell(row, 0)
-            self.distance_measurements_table.selectRow(row)
-
-    def _add_ring_measurement_row(self, values=None):
-        row_data = {
-            'name': self._t('tool_editor.measurements.default_ring', 'Diameter'),
-            'part': '',
-            'center_xyz': '0, 0, 0',
-            'axis_xyz': '0, 1, 0',
-            'diameter': '0',
-        }
-        if isinstance(values, dict):
-            row_data.update(values)
-        self.ring_measurements_table.add_row_dict(row_data)
-        row = self.ring_measurements_table.rowCount() - 1
-        if row >= 0:
-            self._refresh_measurement_part_dropdowns()
-            self.ring_measurements_table.setCurrentCell(row, 0)
-            self.ring_measurements_table.selectRow(row)
-
     def _load_measurement_overlays(self, overlays):
         state = self._empty_measurement_editor_state()
         raw_overlays = overlays
@@ -2265,29 +2209,20 @@ class AddEditToolDialog(QDialog):
             milling_tool_types=MILLING_TOOL_TYPES,
         )
 
-        if field_state.turning_drill_type:
-            if not self._turning_drill_geometry_mode:
-                drill_angle_text = self.drill_nose_angle.text().strip()
-                if drill_angle_text:
-                    self.nose_corner_radius.setText(drill_angle_text)
-            self._turning_drill_geometry_mode = True
-            self.corner_or_nose_label.setText(self._t('tool_library.field.nose_angle', 'Nose angle'))
-        else:
-            if self._turning_drill_geometry_mode:
-                geometry_angle_text = self.nose_corner_radius.text().strip()
-                if geometry_angle_text:
-                    self.drill_nose_angle.setText(geometry_angle_text)
-            self._turning_drill_geometry_mode = False
-            if field_state.corner_label_kind == 'pitch':
-                self.corner_or_nose_label.setText(self._t('tool_library.field.pitch', 'Pitch'))
-            elif field_state.corner_label_kind == 'nose_radius':
-                self.corner_or_nose_label.setText(self._t('tool_library.field.nose_radius', 'Nose radius'))
-            elif field_state.corner_label_kind == 'nose_angle':
-                self.corner_or_nose_label.setText(self._t('tool_library.field.nose_angle', 'Nose angle'))
-            elif field_state.corner_label_kind == 'corner_radius':
-                self.corner_or_nose_label.setText(self._t('tool_library.field.corner_radius', 'Corner radius'))
-            else:
-                self.corner_or_nose_label.setText(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'))
+        layout_update = build_tool_type_layout_update(
+            field_state,
+            turning_drill_geometry_mode=self._turning_drill_geometry_mode,
+            drill_nose_angle_text=self.drill_nose_angle.text(),
+            nose_corner_radius_text=self.nose_corner_radius.text(),
+        )
+        if layout_update.copy_drill_angle_to_corner is not None:
+            self.nose_corner_radius.setText(layout_update.copy_drill_angle_to_corner)
+        if layout_update.copy_corner_angle_to_drill is not None:
+            self.drill_nose_angle.setText(layout_update.copy_corner_angle_to_drill)
+        self._turning_drill_geometry_mode = layout_update.next_turning_drill_geometry_mode
+        self.corner_or_nose_label.setText(
+            self._t(layout_update.corner_label_key, layout_update.corner_label_fallback)
+        )
 
         self.corner_or_nose_field.setVisible(field_state.show_corner_or_nose)
         self.drill_field.setVisible(field_state.show_drill_field)
@@ -2312,21 +2247,6 @@ class AddEditToolDialog(QDialog):
         QTimer.singleShot(0, self._update_notes_editor_height)
         if self._assembly_transform_enabled:
             QTimer.singleShot(0, lambda: self._request_preview_transform_snapshot(refresh_selection=True))
-
-    def _component_items_from_table(self):
-        return component_items_from_rows(
-            self.parts_table.row_dicts(),
-            translate=self._t,
-            localized_cutting_type=self._localized_cutting_type,
-        )
-
-    def _spare_parts_from_table(self):
-        rows = []
-        for row in range(self.spare_parts_table.rowCount()):
-            entry = self.spare_parts_table.row_dict(row)
-            entry['component_key'] = self._get_spare_component_key(row)
-            rows.append(entry)
-        return spare_parts_from_rows(rows)
 
     def get_tool_data(self):
         return self._payload_adapter.collect_from_dialog(self)

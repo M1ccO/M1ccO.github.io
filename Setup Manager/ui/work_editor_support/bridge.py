@@ -271,7 +271,24 @@ class SelectorSessionBridge(QObject):
             payload_spindle = self._normalize_spindle(payload.get("selector_spindle"))
             if payload_spindle:
                 effective_request["spindle"] = payload_spindle
-            handled = self._apply_tool_result(effective_request, selected_items)
+
+            # If the Tool Library sent per-bucket data, apply each spindle bucket
+            # independently so that sub-spindle changes are never lost.
+            buckets_by_target = payload.get("assignment_buckets_by_target")
+            if isinstance(buckets_by_target, dict) and buckets_by_target:
+                for target_key, bucket_items in buckets_by_target.items():
+                    if not isinstance(bucket_items, list):
+                        continue
+                    parts = str(target_key or "").split(":", 1)
+                    bucket_head = self._normalize_head(parts[0]) if parts else effective_request.get("head", "")
+                    bucket_spindle = self._normalize_spindle(parts[1]) if len(parts) > 1 else "main"
+                    bucket_request = dict(effective_request)
+                    bucket_request["head"] = bucket_head
+                    bucket_request["spindle"] = bucket_spindle
+                    if self._apply_tool_result(bucket_request, bucket_items):
+                        handled = True
+            else:
+                handled = self._apply_tool_result(effective_request, selected_items)
         elif kind == "jaws":
             selected_items = payload.get("jaws")
             if not isinstance(selected_items, list):

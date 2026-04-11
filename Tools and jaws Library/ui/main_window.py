@@ -960,6 +960,14 @@ class MainWindow(QMainWindow):
         """Switch back to Setup Manager."""
         import ctypes
         import ctypes.wintypes
+
+        # Selector mode is session-scoped. Clear it before handoff so the
+        # hidden Tool Library instance always reopens in normal library mode
+        # unless a fresh selector payload explicitly enables selector mode.
+        self._set_selector_session_state(empty_selector_session_state())
+        self._update_selector_action_button()
+        self._apply_selector_context_to_pages()
+
         x, y, width, height = self._current_window_rect()
 
         # Grant Setup Manager permission to take foreground focus (Windows).
@@ -1104,8 +1112,11 @@ class MainWindow(QMainWindow):
             selected_items = []
             selector_head = self._selector_head
             selector_spindle = self._selector_spindle
+            assignment_buckets_by_target: dict = {}
             if hasattr(active_page, 'selector_assigned_tools_for_setup_assignment'):
                 selected_items = active_page.selector_assigned_tools_for_setup_assignment()
+            if hasattr(active_page, 'selector_assignment_buckets_for_setup_assignment'):
+                assignment_buckets_by_target = active_page.selector_assignment_buckets_for_setup_assignment()
             if hasattr(active_page, 'selector_current_target_for_setup_assignment'):
                 target = active_page.selector_current_target_for_setup_assignment()
                 if isinstance(target, dict):
@@ -1154,6 +1165,8 @@ class MainWindow(QMainWindow):
         if kind == 'tools':
             payload['selector_head'] = selector_head
             payload['selector_spindle'] = selector_spindle
+            if assignment_buckets_by_target:
+                payload['assignment_buckets_by_target'] = assignment_buckets_by_target
 
         socket = QLocalSocket()
         socket.connectToServer(self._selector_callback_server)

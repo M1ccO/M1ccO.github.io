@@ -85,6 +85,10 @@ def _build_identity_group(dialog) -> QWidget:
     dialog.spindle_orientation_btn = QPushButton(dialog._localized_spindle_orientation("main"))
     dialog.spindle_orientation_btn.setCheckable(True)
     dialog.spindle_orientation_btn.clicked.connect(dialog._toggle_spindle_orientation)
+    dialog.spindle_orientation_btn.setContextMenuPolicy(Qt.CustomContextMenu)
+    dialog.spindle_orientation_btn.customContextMenuRequested.connect(
+        lambda _pos: dialog._set_spindle_orientation_both()
+    )
     apply_secondary_button_theme(dialog.spindle_orientation_btn)
     dialog.spindle_orientation_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
     dialog.spindle_orientation_btn.setFixedWidth(148)

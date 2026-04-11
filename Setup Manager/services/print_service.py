@@ -471,6 +471,22 @@ class PrintService:
                 return candidate
         return None
 
+    @staticmethod
+    def _is_turning_tool_type(tool_type) -> bool:
+        tool = PrintService._to_text(tool_type)
+        return tool in {
+            "O.D Turning",
+            "I.D Turning",
+            "O.D Groove",
+            "I.D Groove",
+            "Face Groove",
+            "O.D Thread",
+            "I.D Thread",
+            "Turn Thread",
+            "Turn Drill",
+            "Turn Spot Drill",
+        }
+
     def _tool_comment_lines(self, tool, width):
         comment = self._to_text(tool.get("comment"))
         if not comment:
@@ -497,9 +513,27 @@ class PrintService:
         icon_x = x + 8
         icon_size = 14
         icon_y = top_y - ((card_h + icon_size) / 2)
+        is_sub_turning = (
+            self._to_text(tool.get("spindle")).lower() == "sub"
+            and self._is_turning_tool_type(tool.get("tool_type", ""))
+        )
         if icon_path is not None:
             try:
-                canvas.drawImage(str(icon_path), icon_x, icon_y, width=icon_size, height=icon_size, preserveAspectRatio=True, mask='auto')
+                if is_sub_turning:
+                    canvas.saveState()
+                    canvas.scale(-1, 1)
+                    canvas.drawImage(
+                        str(icon_path),
+                        -icon_x - icon_size,
+                        icon_y,
+                        width=icon_size,
+                        height=icon_size,
+                        preserveAspectRatio=True,
+                        mask='auto',
+                    )
+                    canvas.restoreState()
+                else:
+                    canvas.drawImage(str(icon_path), icon_x, icon_y, width=icon_size, height=icon_size, preserveAspectRatio=True, mask='auto')
             except Exception:
                 pass
 

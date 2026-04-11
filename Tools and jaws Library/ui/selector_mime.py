@@ -57,6 +57,7 @@ def first_dropped_jaw(mime: QMimeData) -> dict | None:
         return {
             "jaw_id": jaw_id,
             "jaw_type": str(item.get("jaw_type") or "").strip(),
+            "spindle_side": str(item.get("spindle_side") or "").strip(),
         }
     return None
 

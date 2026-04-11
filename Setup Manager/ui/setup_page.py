@@ -7,7 +7,7 @@ from datetime import date
 from typing import Callable
 
 from PySide6.QtCore import QDate, QEvent, QSignalBlocker, Qt, Signal, QSize, QTimer, QModelIndex
-from PySide6.QtGui import QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel, QTransform
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QAbstractSpinBox,
@@ -109,6 +109,19 @@ def _toolbar_icon_with_svg_render_fallback(name: str, size: int = 28) -> QIcon:
 class ToolNameCardWidget(QFrame):
     """Compact read-only tool card: icon + tool name only."""
 
+    _TURNING_TOOL_TYPES = {
+        "O.D Turning",
+        "I.D Turning",
+        "O.D Groove",
+        "I.D Groove",
+        "Face Groove",
+        "O.D Thread",
+        "I.D Thread",
+        "Turn Thread",
+        "Turn Drill",
+        "Turn Spot Drill",
+    }
+
     def __init__(self, tool: dict, parent=None):
         super().__init__(parent)
         self.tool = tool or {}
@@ -126,7 +139,10 @@ class ToolNameCardWidget(QFrame):
         icon_name = self._pick_icon_name((self.tool.get("tool_type") or "").strip())
         icon_path = self._resolve_tool_icon(icon_name)
         if icon_path.exists():
-            icon_label.setPixmap(QIcon(str(icon_path)).pixmap(QSize(34, 34)))
+            pixmap = QIcon(str(icon_path)).pixmap(QSize(34, 34))
+            if self._should_mirror_icon():
+                pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+            icon_label.setPixmap(pixmap)
         icon_label.setFixedSize(40, 40)
         icon_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(icon_label, 0, Qt.AlignVCenter)
@@ -147,6 +163,11 @@ class ToolNameCardWidget(QFrame):
     def _pick_icon_name(tool_type: str) -> str:
         mapped = TOOL_TYPE_TO_ICON.get(tool_type)
         return mapped if mapped else DEFAULT_TOOL_ICON
+
+    def _should_mirror_icon(self) -> bool:
+        spindle = str(self.tool.get("spindle") or "").strip().lower()
+        tool_type = str(self.tool.get("tool_type") or "").strip()
+        return spindle == "sub" and tool_type in self._TURNING_TOOL_TYPES
 
     @staticmethod
     def _resolve_tool_icon(icon_name: str) -> Path:

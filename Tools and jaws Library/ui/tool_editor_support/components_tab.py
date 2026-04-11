@@ -5,7 +5,6 @@ constructs the widgets, assigns them back onto the dialog, and wires the
 existing callbacks.
 """
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -14,7 +13,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
-    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -48,16 +46,6 @@ def _configure_parts_table(table: PartsTable, *, hide_column: int | None, widths
     table.setMinimumHeight(minimum_height)
     if hide_column is not None:
         table.setColumnHidden(hide_column, True)
-
-
-def _build_parts_panel(titleless_table: QWidget) -> QFrame:
-    panel = QFrame()
-    panel.setProperty("editorPartsPanel", True)
-    panel_layout = QVBoxLayout(panel)
-    panel_layout.setContentsMargins(8, 10, 8, 8)
-    panel_layout.setSpacing(8)
-    panel_layout.addWidget(titleless_table, 1)
-    return panel
 
 
 def build_components_tab(dialog, root_tabs) -> QWidget:

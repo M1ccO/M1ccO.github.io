@@ -1,9 +1,10 @@
+import json
 import sys
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QSize, Qt, Signal
-from PySide6.QtGui import QFont, QFontMetrics, QIcon
+from PySide6.QtCore import QEvent, QMimeData, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QDrag, QFont, QFontMetrics, QIcon, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -110,6 +111,197 @@ def _tool_icon_for_type(tool_type: str) -> QIcon:
         if candidate.exists():
             return QIcon(str(candidate))
     return QIcon()
+
+
+_TURNING_TOOL_TYPES = {
+    "O.D Turning",
+    "I.D Turning",
+    "O.D Groove",
+    "I.D Groove",
+    "Face Groove",
+    "O.D Thread",
+    "I.D Thread",
+    "Turn Thread",
+    "Turn Drill",
+    "Turn Spot Drill",
+}
+
+WORK_EDITOR_TOOL_ASSIGNMENT_MIME = "application/x-setup-manager-tool-assignment"
+
+
+def _encode_work_editor_tool_payload(mime: QMimeData, payload: list[dict]) -> None:
+    clean_payload = [dict(item) for item in (payload or []) if isinstance(item, dict)]
+    mime.setData(WORK_EDITOR_TOOL_ASSIGNMENT_MIME, json.dumps(clean_payload).encode("utf-8"))
+
+
+def _decode_work_editor_tool_payload(mime: QMimeData) -> list[dict]:
+    try:
+        raw = bytes(mime.data(WORK_EDITOR_TOOL_ASSIGNMENT_MIME)).decode("utf-8").strip()
+    except Exception:
+        return []
+    if not raw:
+        return []
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        return []
+    return [dict(item) for item in parsed if isinstance(item, dict)] if isinstance(parsed, list) else []
+
+
+class _WorkEditorToolAssignmentListWidget(QListWidget):
+    externalAssignmentsDropped = Signal(list, int, object)
+    orderChanged = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
+
+    def startDrag(self, supportedActions):
+        indexes = sorted(self.selectedIndexes(), key=lambda idx: idx.row())
+        if not indexes:
+            current = self.currentIndex()
+            if current.isValid():
+                indexes = [current]
+        if not indexes:
+            return
+
+        mime = self.model().mimeData(indexes) or QMimeData()
+        payload: list[dict] = []
+        for index in indexes:
+            item = self.item(index.row())
+            if item is None:
+                continue
+            assignment = item.data(Qt.UserRole)
+            if isinstance(assignment, dict):
+                payload.append(dict(assignment))
+        _encode_work_editor_tool_payload(mime, payload)
+
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        first_row = indexes[0].row()
+        ghost_item = self.item(first_row)
+        ghost_widget = self.itemWidget(ghost_item) if ghost_item is not None else None
+        if isinstance(ghost_widget, QWidget):
+            card_widget = ghost_widget.findChild(MiniAssignmentCard)
+            preview_widget = card_widget if isinstance(card_widget, QWidget) else ghost_widget
+            grabbed = preview_widget.grab()
+            if not grabbed.isNull():
+                translucent = QPixmap(grabbed.size())
+                translucent.fill(Qt.transparent)
+                painter = QPainter(translucent)
+                painter.setOpacity(0.7)
+                painter.drawPixmap(0, 0, grabbed)
+                painter.end()
+                drag.setPixmap(translucent)
+                drag.setHotSpot(translucent.rect().center())
+        elif payload:
+            text = str(payload[0].get("tool_id") or "").strip()
+            pixmap = QPixmap(220, 40)
+            pixmap.fill(QColor(0, 0, 0, 0))
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setOpacity(0.75)
+            painter.setBrush(QColor("#f0f6fc"))
+            painter.setPen(QColor("#637282"))
+            painter.drawRoundedRect(1, 1, 218, 38, 6, 6)
+            painter.setOpacity(1.0)
+            painter.setPen(QColor("#22303c"))
+            painter.drawText(10, 4, 200, 32, Qt.AlignVCenter | Qt.TextSingleLine, text)
+            painter.end()
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(pixmap.rect().center())
+
+        drag.exec(Qt.MoveAction)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(WORK_EDITOR_TOOL_ASSIGNMENT_MIME):
+            event.acceptProposedAction()
+            return
+        if event.source() is self:
+            super().dragEnterEvent(event)
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat(WORK_EDITOR_TOOL_ASSIGNMENT_MIME):
+            event.acceptProposedAction()
+            return
+        if event.source() is self:
+            super().dragMoveEvent(event)
+            return
+        event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasFormat(WORK_EDITOR_TOOL_ASSIGNMENT_MIME) and event.source() is not self:
+            dropped = _decode_work_editor_tool_payload(event.mimeData())
+            point = event.position().toPoint() if hasattr(event, "position") else event.pos()
+            row = self.indexAt(point).row()
+            if row < 0:
+                row = self.count()
+            self.externalAssignmentsDropped.emit(dropped if isinstance(dropped, list) else [], row, event.source())
+            event.acceptProposedAction()
+            return
+        super().dropEvent(event)
+        if event.source() is self:
+            self.orderChanged.emit()
+
+    def mousePressEvent(self, event):
+        point = event.position().toPoint() if hasattr(event, "position") else event.pos()
+        if self.itemAt(point) is None:
+            self.clearSelection()
+            self.setCurrentRow(-1)
+        super().mousePressEvent(event)
+
+
+class _WorkEditorToolRemoveDropButton(QPushButton):
+    assignmentsDropped = Signal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+
+    def dragEnterEvent(self, event):
+        if _decode_work_editor_tool_payload(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if _decode_work_editor_tool_payload(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dropEvent(self, event):
+        dropped = _decode_work_editor_tool_payload(event.mimeData())
+        if not dropped:
+            event.ignore()
+            return
+        self.assignmentsDropped.emit(dropped)
+        event.acceptProposedAction()
+
+
+def _is_turning_tool_type(tool_type: str) -> bool:
+    return (tool_type or "").strip() in _TURNING_TOOL_TYPES
+
+
+def _tool_icon_for_type_in_spindle(tool_type: str, spindle: str) -> QIcon:
+    icon = _tool_icon_for_type(tool_type)
+    if icon.isNull():
+        return icon
+    is_sub = (spindle or "").strip().lower() == "sub"
+    if not is_sub or not _is_turning_tool_type(tool_type):
+        return icon
+    pixmap = icon.pixmap(QSize(32, 32))
+    if pixmap.isNull():
+        return icon
+    mirrored = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+    return QIcon(mirrored)
 
 
 def _tool_icon_for_ref(tool: dict | None) -> QIcon:
@@ -656,21 +848,16 @@ class _OrderedToolList(QWidget):
         list_panel_layout.setContentsMargins(8, 10, 8, 8)
         list_panel_layout.setSpacing(0)
 
-        class _DeselectableList(QListWidget):
-            def mousePressEvent(self_inner, event):
-                point = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-                if self_inner.itemAt(point) is None:
-                    self_inner.clearSelection()
-                    self_inner.setCurrentRow(-1)
-                super(_DeselectableList, self_inner).mousePressEvent(event)
-
-        self.tool_list = _DeselectableList()
+        self.tool_list = _WorkEditorToolAssignmentListWidget()
+        self.tool_list._owner = self
         self.tool_list.setObjectName("toolIdsOrderList")
         self.tool_list.setSortingEnabled(False)
         list_panel_layout.addWidget(self.tool_list, 1)
         layout.addWidget(list_panel, 1)
 
-        btn_row = QHBoxLayout()
+        self.controls_bar = QWidget()
+        btn_row = QHBoxLayout(self.controls_bar)
+        btn_row.setContentsMargins(0, 0, 0, 0)
         btn_row.setSpacing(8)
         self.move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "\u25B2"))
         self.move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "\u25BC"))
@@ -725,7 +912,7 @@ class _OrderedToolList(QWidget):
         btn_row.addWidget(self.delete_comment_btn)
 
         btn_row.addStretch(1)
-        layout.addLayout(btn_row)
+        layout.addWidget(self.controls_bar)
 
         self.move_up_btn.clicked.connect(self._move_up)
         self.move_down_btn.clicked.connect(self._move_down)
@@ -736,6 +923,8 @@ class _OrderedToolList(QWidget):
         self.spindle_selector.currentIndexChanged.connect(self._render_current_spindle)
         self.tool_list.currentRowChanged.connect(self._update_action_states)
         self.tool_list.itemSelectionChanged.connect(self._sync_row_selection_states)
+        self.tool_list.orderChanged.connect(self._sync_assignment_order)
+        self.tool_list.externalAssignmentsDropped.connect(self._on_external_assignments_dropped)
 
         self._all_tools: list = []
         self._show_pot: bool = False
@@ -760,6 +949,9 @@ class _OrderedToolList(QWidget):
 
     def _request_selector(self):
         self.selectorRequested.emit(self._head_key, self._current_spindle())
+
+    def set_controls_visible(self, visible: bool):
+        self.controls_bar.setVisible(bool(visible))
 
     @staticmethod
     def _assignment_key(item: dict) -> str:
@@ -827,7 +1019,7 @@ class _OrderedToolList(QWidget):
         icon = QIcon()
         ref = self._tool_ref_for_assignment(assignment)
         if isinstance(ref, dict):
-            icon = _tool_icon_for_ref(ref)
+            icon = _tool_icon_for_type_in_spindle(ref.get("tool_type", ""), self._current_spindle())
         widget = self._ToolAssignmentRowWidget(
             icon=icon,
             text=display_text,
@@ -853,6 +1045,7 @@ class _OrderedToolList(QWidget):
         for index, assignment in enumerate(self._current_assignments()):
             item = QListWidgetItem()
             item.setData(Qt.UserRole, dict(assignment))
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
             has_comment = bool(str(assignment.get("comment") or "").strip())
             item.setSizeHint(QSize(0, 50 if has_comment else 42))
             self.tool_list.addItem(item)
@@ -883,6 +1076,81 @@ class _OrderedToolList(QWidget):
         self.remove_btn.setEnabled(has_selection)
         self.comment_btn.setEnabled(has_selection)
         self.delete_comment_btn.setEnabled(has_comment)
+        self.delete_comment_btn.setVisible(has_comment)
+
+    def _sync_assignment_order(self):
+        ordered: list[dict] = []
+        for row in range(self.tool_list.count()):
+            item = self.tool_list.item(row)
+            assignment = item.data(Qt.UserRole) if item is not None else None
+            if isinstance(assignment, dict):
+                ordered.append(dict(assignment))
+        self._assignments_by_spindle[self._current_spindle()] = ordered
+        self._sync_row_selection_states()
+        self._update_action_states()
+
+    def _normalized_assignment_for_current_spindle(self, assignment: dict | None) -> dict | None:
+        if not isinstance(assignment, dict):
+            return None
+        tool_id = str(assignment.get("tool_id") or assignment.get("id") or "").strip()
+        if not tool_id:
+            return None
+        entry = {
+            "tool_id": tool_id,
+            "spindle": self._current_spindle(),
+            "comment": str(assignment.get("comment") or "").strip(),
+            "pot": str(assignment.get("pot") or assignment.get("default_pot") or "").strip(),
+            "override_id": str(assignment.get("override_id") or "").strip(),
+            "override_description": str(assignment.get("override_description") or "").strip(),
+        }
+        tool_uid = assignment.get("tool_uid", assignment.get("uid"))
+        try:
+            parsed_uid = int(tool_uid) if tool_uid is not None and str(tool_uid).strip() else None
+        except Exception:
+            parsed_uid = None
+        if parsed_uid is not None:
+            entry["tool_uid"] = parsed_uid
+        return entry
+
+    def _insert_assignments(self, dropped_items: list[dict], insert_row: int) -> list[str]:
+        assignments = self._current_assignments()
+        existing_keys = {self._assignment_key(item) for item in assignments if self._assignment_key(item)}
+        insert_at = insert_row if isinstance(insert_row, int) and insert_row >= 0 else len(assignments)
+        insert_at = min(insert_at, len(assignments))
+        added_keys: list[str] = []
+        for raw_item in dropped_items or []:
+            normalized = self._normalized_assignment_for_current_spindle(raw_item)
+            if normalized is None:
+                continue
+            key = self._assignment_key(normalized)
+            if not key or key in existing_keys:
+                continue
+            assignments.insert(insert_at, normalized)
+            existing_keys.add(key)
+            added_keys.append(key)
+            insert_at += 1
+        return added_keys
+
+    def _remove_assignments_by_keys(self, assignment_keys: list[str] | set[str], *, render: bool = True):
+        keys = {str(item).strip() for item in (assignment_keys or []) if str(item).strip()}
+        if not keys:
+            return
+        remaining = [item for item in self._current_assignments() if self._assignment_key(item) not in keys]
+        self._assignments_by_spindle[self._current_spindle()] = remaining
+        if render:
+            self._render_current_spindle()
+
+    def _on_external_assignments_dropped(self, dropped_items: list[dict], insert_row: int, source_widget):
+        added_keys = self._insert_assignments(dropped_items, insert_row)
+        if not added_keys:
+            return
+        source_owner = getattr(source_widget, "_owner", None)
+        if source_owner is not None and source_owner is not self:
+            source_owner._remove_assignments_by_keys(added_keys)
+        self._render_current_spindle()
+        target_row = min(insert_row, self.tool_list.count() - 1) if self.tool_list.count() else -1
+        if target_row >= 0:
+            self.tool_list.setCurrentRow(target_row)
 
     def _move_up(self):
         assignments = self._current_assignments()
@@ -1095,7 +1363,8 @@ class _OrderedToolList(QWidget):
             if tool_uid is not None:
                 entry["tool_uid"] = tool_uid
             grouped[spindle].append(entry)
-        self._assignments_by_spindle = grouped
+        self._assignments_by_spindle.clear()
+        self._assignments_by_spindle.update(grouped)
         self._render_current_spindle()
 
     def set_tool_ids(self, tool_ids: list):
@@ -1173,6 +1442,10 @@ class WorkEditorDialog(QDialog):
         self._zero_axis_input_map: dict[tuple[str, str, str], QLineEdit] = {}
         self._jaw_selectors: dict[str, _JawSelectorPanel] = {}
         self._ordered_tool_lists: dict[str, _OrderedToolList] = {}
+        self._tool_column_lists: dict[str, dict[str, _OrderedToolList]] = {}
+        self._all_tool_list_widgets: list[_OrderedToolList] = []
+        self._active_tool_list: _OrderedToolList | None = None
+        self._syncing_tool_list_state = False
         self._sub_program_inputs: dict[str, QLineEdit] = {}
         self._tool_cache_by_head: dict[str, list[dict]] = {}
         self._tool_cache_all: list[dict] = []
@@ -1299,44 +1572,50 @@ class WorkEditorDialog(QDialog):
         return next(iter(self._ordered_tool_lists.values()))
 
     def _default_selector_spindle(self) -> str:
-        if hasattr(self, "tools_spindle_switch"):
-            return self._current_tools_spindle_value()
+        current_head = self._current_tools_head_value()
+        head_columns = self._tool_column_lists.get(current_head, {})
+        for spindle in ("main", "sub"):
+            ordered = head_columns.get(spindle)
+            if ordered is not None and hasattr(ordered, "tool_list") and ordered.tool_list.hasFocus():
+                return spindle
         return self.machine_profile.default_tools_spindle
 
-    def _current_tools_spindle_value(self) -> str:
-        if not hasattr(self, "tools_spindle_switch"):
-            return self.machine_profile.default_tools_spindle
-        return self._normalize_selector_spindle(
-            self.tools_spindle_switch.property("spindle") or self.machine_profile.default_tools_spindle
+    def _current_tools_head_value(self) -> str:
+        if not hasattr(self, "tools_head_switch"):
+            return next(iter(self._head_profiles.keys()), "HEAD1")
+        return self._normalize_selector_head(
+            self.tools_head_switch.property("head") or next(iter(self._head_profiles.keys()), "HEAD1")
         )
 
-    def _update_tools_spindle_switch_text(self):
-        if not hasattr(self, "tools_spindle_switch"):
+    def _update_tools_head_switch_text(self):
+        if not hasattr(self, "tools_head_switch"):
             return
-        spindle = self._current_tools_spindle_value()
-        label = self._spindle_label(spindle, "Main spindle")
-        self.tools_spindle_switch.setText(label)
-        self.tools_spindle_switch.setChecked(spindle == "sub")
+        head = self._current_tools_head_value()
+        head_profile = self._head_profiles.get(head)
+        label = self._head_label(head, head_profile.label_default if head_profile else head)
+        self.tools_head_switch.setText(label)
+        self.tools_head_switch.setChecked(head == "HEAD2")
 
-    def _set_tools_spindle_value(self, spindle: str):
-        normalized = self._normalize_selector_spindle(spindle)
-        if not hasattr(self, "tools_spindle_switch"):
+    def _set_tools_head_value(self, head: str):
+        normalized = self._normalize_selector_head(head)
+        if not hasattr(self, "tools_head_switch"):
             return
-        self.tools_spindle_switch.setProperty("spindle", normalized)
-        self._update_tools_spindle_switch_text()
+        self.tools_head_switch.setProperty("head", normalized)
+        self._update_tools_head_switch_text()
 
-    def _toggle_tools_spindle_view(self):
-        if not hasattr(self, "tools_spindle_switch"):
+    def _toggle_tools_head_view(self):
+        if not hasattr(self, "tools_head_switch"):
             return
-        target = "sub" if self.tools_spindle_switch.isChecked() else "main"
-        self._set_tools_spindle_value(target)
-        self._sync_tool_spindle_view()
+        target = "HEAD2" if self.tools_head_switch.isChecked() else "HEAD1"
+        self._set_tools_head_value(target)
+        self._sync_tool_head_view()
 
     def _default_selector_head(self) -> str:
-        for head_key, ordered_list in self._ordered_tool_lists.items():
-            if hasattr(ordered_list, "tool_list") and ordered_list.tool_list.hasFocus():
-                return head_key
-        return next(iter(self._head_profiles.keys()), "HEAD1")
+        for head_key, columns in self._tool_column_lists.items():
+            for ordered_list in columns.values():
+                if hasattr(ordered_list, "tool_list") and ordered_list.tool_list.hasFocus():
+                    return head_key
+        return self._current_tools_head_value()
 
     def _default_jaw_selector_spindle(self) -> str:
         for spindle_key, selector in self._jaw_selectors.items():
@@ -1391,8 +1670,10 @@ class WorkEditorDialog(QDialog):
             head_key=target_head,
             selected_items=selected_items,
         )
-        for head, ordered_list in self._ordered_tool_lists.items():
-            ordered_list._all_tools = self._tool_cache_by_head.get(head, self._tool_cache_all) or []
+        for head, columns in self._tool_column_lists.items():
+            refs = self._tool_cache_by_head.get(head, self._tool_cache_all) or []
+            for ordered_list in columns.values():
+                ordered_list._all_tools = refs
 
     def _merge_jaw_refs(self, selected_items: list[dict]):
         jaw_refs, changed = merge_jaw_refs(self._jaw_cache, selected_items)
@@ -1407,9 +1688,10 @@ class WorkEditorDialog(QDialog):
         ordered_list = self._selector_target_ordered_list(head_key)
         self._merge_tool_refs(head_key, selected_items)
 
-        bucket = ordered_list._assignments_by_spindle.setdefault(spindle, [])
-        seen_keys = {ordered_list._assignment_key(item) for item in bucket if ordered_list._assignment_key(item)}
-        added_any = False
+        # Selector order is authoritative for the active target bucket.
+        # Rebuild bucket from payload to preserve exact user ordering.
+        bucket: list[dict] = []
+        seen_keys: set[str] = set()
 
         for item in selected_items:
             if not isinstance(item, dict):
@@ -1433,13 +1715,14 @@ class WorkEditorDialog(QDialog):
                 continue
             bucket.append(entry)
             seen_keys.add(key)
-            added_any = True
 
-        # Switch the spindle combo to match the target spindle so the list shows the new tools
-        ordered_list.set_current_spindle(spindle)
-        ordered_list._render_current_spindle()
-        self._sync_tool_spindle_view()
-        return added_any or bool(selected_items)
+        ordered_list._assignments_by_spindle[spindle] = bucket
+
+        # Keep both spindle columns in sync for the target head and show that head.
+        self._set_tools_head_value(head_key)
+        self._sync_tool_head_view()
+        self._refresh_tool_head_widgets(head_key)
+        return True
 
     def _apply_jaw_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
         spindle = self._normalize_selector_spindle(request.get("spindle"))
@@ -1912,19 +2195,19 @@ class WorkEditorDialog(QDialog):
         toolbar = QHBoxLayout()
         toolbar.setContentsMargins(0, 0, 0, 0)
         toolbar.setSpacing(8)
-        toolbar.addWidget(_section_label(self._t("work_editor.tools.spindle_view", "Spindle View")))
+        toolbar.addWidget(_section_label(self._t("work_editor.tools.head_view", "Head View")))
 
-        self.tools_spindle_switch = QPushButton()
-        self.tools_spindle_switch.setProperty("panelActionButton", True)
-        self.tools_spindle_switch.setCheckable(True)
-        self.tools_spindle_switch.setMinimumWidth(112)
-        self.tools_spindle_switch.setMaximumWidth(146)
-        self.tools_spindle_switch.setFixedHeight(30)
-        self.tools_spindle_switch.clicked.connect(self._toggle_tools_spindle_view)
-        self.tools_spindle_switch.setProperty("spindle", self.machine_profile.default_tools_spindle)
-        self._update_tools_spindle_switch_text()
-        self.tools_spindle_switch.setVisible(len(self.machine_profile.spindles) > 1)
-        toolbar.addWidget(self.tools_spindle_switch)
+        self.tools_head_switch = QPushButton()
+        self.tools_head_switch.setProperty("panelActionButton", True)
+        self.tools_head_switch.setCheckable(True)
+        self.tools_head_switch.setMinimumWidth(112)
+        self.tools_head_switch.setMaximumWidth(146)
+        self.tools_head_switch.setFixedHeight(30)
+        self.tools_head_switch.clicked.connect(self._toggle_tools_head_view)
+        self.tools_head_switch.setProperty("head", next(iter(self._head_profiles.keys()), "HEAD1"))
+        self._update_tools_head_switch_text()
+        self.tools_head_switch.setVisible(len(self.machine_profile.heads) > 1)
+        toolbar.addWidget(self.tools_head_switch)
 
         self.open_tool_selector_btn = QPushButton(
             self._t("work_editor.selector.tools_button", "Select Tools")
@@ -1964,20 +2247,42 @@ class WorkEditorDialog(QDialog):
 
         host = ResponsiveColumnsHost(switch_width=820)
         for head in self.machine_profile.heads:
-            ordered = _OrderedToolList(
-                self._t(f"work_editor.tools.{head.key.lower()}", f"{head.label_default} Tools"),
+            shared_assignments = {"main": [], "sub": []}
+            main_ordered = _OrderedToolList(
+                self._spindle_label("main", "Main spindle tools"),
                 head.key,
                 translate=self._t,
             )
-            ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            ordered.spindle_selector.setVisible(False)
-            ordered.selectorRequested.connect(self._open_tool_selector_for_bucket)
-            self._ordered_tool_lists[head.key] = ordered
+            sub_ordered = _OrderedToolList(
+                self._spindle_label("sub", "Sub spindle tools"),
+                head.key,
+                translate=self._t,
+            )
+            main_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            main_ordered.spindle_selector.setVisible(False)
+            sub_ordered.spindle_selector.setVisible(False)
+            main_ordered.set_controls_visible(False)
+            sub_ordered.set_controls_visible(False)
+            main_ordered.set_current_spindle("main")
+            sub_ordered.set_current_spindle("sub")
+            main_ordered._assignments_by_spindle = shared_assignments
+            sub_ordered._assignments_by_spindle = shared_assignments
+            main_ordered.selectorRequested.connect(self._open_tool_selector_for_bucket)
+            sub_ordered.selectorRequested.connect(self._open_tool_selector_for_bucket)
+            main_ordered.tool_list.currentRowChanged.connect(lambda _row, ordered=main_ordered: self._on_tool_list_interaction(ordered))
+            sub_ordered.tool_list.currentRowChanged.connect(lambda _row, ordered=sub_ordered: self._on_tool_list_interaction(ordered))
+            main_ordered.tool_list.itemSelectionChanged.connect(lambda ordered=main_ordered: self._on_tool_list_interaction(ordered))
+            sub_ordered.tool_list.itemSelectionChanged.connect(lambda ordered=sub_ordered: self._on_tool_list_interaction(ordered))
+            self._ordered_tool_lists[head.key] = main_ordered
+            self._tool_column_lists[head.key] = {"main": main_ordered, "sub": sub_ordered}
+            self._all_tool_list_widgets.extend([main_ordered, sub_ordered])
             if head.key == "HEAD1":
-                self.head1_ordered = ordered
+                self.head1_ordered = main_ordered
             elif head.key == "HEAD2":
-                self.head2_ordered = ordered
-            host.add_widget(ordered, 1)
+                self.head2_ordered = main_ordered
+            host.add_widget(main_ordered, 1)
+            host.add_widget(sub_ordered, 1)
 
         host_surface = QFrame()
         host_surface.setProperty("toolIdsHostSurface", True)
@@ -1987,15 +2292,209 @@ class WorkEditorDialog(QDialog):
         host_surface_layout.addWidget(host, 1)
         layout.addWidget(host_surface, 1)
 
-    def _sync_tool_spindle_view(self):
-        spindle = self._current_tools_spindle_value()
-        for ordered_list in self._ordered_tool_lists.values():
+        self.shared_tool_actions = QFrame()
+        shared_actions_layout = QHBoxLayout(self.shared_tool_actions)
+        shared_actions_layout.setContentsMargins(8, 8, 8, 0)
+        shared_actions_layout.setSpacing(8)
+
+        self.shared_move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "\u25B2"))
+        self.shared_move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "\u25BC"))
+        for btn in (self.shared_move_up_btn, self.shared_move_down_btn):
+            btn.setProperty("panelActionButton", True)
+            btn.setMinimumWidth(52)
+            btn.setMaximumWidth(64)
+            btn.setStyleSheet("font-size: 16px; font-weight: 700;")
+
+        self.shared_remove_btn = _WorkEditorToolRemoveDropButton()
+        _OrderedToolList._configure_icon_action(
+            self.shared_remove_btn,
+            "delete",
+            self._t("work_editor.tools.remove", "Remove Tool"),
+            danger=True,
+        )
+
+        self.shared_comment_btn = QPushButton()
+        _OrderedToolList._configure_icon_action(
+            self.shared_comment_btn,
+            "comment",
+            self._t("work_editor.tools.add_comment", "Add Comment"),
+        )
+
+        self.shared_delete_comment_btn = QPushButton()
+        _OrderedToolList._configure_icon_action(
+            self.shared_delete_comment_btn,
+            "comment_delete",
+            self._t("work_editor.tools.delete_comment", "Delete Comment"),
+        )
+        self.shared_delete_comment_btn.setVisible(False)
+
+        self.shared_move_up_btn.clicked.connect(self._shared_move_tool_up)
+        self.shared_move_down_btn.clicked.connect(self._shared_move_tool_down)
+        self.shared_remove_btn.clicked.connect(self._shared_remove_selected_tool)
+        self.shared_remove_btn.assignmentsDropped.connect(self._remove_dragged_tool_assignments)
+        self.shared_comment_btn.clicked.connect(self._shared_add_tool_comment)
+        self.shared_delete_comment_btn.clicked.connect(self._shared_delete_tool_comment)
+
+        shared_actions_layout.addStretch(1)
+        shared_actions_layout.addWidget(self.shared_move_up_btn)
+        shared_actions_layout.addWidget(self.shared_move_down_btn)
+        shared_actions_layout.addWidget(self.shared_remove_btn)
+        shared_actions_layout.addWidget(self.shared_comment_btn)
+        shared_actions_layout.addWidget(self.shared_delete_comment_btn)
+        shared_actions_layout.addStretch(1)
+        layout.addWidget(self.shared_tool_actions, 0)
+        self._sync_tool_head_view()
+        self._update_shared_tool_actions()
+
+    def _visible_tool_lists(self) -> list[_OrderedToolList]:
+        return list(self._tool_column_lists.get(self._current_tools_head_value(), {}).values())
+
+    def _effective_active_tool_list(self) -> _OrderedToolList | None:
+        if self._active_tool_list in self._visible_tool_lists():
+            return self._active_tool_list
+        for ordered_list in self._visible_tool_lists():
+            if ordered_list.tool_list.currentRow() >= 0:
+                return ordered_list
+        return next(iter(self._visible_tool_lists()), None)
+
+    def _on_tool_list_interaction(self, ordered_list: _OrderedToolList):
+        if self._syncing_tool_list_state:
+            return
+        if ordered_list.tool_list.currentRow() >= 0 or ordered_list.tool_list.selectedIndexes():
+            self._set_active_tool_list(ordered_list)
+            return
+        if self._active_tool_list is ordered_list:
+            self._update_shared_tool_actions()
+
+    def _set_active_tool_list(self, ordered_list: _OrderedToolList | None):
+        if ordered_list is None:
+            self._active_tool_list = None
+            self._update_shared_tool_actions()
+            return
+        self._syncing_tool_list_state = True
+        try:
+            self._active_tool_list = ordered_list
+            for other in self._visible_tool_lists():
+                if other is ordered_list:
+                    continue
+                other.tool_list.blockSignals(True)
+                other.tool_list.clearSelection()
+                other.tool_list.setCurrentRow(-1)
+                other.tool_list.blockSignals(False)
+                other._sync_row_selection_states()
+                other._update_action_states()
+        finally:
+            self._syncing_tool_list_state = False
+        ordered_list._sync_row_selection_states()
+        ordered_list._update_action_states()
+        self._update_shared_tool_actions()
+
+    def _update_shared_tool_actions(self):
+        ordered_list = self._effective_active_tool_list()
+        has_selection = bool(ordered_list and ordered_list.tool_list.currentRow() >= 0)
+        current_row = ordered_list.tool_list.currentRow() if ordered_list is not None else -1
+        count = ordered_list.tool_list.count() if ordered_list is not None else 0
+        assignment = ordered_list._tool_assignment() if ordered_list is not None else None
+        has_comment = bool((assignment or {}).get("comment"))
+
+        self.shared_move_up_btn.setEnabled(has_selection and current_row > 0)
+        self.shared_move_down_btn.setEnabled(has_selection and 0 <= current_row < count - 1)
+        self.shared_remove_btn.setEnabled(has_selection)
+        self.shared_comment_btn.setEnabled(has_selection)
+        self.shared_delete_comment_btn.setVisible(has_comment)
+        self.shared_delete_comment_btn.setEnabled(has_comment)
+
+    def _shared_move_tool_up(self):
+        ordered_list = self._effective_active_tool_list()
+        if ordered_list is None:
+            return
+        ordered_list._move_up()
+        self._update_shared_tool_actions()
+
+    def _shared_move_tool_down(self):
+        ordered_list = self._effective_active_tool_list()
+        if ordered_list is None:
+            return
+        ordered_list._move_down()
+        self._update_shared_tool_actions()
+
+    def _shared_remove_selected_tool(self):
+        ordered_list = self._effective_active_tool_list()
+        if ordered_list is None:
+            return
+        ordered_list._remove_selected()
+        self._update_shared_tool_actions()
+
+    def _shared_add_tool_comment(self):
+        ordered_list = self._effective_active_tool_list()
+        if ordered_list is None:
+            return
+        ordered_list._add_or_edit_comment()
+        self._update_shared_tool_actions()
+
+    def _shared_delete_tool_comment(self):
+        ordered_list = self._effective_active_tool_list()
+        if ordered_list is None:
+            return
+        ordered_list._delete_comment()
+        self._update_shared_tool_actions()
+
+    def _remove_dragged_tool_assignments(self, dropped_items: list[dict]):
+        active_head = self._current_tools_head_value()
+        columns = self._tool_column_lists.get(active_head, {})
+        affected_list: _OrderedToolList | None = None
+        for spindle in ("main", "sub"):
+            target_list = columns.get(spindle)
+            if target_list is None:
+                continue
+            keys = [
+                target_list._assignment_key(item)
+                for item in (dropped_items or [])
+                if isinstance(item, dict)
+                and self._normalize_selector_spindle(item.get("spindle")) == spindle
+                and target_list._assignment_key(item)
+            ]
+            if keys:
+                target_list._remove_assignments_by_keys(keys)
+                affected_list = target_list
+        if affected_list is not None:
+            self._set_active_tool_list(affected_list)
+        else:
+            self._update_shared_tool_actions()
+
+    def _refresh_tool_head_widgets(self, head_key: str):
+        columns = self._tool_column_lists.get(self._normalize_selector_head(head_key), {})
+        for spindle, ordered_list in columns.items():
             ordered_list.set_current_spindle(spindle)
+            ordered_list._render_current_spindle()
+
+    def _sync_tool_head_view(self):
+        active_head = self._current_tools_head_value()
+        for head_key, columns in self._tool_column_lists.items():
+            visible = head_key == active_head
+            for spindle, ordered_list in columns.items():
+                ordered_list.set_current_spindle(spindle)
+                ordered_list.setVisible(visible)
+                if visible:
+                    ordered_list._render_current_spindle()
+        active_columns = self._tool_column_lists.get(active_head, {})
+        preferred_active = None
+        for spindle in ("main", "sub"):
+            candidate = active_columns.get(spindle)
+            if candidate is not None and candidate.tool_list.currentRow() >= 0:
+                preferred_active = candidate
+                break
+        if preferred_active is None:
+            preferred_active = active_columns.get("main") or next(iter(active_columns.values()), None)
+        if preferred_active is not None:
+            self._set_active_tool_list(preferred_active)
+        else:
+            self._update_shared_tool_actions()
 
     def _on_print_pots_toggled(self, checked: bool):
         if checked:
             self._populate_default_pots()
-        for ordered_list in self._ordered_tool_lists.values():
+        for ordered_list in self._all_tool_list_widgets:
             ordered_list._show_pot = checked
             ordered_list._render_current_spindle()
 
@@ -2035,7 +2534,7 @@ class WorkEditorDialog(QDialog):
                         assignment["pot"] = default_pot
                         changed = True
         if changed:
-            for ordered_list in self._ordered_tool_lists.values():
+            for ordered_list in self._all_tool_list_widgets:
                 ordered_list._render_current_spindle()
 
     def _open_pot_editor(self):
@@ -2084,7 +2583,7 @@ class WorkEditorDialog(QDialog):
         if dlg.exec() == QDialog.Accepted:
             for item, inp in pot_inputs:
                 item["pot"] = inp.text().strip()
-            for ordered_list in self._ordered_tool_lists.values():
+            for ordered_list in self._all_tool_list_widgets:
                 ordered_list._render_current_spindle()
 
     def _open_tool_selector_for_bucket(self, head_key: str, spindle: str):
@@ -2219,13 +2718,18 @@ class WorkEditorDialog(QDialog):
 
         for selector in self._jaw_selectors.values():
             selector.populate(self._jaw_cache)
-        for head_key, ordered_list in self._ordered_tool_lists.items():
-            ordered_list._all_tools = self._tool_cache_by_head.get(head_key, self._tool_cache_all)
+        for head_key, columns in self._tool_column_lists.items():
+            refs = self._tool_cache_by_head.get(head_key, self._tool_cache_all)
+            for ordered_list in columns.values():
+                ordered_list._all_tools = refs
 
     def _load_work(self):
         if not self.work:
             return
         self._payload_adapter.populate_dialog(self, self.work)
+        for head_key in self._head_profiles.keys():
+            self._refresh_tool_head_widgets(head_key)
+        self._sync_tool_head_view()
 
     def get_work_data(self) -> dict:
         return self._payload_adapter.collect_payload(

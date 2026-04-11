@@ -8,11 +8,14 @@ from .components import (
     spare_parts_from_rows,
 )
 from .payload_adapter import ToolEditorPayloadAdapter
+from .detail_layout_rules import ToolTypeLayoutUpdate, build_tool_type_layout_update
 from .tool_type_rules import ToolTypeFieldState, build_tool_type_field_state, is_mill_tool_type, is_turning_drill_tool_type
 
 __all__ = [
     "ToolEditorPayloadAdapter",
+    "ToolTypeLayoutUpdate",
     "ToolTypeFieldState",
+    "build_tool_type_layout_update",
     "build_tool_type_field_state",
     "component_display_for_key",
     "component_dropdown_values",

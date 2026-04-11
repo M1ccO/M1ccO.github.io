@@ -7,7 +7,7 @@ from pathlib import Path
 
 from typing import Callable
 
-from PySide6.QtCore import QEvent, QModelIndex, QPoint, QSize, Qt, QMimeData, Signal
+from PySide6.QtCore import QEvent, QModelIndex, QPoint, QSize, Qt, QMimeData, Signal, QTimer
 from PySide6.QtGui import QColor, QDrag, QIcon, QImage, QPainter, QPixmap, QStandardItem, QStandardItemModel, QTransform
 from PySide6.QtWidgets import (
     QApplication,
@@ -127,6 +127,7 @@ class _JawCatalogListView(QListView):
                 {
                     'jaw_id': jaw_id,
                     'jaw_type': str(jaw_data.get('jaw_type') if isinstance(jaw_data, dict) else '').strip(),
+                    'spindle_side': str(jaw_data.get('spindle_side') if isinstance(jaw_data, dict) else '').strip(),
                 }
             )
         if not payload:
@@ -213,6 +214,10 @@ class _JawAssignmentSlot(QGroupBox):
         self._selected = False
         self._content_height = 38
         self._drag_start_pos = None
+        self._invalid_drop_active = False
+        self._invalid_drop_timer = QTimer(self)
+        self._invalid_drop_timer.setSingleShot(True)
+        self._invalid_drop_timer.timeout.connect(self._clear_invalid_drop_feedback)
         self.setAcceptDrops(True)
         self.setProperty('toolIdsPanel', True)
         apply_titled_section_style(self)
@@ -242,6 +247,24 @@ class _JawAssignmentSlot(QGroupBox):
         if self._assignment_card is not None:
             self._assignment_card.set_selected(self._selected)
 
+    def flash_invalid_drop(self):
+        """Temporarily highlight this slot red when an incompatible jaw is dropped."""
+        self._invalid_drop_active = True
+        self.setStyleSheet(
+            'QGroupBox {'
+            ' border: 2px solid #d84a4a;'
+            ' border-radius: 8px;'
+            '}'
+            'QGroupBox::title {'
+            ' color: #c83a3a;'
+            '}'
+        )
+        self._invalid_drop_timer.start(550)
+
+    def _clear_invalid_drop_feedback(self):
+        self._invalid_drop_active = False
+        self.setStyleSheet('')
+
     def assignment(self) -> dict | None:
         return dict(self._assignment) if isinstance(self._assignment, dict) else None
 
@@ -254,6 +277,9 @@ class _JawAssignmentSlot(QGroupBox):
                     'jaw_id': jaw_id,
                     'jaw_type': str(jaw.get('jaw_type') or '').strip(),
                 }
+                spindle_side = str(jaw.get('spindle_side') or '').strip()
+                if spindle_side:
+                    normalized['spindle_side'] = spindle_side
         self._assignment = normalized
         self._refresh_ui()
 
@@ -262,8 +288,10 @@ class _JawAssignmentSlot(QGroupBox):
             jaw_id = str(self._assignment.get('jaw_id') or '').strip()
             jaw_type = str(self._assignment.get('jaw_type') or '').strip()
             title = f'{jaw_id}  -  {jaw_type}' if jaw_type else jaw_id
+            # Enrich assignment with slot_key so jaw_icon_for_row picks correct spindle icon.
+            _icon_jaw = {**self._assignment, 'spindle_side': 'sub' if self._slot_key == 'sub' else 'main'}
             if self._assignment_card is None:
-                icon = jaw_icon_for_row(self._assignment)
+                icon = jaw_icon_for_row(_icon_jaw)
                 self._assignment_card = _DraggableJawAssignmentCard(
                     icon=icon,
                     title=title,
@@ -278,11 +306,15 @@ class _JawAssignmentSlot(QGroupBox):
                 )
                 self._assignment_card.dragRequested.connect(self._start_assignment_drag)
                 self._assignment_card.setFixedHeight(self._content_height)
+                self._assignment_card.icon_label.setFixedSize(32, 32)
+                if not icon.isNull():
+                    self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
                 self.layout().insertWidget(0, self._assignment_card)
             else:
-                icon = jaw_icon_for_row(self._assignment)
+                icon = jaw_icon_for_row(_icon_jaw)
+                self._assignment_card.icon_label.setFixedSize(32, 32)
                 if icon is not None and not icon.isNull():
-                    self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(22, 22)))
+                    self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
                 self._assignment_card.title_label.setText(title)
                 self._assignment_card.setFixedHeight(self._content_height)
             self._assignment_card.subtitle_label.setVisible(False)
@@ -986,6 +1018,7 @@ class JawPage(QWidget):
         self.detail_container = QWidget()
         self.detail_container.setMinimumWidth(280)
         detail_layout = QVBoxLayout(self.detail_container)
+        self._detail_container_layout = detail_layout
         detail_layout.setContentsMargins(0, 0, 0, 0)
         detail_layout.setSpacing(0)
 
@@ -1018,7 +1051,7 @@ class JawPage(QWidget):
         return self.detail_container
 
     def _build_selector_card(self) -> QFrame:
-        self.selector_card, self.selector_scroll, self.selector_panel, selector_layout = build_selector_card_shell(spacing=6)
+        self.selector_card, self.selector_scroll, self.selector_panel, selector_layout = build_selector_card_shell(spacing=8)
         selector_card_layout = QVBoxLayout(self.selector_card)
         selector_card_layout.setContentsMargins(0, 0, 0, 0)
         selector_card_layout.setSpacing(0)
@@ -1031,7 +1064,6 @@ class JawPage(QWidget):
             title_text=self._t('jaw_library.selector.header_title', 'Jaw Selector'),
             left_badge_text='SP1',
             right_badge_text=self._t('tool_library.selector.jaws', 'Jaws'),
-            fixed_height_policy=True,
         )
         selector_layout.addWidget(self.selector_info_header, 0)
 
@@ -1050,7 +1082,7 @@ class JawPage(QWidget):
 
         self.selector_hint_label = build_selector_hint_label(
             text=self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.'),
-            multiline=False,
+            multiline=True,
         )
         selector_layout.addWidget(self.selector_hint_label, 0)
 
@@ -1064,8 +1096,9 @@ class JawPage(QWidget):
         self.selector_sp2_slot.jawDropped.connect(self._on_selector_jaw_dropped)
         self.selector_sp1_slot.slotClicked.connect(self._on_selector_slot_clicked)
         self.selector_sp2_slot.slotClicked.connect(self._on_selector_slot_clicked)
-        selector_layout.addWidget(self.selector_sp1_slot)
-        selector_layout.addWidget(self.selector_sp2_slot)
+        selector_layout.addWidget(self.selector_sp1_slot, 0)
+        selector_layout.addWidget(self.selector_sp2_slot, 0)
+        selector_layout.addStretch(1)
 
         self.selector_remove_btn = _SelectorRemoveDropButton()
         apply_selector_icon_button(
@@ -1193,10 +1226,38 @@ class JawPage(QWidget):
         jaw_id = str(jaw.get('jaw_id') or jaw.get('id') or '').strip()
         if not jaw_id:
             return None
-        return {
+        normalized = {
             'jaw_id': jaw_id,
             'jaw_type': str(jaw.get('jaw_type') or '').strip(),
         }
+        spindle_side = str(jaw.get('spindle_side') or '').strip()
+        if spindle_side:
+            normalized['spindle_side'] = spindle_side
+        return normalized
+
+    @staticmethod
+    def _normalize_jaw_spindle_side(value: str | None) -> str:
+        raw = str(value or '').strip().lower()
+        if not raw:
+            return 'both'
+        if raw in {'sp1', '1'}:
+            return 'main'
+        if raw in {'sp2', '2'}:
+            return 'sub'
+        if 'both' in raw or 'molem' in raw:
+            return 'both'
+        if 'sub' in raw or 'vasta' in raw or 'counter' in raw:
+            return 'sub'
+        if 'main' in raw or 'pää' in raw or 'paa' in raw:
+            return 'main'
+        return 'both'
+
+    def _jaw_supports_selector_slot(self, jaw: dict | None, slot: str) -> bool:
+        side = self._normalize_jaw_spindle_side((jaw or {}).get('spindle_side') if isinstance(jaw, dict) else '')
+        target = self._normalize_selector_spindle(slot)
+        if side == 'both':
+            return True
+        return side == target
 
     def _selector_assignments_from_initial(self, initial_assignments: list[dict] | None) -> dict[str, dict | None]:
         """Map Setup Manager payload rows into stable SP1/SP2 slot assignments."""
@@ -1262,6 +1323,11 @@ class JawPage(QWidget):
     def _on_selector_jaw_dropped(self, slot_key: str, jaw: dict):
         normalized_slot = self._normalize_selector_spindle(slot_key)
         normalized_jaw = self._normalize_selector_jaw(jaw)
+        if normalized_jaw is not None and not self._jaw_supports_selector_slot(normalized_jaw, normalized_slot):
+            slot_widget = self.selector_sp1_slot if normalized_slot == 'main' else self.selector_sp2_slot
+            if slot_widget is not None:
+                slot_widget.flash_invalid_drop()
+            return
         self._selector_assignments[normalized_slot] = normalized_jaw
         self._selector_selected_slots = {normalized_slot} if normalized_jaw is not None else set()
         self._refresh_selector_slots()
@@ -1349,12 +1415,18 @@ class JawPage(QWidget):
         if target_mode == 'details':
             self.detail_card.setVisible(True)
             self.selector_card.setVisible(False)
+            if hasattr(self, '_detail_container_layout'):
+                self._detail_container_layout.setStretch(0, 1)
+                self._detail_container_layout.setStretch(1, 0)
             self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
             self.selector_toggle_btn.setChecked(False)
             self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_selector', 'SELECTOR'))
         else:
             self.detail_card.setVisible(False)
             self.selector_card.setVisible(True)
+            if hasattr(self, '_detail_container_layout'):
+                self._detail_container_layout.setStretch(0, 0)
+                self._detail_container_layout.setStretch(1, 1)
             self.detail_section_label.setText(self._t('tool_library.selector.selection_title', 'Selection'))
             self.selector_toggle_btn.setChecked(True)
             self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_details', 'DETAILS'))
@@ -1403,7 +1475,13 @@ class JawPage(QWidget):
             self.splitter.setSizes(self._last_splitter_sizes)
 
     def selector_assigned_jaws_for_setup_assignment(self) -> list[dict]:
-        return normalized_slot_payload(self._selector_assignments, self._normalize_selector_jaw)
+        """Return slot assignments with slot key included so Setup Manager can correlate correctly."""
+        payload: list[dict] = []
+        for slot in ('main', 'sub'):
+            normalized = self._normalize_selector_jaw(self._selector_assignments.get(slot))
+            if normalized is not None:
+                payload.append({**normalized, 'slot': slot})
+        return payload
 
     def _toggle_search(self):
         show = self.search_toggle.isChecked()

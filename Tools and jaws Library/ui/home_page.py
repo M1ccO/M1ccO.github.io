@@ -700,6 +700,7 @@ class HomePage(QWidget):
         # Icon button row (matches Work Editor tool-IDs pattern).
         selector_actions = build_selector_actions_row(spacing=4)
 
+        selector_actions.addStretch(1)
         self.selector_move_up_btn = QPushButton('\u25B2')
         style_move_arrow_button(self.selector_move_up_btn, '\u25B2',
                                 self._t('tool_library.selector.move_up', 'Move Up'))
@@ -739,6 +740,7 @@ class HomePage(QWidget):
             tooltip=self._t('tool_library.selector.delete_comment', 'Delete Comment'),
         )
         self.selector_delete_comment_btn.clicked.connect(self._delete_selector_comment)
+        self.selector_delete_comment_btn.setVisible(False)
         selector_actions.addWidget(self.selector_delete_comment_btn)
 
         selector_actions.addStretch(1)
@@ -883,6 +885,39 @@ class HomePage(QWidget):
     def _normalize_selector_spindle_value(spindle: str) -> str:
         return normalize_selector_spindle(spindle)
 
+    @staticmethod
+    def _normalize_tool_spindle_orientation(value: str | None) -> str:
+        raw = str(value or '').strip().lower().replace('_', ' ')
+        if not raw:
+            return 'main'
+        if 'both' in raw:
+            return 'both'
+        if raw in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}:
+            return 'sub'
+        return 'main'
+
+    def _tool_matches_selector_spindle(self, tool: dict) -> bool:
+        if not self._selector_active:
+            return True
+        if self._normalize_selector_head_value(self._selector_head or 'HEAD1') != 'HEAD2':
+            # HEAD1 tools are valid for both spindles on this machine profile.
+            return True
+        target = self._current_selector_spindle_value()
+        orientation = self._normalize_tool_spindle_orientation(tool.get('spindle_orientation'))
+        return orientation in {target, 'both'}
+
+    def _selector_assignment_icon(self, assignment: dict) -> QIcon:
+        icon = tool_icon_for_type(str(assignment.get('tool_type') or '').strip())
+        tool_type = str(assignment.get('tool_type') or '').strip()
+        is_turning = tool_type in TURNING_TOOL_TYPES
+        if icon.isNull() or self._current_selector_spindle_value() != 'sub' or not is_turning:
+            return icon
+        pixmap = icon.pixmap(QSize(32, 32))
+        if pixmap.isNull():
+            return icon
+        mirrored = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+        return QIcon(mirrored)
+
     @classmethod
     def _selector_target_key(cls, head: str, spindle: str) -> str:
         return f"{cls._normalize_selector_head_value(head)}:{cls._normalize_selector_spindle_value(spindle)}"
@@ -952,11 +987,16 @@ class HomePage(QWidget):
         single_selected = len(selected_rows) == 1
         current_row = selected_rows[0] if single_selected else -1
         has_items = bool(getattr(self, 'selector_assignment_list', None) and self.selector_assignment_list.count() > 0)
+        assignment = None
+        if single_selected and 0 <= current_row < len(self._selector_assigned_tools):
+            assignment = self._selector_assigned_tools[current_row]
+        has_comment = bool(str((assignment or {}).get('comment') or '').strip())
         self.selector_remove_btn.setEnabled(has_row or has_items)
         self.selector_move_up_btn.setEnabled(single_selected and current_row > 0)
         self.selector_move_down_btn.setEnabled(single_selected and current_row < self.selector_assignment_list.count() - 1)
         self.selector_comment_btn.setEnabled(single_selected)
-        self.selector_delete_comment_btn.setEnabled(single_selected)
+        self.selector_delete_comment_btn.setVisible(has_comment)
+        self.selector_delete_comment_btn.setEnabled(has_comment)
 
     def _refresh_selector_assignment_rows(self):
         if not hasattr(self, 'selector_assignment_list'):
@@ -1011,7 +1051,7 @@ class HomePage(QWidget):
                 badges.append(f'P:{pot}')
             if comment:
                 badges.append('C')
-            icon = tool_icon_for_type(str(assignment.get('tool_type') or '').strip())
+            icon = self._selector_assignment_icon(assignment)
             item = QListWidgetItem()
             item.setData(Qt.UserRole, dict(assignment))
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled)
@@ -1195,6 +1235,7 @@ class HomePage(QWidget):
         self._load_selector_bucket_for_current_target()
         self._update_selector_context_header()
         self._update_selector_assignments_section_title()
+        self.refresh_list()
         self._rebuild_selector_assignment_list()
 
     def _on_selector_cancel(self):
@@ -1299,6 +1340,7 @@ class HomePage(QWidget):
             self._update_selector_spindle_button_text()
             self._update_selector_context_header()
             self._update_selector_assignments_section_title()
+            self.refresh_list()
             self._rebuild_selector_assignment_list()
             self._set_selector_panel_mode('selector')
             return
@@ -1308,6 +1350,7 @@ class HomePage(QWidget):
         self._selector_assignments_by_target = {}
         if hasattr(self, 'selector_assignment_list'):
             self.selector_assignment_list.clear()
+        self.refresh_list()
         self._update_selector_context_header()
         self._set_selector_panel_mode('details')
         self.detail_section_label.setText(self._t('tool_library.section.tool_details', 'Tool details'))
@@ -1325,8 +1368,42 @@ class HomePage(QWidget):
             self._update_row_type_visibility(False)
 
     def selector_assigned_tools_for_setup_assignment(self) -> list[dict]:
+        # Sync the active bucket from the UI and persist it before reading all buckets.
         self._sync_selector_assignment_order()
-        return [dict(item) for item in self._selector_assigned_tools]
+        self._store_selector_bucket_for_current_target()
+        head = self._normalize_selector_head_value(self._selector_head or 'HEAD1')
+        payload: list[dict] = []
+        for key, tools in self._selector_assignments_by_target.items():
+            parts = key.split(':', 1)
+            bucket_head = self._normalize_selector_head_value(parts[0]) if parts else head
+            bucket_spindle = self._normalize_selector_spindle_value(parts[1]) if len(parts) > 1 else 'main'
+            if bucket_head != head:
+                continue  # only include the currently active head
+            for item in tools:
+                entry = dict(item)
+                entry['spindle'] = bucket_spindle
+                entry['head'] = head
+                payload.append(entry)
+        return payload
+
+    def selector_assignment_buckets_for_setup_assignment(self) -> dict[str, list[dict]]:
+        """Return per-target buckets (already persisted by selector_assigned_tools_for_setup_assignment)."""
+        head = self._normalize_selector_head_value(self._selector_head or 'HEAD1')
+        result: dict[str, list[dict]] = {}
+        for key, tools in self._selector_assignments_by_target.items():
+            parts = key.split(':', 1)
+            bucket_head = self._normalize_selector_head_value(parts[0]) if parts else head
+            bucket_spindle = self._normalize_selector_spindle_value(parts[1]) if len(parts) > 1 else 'main'
+            if bucket_head != head:
+                continue
+            normalized: list[dict] = []
+            for item in tools:
+                entry = dict(item)
+                entry['spindle'] = bucket_spindle
+                entry['head'] = head
+                normalized.append(entry)
+            result[key] = normalized
+        return result
 
     def update_selector_head(self, head: str) -> None:
         """Update the selector HEAD target (called when the HEAD dropdown changes)."""
@@ -1686,6 +1763,8 @@ class HomePage(QWidget):
             self.type_filter.currentData() or 'All',
             self._selected_head_filter(),
         )
+        if self._selector_active:
+            tools = [tool for tool in tools if self._tool_matches_selector_spindle(tool)]
         if self._master_filter_active:
             tools = [tool for tool in tools if str(tool.get('id', '')).strip() in self._master_filter_ids]
         tools = [tool for tool in tools if self._view_match(tool)]
