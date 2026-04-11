@@ -126,8 +126,9 @@ class SelectorSessionBridge(QObject):
             payload["selector_head"] = normalized_head
         if normalized_spindle:
             payload["selector_spindle"] = normalized_spindle
-        if selector_kind == "tools" and isinstance(initial_assignments, list):
+        if isinstance(initial_assignments, list):
             payload["current_assignments"] = [dict(item) for item in initial_assignments if isinstance(item, dict)]
+        if selector_kind == "tools":
             # Tool Library may switch heads/spindles during a selector session,
             # so we send every bucket up front instead of only the active one.
             payload["current_assignments_by_target"] = self._initial_tool_assignment_buckets()

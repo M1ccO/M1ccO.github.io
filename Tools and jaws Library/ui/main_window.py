@@ -4,7 +4,6 @@ from pathlib import Path
 
 from PySide6.QtCore import (
     QEvent,
-    QPoint,
     QSize,
     Signal,
     Qt,
@@ -1091,7 +1090,7 @@ class MainWindow(QMainWindow):
         jaws_selector_active = self._selector_mode == 'jaws'
         selector_head = self._selector_head
         selector_spindle = self._selector_spindle
-        selector_assignments = self._selector_initial_assignments if tools_selector_active else []
+        selector_assignments = self._selector_initial_assignments if (tools_selector_active or jaws_selector_active) else []
         selector_assignment_buckets = self._selector_initial_assignment_buckets if tools_selector_active else {}
 
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
@@ -1104,7 +1103,7 @@ class MainWindow(QMainWindow):
                     selector_assignment_buckets,
                 )
         if hasattr(self.jaws_page, 'set_selector_context'):
-            self.jaws_page.set_selector_context(jaws_selector_active, selector_spindle)
+            self.jaws_page.set_selector_context(jaws_selector_active, selector_spindle, selector_assignments)
 
     def _send_selector_selection(self):
         if self._selector_mode not in ('tools', 'jaws'):
@@ -1139,7 +1138,7 @@ class MainWindow(QMainWindow):
                 selected_items = self.home_page.selected_tools_for_setup_assignment()
             kind = 'tools'
 
-        if not selected_items:
+        if kind == 'tools' and not selected_items:
             QMessageBox.information(
                 self,
                 self._t('tool_library.selector.no_selection.title', 'Nothing selected'),
@@ -1252,7 +1251,7 @@ class MainWindow(QMainWindow):
             self._selector_request_id = str(payload.get('selector_request_id', '') or '').strip()
             self._selector_head = str(payload.get('selector_head', '') or '').strip()
             self._selector_spindle = str(payload.get('selector_spindle', '') or '').strip()
-            raw_assignments = payload.get('current_assignments') if selector_mode == 'tools' else []
+            raw_assignments = payload.get('current_assignments') if selector_mode in ('tools', 'jaws') else []
             self._selector_initial_assignments = [
                 dict(item) for item in (raw_assignments or []) if isinstance(item, dict)
             ]

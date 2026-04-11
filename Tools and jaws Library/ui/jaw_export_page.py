@@ -1,7 +1,6 @@
 from pathlib import Path
 import re
 
-from PySide6.QtCore import Qt
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 from PySide6.QtWidgets import (

@@ -10,8 +10,6 @@ from typing import Callable
 from PySide6.QtCore import QEvent, QModelIndex, QPoint, QSize, Qt, QMimeData, Signal
 from PySide6.QtGui import QColor, QDrag, QIcon, QImage, QPainter, QPixmap, QStandardItem, QStandardItemModel, QTransform
 from PySide6.QtWidgets import (
-    QAbstractButton,
-    QAbstractItemView,
     QApplication,
     QComboBox,
     QDialog,
@@ -80,7 +78,7 @@ def _jaw_icon_pixmap(jaw: dict, icon_target_size: QSize) -> QPixmap:
 from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import AutoShrinkLabel, add_shadow, apply_shared_dropdown_style, repolish_widget
 from shared.mini_assignment_card import MiniAssignmentCard
-from ui.selector_mime import SELECTOR_JAW_MIME, decode_jaw_payload, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
+from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
     has_any_selector_assignment,
@@ -91,6 +89,13 @@ from ui.selector_state_helpers import (
     toggle_selector_slot_selection,
 )
 from ui.selector_ui_helpers import event_point, normalize_selector_spindle, selector_spindle_label, widget_contains_global_point
+from ui.jaw_page_support import (
+    apply_jaw_detail_grid_rules,
+    jaw_preview_alignment_plane,
+    jaw_preview_label,
+    jaw_preview_rotation_steps,
+    jaw_preview_stl_path,
+)
 
 
 class _JawCatalogListView(QListView):
@@ -815,6 +820,22 @@ class JawPage(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(10)
 
+        filter_frame = self._build_top_filter_frame()
+        root.addWidget(filter_frame)
+
+        content = self._build_main_content_layout()
+        root.addLayout(content, 1)
+
+        self._build_primary_bottom_bar(root)
+        self._build_selector_bottom_bar(root)
+
+        self._set_view_mode('all', refresh=False)
+        self._refresh_selector_slots()
+        self._update_selector_remove_button()
+
+        self._install_layout_event_filters(filter_frame)
+
+    def _build_top_filter_frame(self) -> QFrame:
         filter_frame = QFrame()
         self.filter_frame = filter_frame
         filter_frame.setObjectName('filterFrame')
@@ -862,7 +883,6 @@ class JawPage(QWidget):
         self.detail_section_label.setProperty('detailSectionTitle', True)
         self.detail_section_label.setStyleSheet('padding: 0 2px 0 0; font-size: 18px;')
         detail_top.addWidget(self.detail_section_label)
-
         detail_top.addStretch(1)
 
         self.detail_close_btn = QToolButton()
@@ -894,8 +914,9 @@ class JawPage(QWidget):
         self.jaw_type_filter.view().installEventFilter(self)
 
         self._rebuild_filter_row()
-        root.addWidget(filter_frame)
+        return filter_frame
 
+    def _build_main_content_layout(self) -> QHBoxLayout:
         content = QHBoxLayout()
         content.setContentsMargins(0, 0, 0, 0)
         content.setSpacing(10)
@@ -919,14 +940,19 @@ class JawPage(QWidget):
                 btn.clicked.connect(lambda _checked=False, m=mode: self._set_view_mode(m))
                 side_layout.addWidget(btn)
                 self.view_buttons.append((mode, btn))
-
             side_layout.addStretch(1)
             content.addWidget(self.sidebar, 0)
 
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setHandleWidth(1)
         self.splitter.setChildrenCollapsible(False)
+        self.splitter.addWidget(self._build_catalog_list_card())
+        self.splitter.addWidget(self._build_detail_container())
 
+        content.addWidget(self.splitter, 1)
+        return content
+
+    def _build_catalog_list_card(self) -> QFrame:
         list_card = QFrame()
         list_card.setProperty('catalogShell', True)
         list_layout = QVBoxLayout(list_card)
@@ -955,9 +981,9 @@ class JawPage(QWidget):
         self.jaw_list.selectionModel().selectionChanged.connect(self._on_multi_selection_changed)
         self.jaw_list.doubleClicked.connect(self.on_item_double_clicked)
         list_layout.addWidget(self.jaw_list, 1)
+        return list_card
 
-        self.splitter.addWidget(list_card)
-
+    def _build_detail_container(self) -> QWidget:
         self.detail_container = QWidget()
         self.detail_container.setMinimumWidth(280)
         detail_layout = QVBoxLayout(self.detail_container)
@@ -985,7 +1011,14 @@ class JawPage(QWidget):
 
         detail_card_layout.addWidget(self.detail_scroll, 1)
         detail_layout.addWidget(self.detail_card, 1)
+        detail_layout.addWidget(self._build_selector_card(), 1)
 
+        self.detail_container.hide()
+        self.detail_header_container.hide()
+        self.splitter.setSizes([1, 0])
+        return self.detail_container
+
+    def _build_selector_card(self) -> QFrame:
         self.selector_card = QFrame()
         self.selector_card.setProperty('card', True)
         self.selector_card.setProperty('selectorContext', True)
@@ -1039,7 +1072,6 @@ class JawPage(QWidget):
         selector_info_layout.addLayout(badge_row)
         selector_layout.addWidget(self.selector_info_header, 0)
 
-        # ── Toggle button (SELECTOR / DETAILS) — above the subheading ──
         ctx_row = QHBoxLayout()
         ctx_row.setContentsMargins(0, 0, 0, 0)
         ctx_row.setSpacing(10)
@@ -1097,17 +1129,9 @@ class JawPage(QWidget):
 
         self.selector_scroll.setWidget(self.selector_panel)
         selector_card_layout.addWidget(self.selector_scroll, 1)
-        detail_layout.addWidget(self.selector_card, 1)
+        return self.selector_card
 
-        self.splitter.addWidget(self.detail_container)
-
-        self.detail_container.hide()
-        self.detail_header_container.hide()
-        self.splitter.setSizes([1, 0])
-
-        content.addWidget(self.splitter, 1)
-        root.addLayout(content, 1)
-
+    def _build_primary_bottom_bar(self, root: QVBoxLayout) -> None:
         self.button_bar = QFrame()
         self.button_bar.setProperty('bottomBar', True)
         actions = QHBoxLayout(self.button_bar)
@@ -1149,7 +1173,7 @@ class JawPage(QWidget):
         actions.addWidget(self.copy_btn)
         root.addWidget(self.button_bar)
 
-        # ── Selector bottom bar (VALMIS / PERUUTA) — shown in selector mode ──
+    def _build_selector_bottom_bar(self, root: QVBoxLayout) -> None:
         self.selector_bottom_bar = QFrame()
         self.selector_bottom_bar.setProperty('bottomBar', True)
         self.selector_bottom_bar.setVisible(False)
@@ -1170,10 +1194,8 @@ class JawPage(QWidget):
         sel_bar_layout.addWidget(self.selector_done_btn)
         root.addWidget(self.selector_bottom_bar)
 
-        self._set_view_mode('all', refresh=False)
-        self._refresh_selector_slots()
-        self._update_selector_remove_button()
-
+    def _install_layout_event_filters(self, filter_frame: QFrame) -> None:
+        # Keep wheel and splitter interactions consistent in list/detail/selector modes.
         self.selector_card.installEventFilter(self)
         self.selector_scroll.viewport().installEventFilter(self)
         self.selector_panel.installEventFilter(self)
@@ -1222,28 +1244,30 @@ class JawPage(QWidget):
             'jaw_type': str(jaw.get('jaw_type') or '').strip(),
         }
 
-    def _selector_context_text(self) -> str:
-        active_spindle = self._selector_spindle_label(self._selector_spindle)
-        return self._t(
-            'tool_library.selector.jaw_context',
-            'Drop jaws to SP1 and SP2 slots. Active spindle: {spindle}',
-            spindle=active_spindle,
-        )
+    def _selector_assignments_from_initial(self, initial_assignments: list[dict] | None) -> dict[str, dict | None]:
+        """Map Setup Manager payload rows into stable SP1/SP2 slot assignments."""
+        assignments = slot_assignments_state(None)
+        pending: list[dict] = []
+        for item in initial_assignments or []:
+            if not isinstance(item, dict):
+                continue
+            normalized = self._normalize_selector_jaw(item)
+            if normalized is None:
+                continue
+            spindle = normalize_selector_spindle(item.get('spindle') or item.get('slot') or '')
+            if spindle in assignments and assignments.get(spindle) is None:
+                assignments[spindle] = normalized
+            else:
+                pending.append(normalized)
+        for slot in ('main', 'sub'):
+            if assignments.get(slot) is None and pending:
+                assignments[slot] = pending.pop(0)
+        return assignments
 
     def _update_selector_spindle_ui(self):
         spindle = self._normalize_selector_spindle(self._selector_spindle)
-        if hasattr(self, 'selector_spindle_btn'):
-            self.selector_spindle_btn.setProperty('spindle', spindle)
-            self.selector_spindle_btn.setChecked(spindle == 'sub')
-            self.selector_spindle_btn.setText(self._selector_spindle_label(spindle))
         if hasattr(self, 'selector_spindle_value_label'):
             self.selector_spindle_value_label.setText(self._selector_spindle_label(spindle))
-
-    def _toggle_selector_spindle(self):
-        if not self._selector_active or not hasattr(self, 'selector_spindle_btn'):
-            return
-        self._selector_spindle = 'sub' if self.selector_spindle_btn.isChecked() else 'main'
-        self._update_selector_spindle_ui()
 
     def _refresh_selector_slots(self):
         if not hasattr(self, 'selector_sp1_slot'):
@@ -1286,11 +1310,6 @@ class JawPage(QWidget):
         normalized_jaw = self._normalize_selector_jaw(jaw)
         self._selector_assignments[normalized_slot] = normalized_jaw
         self._selector_selected_slots = {normalized_slot} if normalized_jaw is not None else set()
-        self._refresh_selector_slots()
-
-    def _clear_selector_assignments(self):
-        self._selector_assignments = slot_assignments_state(None)
-        self._selector_selected_slots.clear()
         self._refresh_selector_slots()
 
     def _remove_selected_selector_jaws(self):
@@ -1386,7 +1405,12 @@ class JawPage(QWidget):
             self.selector_toggle_btn.setChecked(True)
             self.selector_toggle_btn.setText(self._t('tool_library.selector.mode_details', 'DETAILS'))
 
-    def set_selector_context(self, active: bool, spindle: str = '') -> None:
+    def set_selector_context(
+        self,
+        active: bool,
+        spindle: str = '',
+        initial_assignments: list[dict] | None = None,
+    ) -> None:
         was_active = self._selector_active
         self._selector_active = bool(active)
         self._selector_spindle = self._normalize_selector_spindle(spindle)
@@ -1401,7 +1425,7 @@ class JawPage(QWidget):
         if self._selector_active:
             if not was_active:
                 self._selector_saved_details_hidden = self._details_hidden
-            self._selector_assignments = slot_assignments_state(None)
+            self._selector_assignments = self._selector_assignments_from_initial(initial_assignments)
             self._selector_selected_slots.clear()
             self._refresh_selector_slots()
             self._set_selector_panel_mode('selector')
@@ -1760,45 +1784,36 @@ class JawPage(QWidget):
     def _split_used_in_works(self, value: str) -> list[str]:
         return [p.strip() for p in (value or '').split('|') if p.strip()]
 
-    def populate_details(self, jaw):
-        self._clear_details()
-
-        if not jaw:
-            card = QFrame()
-            card.setProperty('subCard', True)
-            layout = QVBoxLayout(card)
-            layout.setContentsMargins(14, 14, 14, 14)
-            layout.setSpacing(10)
-            title = QLabel(self._t('jaw_library.section.details', 'Jaw details'))
-            title.setProperty('detailSectionTitle', True)
-            hint = QLabel(self._t('jaw_library.message.select_jaw_for_details', 'Select a jaw to view details.'))
-            hint.setProperty('detailHint', True)
-            hint.setWordWrap(True)
-            layout.addWidget(title)
-            layout.addWidget(hint)
-            placeholder = QFrame()
-            placeholder.setProperty('diagramPanel', True)
-            p = QVBoxLayout(placeholder)
-            p.setContentsMargins(12, 12, 12, 12)
-            p.addStretch(1)
-            p.addStretch(1)
-            layout.addWidget(placeholder)
-            self.detail_layout.addWidget(card)
-            self.detail_layout.addStretch(1)
-            return
-
+    def _build_empty_details_card(self) -> QFrame:
         card = QFrame()
         card.setProperty('subCard', True)
         layout = QVBoxLayout(card)
         layout.setContentsMargins(14, 14, 14, 14)
         layout.setSpacing(10)
+        title = QLabel(self._t('jaw_library.section.details', 'Jaw details'))
+        title.setProperty('detailSectionTitle', True)
+        hint = QLabel(self._t('jaw_library.message.select_jaw_for_details', 'Select a jaw to view details.'))
+        hint.setProperty('detailHint', True)
+        hint.setWordWrap(True)
+        layout.addWidget(title)
+        layout.addWidget(hint)
 
-        # Header
+        placeholder = QFrame()
+        placeholder.setProperty('diagramPanel', True)
+        placeholder_layout = QVBoxLayout(placeholder)
+        placeholder_layout.setContentsMargins(12, 12, 12, 12)
+        placeholder_layout.addStretch(1)
+        placeholder_layout.addStretch(1)
+        layout.addWidget(placeholder)
+        return card
+
+    def _build_jaw_detail_header(self, jaw: dict) -> QFrame:
         header = QFrame()
         header.setProperty('detailHeader', True)
-        h_layout = QVBoxLayout(header)
-        h_layout.setContentsMargins(14, 14, 14, 12)
-        h_layout.setSpacing(4)
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(14, 14, 14, 12)
+        header_layout.setSpacing(4)
+
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(10)
@@ -1810,96 +1825,25 @@ class JawPage(QWidget):
         diam_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
         title_row.addWidget(jaw_id_lbl, 1)
         title_row.addWidget(diam_lbl, 0, Qt.AlignRight)
+
         badge_row = QHBoxLayout()
         badge_row.setContentsMargins(0, 0, 0, 0)
         badge = QLabel(self._localized_jaw_type(jaw.get('jaw_type', '')))
         badge.setProperty('toolBadge', True)
         badge_row.addWidget(badge, 0, Qt.AlignLeft)
         badge_row.addStretch(1)
-        h_layout.addLayout(title_row)
-        h_layout.addLayout(badge_row)
-        layout.addWidget(header)
 
-        # Use the same shared titled-field style as Tool Library detail panel.
-        def build_field(label_text: str, value_text: str):
-            return build_titled_detail_field(label_text, '' if value_text is None else str(value_text))
+        header_layout.addLayout(title_row)
+        header_layout.addLayout(badge_row)
+        return header
 
-        def build_used_in_works_field(value_text: str):
-            return build_titled_detail_list_field(
-                self._t('jaw_library.field.used_in_works', 'Used in works:'),
-                self._split_used_in_works(value_text),
-            )
-
-        # Explicit 2-column row layout.
-        is_spiked = 'spiked' in (jaw.get('jaw_type') or '').lower()
-
-        info = QGridLayout()
-        info.setHorizontalSpacing(14)
-        info.setVerticalSpacing(8)
-
-        # Row 0: Leuka ID | Kara
-        info.addWidget(
-            build_field(self._t('jaw_library.field.jaw_id', 'Jaw ID'), jaw.get('jaw_id', '')),
-            0, 0, 1, 2, Qt.AlignTop,
-        )
-        info.addWidget(
-            build_field(
-                self._t('jaw_library.field.spindle_side', 'Spindle side'),
-                self._localized_spindle_side(jaw.get('spindle_side', '')),
-            ),
-            0, 2, 1, 2, Qt.AlignTop,
-        )
-
-        # Row 1: Kiinnityshalkaisija | Kiinnityspituus
-        info.addWidget(
-            build_field(self._t('jaw_library.field.clamping_diameter', 'Clamping diameter'), jaw.get('clamping_diameter_text', '')),
-            1, 0, 1, 2, Qt.AlignTop,
-        )
-        info.addWidget(
-            build_field(self._t('jaw_library.field.clamping_length', 'Clamping length'), jaw.get('clamping_length', '')),
-            1, 2, 1, 2, Qt.AlignTop,
-        )
-
-        # Row 2: Sorvausrengas | Viimeksi muokattu (hidden for spiked jaws)
-        if is_spiked:
-            info.addWidget(
-                build_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), jaw.get('turning_washer', '')),
-                2, 0, 1, 4, Qt.AlignTop,
-            )
-        else:
-            info.addWidget(
-                build_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), jaw.get('turning_washer', '')),
-                2, 0, 1, 2, Qt.AlignTop,
-            )
-            info.addWidget(
-                build_field(self._t('jaw_library.field.last_modified', 'Last modified'), jaw.get('last_modified', '')),
-                2, 2, 1, 2, Qt.AlignTop,
-            )
-
-        next_row = 3
-
-        used_in_works_value = _lookup_setup_db_used_in_works(jaw.get('jaw_id', ''))
-        used_in_works_field = build_used_in_works_field(used_in_works_value)
-        info.addWidget(used_in_works_field, next_row, 0, 1, 4, Qt.AlignTop)
-
-        notes_text = (jaw.get('notes', '') or '').strip()
-        if notes_text:
-            notes_field = build_titled_detail_field(
-                self._t('jaw_library.field.notes', 'Notes'),
-                notes_text,
-                multiline=True,
-            )
-            info.addWidget(notes_field, next_row + 1, 0, 1, 4, Qt.AlignTop)
-
-        layout.addLayout(info)
-
-        # Preview panel — mirrored wrapper structure from Tool Library.
+    def _build_jaw_preview_card(self, jaw: dict) -> QWidget:
         preview_card = create_titled_section(self._t('tool_library.section.preview', 'Preview'))
         preview_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        p_layout = QVBoxLayout(preview_card)
-        p_layout.setSpacing(10)
-        p_layout.setContentsMargins(6, 4, 6, 6)
+        preview_layout = QVBoxLayout(preview_card)
+        preview_layout.setSpacing(10)
+        preview_layout.setContentsMargins(6, 4, 6, 6)
 
         diagram = QWidget()
         diagram.setObjectName('detailPreviewGradientHost')
@@ -1914,12 +1858,11 @@ class JawPage(QWidget):
         diagram.setMinimumHeight(300)
         diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        d_layout = QVBoxLayout(diagram)
-        d_layout.setContentsMargins(6, 6, 6, 6)
-        d_layout.setSpacing(0)
+        diagram_layout = QVBoxLayout(diagram)
+        diagram_layout.setContentsMargins(6, 6, 6, 6)
+        diagram_layout.setSpacing(0)
 
-        stl_path = (jaw.get('stl_path', '') or '').strip()
-        viewer = None
+        stl_path = jaw_preview_stl_path(jaw)
         loaded = False
         if stl_path:
             viewer = StlPreviewWidget()
@@ -1927,52 +1870,100 @@ class JawPage(QWidget):
             viewer.set_control_hint_text(
                 self._t(
                     'tool_editor.hint.rotate_pan_zoom',
-                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                    'Rotate: left mouse ? Pan: right mouse ? Zoom: mouse wheel',
                 )
             )
-            loaded = bool(
-                viewer.load_stl(
-                    stl_path,
-                    label=jaw.get('jaw_id', self._t('jaw_library.preview.jaw_label', 'Jaw')),
-                )
-            )
+            loaded = bool(viewer.load_stl(stl_path, label=jaw_preview_label(jaw, self._t)))
             if loaded:
-                plane = (jaw.get('preview_plane', '') or 'XZ').strip()
-                if plane not in ('XZ', 'XY', 'YZ'):
-                    plane = 'XZ'
-                viewer.set_alignment_plane(plane)
-                for axis, key in (('x', 'preview_rot_x'), ('y', 'preview_rot_y'), ('z', 'preview_rot_z')):
-                    deg = int(jaw.get(key, 0) or 0) % 360
-                    if deg:
-                        viewer.rotate_model(axis, deg)
+                viewer.set_alignment_plane(jaw_preview_alignment_plane(jaw))
+                for axis, degrees in jaw_preview_rotation_steps(jaw):
+                    viewer.rotate_model(axis, degrees)
                 viewer.setMinimumHeight(260)
-                d_layout.addWidget(viewer, 1)
+                diagram_layout.addWidget(viewer, 1)
 
         if not loaded:
-            txt = QLabel(
+            placeholder = QLabel(
                 self._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
-                if stl_path else
-                self._t('tool_library.preview.none_assigned', 'No 3D model assigned.')
+                if stl_path
+                else self._t('tool_library.preview.none_assigned', 'No 3D model assigned.')
             )
-            txt.setProperty('detailHint', True)
-            txt.setWordWrap(True)
-            txt.setAlignment(Qt.AlignCenter)
-            d_layout.addStretch(1)
-            d_layout.addWidget(txt)
-            d_layout.addStretch(1)
+            placeholder.setProperty('detailHint', True)
+            placeholder.setWordWrap(True)
+            placeholder.setAlignment(Qt.AlignCenter)
+            diagram_layout.addStretch(1)
+            diagram_layout.addWidget(placeholder)
+            diagram_layout.addStretch(1)
 
-        p_layout.addWidget(diagram, 1)
-        layout.addWidget(preview_card)
+        preview_layout.addWidget(diagram, 1)
+        return preview_card
+
+    def populate_details(self, jaw):
+        self._clear_details()
+
+        if not jaw:
+            self.detail_layout.addWidget(self._build_empty_details_card())
+            self.detail_layout.addStretch(1)
+            return
+
+        card = QFrame()
+        card.setProperty('subCard', True)
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 14, 14, 14)
+        layout.setSpacing(10)
+        layout.addWidget(self._build_jaw_detail_header(jaw))
+
+        info = QGridLayout()
+        info.setHorizontalSpacing(14)
+        info.setVerticalSpacing(8)
+
+        def add_field(row: int, col: int, row_span: int, col_span: int, label_text: str, value_text: str) -> None:
+            info.addWidget(
+                build_titled_detail_field(label_text, '' if value_text is None else str(value_text)),
+                row,
+                col,
+                row_span,
+                col_span,
+                Qt.AlignTop,
+            )
+
+        next_row = apply_jaw_detail_grid_rules(
+            jaw=jaw,
+            translate=self._t,
+            localized_spindle_side=self._localized_spindle_side(jaw.get('spindle_side', '')),
+            add_field=add_field,
+        )
+
+        info.addWidget(
+            build_titled_detail_list_field(
+                self._t('jaw_library.field.used_in_works', 'Used in works:'),
+                self._split_used_in_works(_lookup_setup_db_used_in_works(jaw.get('jaw_id', ''))),
+            ),
+            next_row,
+            0,
+            1,
+            4,
+            Qt.AlignTop,
+        )
+
+        notes_text = (jaw.get('notes', '') or '').strip()
+        if notes_text:
+            info.addWidget(
+                build_titled_detail_field(
+                    self._t('jaw_library.field.notes', 'Notes'),
+                    notes_text,
+                    multiline=True,
+                ),
+                next_row + 1,
+                0,
+                1,
+                4,
+                Qt.AlignTop,
+            )
+
+        layout.addLayout(info)
+        layout.addWidget(self._build_jaw_preview_card(jaw))
         layout.addStretch(1)
         self.detail_layout.addWidget(card)
-
-    def _refresh_row_style(self, widget):
-        if widget is None:
-            return
-        style = widget.style()
-        style.unpolish(widget)
-        style.polish(widget)
-        widget.update()
 
     def select_jaw_by_id(self, jaw_id: str):
         """Navigate the list to the jaw with the given jaw_id."""

@@ -129,11 +129,7 @@ except ModuleNotFoundError:
 
 
 class _JawSelectorPanel(QWidget):
-    """Single-jaw selection panel backed by live jaw DB data.
-
-    Mirrors the Tool IDs checkable list style but enforces single selection
-    (radio-button behaviour via itemChanged guard).
-    """
+    """Compact single-jaw panel used by the work editor spindles tab."""
 
     selectionChanged = Signal(str)
 
@@ -150,44 +146,51 @@ class _JawSelectorPanel(QWidget):
         self._translate = translate or _noop_translate
         self._filter_placeholder_key = filter_placeholder_key
         self._filter_placeholder_default = filter_placeholder_default
-        self._spindle_side_filter = spindle_side_filter  # e.g. 'Main spindle' or 'Sub spindle'
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-
-        # Dynamic input section: border/title always present to avoid layout jump.
-        self.dynamic_input_group = create_titled_section(" ")
-        self.dynamic_input_group.setProperty("jawInputGroup", True)
-        self.dynamic_input_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        search_layout = QVBoxLayout(self.dynamic_input_group)
-        search_layout.setContentsMargins(10, 8, 10, 8)
-        search_layout.setSpacing(0)
-
-        self.search = QLineEdit()
-        self.search.setPlaceholderText(self._t(self._filter_placeholder_key, self._filter_placeholder_default))
-        self.search.textChanged.connect(self._on_dynamic_input_changed)
-        search_layout.addWidget(self.search)
-        layout.addWidget(self.dynamic_input_group)
-
-        selection_group = create_titled_section(title)
-        selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        selection_layout = QVBoxLayout(selection_group)
-        selection_layout.setContentsMargins(8, 10, 8, 8)
-        selection_layout.setSpacing(0)
-
-        self.jaw_list = QListWidget()
-        self.jaw_list.setProperty("jawListWidget", True)
-        self.jaw_list.setFrameShape(QFrame.NoFrame)
-        self.jaw_list.setLineWidth(0)
-        selection_layout.addWidget(self.jaw_list, 1)
-        layout.addWidget(selection_group, 1)
-
-        self._all_jaws: list = []
-        self._updating = False
-        self._filter_text = ""
+        self._spindle_side_filter = spindle_side_filter
+        self._title = title
+        self._all_jaws: list[dict] = []
+        self._selected_jaw_id = ""
         self._stop_screws_value = ""
         self._is_stop_screws_mode = False
-        self.jaw_list.itemChanged.connect(self._on_item_changed)
+        self._assignment_card: MiniAssignmentCard | None = None
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        selection_group = create_titled_section(title)
+        selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        selection_layout = QVBoxLayout(selection_group)
+        self._selection_layout = selection_layout
+        selection_layout.setContentsMargins(8, 10, 8, 8)
+        selection_layout.setSpacing(6)
+
+        self.assignment_placeholder = QLabel(self._t("work_editor.jaw.none_selected", "No jaw selected"))
+        self.assignment_placeholder.setProperty("detailHint", True)
+        self.assignment_placeholder.setStyleSheet("font-style: italic; font-weight: 400;")
+        self.assignment_placeholder.setWordWrap(False)
+        self.assignment_placeholder.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.assignment_placeholder.setFixedHeight(38)
+        selection_layout.addWidget(self.assignment_placeholder)
+        layout.addWidget(selection_group, 0)
+
+        self.stop_screws_group = create_titled_section(self._t("setup_page.field.stop_screws", "Stop Screws"))
+        self.stop_screws_group.setProperty("jawInputGroup", True)
+        self.stop_screws_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        stop_layout = QVBoxLayout(self.stop_screws_group)
+        stop_layout.setContentsMargins(10, 8, 10, 8)
+        stop_layout.setSpacing(0)
+
+        self.stop_screws_input = QLineEdit()
+        self.stop_screws_input.setPlaceholderText(
+            self._t("work_editor.jaw.stop_screws_placeholder", "e.g. 10mm")
+        )
+        self.stop_screws_input.textChanged.connect(self._on_stop_screws_changed)
+        stop_layout.addWidget(self.stop_screws_input)
+        layout.addWidget(self.stop_screws_group, 0)
+        layout.addStretch(1)
+
+        self._refresh_assignment_view()
         self._update_stop_screws_visibility()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
@@ -204,117 +207,131 @@ class _JawSelectorPanel(QWidget):
         return "spiked" in description
 
     def _selected_jaw(self) -> dict | None:
-        selected_id = self.get_value()
-        if not selected_id:
+        if not self._selected_jaw_id:
             return None
-        for jaw in self._all_jaws:
-            if (jaw.get("id") or "").strip() == selected_id:
+        for jaw in self._all_jaws or []:
+            jaw_id = str(jaw.get("id") or jaw.get("jaw_id") or "").strip()
+            if jaw_id == self._selected_jaw_id:
                 return jaw
         return None
 
+    def _jaw_icon(self) -> QIcon:
+        # Prefer spindle-specific jaw icons: sub uses jaw_sub, main uses jaw_main.
+        # Fall back to jaw/hard_jaw icons if chuck images are missing.
+        side = (self._spindle_side_filter or '').strip().lower()
+        is_sub = side in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}
+
+        lookup = []
+        if is_sub:
+            lookup += [
+                Path(TOOL_ICONS_DIR) / "jaw_sub.png",
+                Path(TOOL_LIBRARY_TOOL_ICONS_DIR) / "jaw_sub.png",
+                Path(ICONS_DIR) / "tools" / "jaw_sub.png",
+                Path(TOOL_ICONS_DIR) / "jaw_main.png",
+                Path(TOOL_LIBRARY_TOOL_ICONS_DIR) / "jaw_main.png",
+                Path(ICONS_DIR) / "tools" / "jaw_main.png",
+            ]
+        else:
+            lookup += [
+                Path(TOOL_ICONS_DIR) / "jaw_main.png",
+                Path(TOOL_LIBRARY_TOOL_ICONS_DIR) / "jaw_main.png",
+                Path(ICONS_DIR) / "tools" / "jaw_main.png",
+                Path(TOOL_ICONS_DIR) / "jaw_sub.png",
+                Path(TOOL_LIBRARY_TOOL_ICONS_DIR) / "jaw_sub.png",
+                Path(ICONS_DIR) / "tools" / "jaw_sub.png",
+            ]
+
+        # previous fallbacks
+        lookup += [
+            Path(TOOL_ICONS_DIR) / "jaw_icon.png",
+            Path(TOOL_LIBRARY_TOOL_ICONS_DIR) / "jaw_icon.png",
+            Path(TOOL_ICONS_DIR) / "hard_jaw.png",
+            Path(TOOL_LIBRARY_TOOL_ICONS_DIR) / "hard_jaw.png",
+            Path(ICONS_DIR) / "tools" / "hard_jaw.png",
+        ]
+
+        for candidate in lookup:
+            if candidate.exists():
+                icon = QIcon(str(candidate))
+                if not icon.isNull():
+                    return icon
+        return QIcon()
+
+    def _refresh_assignment_view(self):
+        jaw = self._selected_jaw()
+        has_selection = bool(self._selected_jaw_id)
+
+        if not has_selection:
+            self.assignment_placeholder.setText(self._t("work_editor.jaw.none_selected", "No jaw selected"))
+            self.assignment_placeholder.setVisible(True)
+            if self._assignment_card is not None:
+                self._assignment_card.setVisible(False)
+            return
+
+        jaw_id = self._selected_jaw_id
+        description = (jaw.get("description") or "").strip() if isinstance(jaw, dict) else ""
+        if not description and isinstance(jaw, dict):
+            description = str(jaw.get("jaw_type") or "").strip()
+        label = f"{jaw_id}  -  {description}" if description else jaw_id
+        if self._assignment_card is None:
+            icon = self._jaw_icon()
+            self._assignment_card = MiniAssignmentCard(
+                icon=icon,
+                title=label,
+                subtitle="",
+                badges=[],
+                editable=False,
+                compact=True,
+                parent=self,
+            )
+            self._assignment_card.subtitle_label.setVisible(False)
+            self._assignment_card.setMaximumWidth(420)
+            self._assignment_card.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+            if not icon.isNull():
+                self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
+            self._selection_layout.insertWidget(0, self._assignment_card)
+        else:
+            self._assignment_card.title_label.setText(label)
+            icon = self._jaw_icon()
+            if not icon.isNull():
+                self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
+            self._assignment_card.setMaximumWidth(420)
+            self._assignment_card.setVisible(True)
+        self._assignment_card.set_selected(False)
+        self.assignment_placeholder.setVisible(False)
+
     def _update_stop_screws_visibility(self):
         stop_screws_mode = self._is_spiked_jaw(self._selected_jaw())
-        if self._is_stop_screws_mode == stop_screws_mode:
-            return
         self._is_stop_screws_mode = stop_screws_mode
-        self.search.blockSignals(True)
+        self.stop_screws_group.setVisible(stop_screws_mode)
         if stop_screws_mode:
-            helper = self._t(
-                "work_editor.jaw.deselect_to_filter_hint",
-                "(deselect jaws to filter)",
-            )
-            self.dynamic_input_group.setTitle(
-                f"{self._t('setup_page.field.stop_screws', 'Stop Screws')} {helper}"
-            )
-            self.search.setPlaceholderText(
-                self._t("work_editor.jaw.stop_screws_placeholder", "e.g. 10mm")
-            )
-            self.search.setText(self._stop_screws_value)
-        else:
-            self.dynamic_input_group.setTitle(
-                " "
-            )
-            self.search.setPlaceholderText(
-                self._t(self._filter_placeholder_key, self._filter_placeholder_default)
-            )
-            self.search.setText(self._filter_text)
-            self._rebuild(self._filter_text)
-        self.search.blockSignals(False)
-
-    def _on_item_changed(self, changed_item):
-        if self._updating:
-            return
-        if changed_item.checkState() == Qt.Checked:
-            # Enforce single selection: uncheck every other item.
-            self._updating = True
-            for i in range(self.jaw_list.count()):
-                item = self.jaw_list.item(i)
-                if item is not changed_item:
-                    item.setCheckState(Qt.Unchecked)
-            self._updating = False
-        self._update_stop_screws_visibility()
-        self.selectionChanged.emit(self.get_value())
+            self.stop_screws_input.blockSignals(True)
+            self.stop_screws_input.setText(self._stop_screws_value)
+            self.stop_screws_input.blockSignals(False)
 
     def populate(self, jaws: list):
-        self._all_jaws = jaws
-        self._rebuild(self._filter_text)
+        self._all_jaws = [dict(item) for item in (jaws or []) if isinstance(item, dict)]
+        self._refresh_assignment_view()
         self._update_stop_screws_visibility()
 
-    def _rebuild(self, filter_text: str):
-        self._updating = True
-        q = filter_text.strip().lower()
-        current = self.get_value()
-        self.jaw_list.clear()
-        for jaw in self._all_jaws:
-            jaw_id = (jaw.get("id") or "").strip()
-            if not jaw_id:
-                continue
-            # Filter by spindle side if a filter is set; jaws with 'Both' always pass.
-            if self._spindle_side_filter:
-                jaw_side = (jaw.get("spindle_side") or "").strip()
-                if jaw_side and jaw_side.lower() not in (self._spindle_side_filter.lower(), "both"):
-                    continue
-            description = (jaw.get("description") or "").strip()
-            label = f"{jaw_id}  \u2014  {description}" if description else jaw_id
-            if q and q not in label.lower():
-                continue
-            item = QListWidgetItem(label)
-            item.setData(Qt.UserRole, jaw_id)
-            item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-            item.setCheckState(Qt.Checked if jaw_id == current else Qt.Unchecked)
-            self.jaw_list.addItem(item)
-        self._updating = False
-
-    def _on_dynamic_input_changed(self, text: str):
-        if self._is_stop_screws_mode:
-            self._stop_screws_value = text.strip()
-            return
-        self._filter_text = text
-        self._rebuild(self._filter_text)
+    def _on_stop_screws_changed(self, text: str):
+        self._stop_screws_value = (text or "").strip()
 
     def get_value(self) -> str:
-        for i in range(self.jaw_list.count()):
-            item = self.jaw_list.item(i)
-            if item.checkState() == Qt.Checked:
-                return item.data(Qt.UserRole)
-        return ""
+        return self._selected_jaw_id
 
     def set_value(self, jaw_id: str):
-        self._updating = True
-        jaw_id = (jaw_id or "").strip()
-        for i in range(self.jaw_list.count()):
-            item = self.jaw_list.item(i)
-            item.setCheckState(Qt.Checked if item.data(Qt.UserRole) == jaw_id else Qt.Unchecked)
-        self._updating = False
+        self._selected_jaw_id = (jaw_id or "").strip()
+        self._refresh_assignment_view()
         self._update_stop_screws_visibility()
         self.selectionChanged.emit(self.get_value())
 
     def set_stop_screws(self, value: str):
         self._stop_screws_value = (value or "").strip()
         if self._is_stop_screws_mode:
-            self.search.blockSignals(True)
-            self.search.setText(self._stop_screws_value)
-            self.search.blockSignals(False)
+            self.stop_screws_input.blockSignals(True)
+            self.stop_screws_input.setText(self._stop_screws_value)
+            self.stop_screws_input.blockSignals(False)
 
     def get_stop_screws(self) -> str:
         if not self._is_spiked_jaw(self._selected_jaw()):
@@ -1190,19 +1207,16 @@ class WorkEditorDialog(QDialog):
         self.tabs = QTabWidget(self)
 
         self.general_tab = QWidget()
-        self.spindles_tab = QWidget()
         self.zeros_tab = QWidget()
         self.tools_tab = QWidget()
         self.notes_tab = QWidget()
 
         self.tabs.addTab(self.general_tab, self._t("work_editor.tab.general", "General"))
-        self.tabs.addTab(self.spindles_tab, self._t("work_editor.tab.spindles", "Spindles"))
         self.tabs.addTab(self.zeros_tab, self._t("work_editor.tab.zero_points", "Zero Points"))
         self.tabs.addTab(self.tools_tab, self._t("work_editor.tab.tool_ids", "Tool IDs"))
         self.tabs.addTab(self.notes_tab, self._t("work_editor.tab.notes", "Notes"))
 
         self._build_general_tab()
-        self._build_spindles_tab()
         self._build_zeros_tab()
         self._build_tools_tab()
         self._build_notes_tab()
@@ -1326,7 +1340,8 @@ class WorkEditorDialog(QDialog):
 
     def _default_jaw_selector_spindle(self) -> str:
         for spindle_key, selector in self._jaw_selectors.items():
-            if hasattr(selector, "jaw_list") and selector.jaw_list.hasFocus():
+            focus_widget = selector.focusWidget()
+            if focus_widget is not None and selector.isAncestorOf(focus_widget):
                 return spindle_key
         return self._default_selector_spindle()
 
@@ -1430,26 +1445,55 @@ class WorkEditorDialog(QDialog):
         spindle = self._normalize_selector_spindle(request.get("spindle"))
         self._merge_jaw_refs(selected_items)
 
-        selected_jaw = None
+        selected_by_spindle: dict[str, str] = {}
         for item in selected_items:
             if not isinstance(item, dict):
                 continue
             jaw_id = str(item.get("jaw_id") or item.get("id") or "").strip()
-            if jaw_id:
-                selected_jaw = jaw_id
-                break
-        if not selected_jaw:
-            self._show_selector_warning(
-                self._t("work_editor.selector.malformed_callback.title", "Selection callback failed"),
-                self._t(
-                    "work_editor.selector.malformed_callback.body",
-                    "Tool Library returned an empty jaw selection.",
-                ),
-            )
-            return False
+            if not jaw_id:
+                continue
+            item_spindle = self._normalize_selector_spindle(item.get("spindle") or item.get("slot") or "")
+            if item_spindle in ("main", "sub"):
+                selected_by_spindle[item_spindle] = jaw_id
+
+        if selected_by_spindle:
+            main_selector = self._jaw_selectors.get("main")
+            sub_selector = self._jaw_selectors.get("sub")
+            if main_selector is not None:
+                main_selector.set_value(selected_by_spindle.get("main", ""))
+            if sub_selector is not None:
+                sub_selector.set_value(selected_by_spindle.get("sub", ""))
+            return True
+
+        selected_jaws: list[str] = []
+        for item in selected_items:
+            if not isinstance(item, dict):
+                continue
+            jaw_id = str(item.get("jaw_id") or item.get("id") or "").strip()
+            if jaw_id and jaw_id not in selected_jaws:
+                selected_jaws.append(jaw_id)
+
+        if not selected_jaws:
+            main_selector = self._jaw_selectors.get("main")
+            sub_selector = self._jaw_selectors.get("sub")
+            if main_selector is not None:
+                main_selector.set_value("")
+            if sub_selector is not None:
+                sub_selector.set_value("")
+            return True
+
+        if len(selected_jaws) >= 2:
+            main_selector = self._jaw_selectors.get("main")
+            sub_selector = self._jaw_selectors.get("sub")
+            if main_selector is not None:
+                main_selector.set_value(selected_jaws[0])
+            if sub_selector is not None:
+                sub_selector.set_value(selected_jaws[1])
+            return True
 
         target_selector = self._jaw_selectors.get(spindle, self._jaw_selectors.get("main"))
-        target_selector.set_value(selected_jaw)
+        if target_selector is not None:
+            target_selector.set_value(selected_jaws[0])
         return True
 
     def _dialog_title(self) -> str:
@@ -1506,7 +1550,7 @@ class WorkEditorDialog(QDialog):
                 widget.setVisible(show_xy)
 
         for spacer in self._zero_row_spacers:
-            spacer.setMinimumWidth(82 if show_xy else 0)
+            spacer.setMinimumWidth(56 if show_xy else 0)
 
         for combo in self._zero_coord_combos:
             if show_xy:
@@ -1532,7 +1576,7 @@ class WorkEditorDialog(QDialog):
                 grid.setColumnStretch(col, axis_stretch[axis])
             grid.setColumnStretch(1, 1 if show_xy else 0)
             grid.setColumnStretch(0, 0)
-            grid.setColumnMinimumWidth(0, 96 if show_xy else 78)
+            grid.setColumnMinimumWidth(0, 72 if show_xy else 58)
 
         for grid, group in self._zero_grids_with_groups:
             if show_xy:
@@ -1551,10 +1595,15 @@ class WorkEditorDialog(QDialog):
                 self.zero_points_host._layout.setDirection(direction)
                 self.zero_points_host._update_separator_shapes()
 
-    def _build_head_zero_group(self, title: str, head_key: str) -> QGroupBox:
+    def _build_spindle_zero_group(self, title: str, spindle_key: str) -> QGroupBox:
         group = create_titled_section(title)
         group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        grid = QGridLayout(group)
+        root = QVBoxLayout(group)
+        root.setContentsMargins(8, 6, 8, 8)
+        root.setSpacing(8)
+
+        grid_host = QWidget(group)
+        grid = QGridLayout(grid_host)
         grid.setContentsMargins(12, 8, 12, 8)
         grid.setHorizontalSpacing(8)
         grid.setVerticalSpacing(6)
@@ -1562,7 +1611,7 @@ class WorkEditorDialog(QDialog):
         self._zero_grids_with_groups.append((grid, group))
 
         spacer = QLabel("")
-        spacer.setMinimumWidth(82)
+        spacer.setMinimumWidth(56)
         grid.addWidget(spacer, 0, 0)
         self._zero_row_spacers.append(spacer)
 
@@ -1578,14 +1627,14 @@ class WorkEditorDialog(QDialog):
             grid.addWidget(axis_header, 0, col)
             self._zero_axis_widgets[axis].append(axis_header)
 
-        head_prefix = head_key.lower()
-        for row, spindle_key in enumerate(self._spindle_profiles.keys(), start=1):
-            spindle_profile = self._spindle_profiles.get(spindle_key)
-            spindle_label = QLabel(
-                spindle_profile.short_label if spindle_profile is not None else spindle_key.upper()
+        for row, head in enumerate(self.machine_profile.heads, start=1):
+            head_key = head.key
+            head_prefix = head_key.lower()
+            head_label = QLabel(
+                self._t(f"setup_page.section.{head_key.lower()}", head_key)
             )
-            spindle_label.setWordWrap(False)
-            grid.addWidget(spindle_label, row, 0)
+            head_label.setWordWrap(False)
+            grid.addWidget(head_label, row, 0)
 
             combo_attr_name = f"{head_prefix}_{spindle_key}_coord_combo"
             coord_combo = QComboBox()
@@ -1611,6 +1660,8 @@ class WorkEditorDialog(QDialog):
         grid.setColumnStretch(1, 1)
         for col in range(2, 2 + len(self._zero_axes)):
             grid.setColumnStretch(col, 1)
+        root.addWidget(grid_host, 0)
+
         return group
 
     def _set_coord_combo(self, combo: QComboBox, value: str, default: str):
@@ -1625,9 +1676,6 @@ class WorkEditorDialog(QDialog):
             if profile is None:
                 selector.setVisible(False)
                 continue
-            selector.search.setPlaceholderText(
-                self._t(profile.jaw_filter_placeholder_key, profile.jaw_filter_placeholder_default)
-            )
             selector._spindle_side_filter = profile.jaw_filter
 
     def _build_general_tab(self):
@@ -1728,8 +1776,8 @@ class WorkEditorDialog(QDialog):
             filter_placeholder_default="Suodata Vastakara-leukoja...",
             spindle_side_filter="Sub spindle",
         )
-        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._jaw_selectors["main"] = self.main_jaw_selector
         self._jaw_selectors["sub"] = self.sub_jaw_selector
         self.sub_jaw_selector.setVisible("sub" in self._spindle_profiles)
@@ -1777,8 +1825,36 @@ class WorkEditorDialog(QDialog):
             )
         content_layout.addWidget(programs_group)
 
-        xy_toggle_row = QHBoxLayout()
-        xy_toggle_row.setContentsMargins(2, 0, 2, 0)
+        self.main_jaw_selector = _JawSelectorPanel(
+            self._t("work_editor.jaw.main_spindle_jaws", "Pääkaran leuat"),
+            translate=self._t,
+            spindle_side_filter="Main spindle",
+        )
+        self.sub_jaw_selector = _JawSelectorPanel(
+            self._t("work_editor.jaw.sub_spindle_jaws", "Vastakaran leuat"),
+            translate=self._t,
+            spindle_side_filter="Sub spindle",
+        )
+        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._jaw_selectors["main"] = self.main_jaw_selector
+        self._jaw_selectors["sub"] = self.sub_jaw_selector
+        self.sub_jaw_selector.setVisible("sub" in self._spindle_profiles)
+        self._apply_machine_profile_to_jaw_selectors()
+
+        controls_row = QHBoxLayout()
+        controls_row.setContentsMargins(2, 0, 2, 0)
+        controls_row.setSpacing(10)
+        self.open_jaw_selector_btn = QPushButton(
+            self._t("work_editor.selector.jaws_button", "Select Jaws")
+        )
+        self.open_jaw_selector_btn.setProperty("panelActionButton", True)
+        self.open_jaw_selector_btn.setMinimumWidth(176)
+        self.open_jaw_selector_btn.setMaximumWidth(220)
+        self.open_jaw_selector_btn.setFixedHeight(32)
+        self.open_jaw_selector_btn.clicked.connect(self._open_jaw_selector)
+        controls_row.addWidget(self.open_jaw_selector_btn, 0)
+
         self.zero_show_xy_checkbox = QCheckBox(
             self._t("work_editor.zeros.show_xy", "Show X/Y columns")
         )
@@ -1786,20 +1862,36 @@ class WorkEditorDialog(QDialog):
         self.zero_show_xy_checkbox.setChecked(self.machine_profile.default_zero_xy_visible)
         self.zero_show_xy_checkbox.toggled.connect(self._set_zero_xy_visibility)
         self.zero_show_xy_checkbox.setVisible(self.machine_profile.supports_zero_xy_toggle)
-        xy_toggle_row.addWidget(self.zero_show_xy_checkbox)
-        xy_toggle_row.addStretch(1)
-        content_layout.addLayout(xy_toggle_row)
+        controls_row.addWidget(self.zero_show_xy_checkbox, 0, Qt.AlignVCenter)
+        controls_row.addStretch(1)
+        content_layout.addLayout(controls_row)
 
         self.zero_points_host = ResponsiveColumnsHost(switch_width=1320)
-        for head in self.machine_profile.heads:
+        for spindle_key in self._spindle_profiles.keys():
+            default_title = "Main spindle" if spindle_key == "main" else ("Sub spindle" if spindle_key == "sub" else spindle_key.upper())
+            title = self._spindle_label(spindle_key, default_title)
             self.zero_points_host.add_widget(
-                self._build_head_zero_group(
-                    self._t(f"work_editor.zeros.{head.key.lower()}", f"{head.label_default} Zero Points"),
-                    head.key,
+                self._build_spindle_zero_group(
+                    title,
+                    spindle_key,
                 ),
                 1,
             )
         content_layout.addWidget(self.zero_points_host)
+
+        jaw_row_host = QWidget()
+        jaw_row = QHBoxLayout(jaw_row_host)
+        jaw_row.setContentsMargins(0, 0, 0, 0)
+        jaw_row.setSpacing(12)
+        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        jaw_row.addWidget(self.main_jaw_selector, 1)
+        if "sub" in self._spindle_profiles:
+            self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            jaw_row.addWidget(self.sub_jaw_selector, 1)
+        else:
+            jaw_row.addStretch(1)
+        content_layout.addWidget(jaw_row_host, 0)
+
         self._set_zero_xy_visibility(self.zero_show_xy_checkbox.isChecked())
 
         if self.machine_profile.supports_sub_pickup:
@@ -2032,11 +2124,40 @@ class WorkEditorDialog(QDialog):
             initial_assignments=initial_assignments,
         )
 
+    def _selector_initial_jaw_assignments(self) -> list[dict]:
+        assignments: list[dict] = []
+        jaws_by_id: dict[str, dict] = {
+            str(jaw.get("id") or "").strip(): jaw
+            for jaw in (self._jaw_cache or [])
+            if isinstance(jaw, dict) and str(jaw.get("id") or "").strip()
+        }
+        for spindle_key in ("main", "sub"):
+            selector = self._jaw_selectors.get(spindle_key)
+            if selector is None:
+                continue
+            jaw_id = str(selector.get_value() or "").strip()
+            if not jaw_id:
+                continue
+            jaw_ref = jaws_by_id.get(jaw_id, {})
+            entry = {
+                "jaw_id": jaw_id,
+                "spindle": spindle_key,
+            }
+            jaw_type = str(jaw_ref.get("jaw_type") or "").strip()
+            if jaw_type:
+                entry["jaw_type"] = jaw_type
+            description = str(jaw_ref.get("description") or "").strip()
+            if description:
+                entry["description"] = description
+            assignments.append(entry)
+        return assignments
+
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
         self._load_external_refs()
         return self._open_external_selector_session(
             kind="jaws",
             spindle=initial_spindle or self._default_jaw_selector_spindle(),
+            initial_assignments=self._selector_initial_jaw_assignments(),
         )
 
     def _open_combined_tools_jaws_selector(self):

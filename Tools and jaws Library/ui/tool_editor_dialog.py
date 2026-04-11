@@ -2,18 +2,16 @@ import json
 import math
 from typing import Callable
 from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QItemSelectionModel, QEventLoop
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import (
     QApplication,
-    QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QGridLayout, QHBoxLayout, QLabel,
-    QLineEdit, QListView, QMessageBox, QPushButton, QScrollArea, QSizePolicy, QTabWidget, QVBoxLayout, QWidget, QTextEdit,
-    QFileDialog, QTableWidgetItem, QHeaderView, QSplitter, QTreeWidget, QTreeWidgetItem
+    QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QLabel,
+    QLineEdit, QMessageBox, QPushButton, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
+    QFileDialog, QTableWidgetItem, QHeaderView, QTreeWidget, QTreeWidgetItem
 )
 from config import (
-    ALL_TOOL_TYPES,
     MILLING_TOOL_TYPES,
     TURNING_TOOL_TYPES,
-    EDITOR_DROPDOWN_WIDTH,
     JAW_MODELS_ROOT_DEFAULT,
     SHARED_UI_PREFERENCES_PATH,
     TOOL_ICONS_DIR,
@@ -21,7 +19,6 @@ from config import (
 )
 from shared.model_paths import format_model_path_for_display, read_model_roots
 from ui.widgets.parts_table import PartsTable
-from ui.stl_preview import StlPreviewWidget
 from ui.measurement_editor_dialog import MeasurementEditorDialog
 from ui.widgets.color_picker_dialog import ColorPickerDialog
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
@@ -40,15 +37,11 @@ from ui.tool_editor_support import (
     spare_parts_from_rows,
 )
 from shared.editor_helpers import (
-    add_shadow,
     setup_editor_dialog,
-    create_titled_section,
     create_dialog_buttons,
     apply_secondary_button_theme,
     make_arrow_button,
     style_panel_action_button,
-    style_icon_action_button,
-    style_move_arrow_button,
     reflow_fields_grid,
     focus_editor_widget,
     build_editor_field_card,
@@ -419,766 +412,22 @@ class AddEditToolDialog(QDialog):
 
     def _build_ui(self):
         root = QVBoxLayout(self)
-        combo_width = EDITOR_DROPDOWN_WIDTH
+        self._build_ui_modular(root)
 
+    def _build_ui_modular(self, root: QVBoxLayout) -> None:
+        """Build the editor through tab modules while keeping dialog-owned state."""
         self.tabs = QTabWidget()
         self.tabs.setObjectName('toolEditorTabs')
         self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
         root.addWidget(self.tabs, 1)
 
-        # -------------------------
-        # GENERAL TAB
-        # -------------------------
-        general_tab = QWidget()
-        general_tab.setProperty('editorPageSurface', True)
-        general_layout = QVBoxLayout(general_tab)
-        general_layout.setContentsMargins(0, 0, 0, 0)
-        general_layout.setSpacing(0)
+        # The dialog remains the controller; builder modules only construct
+        # widgets and attach them back to ``self`` for the existing behavior.
+        build_general_tab(self, self.tabs)
+        build_components_tab(self, self.tabs)
+        build_spare_parts_tab(self, self.tabs)
+        build_models_tab(self, self.tabs)
 
-        general_scroll = QScrollArea()
-        self.general_scroll = general_scroll
-        general_scroll.setWidgetResizable(True)
-        general_scroll.setFrameShape(QFrame.NoFrame)
-        general_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        general_layout.addWidget(general_scroll, 1)
-
-        general_content = QWidget()
-        general_content.setProperty('editorFieldsViewport', True)
-        general_content.setProperty('editorPageSurface', True)
-        general_content_layout = QVBoxLayout(general_content)
-        general_content_layout.setContentsMargins(0, 0, 0, 0)
-        general_content_layout.setSpacing(0)
-        general_scroll.setWidget(general_content)
-
-        form_frame = QFrame()
-        form_frame.setProperty('subCard', True)
-        form_layout = QVBoxLayout(form_frame)
-        form_layout.setContentsMargins(14, 14, 14, 14)
-        form_layout.setSpacing(10)
-
-        header = QFrame()
-        header.setProperty('detailHeader', True)
-        header_layout = QVBoxLayout(header)
-        header_layout.setContentsMargins(14, 12, 14, 12)
-        header_layout.setSpacing(4)
-
-        title_row = QHBoxLayout()
-        title_row.setContentsMargins(0, 0, 0, 0)
-        title_row.setSpacing(10)
-        self.editor_header_title = QLabel(self._t('tool_editor.header.new_tool', 'New tool'))
-        self.editor_header_title.setProperty('detailHeroTitle', True)
-        self.editor_header_title.setWordWrap(True)
-        self.editor_header_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.editor_header_title.setStyleSheet('font-size: 18px; font-weight: 700;')
-        self.editor_header_id = QLabel('')
-        self.editor_header_id.setProperty('detailHeroTitle', True)
-        self.editor_header_id.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.editor_header_id.setStyleSheet('font-size: 18px; font-weight: 700;')
-        title_font = self.editor_header_title.font()
-        title_font.setPointSizeF(max(15.0, title_font.pointSizeF() + 1.5))
-        self.editor_header_title.setFont(title_font)
-        id_font = self.editor_header_id.font()
-        id_font.setPointSizeF(max(15.0, id_font.pointSizeF() + 1.5))
-        self.editor_header_id.setFont(id_font)
-        title_row.addWidget(self.editor_header_title, 1)
-        title_row.addWidget(self.editor_header_id, 0, Qt.AlignRight)
-
-        meta_row = QHBoxLayout()
-        meta_row.setContentsMargins(0, 0, 0, 0)
-        self.editor_type_badge = QLabel('')
-        self.editor_type_badge.setProperty('toolBadge', True)
-        meta_row.addWidget(self.editor_type_badge, 0, Qt.AlignLeft)
-        meta_row.addStretch(1)
-
-        header_layout.addLayout(title_row)
-        header_layout.addLayout(meta_row)
-        form_layout.addWidget(header)
-
-        self.general_fields_grid = None  # Groups handle layout directly
-
-        self.tool_id = QLineEdit()
-        self.tool_head = QPushButton(self._localized_tool_head('HEAD1'))
-        self.tool_head.setCheckable(True)
-        self.tool_head.clicked.connect(self._toggle_tool_head)
-        apply_secondary_button_theme(self.tool_head)
-        self.tool_head.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.tool_head.setFixedWidth(118)
-        self.spindle_orientation_btn = QPushButton(self._localized_spindle_orientation('main'))
-        self.spindle_orientation_btn.setCheckable(True)
-        self.spindle_orientation_btn.clicked.connect(self._toggle_spindle_orientation)
-        apply_secondary_button_theme(self.spindle_orientation_btn)
-        self.spindle_orientation_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.spindle_orientation_btn.setFixedWidth(148)
-
-        self.tool_type = QComboBox()
-        for raw_type in ALL_TOOL_TYPES:
-            self.tool_type.addItem(self._localized_tool_type(raw_type), raw_type)
-        self.tool_type.currentTextChanged.connect(self._update_tool_type_fields)
-        self._style_combo(self.tool_type)
-        self.tool_type.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.tool_type.setFixedWidth(330)
-        self.tool_type.setMaxVisibleItems(8)
-        self._configure_combo_popup(self.tool_type, max_rows=8, row_height=44)
-
-        self.tool_type_row = QWidget()
-        self.tool_type_row.setProperty('editorInlineRow', True)
-        ttl = QHBoxLayout(self.tool_type_row)
-        ttl.setContentsMargins(0, 0, 0, 0)
-        ttl.setSpacing(10)
-        ttl.addWidget(self.tool_type)
-        ttl.addWidget(self.tool_head)
-        ttl.addWidget(self.spindle_orientation_btn)
-        ttl.addStretch(1)
-
-        self.description = QLineEdit()
-        self.geom_x = QLineEdit()
-        self.geom_z = QLineEdit()
-        self.b_axis_angle = QLineEdit()
-        self.radius = QLineEdit()
-        self.nose_corner_radius = QLineEdit()
-        self.holder_code = QLineEdit()
-        self.holder_link = QLineEdit()
-        self.holder_add_element = QLineEdit()
-        self.holder_add_element_link = QLineEdit()
-
-        self.cutting_type = QComboBox()
-        self.cutting_type.setObjectName('cuttingTypeCombo')
-        for raw_cutting in ['Insert', 'Drill', 'Center drill', 'Mill']:
-            self.cutting_type.addItem(self._localized_cutting_type(raw_cutting), raw_cutting)
-        self.cutting_type.currentTextChanged.connect(self._update_tool_type_fields)
-        self._style_combo(self.cutting_type)
-        self.cutting_type.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.cutting_type.setMinimumWidth(180)
-
-        self.cutting_code = QLineEdit()
-        self.cutting_link = QLineEdit()
-        self.cutting_add_element = QLineEdit()
-        self.cutting_add_element_link = QLineEdit()
-        self.notes = QTextEdit()
-        self.notes.setAcceptRichText(False)
-        self.notes.setLineWrapMode(QTextEdit.WidgetWidth)
-        self.notes.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.notes.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.notes.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.notes.setPlaceholderText(self._t('tool_editor.placeholder.notes_shift_enter', 'Use Shift+Enter for new line'))
-        self.notes.setStyleSheet('')
-        self.notes.textChanged.connect(self._update_notes_editor_height)
-        self.default_pot = QLineEdit()
-
-        self.holder_code_row = self._build_picker_row(
-            self.holder_code,
-            self._pick_holder_component,
-            self._t('tool_editor.tooltip.pick_holder', 'Pick holder from existing tools'),
-        )
-        self.cutting_code_row = self._build_picker_row(
-            self.cutting_code,
-            self._pick_cutting_component,
-            self._t('tool_editor.tooltip.pick_cutting', 'Pick cutting component from existing tools'),
-        )
-
-        self.cutting_type_row = QWidget()
-        self.cutting_type_row.setProperty('editorInlineRow', True)
-        ctl = QHBoxLayout(self.cutting_type_row)
-        ctl.setContentsMargins(0, 0, 0, 0)
-        ctl.addWidget(self.cutting_type)
-        ctl.addStretch(1)
-
-        self.cutting_code_label = QLabel(self._t('tool_library.field.cutting_code', '{cutting_type} code', cutting_type=self._localized_cutting_type('Insert')))
-
-        self.drill_nose_angle = QLineEdit()
-        self.mill_cutting_edges = QLineEdit()
-        self.drill_row_label = QLabel(self._t('tool_library.field.nose_angle', 'Nose angle'))
-        self.mill_row_label = QLabel(self._t('tool_library.field.number_of_flutes', 'Number of flutes'))
-
-        # Make editor controls visually closer to detail value boxes.
-        for w in [
-            self.tool_id, self.tool_head, self.tool_type, self.description, self.geom_x, self.geom_z,
-            self.b_axis_angle, self.radius, self.nose_corner_radius, self.holder_code, self.holder_link,
-            self.holder_add_element, self.holder_add_element_link, self.cutting_type,
-            self.cutting_code, self.cutting_link, self.cutting_add_element,
-            self.cutting_add_element_link, self.drill_nose_angle,
-            self.mill_cutting_edges, self.notes, self.default_pot
-        ]:
-            self._style_general_editor(w)
-
-        # -- Build grouped field sections --
-
-        # Group 1: Identity
-        group1 = self._build_field_group([
-            self._build_edit_field(self._t('tool_library.row.tool_id', 'Tool ID'), self.tool_id),
-            self._build_edit_field(self._t('tool_editor.field.tool_type', 'Tool type'), self.tool_type_row),
-            self._build_edit_field(self._t('tool_editor.field.default_pot', 'Default pot'), self.default_pot),
-            self._build_edit_field(self._t('setup_page.field.description', 'Description'), self.description),
-        ])
-
-        # Group 2: Geometry
-        self.corner_or_nose_label = QLabel(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'))
-        self.corner_or_nose_field = self._build_edit_field('', self.nose_corner_radius, key_label=self.corner_or_nose_label)
-        self.mill_field = self._build_edit_field('', self.mill_cutting_edges, key_label=self.mill_row_label)
-        self.mill_field.setVisible(False)
-        self.radius_field = self._build_edit_field(self._t('tool_library.field.radius', 'Radius'), self.radius)
-        self.b_axis_field = self._build_edit_field(self._t('tool_library.field.b_axis_angle', 'B-axis angle'), self.b_axis_angle)
-        self.b_axis_field.setVisible(False)
-        group2 = self._build_field_group([
-            self._build_edit_field(self._t('tool_library.field.geom_x', 'Geom X'), self.geom_x),
-            self._build_edit_field(self._t('tool_library.field.geom_z', 'Geom Z'), self.geom_z),
-            self.radius_field,
-            self.b_axis_field,
-            self.corner_or_nose_field,
-            self.mill_field,
-        ])
-
-        # Group 3: Holder (code/link toggle)
-        self.holder_code_field = self._build_edit_field(self._t('tool_library.field.holder_code', 'Holder code'), self.holder_code_row)
-        self.holder_link_field = self._build_edit_field(self._t('tool_editor.field.holder_link', 'Holder link'), self.holder_link)
-        self.holder_add_field = self._build_edit_field(self._t('tool_library.field.add_element', 'Add. Element'), self.holder_add_element)
-        self.holder_add_link_field = self._build_edit_field(self._t('tool_editor.field.add_element_link', 'Add. Element link'), self.holder_add_element_link)
-        self.holder_link_field.setVisible(False)
-        self.holder_add_link_field.setVisible(False)
-        group3 = self._build_field_group([
-            self.holder_code_field, self.holder_link_field,
-            self.holder_add_field, self.holder_add_link_field,
-        ])
-
-        # Group 4: Cutting (code/link toggle)
-        cutting_type_field = self._build_edit_field(self._t('tool_editor.field.cutting_component_type', 'Cutting component type'), self.cutting_type_row)
-        self.cutting_code_field = self._build_edit_field('', self.cutting_code_row, key_label=self.cutting_code_label)
-        self.cutting_link_field = self._build_edit_field(self._t('tool_editor.field.cutting_component_link', 'Cutting component link'), self.cutting_link)
-        self.cutting_add_field = self._build_edit_field(self._t('tool_editor.field.add_cutting_any', 'Add. Insert/Drill/Mill'), self.cutting_add_element)
-        self.cutting_add_link_field = self._build_edit_field(self._t('tool_editor.field.add_cutting_any_link', 'Add. Insert/Drill/Mill link'), self.cutting_add_element_link)
-        self.cutting_link_field.setVisible(False)
-        self.cutting_add_link_field.setVisible(False)
-        self.drill_field = self._build_edit_field('', self.drill_nose_angle, key_label=self.drill_row_label)
-        group4 = self._build_field_group([
-            cutting_type_field,
-            self.cutting_code_field, self.cutting_link_field,
-            self.cutting_add_field, self.cutting_add_link_field,
-            self.drill_field,
-        ])
-
-        # Group 5: Notes
-        group5 = self._build_field_group([
-            self._build_edit_field(self._t('tool_library.field.notes', 'Notes'), self.notes),
-        ])
-
-        # Dummy field order for compatibility
-        self._general_field_order = []
-
-        # Add groups to form layout
-        form_layout.addWidget(group1)
-        form_layout.addWidget(group2)
-        group3.setVisible(False)
-        form_layout.addWidget(group3)
-        group4.setVisible(False)
-        form_layout.addWidget(group4)
-        form_layout.addWidget(group5)
-
-        general_content_layout.addWidget(form_frame)
-        general_content_layout.addStretch(1)
-        self.tabs.addTab(general_tab, self._t('tool_editor.tab.general', 'General'))
-
-        # -------------------------
-        # ADDITIONAL PARTS TAB
-        # -------------------------
-        parts_tab = QWidget()
-        parts_tab.setProperty('editorPageSurface', True)
-        parts_tab_layout = QVBoxLayout(parts_tab)
-        parts_tab_layout.setContentsMargins(18, 18, 18, 18)
-        parts_tab_layout.setSpacing(8)
-
-        p_layout = parts_tab_layout
-        p_layout.setSpacing(8)
-
-        parts_panel = QFrame()
-        parts_panel.setProperty('editorPartsPanel', True)
-        parts_panel_layout = QVBoxLayout(parts_panel)
-        parts_panel_layout.setContentsMargins(8, 10, 8, 8)
-        parts_panel_layout.setSpacing(8)
-
-        self.parts_table = PartsTable([
-            self._t('tool_editor.table.role', 'Role'),
-            self._t('tool_editor.table.part_name', 'Label'),
-            self._t('tool_editor.table.code', 'Code'),
-            self._t('tool_editor.table.link', 'Link'),
-            self._t('tool_editor.table.group', 'Group'),
-        ])
-        self.parts_table.set_column_keys(['role', 'label', 'code', 'link', 'group'])
-        self.parts_table.setObjectName('editorPartsTable')
-        self.parts_table.setSelectionMode(PartsTable.ExtendedSelection)
-        self.parts_table.setEditTriggers(
-            QAbstractItemView.DoubleClicked
-            | QAbstractItemView.SelectedClicked
-            | QAbstractItemView.EditKeyPressed
-            | QAbstractItemView.AnyKeyPressed
-        )
-        self.parts_table.horizontalHeader().setStretchLastSection(False)
-        header = self.parts_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Interactive)
-        header.setSectionResizeMode(1, QHeaderView.Interactive)
-        header.setSectionResizeMode(2, QHeaderView.Interactive)
-        header.setSectionResizeMode(3, QHeaderView.Stretch)
-        header.setSectionResizeMode(4, QHeaderView.Interactive)
-        self.parts_table.setColumnWidth(0, 90)
-        self.parts_table.setColumnWidth(1, 190)
-        self.parts_table.setColumnWidth(2, 230)
-        self.parts_table.setColumnWidth(4, 120)
-        self.parts_table.verticalHeader().setDefaultSectionSize(32)
-        self.parts_table.verticalHeader().setMinimumSectionSize(28)
-        self.parts_table.setMinimumHeight(320)
-        self.parts_table.setColumnHidden(0, True)
-        parts_panel_layout.addWidget(self.parts_table, 1)
-        p_layout.addWidget(parts_panel, 1)
-
-        parts_btn_bar = QFrame()
-        parts_btn_bar.setProperty('editorButtonBar', True)
-        p_btns = QHBoxLayout(parts_btn_bar)
-        p_btns.setContentsMargins(2, 6, 2, 2)
-        p_btns.setSpacing(8)
-        self.add_part_btn = QPushButton()
-        self.remove_part_btn = QPushButton()
-        style_icon_action_button(
-            self.add_part_btn,
-            TOOL_ICONS_DIR / 'Plus_icon.svg',
-            self._t('tool_editor.action.add_component', 'Add component'),
-        )
-        style_icon_action_button(
-            self.remove_part_btn,
-            TOOL_ICONS_DIR / 'remove.svg',
-            self._t('tool_editor.action.remove_selected_part', 'Remove selected part'),
-            danger=True,
-        )
-        self.part_up_btn = QPushButton()
-        self.part_down_btn = QPushButton()
-        style_move_arrow_button(self.part_up_btn, self._t('work_editor.tools.move_up', '▲'), self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
-        style_move_arrow_button(self.part_down_btn, self._t('work_editor.tools.move_down', '▼'), self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
-        self.pick_part_btn = self._make_arrow_button('menu_open.svg', self._t('tool_editor.tooltip.pick_additional_part', 'Pick additional part from existing tools'))
-        self.group_btn = QPushButton()
-        style_icon_action_button(
-            self.group_btn,
-            TOOL_ICONS_DIR / 'assemblies_icon.svg',
-            self._t('tool_editor.action.group_parts', 'Group selected parts'),
-        )
-        self.group_btn.setVisible(True)
-        self.group_name_edit = QLineEdit()
-        self.group_name_edit.setPlaceholderText(self._t('tool_editor.placeholder.group_name', 'Group name...'))
-        self.group_name_edit.setVisible(False)
-        self.group_name_edit.setMinimumHeight(34)
-        self.group_name_edit.setMaximumWidth(160)
-        self.group_hint_label = QLabel(self._t('tool_editor.hint.press_enter_to_add', 'Press Enter to add'))
-        self.group_hint_label.setVisible(False)
-        self.group_hint_label.setStyleSheet('background: transparent; font-size: 12px; color: #7a8a9a; font-style: italic;')
-        self.group_select_hint_label = QLabel(self._t('tool_editor.hint.select_multiple', 'Select part(s) to make a group'))
-        self.group_select_hint_label.setStyleSheet('background: transparent; font-size: 12px; color: #9aabb8; font-style: italic;')
-        self.add_part_btn.clicked.connect(lambda: self._add_component_row('holder'))
-        self.remove_part_btn.clicked.connect(self._remove_component_row)
-        self.part_up_btn.clicked.connect(lambda: self._move_component_row(-1))
-        self.part_down_btn.clicked.connect(lambda: self._move_component_row(1))
-        self.pick_part_btn.clicked.connect(self._pick_additional_part)
-        self.group_btn.clicked.connect(self._toggle_group)
-        self.group_name_edit.installEventFilter(self)
-        self.parts_table.itemSelectionChanged.connect(self._update_group_button_visibility)
-        self.parts_table.itemChanged.connect(self._schedule_spare_component_refresh)
-        p_btns.addWidget(self.add_part_btn)
-        p_btns.addWidget(self.remove_part_btn)
-        p_btns.addWidget(self.part_up_btn)
-        p_btns.addWidget(self.part_down_btn)
-        p_btns.addWidget(self.group_btn)
-        p_btns.addWidget(self.group_name_edit)
-        p_btns.addWidget(self.group_hint_label)
-        p_btns.addWidget(self.group_select_hint_label)
-        p_btns.addStretch(1)
-        p_btns.addWidget(self.pick_part_btn)
-        p_layout.addWidget(parts_btn_bar)
-        self.tabs.addTab(parts_tab, self._t('tool_editor.tab.components', 'Components'))
-
-        # -------------------------
-        # SPARE PARTS TAB
-        # -------------------------
-        spare_tab = QWidget()
-        spare_tab.setProperty('editorPageSurface', True)
-        spare_tab_layout = QVBoxLayout(spare_tab)
-        spare_tab_layout.setContentsMargins(18, 18, 18, 18)
-        spare_tab_layout.setSpacing(8)
-
-        spare_panel = QFrame()
-        spare_panel.setProperty('editorPartsPanel', True)
-        spare_panel_layout = QVBoxLayout(spare_panel)
-        spare_panel_layout.setContentsMargins(8, 10, 8, 8)
-        spare_panel_layout.setSpacing(8)
-
-        self.spare_parts_table = PartsTable([
-            self._t('tool_editor.table.part_name', 'Part name'),
-            self._t('tool_editor.table.code', 'Code'),
-            self._t('tool_editor.table.link', 'Link'),
-            self._t('tool_editor.table.linked_component', 'Linked Component'),
-            self._t('tool_editor.table.group', 'Group'),
-        ])
-        self.spare_parts_table.set_column_keys(['name', 'code', 'link', 'linked_component', 'group'])
-        self.spare_parts_table.set_read_only_columns(['linked_component'])
-        self.spare_parts_table.setObjectName('editorSparePartsTable')
-        self.spare_parts_table.setSelectionMode(PartsTable.ExtendedSelection)
-        self.spare_parts_table.setEditTriggers(
-            QAbstractItemView.DoubleClicked
-            | QAbstractItemView.SelectedClicked
-            | QAbstractItemView.EditKeyPressed
-            | QAbstractItemView.AnyKeyPressed
-        )
-        self.spare_parts_table.setCornerButtonEnabled(False)
-        spare_header = self.spare_parts_table.horizontalHeader()
-        spare_header.setStretchLastSection(False)
-        spare_header.setSectionResizeMode(0, QHeaderView.Interactive)
-        spare_header.setSectionResizeMode(1, QHeaderView.Interactive)
-        spare_header.setSectionResizeMode(2, QHeaderView.Stretch)
-        spare_header.setSectionResizeMode(3, QHeaderView.Interactive)
-        spare_header.setSectionResizeMode(4, QHeaderView.Interactive)
-        self.spare_parts_table.setColumnWidth(0, 190)
-        self.spare_parts_table.setColumnWidth(1, 220)
-        self.spare_parts_table.setColumnWidth(3, 200)
-        self.spare_parts_table.setColumnWidth(4, 120)
-        self.spare_parts_table.verticalHeader().setDefaultSectionSize(32)
-        self.spare_parts_table.verticalHeader().setMinimumSectionSize(28)
-        self.spare_parts_table.setMinimumHeight(320)
-        self.spare_parts_table.setColumnHidden(4, True)
-        spare_panel_layout.addWidget(self.spare_parts_table, 1)
-        spare_tab_layout.addWidget(spare_panel, 1)
-
-        spare_btn_bar = QFrame()
-        spare_btn_bar.setProperty('editorButtonBar', True)
-        s_btns = QHBoxLayout(spare_btn_bar)
-        s_btns.setContentsMargins(2, 6, 2, 2)
-        s_btns.setSpacing(8)
-
-        self.add_spare_btn = QPushButton()
-        self.remove_spare_btn = QPushButton()
-        style_icon_action_button(
-            self.add_spare_btn,
-            TOOL_ICONS_DIR / 'Plus_icon.svg',
-            self._t('tool_editor.action.add_spare_part', 'Add spare part'),
-        )
-        style_icon_action_button(
-            self.remove_spare_btn,
-            TOOL_ICONS_DIR / 'remove.svg',
-            self._t('tool_editor.action.remove_selected_part', 'Remove selected part'),
-            danger=True,
-        )
-        self.spare_up_btn = QPushButton()
-        self.spare_down_btn = QPushButton()
-        style_move_arrow_button(self.spare_up_btn, self._t('work_editor.tools.move_up', '▲'), self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
-        style_move_arrow_button(self.spare_down_btn, self._t('work_editor.tools.move_down', '▼'), self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
-
-        self.pick_spare_btn = self._make_arrow_button('menu_open.svg', self._t('tool_editor.tooltip.pick_additional_part', 'Pick additional part from existing tools'))
-        self.link_spare_btn = QPushButton()
-        style_icon_action_button(
-            self.link_spare_btn,
-            TOOL_ICONS_DIR / 'assemblies_icon.svg',
-            self._t('tool_editor.action.link_spare_to_component', 'Link to selected component'),
-        )
-        self.spare_link_hint_label = QLabel(
-            self._t(
-                'tool_editor.hint.link_spares_from_table',
-                'Link part(s) to components by selecting them in the table',
-            )
-        )
-        self.spare_link_hint_label.setStyleSheet(
-            'background: transparent; font-size: 12px; color: #9aabb8; font-style: italic;'
-        )
-
-        self.add_spare_btn.clicked.connect(self._add_spare_part_row)
-        self.remove_spare_btn.clicked.connect(self.spare_parts_table.remove_selected_row)
-        self.spare_up_btn.clicked.connect(lambda: self.spare_parts_table.move_selected_row(-1))
-        self.spare_down_btn.clicked.connect(lambda: self.spare_parts_table.move_selected_row(1))
-        self.pick_spare_btn.clicked.connect(self._pick_spare_part)
-        self.link_spare_btn.clicked.connect(self._link_spares_to_selected_component)
-
-        s_btns.addWidget(self.add_spare_btn)
-        s_btns.addWidget(self.remove_spare_btn)
-        s_btns.addWidget(self.spare_up_btn)
-        s_btns.addWidget(self.spare_down_btn)
-        s_btns.addWidget(self.link_spare_btn)
-        s_btns.addWidget(self.spare_link_hint_label)
-        s_btns.addStretch(1)
-        s_btns.addWidget(self.pick_spare_btn)
-        spare_tab_layout.addWidget(spare_btn_bar)
-        self.tabs.addTab(spare_tab, self._t('tool_editor.tab.spare_parts', 'Spare parts'))
-
-        # -------------------------
-        # 3D MODELS TAB
-        # -------------------------
-        models_tab = QWidget()
-        models_tab.setProperty('editorPageSurface', True)
-        models_layout = QVBoxLayout(models_tab)
-        models_layout.setContentsMargins(18, 18, 18, 18)
-        models_layout.setSpacing(8)
-
-        models_columns_spacing = 8
-        models_bottom_left_width = 340
-        models_bottom_left_box_width = 320
-        models_bottom_right_width = 488
-
-        splitter = QSplitter(Qt.Horizontal)
-        splitter.setProperty('editorTransparentPanel', True)
-        splitter.setHandleWidth(8)
-
-        # Left side: table in panel frame (same structure as spare parts tab)
-        models_panel = QFrame()
-        models_panel.setProperty('editorPartsPanel', True)
-        models_panel.setMinimumWidth(260)
-        models_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        models_panel_layout = QVBoxLayout(models_panel)
-        models_panel_layout.setContentsMargins(8, 10, 8, 8)
-        models_panel_layout.setSpacing(0)
-
-        self.model_table = PartsTable(['Part Name', 'STL File', 'Color'])
-        self.model_table.setObjectName('editorModelsTable')
-        self.model_table.setMinimumHeight(240)
-        self.model_table.setMaximumHeight(16777215)
-        self.model_table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.model_table.verticalHeader().setDefaultSectionSize(44)
-        self.model_table.verticalHeader().setMinimumSectionSize(28)
-        self.model_table.setColumnCount(3)
-        self.model_table.setHorizontalHeaderLabels([
-            self._t('tool_editor.table.part_name', 'Part Name'),
-            self._t('jaw_editor.field.stl_file', 'STL File'),
-            self._t('tool_editor.table.color', 'Color'),
-        ])
-        model_header = self.model_table.horizontalHeader()
-        model_header.setSectionResizeMode(0, QHeaderView.Interactive)
-        model_header.setSectionResizeMode(1, QHeaderView.Stretch)
-        model_header.setSectionResizeMode(2, QHeaderView.Interactive)
-        model_header.setStretchLastSection(False)
-        self.model_table.setColumnWidth(0, 100)
-        self.model_table.setColumnWidth(1, 170)
-        self.model_table.setColumnWidth(2, 70)
-        self.model_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.model_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.model_table.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.model_table.itemChanged.connect(self._on_model_table_changed)
-
-        models_panel_layout.addWidget(self.model_table, 1)
-
-        # Right side: preview panel
-        preview_panel = QFrame()
-        preview_panel.setProperty('editorPartsPanel', True)
-        preview_panel.setMinimumWidth(300)
-        preview_panel_layout = QVBoxLayout(preview_panel)
-        preview_panel_layout.setContentsMargins(8, 8, 8, 8)
-        preview_panel_layout.setSpacing(8)
-
-        self.models_preview = StlPreviewWidget()
-        self.models_preview.set_control_hint_text(
-            self._t(
-                'tool_editor.hint.rotate_pan_zoom',
-                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
-            )
-        )
-        preview_panel_layout.addWidget(self.models_preview, 1)
-
-        # Transform controls (visible only when preference is on)
-        self._transform_frame = create_titled_section(
-            self._t('tool_editor.transform.toolbar_title', 'Muunnos')
-        )
-        self._transform_frame.setMinimumWidth(models_bottom_right_width)
-        self._transform_frame.setMaximumWidth(models_bottom_right_width)
-        self._transform_frame.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        _tf_layout = QVBoxLayout(self._transform_frame)
-        _tf_layout.setContentsMargins(8, 4, 8, 6)
-        _tf_layout.setSpacing(4)
-
-        _mode_row = QHBoxLayout()
-        _mode_row.setSpacing(0)
-        _mode_row.setContentsMargins(0, 0, 0, 0)
-        self._mode_toggle_btn = QPushButton('')
-        self._fine_transform_btn = QPushButton('')
-        self._reset_transform_btn = QPushButton()
-        style_icon_action_button(
-            self._mode_toggle_btn,
-            TOOL_ICONS_DIR / 'move.svg',
-            self._t('tool_editor.transform.move', 'SIIRRÄ'),
-        )
-        style_icon_action_button(
-            self._fine_transform_btn,
-            TOOL_ICONS_DIR / '1x.svg',
-            self._t('tool_editor.transform.fine_tooltip', 'Toggle fine transform increments'),
-        )
-        style_icon_action_button(
-            self._reset_transform_btn,
-            TOOL_ICONS_DIR / 'reset.svg',
-            self._t('tool_editor.transform.reset', 'NOLLAA'),
-        )
-        self._mode_toggle_btn.setCheckable(True)
-        self._mode_toggle_btn.setChecked(True)
-        self._fine_transform_btn.setCheckable(True)
-        self._fine_transform_btn.setChecked(self._fine_transform_enabled)
-        self._reset_transform_btn.setFixedWidth(42)
-        self._mode_toggle_btn.setFixedWidth(42)
-        self._fine_transform_btn.setFixedWidth(42)
-        self._reset_transform_btn.setToolTip(
-            self._t(
-                'tool_editor.transform.reset_tooltip',
-                'Left click: reset to original position. Right click: restore saved position.',
-            )
-        )
-        self._update_mode_toggle_button_appearance()
-        self._update_fine_transform_button_appearance()
-
-        _lbl_x = QLabel('X')
-        _lbl_x.setProperty('detailFieldKey', True)
-        _lbl_x.setFixedWidth(16)
-        _lbl_x.setAlignment(Qt.AlignCenter)
-
-        self._transform_x = QLineEdit('0')
-        self._transform_x.setFixedWidth(80)
-        self._transform_x.setAlignment(Qt.AlignRight)
-
-        _lbl_y = QLabel('Y')
-        _lbl_y.setProperty('detailFieldKey', True)
-        _lbl_y.setFixedWidth(16)
-        _lbl_y.setAlignment(Qt.AlignCenter)
-
-        self._transform_y = QLineEdit('0')
-        self._transform_y.setFixedWidth(80)
-        self._transform_y.setAlignment(Qt.AlignRight)
-
-        _lbl_z = QLabel('Z')
-        _lbl_z.setProperty('detailFieldKey', True)
-        _lbl_z.setFixedWidth(16)
-        _lbl_z.setAlignment(Qt.AlignCenter)
-
-        self._transform_z = QLineEdit('0')
-        self._transform_z.setFixedWidth(80)
-        self._transform_z.setAlignment(Qt.AlignRight)
-
-        _mode_row.addWidget(self._mode_toggle_btn)
-        _mode_row.addSpacing(3)
-        _mode_row.addWidget(self._fine_transform_btn)
-        _mode_row.addSpacing(4)
-        _mode_row.addWidget(_lbl_x)
-        _mode_row.addWidget(self._transform_x)
-        _mode_row.addSpacing(4)
-        _mode_row.addWidget(_lbl_y)
-        _mode_row.addWidget(self._transform_y)
-        _mode_row.addSpacing(4)
-        _mode_row.addWidget(_lbl_z)
-        _mode_row.addWidget(self._transform_z)
-
-        _mode_row.addSpacing(6)
-        _mode_row.addWidget(self._reset_transform_btn)
-        _tf_layout.addLayout(_mode_row)
-
-        self._transform_frame.setVisible(self._assembly_transform_enabled)
-
-        if self._assembly_transform_enabled:
-            self.models_preview.set_fine_transform_enabled(self._fine_transform_enabled)
-            self.models_preview.transform_changed.connect(self._on_viewer_transform_changed)
-            self.models_preview.part_selected.connect(self._on_viewer_part_selected)
-            self.models_preview.part_selection_changed.connect(self._on_viewer_part_selection_changed)
-            self._mode_toggle_btn.clicked.connect(self._on_mode_toggle_clicked)
-            self._fine_transform_btn.toggled.connect(self._on_fine_transform_toggled)
-            self._reset_transform_btn.clicked.connect(self._reset_current_part_transform)
-            self._transform_x.editingFinished.connect(self._apply_manual_transform)
-            self._transform_y.editingFinished.connect(self._apply_manual_transform)
-            self._transform_z.editingFinished.connect(self._apply_manual_transform)
-            self._transform_x.returnPressed.connect(self._transform_x.editingFinished.emit)
-            self._transform_y.returnPressed.connect(self._transform_y.editingFinished.emit)
-            self._transform_z.returnPressed.connect(self._transform_z.editingFinished.emit)
-            self.model_table.itemSelectionChanged.connect(self._on_model_table_selection_changed)
-            QTimer.singleShot(0, self._update_transform_row_sizes)
-
-        model_btn_bar = create_titled_section(
-            self._t('tool_editor.models.actions_title', 'Mallien toiminnot')
-        )
-        model_btn_bar_layout = QVBoxLayout(model_btn_bar)
-        model_btn_bar_layout.setContentsMargins(8, 4, 8, 6)
-        model_btn_bar_layout.setSpacing(4)
-
-        model_meta_row = QHBoxLayout()
-        model_meta_row.setContentsMargins(0, 0, 0, 0)
-        model_meta_row.setSpacing(6)
-
-        model_btns = QHBoxLayout()
-        model_btns.setContentsMargins(0, 0, 0, 0)
-        model_btns.setSpacing(8)
-        self.add_model_btn = QPushButton(self._t('tool_editor.action.add_model', 'ADD MODEL'))
-        self.remove_model_btn = QPushButton(self._t('tool_editor.action.remove_selected_model', 'REMOVE SELECTED MODEL'))
-        style_icon_action_button(
-            self.add_model_btn,
-            TOOL_ICONS_DIR / 'add_file.svg',
-            self._t('tool_editor.action.add_model', 'Add model'),
-        )
-        style_icon_action_button(
-            self.remove_model_btn,
-            TOOL_ICONS_DIR / 'remove.svg',
-            self._t('tool_editor.action.remove_selected_model', 'Remove selected model'),
-            danger=True,
-        )
-        self.model_up_btn = QPushButton()
-        self.model_down_btn = QPushButton()
-        style_move_arrow_button(self.model_up_btn, self._t('work_editor.tools.move_up', '▲'), self._t('tool_editor.tooltip.move_row_up', 'Move selected row up'))
-        style_move_arrow_button(self.model_down_btn, self._t('work_editor.tools.move_down', '▼'), self._t('tool_editor.tooltip.move_row_down', 'Move selected row down'))
-        self.add_model_btn.clicked.connect(self._add_model_row)
-        self.remove_model_btn.clicked.connect(self._remove_model_row)
-        self.model_up_btn.clicked.connect(lambda: self._move_model_row(-1))
-        self.model_down_btn.clicked.connect(lambda: self._move_model_row(1))
-        self.edit_measurements_btn = QPushButton('')
-        style_icon_action_button(
-            self.edit_measurements_btn,
-            TOOL_ICONS_DIR / 'measure.svg',
-            self._t('tool_editor.measurements.open_editor', 'Edit measurements'),
-        )
-        self.edit_measurements_btn.clicked.connect(self._open_measurement_editor)
-        self.measurement_summary_label = QLabel()
-        self.measurement_summary_label.setProperty('detailHint', True)
-        self.measurement_summary_label.setStyleSheet(
-            'background: transparent; color: #6b7b8e; font-size: 11px;'
-        )
-        self.measurement_summary_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        model_meta_row.addWidget(self.measurement_summary_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        model_meta_row.addStretch(1)
-        model_btn_bar_layout.addLayout(model_meta_row)
-        model_btns.addWidget(self.add_model_btn)
-        model_btns.addWidget(self.remove_model_btn)
-        model_btns.addWidget(self.model_up_btn)
-        model_btns.addWidget(self.model_down_btn)
-        model_btns.addWidget(self.edit_measurements_btn)
-        model_btns.addStretch(1)
-        model_btn_bar_layout.addLayout(model_btns)
-        splitter.addWidget(models_panel)
-        splitter.addWidget(preview_panel)
-        splitter.setCollapsible(0, False)
-        splitter.setCollapsible(1, False)
-        splitter.setSizes([420, 540])
-        models_layout.addWidget(splitter, 1)
-
-        bottom_row = QHBoxLayout()
-        bottom_row.setContentsMargins(0, 0, 0, 0)
-        bottom_row.setSpacing(models_columns_spacing)
-        left_toolbar_host = QWidget()
-        left_toolbar_host.setObjectName('leftToolbarHost')
-        left_toolbar_host.setFixedWidth(models_bottom_left_width)
-        left_toolbar_host.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        left_toolbar_host.setAutoFillBackground(False)
-        left_toolbar_host.setStyleSheet(
-            '#leftToolbarHost { background: transparent; border: none; }'
-        )
-        left_toolbar_host_layout = QHBoxLayout(left_toolbar_host)
-        left_toolbar_host_layout.setContentsMargins(0, 0, 0, 0)
-        left_toolbar_host_layout.setSpacing(0)
-        model_btn_bar.setFixedWidth(models_bottom_left_box_width)
-        left_toolbar_host_layout.addStretch(1)
-        left_toolbar_host_layout.addWidget(model_btn_bar, 0, Qt.AlignTop)
-        left_toolbar_host_layout.addStretch(1)
-        bottom_row.addWidget(left_toolbar_host, 0, Qt.AlignLeft | Qt.AlignTop)
-        bottom_row.addStretch(1)
-        bottom_row.addWidget(self._transform_frame, 0, Qt.AlignRight | Qt.AlignTop)
-        models_layout.addLayout(bottom_row, 0)
-        self._transform_frame.setVisible(self._assembly_transform_enabled)
-
-        self.tabs.addTab(models_tab, self._t('tool_editor.tab.models', '3D models'))
-        self._update_measurement_summary_label()
-
-        # -------------------------
-        # BOTTOM BUTTONS
-        # -------------------------
         self._dialog_buttons = create_dialog_buttons(
             self,
             save_text=self._t('tool_editor.action.save_tool', 'SAVE TOOL'),
@@ -1187,19 +436,33 @@ class AddEditToolDialog(QDialog):
             on_cancel=self.reject,
         )
         self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
-
         root.addWidget(self._dialog_buttons)
 
         apply_secondary_button_theme(self, self._save_btn)
 
+        # The dialog-level event filter coordinates Enter handling, right-click
+        # transform reset, and outside-click dropdown cleanup across tabs.
         QApplication.instance().installEventFilter(self)
 
         for le in [
-            self.tool_id, self.description, self.geom_x, self.geom_z, self.b_axis_angle, self.radius,
-            self.nose_corner_radius, self.holder_code, self.holder_link, self.holder_add_element,
-            self.holder_add_element_link, self.cutting_code, self.cutting_link,
-            self.cutting_add_element, self.cutting_add_element_link,
-            self.drill_nose_angle, self.mill_cutting_edges, self.default_pot
+            self.tool_id,
+            self.description,
+            self.geom_x,
+            self.geom_z,
+            self.b_axis_angle,
+            self.radius,
+            self.nose_corner_radius,
+            self.holder_code,
+            self.holder_link,
+            self.holder_add_element,
+            self.holder_add_element_link,
+            self.cutting_code,
+            self.cutting_link,
+            self.cutting_add_element,
+            self.cutting_add_element_link,
+            self.drill_nose_angle,
+            self.mill_cutting_edges,
+            self.default_pot,
         ]:
             le.returnPressed.connect(le.clearFocus)
 
@@ -1218,6 +481,7 @@ class AddEditToolDialog(QDialog):
             numeric_editor.textEdited.connect(
                 lambda text, editor=numeric_editor: self._normalize_decimal_comma_input(editor, text)
             )
+
         self._update_general_header()
         self._update_spindle_orientation_visibility()
         self._update_notes_editor_height()

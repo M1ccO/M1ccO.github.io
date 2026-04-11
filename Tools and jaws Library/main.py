@@ -2,6 +2,7 @@ import json
 import sys
 import ctypes
 import ctypes.wintypes
+import traceback
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtGui import QColor, QGuiApplication, QPalette
@@ -280,7 +281,8 @@ def main():
                     if raw:
                         process_external_request(json.loads(raw))
                 except Exception:
-                    pass
+                    # Never fail silently here: Setup Manager handoff depends on this path.
+                    traceback.print_exc()
                 finally:
                     sock.disconnectFromServer()
                     sock.deleteLater()

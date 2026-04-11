@@ -3,12 +3,12 @@ import json
 import shutil
 from datetime import datetime
 from pathlib import Path
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QItemSelectionModel, QMimeData, Signal
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QMimeData, Signal
 from PySide6.QtGui import QDrag, QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
-    QAbstractButton, QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
+    QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
     QDialogButtonBox, QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
     QScrollArea, QSplitter, QVBoxLayout, QWidget, QSizePolicy, QToolButton
 )
@@ -26,10 +26,9 @@ from ui.tool_catalog_delegate import (
     ToolCatalogDelegate, tool_icon_for_type,
     ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON, ROLE_TOOL_UID,
 )
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style, repolish_widget
+from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 from shared.editor_helpers import (
     apply_secondary_button_theme,
-    apply_titled_section_style,
     ask_multi_edit_mode,
     create_titled_section,
     create_dialog_buttons,
@@ -50,6 +49,7 @@ from ui.selector_state_helpers import (
     selector_bucket_map,
 )
 from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
+from ui.home_page_support import apply_tool_detail_layout_rules
 
 
 class _ToolCatalogListView(QListView):
@@ -606,8 +606,20 @@ class HomePage(QWidget):
         detail_card_layout.addWidget(self.detail_scroll, 1)
         dc_layout.addWidget(self.detail_card, 1)
 
-        from PySide6.QtWidgets import QInputDialog
+        self._build_selector_card(dc_layout)
 
+        self.splitter.addWidget(self.detail_container)
+        root.addWidget(self.splitter, 1)
+
+        self.detail_container.hide()
+        self.detail_header_container.hide()
+        self.splitter.setSizes([1, 0])
+
+        self._build_bottom_bars(root)
+
+
+    def _build_selector_card(self, dc_layout: QVBoxLayout) -> None:
+        """Build the selector context card shown when assigning tools externally."""
         self.selector_card = QFrame()
         self.selector_card.setProperty('card', True)
         self.selector_card.setProperty('selectorContext', True)
@@ -781,13 +793,8 @@ class HomePage(QWidget):
         selector_card_layout.addWidget(self.selector_scroll, 1)
         dc_layout.addWidget(self.selector_card, 1)
 
-        self.splitter.addWidget(self.detail_container)
-        root.addWidget(self.splitter, 1)
-
-        self.detail_container.hide()
-        self.detail_header_container.hide()
-        self.splitter.setSizes([1, 0])
-
+    def _build_bottom_bars(self, root: QVBoxLayout) -> None:
+        """Build normal and selector-mode bottom action bars."""
         self.button_bar = QFrame()
         self.button_bar.setProperty('bottomBar', True)
         button_layout = QHBoxLayout(self.button_bar)
@@ -2268,63 +2275,9 @@ class HomePage(QWidget):
         header_layout.addLayout(meta_row)
         layout.addWidget(header)
 
-        # helper to create a field widget with key and value
-        def build_field(label_text: str, value_text: str, multiline: bool = False) -> QWidget:
-            field_group = create_titled_section(label_text)
-            field_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-            field_group.setMinimumWidth(0)
-            field_group.setProperty('elideGroupTitle', True)
-            field_group.setProperty('fullGroupTitle', label_text)
-            field_group.installEventFilter(self)
-            QTimer.singleShot(0, lambda g=field_group: self._refresh_elided_group_title(g))
-
-            flayout = QVBoxLayout(field_group)
-            flayout.setContentsMargins(6, 4, 6, 4)
-            flayout.setSpacing(4)
-
-            raw_value = '' if value_text is None else str(value_text)
-            if multiline:
-                normalized_value = (
-                    raw_value
-                    .replace('\r\n', '\n')
-                    .replace('\r', '\n')
-                    .replace('\u2028', '\n')
-                    .replace('\u2029', '\n')
-                    .replace('\\n', '\n')
-                )
-                value_edit = QLabel(normalized_value if normalized_value.strip() else '-')
-                value_edit.setWordWrap(True)
-                value_edit.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                value_edit.setFocusPolicy(Qt.NoFocus)
-                value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-                value_edit.setMinimumHeight(32)
-                value_edit.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-                value_edit.setStyleSheet(
-                    'QLabel {'
-                    '  background-color: #ffffff;'
-                    '  border: 1px solid #c8d4e0;'
-                    '  border-radius: 6px;'
-                    '  padding: 6px;'
-                    '  font-size: 10.5pt;'
-                    '}'
-                )
-                # Avoid tooltip popups over notes; the wrapped text is fully visible in-place.
-                value_edit.setToolTip('')
-            else:
-                value_edit = QLineEdit(raw_value if raw_value.strip() else '-')
-                value_edit.setReadOnly(True)
-                value_edit.setFocusPolicy(Qt.NoFocus)
-                value_edit.setCursorPosition(0)
-                value_edit.setToolTip(raw_value.strip() or '-')
-                value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-            flayout.addWidget(value_edit)
-            return field_group
-
         raw_cutting_type = tool.get('cutting_type', 'Insert')
         raw_tool_type = tool.get('tool_type', '')
         turning_drill_type = self._is_turning_drill_tool_type(raw_tool_type)
-        mill_tool_type = self._is_mill_tool_type(raw_tool_type)
 
         # Build the information grid using 6 equal columns.
         # Two-box rows use 3+3 spans; three-box rows use 2+2+2 spans.
@@ -2339,128 +2292,36 @@ class HomePage(QWidget):
         info.setColumnStretch(4, 1)
         info.setColumnStretch(5, 1)
 
-        def add_two_box_row(row, left_label, left_value, right_label, right_value):
-            info.addWidget(build_field(left_label, left_value), row, 0, 1, 3, Qt.AlignTop)
-            info.addWidget(build_field(right_label, right_value), row, 3, 1, 3, Qt.AlignTop)
-
-        def add_three_box_row(row, first_label, first_value, second_label, second_value, third_label, third_value):
-            info.addWidget(build_field(first_label, first_value), row, 0, 1, 2, Qt.AlignTop)
-            info.addWidget(build_field(second_label, second_value), row, 2, 1, 2, Qt.AlignTop)
-            info.addWidget(build_field(third_label, third_value), row, 4, 1, 2, Qt.AlignTop)
-
-        is_milling = raw_tool_type in MILLING_TOOL_TYPES
-        is_drill_cutting = raw_cutting_type in {'Drill', 'Center drill'}
-        is_drill_tool = (raw_tool_type or '').strip() == 'Drill'
-        is_chamfer = (raw_tool_type or '').strip() == 'Chamfer'
-        is_center_drill_tool = (raw_tool_type or '').strip() == 'Spot Drill'
-        uses_pitch_label = (raw_tool_type or '').strip() == 'Tapping'
-        is_turning_tool = raw_tool_type in TURNING_TOOL_TYPES
-        show_b_axis = is_turning_tool and not turning_drill_type and tool_head == 'HEAD1'
-        is_head2_turning_non_drill = tool_head == 'HEAD2' and is_turning_tool and not turning_drill_type
-
-        if is_head2_turning_non_drill:
-            # HEAD2 turning tools: one row with Geom X, Geom Z, and Nirkonsade.
-            add_three_box_row(
-                0,
-                self._t('tool_library.field.geom_x', 'Geom X'),
-                str(tool.get('geom_x', '')),
-                self._t('tool_library.field.geom_z', 'Geom Z'),
-                str(tool.get('geom_z', '')),
-                self._t('tool_library.field.nose_radius', 'Nose radius'),
-                str(tool.get('nose_corner_radius', '')),
-            )
-        else:
-            add_two_box_row(
-                0,
-                self._t('tool_library.field.geom_x', 'Geom X'),
-                str(tool.get('geom_x', '')),
-                self._t('tool_library.field.geom_z', 'Geom Z'),
-                str(tool.get('geom_z', '')),
-            )
-
         angle_value = str(tool.get('drill_nose_angle', ''))
         if not angle_value.strip():
             # Backward compatibility: older records may store point angle in nose_corner_radius.
             angle_value = str(tool.get('nose_corner_radius', ''))
 
-        if turning_drill_type:
-            # Turn drills / turn center drills:
-            # row 1 = Geom X + Geom Z, row 2 = Radius + Nose angle.
-            add_two_box_row(
-                1,
-                self._t('tool_library.field.radius', 'Radius'),
-                str(tool.get('radius', '')),
-                self._t('tool_library.field.nose_angle', 'Nose angle'),
-                angle_value,
-            )
-            full_row = 2
-        elif is_turning_tool:
-            if show_b_axis:
-                add_two_box_row(
-                    1,
-                    self._t('tool_library.field.b_axis_angle', 'B-axis angle'),
-                    str(tool.get('b_axis_angle', '0')),
-                    self._t('tool_library.field.nose_radius', 'Nose radius'),
-                    str(tool.get('nose_corner_radius', '')),
-                )
-                full_row = 2
-            elif is_head2_turning_non_drill:
-                full_row = 1
-            else:
-                full_row = 1
-        elif is_chamfer:
-            add_three_box_row(
-                1,
-                self._t('tool_library.field.radius', 'Radius'),
-                str(tool.get('radius', '')),
-                self._t('tool_library.field.nose_angle', 'Nose angle'),
-                angle_value,
-                self._t('tool_library.field.number_of_flutes', 'Number of flutes'),
-                str(tool.get('mill_cutting_edges', '')),
-            )
-            full_row = 2
-        elif is_center_drill_tool:
-            add_two_box_row(
-                1,
-                self._t('tool_library.field.radius', 'Radius'),
-                str(tool.get('radius', '')),
-                self._t('tool_library.field.nose_angle', 'Nose angle'),
-                angle_value,
-            )
-            full_row = 2
-        elif is_drill_tool:
-            add_two_box_row(
-                1,
-                self._t('tool_library.field.radius', 'Radius'),
-                str(tool.get('radius', '')),
-                self._t('tool_library.field.nose_angle', 'Nose angle'),
-                angle_value,
-            )
-            full_row = 2
-        elif is_milling and not is_drill_cutting:
-            add_three_box_row(
-                1,
-                self._t('tool_library.field.radius', 'Radius'),
-                str(tool.get('radius', '')),
-                self._t('tool_library.field.number_of_flutes', 'Number of flutes'),
-                str(tool.get('mill_cutting_edges', '')),
-                self._t('tool_library.field.pitch', 'Pitch') if uses_pitch_label else self._t('tool_library.field.corner_radius', 'Corner radius'),
-                str(tool.get('nose_corner_radius', '')),
-            )
-            full_row = 2
-        else:
-            if is_drill_cutting:
-                info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
-                info.addWidget(build_field(self._t('tool_library.field.nose_angle', 'Nose angle'), angle_value), 1, 3, 1, 3, Qt.AlignTop)
-            elif not is_drill_cutting:
-                info.addWidget(build_field(self._t('tool_library.field.radius', 'Radius'), str(tool.get('radius', ''))), 1, 0, 1, 3, Qt.AlignTop)
-                info.addWidget(build_field(self._t('tool_library.field.nose_corner_radius', 'Nose R / Corner R'), str(tool.get('nose_corner_radius', ''))), 1, 3, 1, 3, Qt.AlignTop)
-            full_row = 2
+        def _fallback_pair_row(left_label: str, left_value: str, right_label: str, right_value: str) -> None:
+            info.addWidget(self._build_detail_field(left_label, left_value), 1, 0, 1, 3, Qt.AlignTop)
+            info.addWidget(self._build_detail_field(right_label, right_value), 1, 3, 1, 3, Qt.AlignTop)
+
+        full_row = apply_tool_detail_layout_rules(
+            tool=tool,
+            tool_head=tool_head,
+            raw_tool_type=raw_tool_type,
+            raw_cutting_type=raw_cutting_type,
+            turning_drill_type=turning_drill_type,
+            angle_value=angle_value,
+            milling_tool_types=MILLING_TOOL_TYPES,
+            turning_tool_types=TURNING_TOOL_TYPES,
+            add_two_box_row=lambda row, ll, lv, rl, rv: self._add_two_box_row(info, row, ll, lv, rl, rv),
+            add_three_box_row=lambda row, l1, v1, l2, v2, l3, v3: self._add_three_box_row(
+                info, row, l1, v1, l2, v2, l3, v3
+            ),
+            add_fallback_pair_row=_fallback_pair_row,
+            translate=self._t,
+        )
 
         # notes field - spans full width
         notes_text = tool.get('notes', tool.get('spare_parts', ''))
         if notes_text:
-            notes_field = build_field(self._t('tool_library.field.notes', 'Notes'), notes_text, multiline=True)
+            notes_field = self._build_detail_field(self._t('tool_library.field.notes', 'Notes'), notes_text, multiline=True)
             info.addWidget(notes_field, full_row, 0, 1, 6)
         layout.addLayout(info)
         layout.addWidget(self._build_components_panel(tool, support_parts))
@@ -2510,43 +2371,65 @@ class HomePage(QWidget):
         self._component_toggle_arrows = (left_arrow, up_arrow)
         return self._component_toggle_arrows
 
-    # ==============================
-    # Detail Panel Sections
-    # ==============================
-    def _build_components_panel(self, tool, support_parts):
-        frame = create_titled_section(self._t('tool_library.section.tool_components', 'Tool components'))
-        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
-        layout = QVBoxLayout(frame)
-        layout.setContentsMargins(6, 4, 6, 6)
-        layout.setSpacing(6)
+    @staticmethod
+    def _component_key(item: dict, fallback_idx: int) -> str:
+        explicit = (item.get('component_key') or '').strip()
+        if explicit:
+            return explicit
+        role = (item.get('role') or 'component').strip().lower()
+        code = (item.get('code') or '').strip()
+        if code:
+            return f"{role}:{code}"
+        return f"{role}:idx:{fallback_idx}"
 
-        body_host = QFrame()
-        body_host.setObjectName('toolComponentsBodyHost')
-        body_host.setStyleSheet(
-            'QFrame#toolComponentsBodyHost {'
-            '  background-color: #ffffff;'
-            '  border: none;'
-            '  border-radius: 4px;'
-            '}'
+    def _legacy_component_candidates(self, tool: dict) -> list[dict]:
+        """Build compatibility rows when tool data predates `component_items`."""
+        raw_cutting_name = tool.get('cutting_type', '')
+        cutting_name = self._localized_cutting_type(raw_cutting_name) if raw_cutting_name else self._t(
+            'tool_library.field.cutting_part',
+            'Cutting part',
         )
-        body_layout = QVBoxLayout(body_host)
-        body_layout.setContentsMargins(8, 8, 8, 8)
-        body_layout.setSpacing(6)
+        candidates = [
+            {
+                'role': 'holder',
+                'label': self._t('tool_library.field.holder', 'Holder'),
+                'code': tool.get('holder_code', ''),
+                'link': (tool.get('holder_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'holder:' + (tool.get('holder_code', '') or '').strip(),
+                'order': 0,
+            },
+            {
+                'role': 'holder',
+                'label': self._t('tool_library.field.add_element', 'Add. Element'),
+                'code': tool.get('holder_add_element', ''),
+                'link': (tool.get('holder_add_element_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'holder:' + (tool.get('holder_add_element', '') or '').strip(),
+                'order': 1,
+            },
+            {
+                'role': 'cutting',
+                'label': cutting_name,
+                'code': tool.get('cutting_code', ''),
+                'link': (tool.get('cutting_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'cutting:' + (tool.get('cutting_code', '') or '').strip(),
+                'order': 2,
+            },
+            {
+                'role': 'cutting',
+                'label': self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=cutting_name),
+                'code': tool.get('cutting_add_element', ''),
+                'link': (tool.get('cutting_add_element_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'cutting:' + (tool.get('cutting_add_element', '') or '').strip(),
+                'order': 3,
+            },
+        ]
+        return [item for item in candidates if (item.get('code') or '').strip()]
 
-        list_layout = QVBoxLayout()
-        list_layout.setContentsMargins(0, 0, 0, 0)
-        list_layout.setSpacing(4)
-
-        def _component_key(item: dict, fallback_idx: int) -> str:
-            explicit = (item.get('component_key') or '').strip()
-            if explicit:
-                return explicit
-            role = (item.get('role') or 'component').strip().lower()
-            code = (item.get('code') or '').strip()
-            if code:
-                return f"{role}:{code}"
-            return f"{role}:idx:{fallback_idx}"
-
+    def _normalized_component_items(self, tool: dict) -> list[dict]:
         component_items = tool.get('component_items', [])
         if isinstance(component_items, str):
             try:
@@ -2554,7 +2437,7 @@ class HomePage(QWidget):
             except Exception:
                 component_items = []
 
-        normalized = []
+        normalized: list[dict] = []
         if isinstance(component_items, list):
             for idx, item in enumerate(component_items):
                 if not isinstance(item, dict):
@@ -2582,52 +2465,14 @@ class HomePage(QWidget):
                 )
 
         if not normalized:
-            # Legacy fallback for rows without component_items.
-            raw_cutting_name = tool.get('cutting_type', '')
-            cutting_name = self._localized_cutting_type(raw_cutting_name) if raw_cutting_name else self._t('tool_library.field.cutting_part', 'Cutting part')
-            legacy_candidates = [
-                {
-                    'role': 'holder',
-                    'label': self._t('tool_library.field.holder', 'Holder'),
-                    'code': tool.get('holder_code', ''),
-                    'link': (tool.get('holder_link', '') or '').strip(),
-                    'group': '',
-                    'component_key': 'holder:' + (tool.get('holder_code', '') or '').strip(),
-                    'order': 0,
-                },
-                {
-                    'role': 'holder',
-                    'label': self._t('tool_library.field.add_element', 'Add. Element'),
-                    'code': tool.get('holder_add_element', ''),
-                    'link': (tool.get('holder_add_element_link', '') or '').strip(),
-                    'group': '',
-                    'component_key': 'holder:' + (tool.get('holder_add_element', '') or '').strip(),
-                    'order': 1,
-                },
-                {
-                    'role': 'cutting',
-                    'label': cutting_name,
-                    'code': tool.get('cutting_code', ''),
-                    'link': (tool.get('cutting_link', '') or '').strip(),
-                    'group': '',
-                    'component_key': 'cutting:' + (tool.get('cutting_code', '') or '').strip(),
-                    'order': 2,
-                },
-                {
-                    'role': 'cutting',
-                    'label': self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=cutting_name),
-                    'code': tool.get('cutting_add_element', ''),
-                    'link': (tool.get('cutting_add_element_link', '') or '').strip(),
-                    'group': '',
-                    'component_key': 'cutting:' + (tool.get('cutting_add_element', '') or '').strip(),
-                    'order': 3,
-                },
-            ]
-            normalized.extend([item for item in legacy_candidates if (item.get('code') or '').strip()])
+            normalized.extend(self._legacy_component_candidates(tool))
 
         normalized.sort(key=lambda entry: int(entry.get('order', 0)))
+        return normalized
 
-        spare_index = {}
+    @staticmethod
+    def _spare_index_by_component(support_parts: list | None) -> dict[str, list[dict]]:
+        index: dict[str, list[dict]] = {}
         for part in support_parts or []:
             if isinstance(part, str):
                 try:
@@ -2643,7 +2488,248 @@ class HomePage(QWidget):
             )
             if not part_key:
                 continue
-            spare_index.setdefault(part_key, []).append(part)
+            index.setdefault(part_key, []).append(part)
+        return index
+
+    def _build_component_row_widget(self, item: dict, display_name: str) -> tuple[QFrame, QLabel, str, str]:
+        row_card = QFrame()
+        row_card.setProperty('editorFieldCard', True)
+        row_layout = QHBoxLayout(row_card)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(8)
+
+        button_text = (display_name or '').strip()
+        btn = QPushButton(button_text)
+        btn.setProperty('panelActionButton', True)
+        btn.setProperty('componentCompact', True)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setToolTip(
+            (item.get('link') or '').strip()
+            or self._t('tool_library.part.no_link', 'No link set for: {name}', name=display_name)
+        )
+        btn.setMinimumWidth(100)
+        fm = QFontMetrics(btn.font())
+        required_width = fm.horizontalAdvance(button_text) + 34
+        btn.setFixedWidth(max(88, min(360, required_width)))
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        btn.clicked.connect(lambda _=False, p=item: self.part_clicked(p))
+        row_layout.addWidget(btn, 0)
+
+        raw_code = (item.get('code', '') or '').strip()
+        code_lbl = QLabel(raw_code if raw_code else '-')
+        code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        code_style_default = (
+            'background: transparent;'
+            'border: none;'
+            'padding: 0 2px;'
+            'font-size: 11pt;'
+            'color: #22303c;'
+            'font-weight: 400;'
+            'border-bottom: 1px solid transparent;'
+        )
+        code_style_hover = (
+            'background: transparent;'
+            'border: none;'
+            'padding: 0 2px;'
+            'font-size: 11pt;'
+            'color: #1f5f9a;'
+            'font-weight: 400;'
+            'border-bottom: 1px solid #1f5f9a;'
+        )
+        code_lbl.setStyleSheet(code_style_default)
+        row_layout.addWidget(code_lbl, 1)
+        return row_card, code_lbl, code_style_default, code_style_hover
+
+    def _build_component_spare_host(self, linked_spares: list[dict]) -> QFrame:
+        spare_host = QFrame()
+        spare_host.setProperty('editorFieldGroup', True)
+        spare_host_layout = QVBoxLayout(spare_host)
+        spare_host_layout.setContentsMargins(12, 4, 0, 2)
+        spare_host_layout.setSpacing(4)
+        spare_host.setVisible(False)
+
+        for spare in linked_spares:
+            spare_row = QFrame()
+            spare_row.setProperty('editorFieldCard', True)
+            spare_row_layout = QHBoxLayout(spare_row)
+            spare_row_layout.setContentsMargins(0, 0, 0, 0)
+            spare_row_layout.setSpacing(8)
+
+            spare_name = (spare.get('name') or self._t('tool_library.field.part', 'Part')).strip()
+            spare_btn = QPushButton(spare_name)
+            spare_btn.setProperty('panelActionButton', True)
+            spare_btn.setProperty('componentCompact', True)
+            spare_btn.setCursor(Qt.PointingHandCursor)
+            spare_btn.setToolTip(
+                (spare.get('link') or '').strip()
+                or self._t('tool_library.part.no_link', 'No link set for: {name}', name=spare_name)
+            )
+            spare_btn_fm = QFontMetrics(spare_btn.font())
+            spare_required_width = spare_btn_fm.horizontalAdvance(spare_name) + 48
+            spare_btn.setFixedWidth(max(110, min(360, spare_required_width)))
+            spare_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+            spare_btn.clicked.connect(lambda _=False, p=spare: self.part_clicked(p))
+
+            spare_code = (spare.get('code') or '').strip()
+            spare_code_lbl = QLabel(spare_code if spare_code else '-')
+            spare_code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            spare_code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            spare_code_lbl.setStyleSheet(
+                'background: transparent;'
+                'border: none;'
+                'padding: 0 2px;'
+                'font-size: 10.5pt;'
+                'color: #22303c;'
+            )
+
+            spare_row_layout.addWidget(spare_btn, 0)
+            spare_row_layout.addWidget(spare_code_lbl, 1)
+            spare_host_layout.addWidget(spare_row)
+        return spare_host
+
+    def _wire_spare_toggle(
+        self,
+        *,
+        frame: QFrame,
+        spare_host: QFrame,
+        code_lbl: QLabel,
+        arrow_lbl: QLabel,
+        arrow_up: QPixmap,
+        arrow_left: QPixmap,
+        code_style_default: str,
+        code_style_hover: str,
+    ) -> None:
+        def _set_code_hover(hovered: bool):
+            code_lbl.setStyleSheet(code_style_hover if hovered else code_style_default)
+
+        def _toggle_spares(_e):
+            visible = not spare_host.isVisible()
+            spare_host.setVisible(visible)
+            arrow_lbl.setPixmap(arrow_up if visible else arrow_left)
+            _set_code_hover(False)
+            frame.updateGeometry()
+            frame.update()
+
+        def _hover_enter(_e):
+            _set_code_hover(True)
+
+        def _hover_leave(_e):
+            _set_code_hover(False)
+
+        code_lbl.mousePressEvent = _toggle_spares
+        arrow_lbl.mousePressEvent = _toggle_spares
+        code_lbl.enterEvent = _hover_enter
+        code_lbl.leaveEvent = _hover_leave
+        arrow_lbl.enterEvent = _hover_enter
+        arrow_lbl.leaveEvent = _hover_leave
+
+    def _build_detail_field(self, label_text: str, value_text: str, multiline: bool = False) -> QWidget:
+        field_group = create_titled_section(label_text)
+        field_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        field_group.setMinimumWidth(0)
+        field_group.setProperty('elideGroupTitle', True)
+        field_group.setProperty('fullGroupTitle', label_text)
+        field_group.installEventFilter(self)
+        QTimer.singleShot(0, lambda g=field_group: self._refresh_elided_group_title(g))
+
+        flayout = QVBoxLayout(field_group)
+        flayout.setContentsMargins(6, 4, 6, 4)
+        flayout.setSpacing(4)
+
+        raw_value = '' if value_text is None else str(value_text)
+        if multiline:
+            normalized_value = (
+                raw_value
+                .replace('\r\n', '\n')
+                .replace('\r', '\n')
+                .replace('\u2028', '\n')
+                .replace('\u2029', '\n')
+                .replace('\\n', '\n')
+            )
+            value_edit = QLabel(normalized_value if normalized_value.strip() else '-')
+            value_edit.setWordWrap(True)
+            value_edit.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            value_edit.setFocusPolicy(Qt.NoFocus)
+            value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            value_edit.setMinimumHeight(32)
+            value_edit.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            value_edit.setStyleSheet(
+                'QLabel {'
+                '  background-color: #ffffff;'
+                '  border: 1px solid #c8d4e0;'
+                '  border-radius: 6px;'
+                '  padding: 6px;'
+                '  font-size: 10.5pt;'
+                '}'
+            )
+            value_edit.setToolTip('')
+        else:
+            value_edit = QLineEdit(raw_value if raw_value.strip() else '-')
+            value_edit.setReadOnly(True)
+            value_edit.setFocusPolicy(Qt.NoFocus)
+            value_edit.setCursorPosition(0)
+            value_edit.setToolTip(raw_value.strip() or '-')
+            value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        flayout.addWidget(value_edit)
+        return field_group
+
+    def _add_two_box_row(
+        self,
+        info: QGridLayout,
+        row: int,
+        left_label: str,
+        left_value: str,
+        right_label: str,
+        right_value: str,
+    ) -> None:
+        info.addWidget(self._build_detail_field(left_label, left_value), row, 0, 1, 3, Qt.AlignTop)
+        info.addWidget(self._build_detail_field(right_label, right_value), row, 3, 1, 3, Qt.AlignTop)
+
+    def _add_three_box_row(
+        self,
+        info: QGridLayout,
+        row: int,
+        first_label: str,
+        first_value: str,
+        second_label: str,
+        second_value: str,
+        third_label: str,
+        third_value: str,
+    ) -> None:
+        info.addWidget(self._build_detail_field(first_label, first_value), row, 0, 1, 2, Qt.AlignTop)
+        info.addWidget(self._build_detail_field(second_label, second_value), row, 2, 1, 2, Qt.AlignTop)
+        info.addWidget(self._build_detail_field(third_label, third_value), row, 4, 1, 2, Qt.AlignTop)
+
+    # ==============================
+    # Detail Panel Sections
+    # ==============================
+    def _build_components_panel(self, tool, support_parts):
+        frame = create_titled_section(self._t('tool_library.section.tool_components', 'Tool components'))
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(6, 4, 6, 6)
+        layout.setSpacing(6)
+
+        body_host = QFrame()
+        body_host.setObjectName('toolComponentsBodyHost')
+        body_host.setStyleSheet(
+            'QFrame#toolComponentsBodyHost {'
+            '  background-color: #ffffff;'
+            '  border: none;'
+            '  border-radius: 4px;'
+            '}'
+        )
+        body_layout = QVBoxLayout(body_host)
+        body_layout.setContentsMargins(8, 8, 8, 8)
+        body_layout.setSpacing(6)
+
+        list_layout = QVBoxLayout()
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.setSpacing(4)
+        normalized = self._normalized_component_items(tool)
+        spare_index = self._spare_index_by_component(support_parts)
 
         last_group = None
         for idx, item in enumerate(normalized):
@@ -2661,55 +2747,10 @@ class HomePage(QWidget):
                     list_layout.addWidget(group_label)
 
             display_name = item.get('label', self._t('tool_library.field.part', 'Part'))
-            button_text = (display_name or '').strip()
-
-            component_key = _component_key(item, idx)
+            component_key = self._component_key(item, idx)
             linked_spares = spare_index.get(component_key, [])
-
-            row_card = QFrame()
-            row_card.setProperty('editorFieldCard', True)
-            row_layout = QHBoxLayout(row_card)
-            row_layout.setContentsMargins(0, 0, 0, 0)
-            row_layout.setSpacing(8)
-
-            btn = QPushButton(button_text)
-            btn.setProperty('panelActionButton', True)
-            btn.setProperty('componentCompact', True)
-            btn.setCursor(Qt.PointingHandCursor)
-            btn.setToolTip((item.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=display_name))
-            btn.setMinimumWidth(100)
-            fm = QFontMetrics(btn.font())
-            required_width = fm.horizontalAdvance(button_text) + 34
-            btn_width = max(88, min(360, required_width))
-            btn.setFixedWidth(btn_width)
-            btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-            btn.clicked.connect(lambda _=False, p=item: self.part_clicked(p))
-            row_layout.addWidget(btn, 0)
-
-            raw_code = (item.get('code', '') or '').strip()
-            code_lbl = QLabel(raw_code if raw_code else '-')
-            code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
-            code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-            code_style_default = (
-                'background: transparent;'
-                'border: none;'
-                'padding: 0 2px;'
-                'font-size: 11pt;'
-                'color: #22303c;'
-                'font-weight: 400;'
-                'border-bottom: 1px solid transparent;'
-            )
-            code_style_hover = (
-                'background: transparent;'
-                'border: none;'
-                'padding: 0 2px;'
-                'font-size: 11pt;'
-                'color: #1f5f9a;'
-                'font-weight: 400;'
-                'border-bottom: 1px solid #1f5f9a;'
-            )
-            code_lbl.setStyleSheet(code_style_default)
-            row_layout.addWidget(code_lbl, 1)
+            row_card, code_lbl, code_style_default, code_style_hover = self._build_component_row_widget(item, display_name)
+            row_layout = row_card.layout()
 
             if linked_spares:
                 arrow_style_default = 'background: transparent; border: none; padding: 0 4px;'
@@ -2725,90 +2766,20 @@ class HomePage(QWidget):
                 # Make the whole code area clickable to toggle spares
                 code_lbl.setCursor(Qt.PointingHandCursor)
 
-                def _set_code_hover(
-                    hovered: bool,
-                    label=code_lbl,
-                    default_style=code_style_default,
-                    hover_style=code_style_hover,
-                ):
-                    label.setStyleSheet(hover_style if hovered else default_style)
-
             list_layout.addWidget(row_card)
 
             if linked_spares:
-                spare_host = QFrame()
-                spare_host.setProperty('editorFieldGroup', True)
-                spare_host_layout = QVBoxLayout(spare_host)
-                spare_host_layout.setContentsMargins(12, 4, 0, 2)
-                spare_host_layout.setSpacing(4)
-                spare_host.setVisible(False)
-
-                SPARE_BTN_WIDTH = 150
-
-                for spare in linked_spares:
-                    spare_row = QFrame()
-                    spare_row.setProperty('editorFieldCard', True)
-                    spare_row_layout = QHBoxLayout(spare_row)
-                    spare_row_layout.setContentsMargins(0, 0, 0, 0)
-                    spare_row_layout.setSpacing(8)
-
-                    spare_name = (spare.get('name') or self._t('tool_library.field.part', 'Part')).strip()
-                    spare_btn = QPushButton(spare_name)
-                    spare_btn.setProperty('panelActionButton', True)
-                    spare_btn.setProperty('componentCompact', True)
-                    spare_btn.setCursor(Qt.PointingHandCursor)
-                    spare_btn.setToolTip((spare.get('link') or '').strip() or self._t('tool_library.part.no_link', 'No link set for: {name}', name=spare_name))
-                    spare_btn_fm = QFontMetrics(spare_btn.font())
-                    spare_required_width = spare_btn_fm.horizontalAdvance(spare_name) + 48
-                    spare_btn.setFixedWidth(max(110, min(360, spare_required_width)))
-                    spare_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-                    spare_btn.clicked.connect(lambda _=False, p=spare: self.part_clicked(p))
-
-                    spare_code = (spare.get('code') or '').strip()
-                    spare_code_lbl = QLabel(spare_code if spare_code else '-')
-                    spare_code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
-                    spare_code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-                    spare_code_lbl.setStyleSheet(
-                        'background: transparent;'
-                        'border: none;'
-                        'padding: 0 2px;'
-                        'font-size: 10.5pt;'
-                        'color: #22303c;'
-                    )
-
-                    spare_row_layout.addWidget(spare_btn, 0)
-                    spare_row_layout.addWidget(spare_code_lbl, 1)
-                    spare_host_layout.addWidget(spare_row)
-
-                def _toggle_spares(
-                    _e,
-                    host=spare_host,
-                    arrow=arrow_lbl,
-                    up=arrow_up,
-                    left=arrow_left,
-                    panel=frame,
-                    set_hover=_set_code_hover,
-                ):
-                    visible = not host.isVisible()
-                    host.setVisible(visible)
-                    arrow.setPixmap(up if visible else left)
-                    set_hover(False)
-                    panel.updateGeometry()
-                    panel.update()
-
-                def _hover_enter(_e, set_hover=_set_code_hover):
-                    set_hover(True)
-
-                def _hover_leave(_e, set_hover=_set_code_hover):
-                    set_hover(False)
-
-                code_lbl.mousePressEvent = _toggle_spares
-                arrow_lbl.mousePressEvent = _toggle_spares
-                code_lbl.enterEvent = _hover_enter
-                code_lbl.leaveEvent = _hover_leave
-                arrow_lbl.enterEvent = _hover_enter
-                arrow_lbl.leaveEvent = _hover_leave
-
+                spare_host = self._build_component_spare_host(linked_spares)
+                self._wire_spare_toggle(
+                    frame=frame,
+                    spare_host=spare_host,
+                    code_lbl=code_lbl,
+                    arrow_lbl=arrow_lbl,
+                    arrow_up=arrow_up,
+                    arrow_left=arrow_left,
+                    code_style_default=code_style_default,
+                    code_style_hover=code_style_hover,
+                )
                 list_layout.addWidget(spare_host)
 
         if not normalized:

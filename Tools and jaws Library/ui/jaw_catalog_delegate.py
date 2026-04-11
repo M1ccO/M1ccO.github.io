@@ -23,8 +23,8 @@ ROLE_JAW_DATA = Qt.UserRole + 1
 ROLE_JAW_ICON = Qt.UserRole + 2
 
 ROW_HEIGHT = 74
-ICON_SIZE = 40
-ICON_SLOT_W = 40
+ICON_SIZE = 48
+ICON_SLOT_W = 52
 CARD_RADIUS = 8
 CARD_MARGIN_H = 6
 CARD_MARGIN_V = 2
@@ -73,13 +73,18 @@ def _is_sub_spindle(spindle_side: str) -> bool:
 
 def _jaw_icon_filename(jaw_type: str) -> str:
     _ = jaw_type
-    # Keep one stable base icon for jaw rows; sub spindle rows mirror it.
-    return "hard_jaw.png"
+    # Use the dedicated jaw icon; sub spindle uses jaw_sub, main uses jaw_main.
+    return "jaw_main.png"
 
 
 def jaw_icon_for_row(jaw: dict) -> QIcon:
-    filename = _jaw_icon_filename(jaw.get("jaw_type", ""))
+    spindle_side = str(jaw.get("spindle_side") or "").strip().lower()
+    is_sub = "sub" in spindle_side or "vasta" in spindle_side or "ala" in spindle_side
+    # Use the spindle-specific chuck icon (already transparent, already mirrored).
+    filename = "jaw_sub.png" if is_sub else "jaw_main.png"
     path = TOOL_ICONS_DIR / filename
+    if not path.exists():
+        path = TOOL_ICONS_DIR / _jaw_icon_filename(jaw.get("jaw_type", ""))
     if not path.exists():
         fallback = TOOL_ICONS_DIR / "jaw_icon.png"
         path = fallback if fallback.exists() else path
@@ -367,24 +372,42 @@ class JawCatalogDelegate(QStyledItemDelegate):
 
     def _cached_pixmap(self, icon: QIcon, jaw_type: str, spindle_side: str) -> QPixmap | None:
         file_name = _jaw_icon_filename(jaw_type)
-        key = (file_name, "sub" if _is_sub_spindle(spindle_side) else "main")
+        is_sub = _is_sub_spindle(spindle_side)
+        key = (file_name, "sub" if is_sub else "main")
         if key not in self._icon_cache:
-            path = TOOL_ICONS_DIR / file_name
+            # For sub spindle prefer the pre-mirrored jaw_sub.png;
+            # fall back to runtime-mirrored jaw_main (or any other file).
+            if is_sub:
+                sub_path = TOOL_ICONS_DIR / "jaw_sub.png"
+                path = sub_path if sub_path.exists() else TOOL_ICONS_DIR / file_name
+            else:
+                path = TOOL_ICONS_DIR / file_name
+
             if not path.exists():
                 fallback = TOOL_ICONS_DIR / "jaw_icon.png"
                 path = fallback if fallback.exists() else path
 
             pixmap = QPixmap()
             if path.exists():
-                img = _clean_icon_image(path, QSize(ICON_SIZE, ICON_SIZE))
-                if not img.isNull() and key[1] == "sub":
-                    img = img.mirrored(True, False)
-                if not img.isNull():
-                    pixmap = QPixmap.fromImage(img)
+                # Chuck images are already transparent — load directly, no cleaning needed.
+                if path.stem.startswith("jaw_"):
+                    raw = QPixmap(str(path))
+                    if not raw.isNull():
+                        pixmap = raw.scaled(
+                            QSize(ICON_SIZE, ICON_SIZE),
+                            Qt.KeepAspectRatio,
+                            Qt.SmoothTransformation,
+                        )
+                else:
+                    img = _clean_icon_image(path, QSize(ICON_SIZE, ICON_SIZE))
+                    if not img.isNull() and is_sub and path.stem != "jaw_sub":
+                        img = img.transformed(QTransform().scale(-1, 1))
+                    if not img.isNull():
+                        pixmap = QPixmap.fromImage(img)
 
             if pixmap.isNull():
                 pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE))
-                if not pixmap.isNull() and key[1] == "sub":
+                if not pixmap.isNull() and is_sub:
                     pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
             self._icon_cache[key] = pixmap
         return self._icon_cache.get(key)
