@@ -255,33 +255,6 @@ QWidget[selectorContext="true"] QLabel[miniAssignmentHint="true"] {
     color: #617180;
 }
 
-QWidget[selectorContext="true"] QFrame[jawSelectorSlot="true"] {
-    background-color: #f0f6fc;
-    border: 1px solid #d0d8e0;
-    border-radius: 6px;
-}
-
-QWidget[selectorContext="true"] QFrame[jawSelectorDropSurface="true"] {
-    background-color: transparent;
-    border: none;
-    border-radius: 6px;
-}
-
-QWidget[selectorContext="true"] QFrame[jawSelectorDropSurface="true"][hasAssignment="true"] {
-    background-color: transparent;
-    border: none;
-}
-
-QWidget[selectorContext="true"] QLabel[jawSelectorDropValue="true"] {
-    font-size: 10.5pt;
-    font-weight: 500;
-    color: #3a4a58;
-    background: #d9dde3;
-    border: 1px solid #c5cdd6;
-    border-radius: 6px;
-    padding: 10px;
-}
-
 QWidget[selectorContext="true"] QListWidget#toolIdsOrderList {
     background: transparent;
     border: none;

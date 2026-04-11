@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFrame,
+    QGroupBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -37,12 +38,14 @@ from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_
 from ui.jaw_editor_dialog import AddEditJawDialog
 from shared.editor_helpers import (
     apply_secondary_button_theme,
+    apply_titled_section_style,
     ask_multi_edit_mode,
     build_titled_detail_field,
     build_titled_detail_list_field,
     create_titled_section,
     create_dialog_buttons,
     setup_editor_dialog,
+    style_icon_action_button,
     style_panel_action_button,
 )
 
@@ -144,8 +147,9 @@ class _JawCatalogListView(QListView):
         drag.exec(Qt.CopyAction)
 
 
-class _JawAssignmentSlot(QFrame):
+class _JawAssignmentSlot(QGroupBox):
     jawDropped = Signal(str, dict)
+    slotClicked = Signal(str, bool)
 
     def __init__(self, slot_key: str, title: str, parent=None):
         super().__init__(parent)
@@ -153,46 +157,40 @@ class _JawAssignmentSlot(QFrame):
         self._assignment: dict | None = None
         self._drop_placeholder = 'Drop jaw here'
         self._assignment_card: MiniAssignmentCard | None = None
+        self._selected = False
+        self._content_height = 38
+        self._drag_start_pos = None
         self.setAcceptDrops(True)
-        self.setProperty('jawSelectorSlot', True)
+        self.setProperty('toolIdsPanel', True)
+        apply_titled_section_style(self)
+        self.setTitle(title)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setContentsMargins(8, 10, 8, 8)
         layout.setSpacing(6)
 
-        self.title_label = QLabel(title)
-        self.title_label.setProperty('detailFieldKey', True)
-        layout.addWidget(self.title_label)
-
-        self.drop_surface = QFrame()
-        self.drop_surface.setProperty('jawSelectorDropSurface', True)
-        self._drop_layout = QVBoxLayout(self.drop_surface)
-        self._drop_layout.setContentsMargins(0, 0, 0, 0)
-        self._drop_layout.setSpacing(0)
-
         self.value_label = QLabel('')
-        self.value_label.setProperty('jawSelectorDropValue', True)
-        self.value_label.setWordWrap(True)
-        self._drop_layout.addWidget(self.value_label)
-        layout.addWidget(self.drop_surface)
-
-        self.clear_btn = QPushButton('Clear')
-        self.clear_btn.setProperty('panelActionButton', True)
-        self.clear_btn.setMinimumWidth(88)
-        style_panel_action_button(self.clear_btn)
-        self.clear_btn.clicked.connect(self._clear_assignment_requested)
-        layout.addWidget(self.clear_btn, 0, Qt.AlignLeft)
+        self.value_label.setProperty('detailHint', True)
+        self.value_label.setWordWrap(False)
+        self.value_label.setFixedHeight(self._content_height)
+        self.value_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        layout.addWidget(self.value_label)
         self._refresh_ui()
 
     def set_title(self, title: str):
-        self.title_label.setText(title)
-
-    def set_clear_text(self, label: str):
-        self.clear_btn.setText(label)
+        self.setTitle(title)
 
     def set_drop_placeholder_text(self, text: str):
         self._drop_placeholder = str(text or 'Drop jaw here')
         self._refresh_ui()
+
+    def set_selected(self, selected: bool):
+        self._selected = bool(selected)
+        if self._assignment_card is not None:
+            self._assignment_card.set_selected(self._selected)
+
+    def is_selected(self) -> bool:
+        return self._selected
 
     def assignment(self) -> dict | None:
         return dict(self._assignment) if isinstance(self._assignment, dict) else None
@@ -223,33 +221,69 @@ class _JawAssignmentSlot(QFrame):
                     badges=[],
                     editable=False,
                     compact=True,
-                    parent=self.drop_surface,
+                    parent=self,
                 )
-                self._drop_layout.addWidget(self._assignment_card)
+                self._assignment_card.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+                self._assignment_card.setFixedHeight(self._content_height)
+                self.layout().insertWidget(0, self._assignment_card)
             else:
                 icon = jaw_icon_for_row(self._assignment)
                 if icon is not None and not icon.isNull():
                     self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(22, 22)))
                 self._assignment_card.title_label.setText(title)
+                self._assignment_card.setFixedHeight(self._content_height)
             self._assignment_card.subtitle_label.setVisible(False)
             self._assignment_card.set_badges([])
             self._assignment_card.setVisible(True)
+            self._assignment_card.set_selected(self._selected)
             self.value_label.setVisible(False)
-            self.clear_btn.setEnabled(True)
-            self.drop_surface.setProperty('hasAssignment', True)
-            repolish_widget(self.drop_surface)
             return
         self.value_label.setText(self._drop_placeholder)
         self.value_label.setVisible(True)
         if self._assignment_card is not None:
             self._assignment_card.setVisible(False)
-        self.clear_btn.setEnabled(False)
-        self.drop_surface.setProperty('hasAssignment', False)
-        repolish_widget(self.drop_surface)
 
-    def _clear_assignment_requested(self):
-        self.set_assignment(None)
-        self.jawDropped.emit(self._slot_key, {})
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.pos()
+        ctrl = bool(event.modifiers() & Qt.ControlModifier)
+        self.slotClicked.emit(self._slot_key, ctrl)
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not (event.buttons() & Qt.LeftButton):
+            return super().mouseMoveEvent(event)
+        if self._assignment is None or self._drag_start_pos is None:
+            return super().mouseMoveEvent(event)
+        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            return super().mouseMoveEvent(event)
+
+        payload = [dict(self._assignment)]
+        mime = QMimeData()
+        mime.setData(SELECTOR_JAW_MIME, json.dumps(payload).encode('utf-8'))
+
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        ghost_source = self._assignment_card if self._assignment_card is not None else self
+        ghost = ghost_source.grab()
+        if not ghost.isNull():
+            translucent = QPixmap(ghost.size())
+            translucent.fill(Qt.transparent)
+            painter = QPainter(translucent)
+            painter.setOpacity(0.7)
+            painter.drawPixmap(0, 0, ghost)
+            painter.end()
+            drag.setPixmap(translucent)
+            drag.setHotSpot(translucent.rect().center())
+
+        drag.exec(Qt.CopyAction)
+        self._drag_start_pos = None
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        super().mouseReleaseEvent(event)
 
     @staticmethod
     def _normalized_first_dropped_jaw(mime: QMimeData) -> dict | None:
@@ -291,6 +325,53 @@ class _JawAssignmentSlot(QFrame):
             event.ignore()
             return
         self.jawDropped.emit(self._slot_key, jaw)
+        event.acceptProposedAction()
+
+
+class _SelectorRemoveDropButton(QPushButton):
+    jawsDropped = Signal(list)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAcceptDrops(True)
+
+    @staticmethod
+    def _payload_jaw_ids(mime: QMimeData) -> list[str]:
+        if not mime.hasFormat(SELECTOR_JAW_MIME):
+            return []
+        try:
+            payload = json.loads(bytes(mime.data(SELECTOR_JAW_MIME)).decode('utf-8'))
+        except Exception:
+            payload = []
+        if not isinstance(payload, list):
+            return []
+        jaw_ids: list[str] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            jaw_id = str(item.get('jaw_id') or item.get('id') or '').strip()
+            if jaw_id and jaw_id not in jaw_ids:
+                jaw_ids.append(jaw_id)
+        return jaw_ids
+
+    def dragEnterEvent(self, event):
+        if self._payload_jaw_ids(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        if self._payload_jaw_ids(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dropEvent(self, event):
+        jaw_ids = self._payload_jaw_ids(event.mimeData())
+        if not jaw_ids:
+            event.ignore()
+            return
+        self.jawsDropped.emit(jaw_ids)
         event.acceptProposedAction()
 
 
@@ -695,6 +776,7 @@ class JawPage(QWidget):
         self._selector_spindle = ''
         self._selector_panel_mode = 'details'
         self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
+        self._selector_selected_slots: set[str] = set()
         self._selector_saved_details_hidden = True
         self._build_ui()
         self.refresh_list()
@@ -716,6 +798,7 @@ class JawPage(QWidget):
         root.setSpacing(10)
 
         filter_frame = QFrame()
+        self.filter_frame = filter_frame
         filter_frame.setObjectName('filterFrame')
         filter_frame.setProperty('card', True)
         self.filter_layout = QHBoxLayout(filter_frame)
@@ -904,7 +987,7 @@ class JawPage(QWidget):
         self.selector_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         selector_layout = QVBoxLayout(self.selector_panel)
         selector_layout.setContentsMargins(10, 10, 10, 10)
-        selector_layout.setSpacing(8)
+        selector_layout.setSpacing(6)
 
         self.selector_info_header = QFrame()
         self.selector_info_header.setProperty('detailHeader', True)
@@ -955,42 +1038,44 @@ class JawPage(QWidget):
         self.selector_toggle_btn.clicked.connect(self._on_selector_toggle_clicked)
         style_panel_action_button(self.selector_toggle_btn)
         ctx_row.addWidget(self.selector_toggle_btn, 0)
-
-        self.selector_spindle_btn = QPushButton('SP1')
-        self.selector_spindle_btn.setProperty('panelActionButton', True)
-        self.selector_spindle_btn.setCheckable(True)
-        self.selector_spindle_btn.setMinimumWidth(120)
-        self.selector_spindle_btn.setMaximumWidth(140)
-        self.selector_spindle_btn.setFixedHeight(30)
-        self.selector_spindle_btn.setProperty('spindle', 'main')
-        self.selector_spindle_btn.clicked.connect(self._toggle_selector_spindle)
-        style_panel_action_button(self.selector_spindle_btn)
-        ctx_row.addWidget(self.selector_spindle_btn, 0)
         ctx_row.addStretch(1)
         selector_layout.addLayout(ctx_row)
 
         self.selector_hint_label = QLabel(
             self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.')
         )
-        self.selector_hint_label.setWordWrap(True)
+        self.selector_hint_label.setWordWrap(False)
         self.selector_hint_label.setProperty('detailHint', True)
-        selector_layout.addWidget(self.selector_hint_label)
+        self.selector_hint_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.selector_hint_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.selector_hint_label.setFixedHeight(24)
+        self.selector_hint_label.setStyleSheet('margin: 0px; padding: 0px; background: transparent;')
+        selector_layout.addWidget(self.selector_hint_label, 0)
 
         self.selector_sp1_slot = _JawAssignmentSlot('main', self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
         self.selector_sp2_slot = _JawAssignmentSlot('sub', self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'))
+        self.selector_sp1_slot.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        self.selector_sp2_slot.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.selector_sp1_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.selector_sp2_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.selector_sp1_slot.jawDropped.connect(self._on_selector_jaw_dropped)
         self.selector_sp2_slot.jawDropped.connect(self._on_selector_jaw_dropped)
+        self.selector_sp1_slot.slotClicked.connect(self._on_selector_slot_clicked)
+        self.selector_sp2_slot.slotClicked.connect(self._on_selector_slot_clicked)
         selector_layout.addWidget(self.selector_sp1_slot)
         selector_layout.addWidget(self.selector_sp2_slot)
 
-        self.selector_clear_all_btn = QPushButton(self._t('tool_library.selector.clear', 'Clear'))
-        self.selector_clear_all_btn.setProperty('panelActionButton', True)
-        self.selector_clear_all_btn.setMinimumWidth(92)
-        style_panel_action_button(self.selector_clear_all_btn)
-        self.selector_clear_all_btn.clicked.connect(self._clear_selector_assignments)
-        selector_layout.addWidget(self.selector_clear_all_btn, 0, Qt.AlignLeft)
+        self.selector_remove_btn = _SelectorRemoveDropButton()
+        style_icon_action_button(
+            self.selector_remove_btn,
+            TOOL_ICONS_DIR / 'delete.svg',
+            self._t('tool_library.selector.remove', 'Remove'),
+            danger=True,
+        )
+        self.selector_remove_btn.clicked.connect(self._remove_selected_selector_jaws)
+        self.selector_remove_btn.jawsDropped.connect(self._on_selector_remove_drop)
+        selector_layout.addWidget(self.selector_remove_btn, 0, Qt.AlignLeft)
+        selector_layout.addStretch(1)
 
         self.selector_scroll.setWidget(self.selector_panel)
         selector_card_layout.addWidget(self.selector_scroll, 1)
@@ -1069,6 +1154,17 @@ class JawPage(QWidget):
 
         self._set_view_mode('all', refresh=False)
         self._refresh_selector_slots()
+        self._update_selector_remove_button()
+
+        self.selector_card.installEventFilter(self)
+        self.selector_scroll.viewport().installEventFilter(self)
+        self.selector_panel.installEventFilter(self)
+        self.detail_container.installEventFilter(self)
+        self.splitter.installEventFilter(self)
+        filter_frame.installEventFilter(self)
+        self.button_bar.installEventFilter(self)
+        self.selector_bottom_bar.installEventFilter(self)
+        self.detail_header_container.installEventFilter(self)
 
     def _on_module_switch_clicked(self):
         if callable(self._module_switch_callback):
@@ -1136,16 +1232,85 @@ class JawPage(QWidget):
             return
         self.selector_sp1_slot.set_assignment(self._selector_assignments.get('main'))
         self.selector_sp2_slot.set_assignment(self._selector_assignments.get('sub'))
+        self._selector_selected_slots = {
+            slot for slot in self._selector_selected_slots
+            if self._selector_assignments.get(slot) is not None
+        }
+        self._apply_selector_slot_selection()
+        self._update_selector_remove_button()
+
+    def _apply_selector_slot_selection(self):
+        if hasattr(self, 'selector_sp1_slot'):
+            self.selector_sp1_slot.set_selected('main' in self._selector_selected_slots)
+        if hasattr(self, 'selector_sp2_slot'):
+            self.selector_sp2_slot.set_selected('sub' in self._selector_selected_slots)
+
+    def _on_selector_slot_clicked(self, slot_key: str, ctrl_pressed: bool):
+        slot = self._normalize_selector_spindle(slot_key)
+        has_assignment = self._selector_assignments.get(slot) is not None
+        if not has_assignment:
+            if not ctrl_pressed:
+                self._selector_selected_slots.clear()
+            self._apply_selector_slot_selection()
+            self._update_selector_remove_button()
+            return
+
+        if ctrl_pressed:
+            if slot in self._selector_selected_slots:
+                self._selector_selected_slots.remove(slot)
+            else:
+                self._selector_selected_slots.add(slot)
+        else:
+            self._selector_selected_slots = {slot}
+
+        self._apply_selector_slot_selection()
+        self._update_selector_remove_button()
+
+    def _update_selector_remove_button(self):
+        if not hasattr(self, 'selector_remove_btn'):
+            return
+        has_selected = any(self._selector_assignments.get(slot) is not None for slot in self._selector_selected_slots)
+        has_assigned = any(self._selector_assignments.get(slot) is not None for slot in ('main', 'sub'))
+        enabled = has_selected or has_assigned
+        self.selector_remove_btn.setEnabled(enabled)
 
     def _on_selector_jaw_dropped(self, slot_key: str, jaw: dict):
         normalized_slot = self._normalize_selector_spindle(slot_key)
         normalized_jaw = self._normalize_selector_jaw(jaw)
         self._selector_assignments[normalized_slot] = normalized_jaw
+        self._selector_selected_slots = {normalized_slot} if normalized_jaw is not None else set()
         self._refresh_selector_slots()
 
     def _clear_selector_assignments(self):
         self._selector_assignments = {'main': None, 'sub': None}
+        self._selector_selected_slots.clear()
         self._refresh_selector_slots()
+
+    def _remove_selected_selector_jaws(self):
+        if not self._selector_selected_slots:
+            return
+        for slot in list(self._selector_selected_slots):
+            self._selector_assignments[slot] = None
+        self._selector_selected_slots.clear()
+        self._refresh_selector_slots()
+
+    def _remove_selector_jaws_by_ids(self, jaw_ids: list[str]):
+        targets = {str(jaw_id).strip() for jaw_id in jaw_ids if str(jaw_id).strip()}
+        if not targets:
+            return
+        changed = False
+        for slot_key in ('main', 'sub'):
+            jaw = self._selector_assignments.get(slot_key)
+            jaw_id = str((jaw or {}).get('jaw_id') or '').strip() if isinstance(jaw, dict) else ''
+            if jaw_id and jaw_id in targets:
+                self._selector_assignments[slot_key] = None
+                changed = True
+        if changed:
+            self._selector_selected_slots.clear()
+            self._refresh_selector_slots()
+
+    def _on_selector_remove_drop(self, jaw_ids: list[str]):
+        self._remove_selector_jaws_by_ids(jaw_ids)
 
     def _on_selector_cancel(self):
         """Cancel selector — notify main window to clear the session."""
@@ -1219,12 +1384,14 @@ class JawPage(QWidget):
             if not was_active:
                 self._selector_saved_details_hidden = self._details_hidden
             self._selector_assignments = {'main': None, 'sub': None}
+            self._selector_selected_slots.clear()
             self._refresh_selector_slots()
             self._set_selector_panel_mode('selector')
             return
 
         self._details_hidden = self._selector_saved_details_hidden
         self._selector_assignments = {'main': None, 'sub': None}
+        self._selector_selected_slots.clear()
         self._refresh_selector_slots()
         self._set_selector_panel_mode('details')
         self.detail_section_label.setText(self._t('jaw_library.section.details', 'Jaw details'))
@@ -1342,6 +1509,40 @@ class JawPage(QWidget):
                 getattr(self, 'jaw_type_filter', None) and obj is self.jaw_type_filter.view()):
             if getattr(self, '_suppress_combo', False) and event.type() in (QEvent.Show, QEvent.ShowToParent):
                 return True
+        selector_click_targets = {
+            getattr(self, 'selector_card', None),
+            getattr(self, 'selector_panel', None),
+            getattr(self, 'detail_container', None),
+            getattr(self, 'splitter', None),
+            getattr(self, 'button_bar', None),
+            getattr(self, 'selector_bottom_bar', None),
+            getattr(self, 'filter_frame', None),
+            getattr(self, 'detail_header_container', None),
+            getattr(self, 'selector_scroll', None) and self.selector_scroll.viewport(),
+        }
+        if (
+            self._selector_active
+            and event.type() == QEvent.MouseButtonPress
+            and obj in selector_click_targets
+            and hasattr(event, 'pos')
+        ):
+            global_pos = obj.mapToGlobal(event.pos())
+            on_slot = False
+            for slot_widget in (getattr(self, 'selector_sp1_slot', None), getattr(self, 'selector_sp2_slot', None)):
+                if slot_widget is None:
+                    continue
+                local_pos = slot_widget.mapFromGlobal(global_pos)
+                if slot_widget.rect().contains(local_pos):
+                    on_slot = True
+                    break
+            if not on_slot and hasattr(self, 'selector_remove_btn'):
+                remove_local = self.selector_remove_btn.mapFromGlobal(global_pos)
+                if self.selector_remove_btn.rect().contains(remove_local):
+                    on_slot = True
+            if not on_slot and self._selector_selected_slots:
+                self._selector_selected_slots.clear()
+                self._apply_selector_slot_selection()
+                self._update_selector_remove_button()
         if obj in (getattr(self, 'jaw_list', None),
                    getattr(self, 'jaw_list', None) and self.jaw_list.viewport()):
             if event.type() == QEvent.MouseButtonPress:
@@ -2010,14 +2211,12 @@ class JawPage(QWidget):
             self.selector_module_value_label.setText(self._t('tool_library.selector.jaws', 'Jaws'))
         if hasattr(self, 'selector_sp1_slot'):
             self.selector_sp1_slot.set_title(self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
-            self.selector_sp1_slot.set_clear_text(self._t('tool_library.selector.clear', 'Clear'))
             self.selector_sp1_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         if hasattr(self, 'selector_sp2_slot'):
             self.selector_sp2_slot.set_title(self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'))
-            self.selector_sp2_slot.set_clear_text(self._t('tool_library.selector.clear', 'Clear'))
             self.selector_sp2_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
-        if hasattr(self, 'selector_clear_all_btn'):
-            self.selector_clear_all_btn.setText(self._t('tool_library.selector.clear', 'Clear'))
+        if hasattr(self, 'selector_remove_btn'):
+            self.selector_remove_btn.setToolTip(self._t('tool_library.selector.remove', 'Remove'))
         if hasattr(self, 'selector_done_btn'):
             self.selector_done_btn.setText(self._t('tool_library.selector.done', 'DONE'))
         if hasattr(self, 'selector_cancel_btn'):

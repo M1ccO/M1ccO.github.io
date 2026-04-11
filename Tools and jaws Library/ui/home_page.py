@@ -123,11 +123,44 @@ class _ToolAssignmentListWidget(QListWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setDragEnabled(True)
         self.setAcceptDrops(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setDefaultDropAction(Qt.MoveAction)
+
+    def startDrag(self, supportedActions):
+        indexes = sorted(self.selectedIndexes(), key=lambda idx: idx.row())
+        if not indexes:
+            current = self.currentIndex()
+            if current.isValid():
+                indexes = [current]
+        if not indexes:
+            return
+
+        mime = self.model().mimeData(indexes)
+        if mime is None:
+            return
+
+        drag = QDrag(self)
+        drag.setMimeData(mime)
+
+        first_row = indexes[0].row()
+        ghost_item = self.item(first_row)
+        ghost_widget = self.itemWidget(ghost_item) if ghost_item is not None else None
+        if isinstance(ghost_widget, QWidget):
+            grabbed = ghost_widget.grab()
+            if not grabbed.isNull():
+                translucent = QPixmap(grabbed.size())
+                translucent.fill(Qt.transparent)
+                painter = QPainter(translucent)
+                painter.setOpacity(0.7)
+                painter.drawPixmap(0, 0, grabbed)
+                painter.end()
+                drag.setPixmap(translucent)
+                drag.setHotSpot(translucent.rect().center())
+
+        drag.exec(Qt.MoveAction)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
@@ -910,16 +943,25 @@ class HomePage(QWidget):
         if hasattr(self, 'selector_assignments_frame') and hasattr(self.selector_assignments_frame, 'setTitle'):
             self.selector_assignments_frame.setTitle(self._selector_assignments_section_title())
 
+    def _selector_selected_rows(self) -> list[int]:
+        if not hasattr(self, 'selector_assignment_list'):
+            return []
+        rows = sorted({index.row() for index in self.selector_assignment_list.selectedIndexes()})
+        return [row for row in rows if 0 <= row < len(self._selector_assigned_tools)]
+
     def _update_selector_assignment_buttons(self):
         if not hasattr(self, 'selector_remove_btn'):
             return
-        has_row = bool(getattr(self, 'selector_assignment_list', None) and self.selector_assignment_list.currentRow() >= 0)
+        selected_rows = self._selector_selected_rows()
+        has_row = bool(selected_rows)
+        single_selected = len(selected_rows) == 1
+        current_row = selected_rows[0] if single_selected else -1
         has_items = bool(getattr(self, 'selector_assignment_list', None) and self.selector_assignment_list.count() > 0)
         self.selector_remove_btn.setEnabled(has_row)
-        self.selector_move_up_btn.setEnabled(has_row and self.selector_assignment_list.currentRow() > 0)
-        self.selector_move_down_btn.setEnabled(has_row and self.selector_assignment_list.currentRow() < self.selector_assignment_list.count() - 1)
-        self.selector_comment_btn.setEnabled(has_row)
-        self.selector_delete_comment_btn.setEnabled(has_row)
+        self.selector_move_up_btn.setEnabled(single_selected and current_row > 0)
+        self.selector_move_down_btn.setEnabled(single_selected and current_row < self.selector_assignment_list.count() - 1)
+        self.selector_comment_btn.setEnabled(single_selected)
+        self.selector_delete_comment_btn.setEnabled(single_selected)
 
     def _refresh_selector_assignment_rows(self):
         if not hasattr(self, 'selector_assignment_list'):
@@ -957,6 +999,7 @@ class HomePage(QWidget):
         if not hasattr(self, 'selector_assignment_list'):
             return
         current = self.selector_assignment_list.currentRow()
+        selected_rows = self._selector_selected_rows()
         self.selector_assignment_list.blockSignals(True)
         self.selector_assignment_list.clear()
         for row, assignment in enumerate(self._selector_assigned_tools):
@@ -999,6 +1042,11 @@ class HomePage(QWidget):
             row_layout.addWidget(card)
             self.selector_assignment_list.setItemWidget(item, row_host)
         self.selector_assignment_list.blockSignals(False)
+        for row in selected_rows:
+            if 0 <= row < self.selector_assignment_list.count():
+                item = self.selector_assignment_list.item(row)
+                if item is not None:
+                    item.setSelected(True)
         if current >= 0 and current < self.selector_assignment_list.count():
             self.selector_assignment_list.setCurrentRow(current)
         self._sync_selector_card_selection_states()
@@ -1033,13 +1081,15 @@ class HomePage(QWidget):
             self.selector_assignment_list.setCurrentRow(min(insert_at - 1, self.selector_assignment_list.count() - 1))
 
     def _remove_selector_assignment(self):
-        row = self.selector_assignment_list.currentRow() if hasattr(self, 'selector_assignment_list') else -1
-        if row < 0 or row >= len(self._selector_assigned_tools):
+        rows = self._selector_selected_rows()
+        if not rows:
             return
-        self._selector_assigned_tools.pop(row)
+        for row in reversed(rows):
+            if 0 <= row < len(self._selector_assigned_tools):
+                self._selector_assigned_tools.pop(row)
         self._rebuild_selector_assignment_list()
         if self.selector_assignment_list.count() > 0:
-            self.selector_assignment_list.setCurrentRow(min(row, self.selector_assignment_list.count() - 1))
+            self.selector_assignment_list.setCurrentRow(min(rows[0], self.selector_assignment_list.count() - 1))
 
     def _clear_selector_assignments(self):
         self._selector_assigned_tools = []
@@ -1048,7 +1098,10 @@ class HomePage(QWidget):
         self._update_selector_assignment_buttons()
 
     def _move_selector_up(self):
-        row = self.selector_assignment_list.currentRow() if hasattr(self, 'selector_assignment_list') else -1
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
         if row <= 0 or row >= len(self._selector_assigned_tools):
             return
         self._selector_assigned_tools[row - 1], self._selector_assigned_tools[row] = (
@@ -1057,7 +1110,10 @@ class HomePage(QWidget):
         self.selector_assignment_list.setCurrentRow(row - 1)
 
     def _move_selector_down(self):
-        row = self.selector_assignment_list.currentRow() if hasattr(self, 'selector_assignment_list') else -1
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
         if row < 0 or row >= len(self._selector_assigned_tools) - 1:
             return
         self._selector_assigned_tools[row], self._selector_assigned_tools[row + 1] = (
@@ -1066,7 +1122,10 @@ class HomePage(QWidget):
         self.selector_assignment_list.setCurrentRow(row + 1)
 
     def _add_selector_comment(self):
-        row = self.selector_assignment_list.currentRow() if hasattr(self, 'selector_assignment_list') else -1
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
         if row < 0 or row >= len(self._selector_assigned_tools):
             return
         current = str(self._selector_assigned_tools[row].get('comment') or '').strip()
@@ -1082,7 +1141,10 @@ class HomePage(QWidget):
             self.selector_assignment_list.setCurrentRow(row)
 
     def _delete_selector_comment(self):
-        row = self.selector_assignment_list.currentRow() if hasattr(self, 'selector_assignment_list') else -1
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
         if row < 0 or row >= len(self._selector_assigned_tools):
             return
         self._selector_assigned_tools[row].pop('comment', None)
