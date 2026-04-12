@@ -1,4 +1,4 @@
-"""Shared editor-dialog utilities used by tool and jaw editor dialogs.
+﻿"""Shared editor-dialog utilities used by tool and jaw editor dialogs.
 
 Provides ``EditorDialogMixin`` -- a mixin class that encapsulates the common
 dialog-chrome and measurement-management logic shared between
@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import SHARED_UI_PREFERENCES_PATH
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     build_editor_field_card,
     build_editor_field_group,
     focus_editor_widget,
@@ -242,3 +242,4 @@ class EditorDialogMixin:
     def _on_model_table_selection_changed(self):
         self._preview_controller.on_model_table_selection_changed()
         self._refresh_models_preview()
+

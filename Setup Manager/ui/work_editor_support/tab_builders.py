@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, Callable
 
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 try:
-    from shared.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
+    from shared.ui.helpers.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 except ModuleNotFoundError:
     from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 from .selector_flow import open_combined_tools_jaws_selector_session
@@ -156,11 +156,11 @@ def build_spindles_tab_ui(
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
-        main_title=dialog._t("work_editor.spindles.sp1_jaw", "Pääkara"),
+        main_title=dialog._t("work_editor.spindles.sp1_jaw", "PÃ¤Ã¤kara"),
         sub_title=dialog._t("work_editor.spindles.sp2_jaw", "Vastakara"),
         main_filter_placeholder=(
             "work_editor.jaw.filter_sp1_placeholder",
-            "Suodata Pääkara-leukoja...",
+            "Suodata PÃ¤Ã¤kara-leukoja...",
         ),
         sub_filter_placeholder=(
             "work_editor.jaw.filter_sp2_placeholder",
@@ -223,7 +223,7 @@ def build_zeros_tab_ui(
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
-        main_title=dialog._t("work_editor.jaw.main_spindle_jaws", "Pääkaran leuat"),
+        main_title=dialog._t("work_editor.jaw.main_spindle_jaws", "PÃ¤Ã¤karan leuat"),
         sub_title=dialog._t("work_editor.jaw.sub_spindle_jaws", "Vastakaran leuat"),
         main_spindle_side_filter="Main spindle",
         sub_spindle_side_filter="Sub spindle",
@@ -322,3 +322,4 @@ def build_notes_tab_ui(
     robot_group_layout.setContentsMargins(10, 8, 10, 10)
     robot_group_layout.addWidget(dialog.robot_info_input, 0)
     layout.addWidget(robot_group, 0)
+

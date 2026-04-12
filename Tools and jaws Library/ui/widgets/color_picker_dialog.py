@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import SETTINGS_PATH, TOOL_ICONS_DIR
-from shared.editor_helpers import add_shadow, setup_editor_dialog
+from shared.ui.helpers.editor_helpers import add_shadow, setup_editor_dialog
 
 
 def _noop_translate(_key: str, default: str | None = None, **_kwargs) -> str:
@@ -924,4 +924,5 @@ class ColorPickerDialog(QDialog):
             type(self)._save_custom_colors_to_settings()
         self._selected_custom_index = index
         self._update_swatch_selection(color_hex, preserve_custom=True)
+
 

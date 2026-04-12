@@ -1,4 +1,4 @@
-import json
+﻿import json
 from typing import Callable
 
 from PySide6.QtCore import QEvent, Qt, QTimer
@@ -21,13 +21,13 @@ from PySide6.QtWidgets import (
 )
 
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_ICONS_DIR, TOOL_MODELS_ROOT_DEFAULT
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
     build_editor_field_card,
     create_dialog_buttons,
     setup_editor_dialog,
 )
-from shared.model_paths import format_model_path_for_display, read_model_roots
+from shared.data.model_paths import format_model_path_for_display, read_model_roots
 from ui.jaw_editor_support import build_models_tab
 from ui.shared.editor_dialog_helpers import EditorDialogMixin
 from ui.shared.model_table_helpers import ModelTableMixin
@@ -427,3 +427,4 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
             return
         super().accept()
+

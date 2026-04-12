@@ -1,7 +1,7 @@
-import json
+﻿import json
 
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
-from shared.model_paths import JAWS_PREFIX, normalize_model_path_for_storage, read_model_roots
+from shared.data.model_paths import JAWS_PREFIX, normalize_model_path_for_storage, read_model_roots
 
 
 class JawService:
@@ -253,3 +253,4 @@ class JawService:
     def delete_jaw(self, jaw_id: str):
         with self.db.conn:
             self.db.conn.execute('DELETE FROM jaws WHERE jaw_id = ?', (jaw_id,))
+

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Measurement Editor Dialog - Visual measurement configuration in 3D space.
 
 Allows users to add and configure distance measurements and diameter rings
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView, QStackedWidget, QSizePolicy,
 )
 from config import TOOL_ICONS_DIR
-from ui.stl_preview import StlPreviewWidget
+from shared.ui.stl_preview import StlPreviewWidget
 from ui.measurement_editor.utils.coordinates import (
     xyz_to_tuple as _xyz_to_tuple,
     fmt_coord as _fmt_coord,
@@ -78,7 +78,7 @@ from ui.measurement_editor.bridge.preview_sync import (
     apply_distance_overlay_update as _apply_distance_overlay_update,
     compose_preview_overlays as _compose_preview_overlays,
 )
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     apply_shared_checkbox_style,
     create_dialog_buttons,
     apply_secondary_button_theme,
@@ -149,9 +149,9 @@ class MeasurementEditorDialog(QDialog):
         for edit in self.findChildren(QLineEdit):
             edit.installEventFilter(self)
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # UI BUILD
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -171,7 +171,7 @@ class MeasurementEditorDialog(QDialog):
             '}'
         )
 
-        # ── LEFT PANEL ──────────────────────────────────────────────
+        # â”€â”€ LEFT PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         left_panel = QFrame()
         left_panel.setObjectName('measurementEditorLeftPanel')
         left_panel.setStyleSheet('''
@@ -273,12 +273,12 @@ class MeasurementEditorDialog(QDialog):
         self._add_type_picker_page_index = self._edit_stack.addWidget(self._build_measurement_type_picker())
         left_layout.addWidget(self._edit_stack)
 
-        # ── PREVIEW ─────────────────────────────────────────────────
+        # â”€â”€ PREVIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self._preview_widget = StlPreviewWidget()
         self._preview_widget.set_control_hint_text(
             self._t(
                 'tool_editor.hint.rotate_pan_zoom',
-                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
             )
         )
         self._preview_container = QWidget()
@@ -288,7 +288,7 @@ class MeasurementEditorDialog(QDialog):
         _preview_layout.addWidget(self._preview_widget)
         self._preview_container.installEventFilter(self)
 
-        # Overlay is a direct child (no layout) — positioned via setGeometry in
+        # Overlay is a direct child (no layout) â€” positioned via setGeometry in
         # _position_axis_overlay(). WA_NativeWindow gives it its own HWND so it
         # renders on top of the QWebEngineView native window on Windows.
         self._axis_pick_overlay = QFrame(self._preview_container)
@@ -368,7 +368,7 @@ class MeasurementEditorDialog(QDialog):
         splitter.setSizes([420, 580])
         root.addWidget(splitter, 1)
 
-        # ── BOTTOM BUTTONS ──────────────────────────────────────────
+        # â”€â”€ BOTTOM BUTTONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         button_box = create_dialog_buttons(
             self,
             save_text=self._t('common.save', 'Save').upper(),
@@ -880,9 +880,9 @@ class MeasurementEditorDialog(QDialog):
         layout.addStretch(1)
         return container
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # MEASUREMENT LIST MANAGEMENT
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _ensure_measurement_uid(self, payload: dict | None) -> str:
         data = payload if isinstance(payload, dict) else {}
@@ -1276,9 +1276,9 @@ class MeasurementEditorDialog(QDialog):
             self._edit_stack.setCurrentIndex(0)
             self._refresh_preview_measurements()
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # SELECTION & FORM POPULATION
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _distance_precise_mode_enabled(self) -> bool:
         if not hasattr(self, '_distance_detail_mode_btn'):
@@ -2033,9 +2033,9 @@ class MeasurementEditorDialog(QDialog):
             meas.get('end_xyz', '0, 1, 0')
         )
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # EDIT COMMIT
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _schedule_commit(self):
         self._commit_timer.start()
@@ -2487,9 +2487,9 @@ class MeasurementEditorDialog(QDialog):
             return 'z'
         return 'all'
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # POINT PICKING
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _on_pick_target(self):
         if self._pick_target and self._pick_target.startswith('target_xyz:'):
@@ -2899,9 +2899,9 @@ class MeasurementEditorDialog(QDialog):
             else:
                 self._refresh_preview_measurements()
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # PREVIEW REFRESH
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _refresh_preview_measurements(self):
         distance_overlays: list[dict] = []
@@ -2964,9 +2964,9 @@ class MeasurementEditorDialog(QDialog):
                 continue
             self._on_measurement_updated({'index': idx, 'overlay': overlay})
 
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # OUTPUT
-    # ─────────────────────────────────────────────────────────────────
+    # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def get_measurements(self) -> dict:
         """Return all measurements from the dialog."""
@@ -3000,3 +3000,4 @@ class MeasurementEditorDialog(QDialog):
         self._sync_preview_measurements_before_save()
         self._commit_current_edit()
         super().accept()
+

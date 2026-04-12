@@ -1,11 +1,11 @@
-"""Shared detail-field builders for HomePage detail card rows."""
+﻿"""Shared detail-field builders for HomePage detail card rows."""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QGridLayout, QLabel, QLineEdit, QSizePolicy, QVBoxLayout, QWidget
 
-from shared.editor_helpers import create_titled_section
+from shared.ui.helpers.editor_helpers import create_titled_section
 
 
 def build_detail_field(
@@ -96,3 +96,4 @@ def add_three_box_row(
     info.addWidget(build_field(first_label, first_value), row, 0, 1, 2, Qt.AlignTop)
     info.addWidget(build_field(second_label, second_value), row, 2, 1, 2, Qt.AlignTop)
     info.addWidget(build_field(third_label, third_value), row, 4, 1, 2, Qt.AlignTop)
+

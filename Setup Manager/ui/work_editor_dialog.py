@@ -1,4 +1,4 @@
-import json
+﻿import json
 import sys
 from pathlib import Path
 from typing import Callable
@@ -62,7 +62,7 @@ from config import (
 )
 from ui.widgets.common import apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
 try:
-    from shared.editor_helpers import (
+    from shared.ui.helpers.editor_helpers import (
         ResponsiveColumnsHost,
         apply_shared_checkbox_style,
         apply_titled_section_style,
@@ -311,13 +311,13 @@ def _tool_icon_for_ref(tool: dict | None) -> QIcon:
 
 
 try:
-    from shared.mini_assignment_card import MiniAssignmentCard  # noqa: E402
+    from shared.ui.cards.mini_assignment_card import MiniAssignmentCard  # noqa: E402
 except ModuleNotFoundError:
     # When launched with "Setup Manager" as app root, ensure workspace root is importable.
     _workspace_root = Path(__file__).resolve().parents[2]
     if str(_workspace_root) not in sys.path:
         sys.path.insert(0, str(_workspace_root))
-    from shared.mini_assignment_card import MiniAssignmentCard  # noqa: E402
+    from shared.ui.cards.mini_assignment_card import MiniAssignmentCard  # noqa: E402
 
 
 class _JawSelectorPanel(QWidget):
@@ -653,7 +653,7 @@ class _ToolPickerDialog(QDialog):
             return "both"
         if text in ("sub", "sp2") or "sub" in text or "vasta" in text:
             return "sub"
-        if text in ("main", "sp1") or "main" in text or "pää" in text or "paa" in text:
+        if text in ("main", "sp1") or "main" in text or "pÃ¤Ã¤" in text or "paa" in text:
             return "main"
         return text
 
@@ -2046,10 +2046,10 @@ class WorkEditorDialog(QDialog):
         layout.addLayout(selector_row)
 
         self.main_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.spindles.sp1_jaw", "Pääkara"),
+            self._t("work_editor.spindles.sp1_jaw", "PÃ¤Ã¤kara"),
             translate=self._t,
             filter_placeholder_key="work_editor.jaw.filter_sp1_placeholder",
-            filter_placeholder_default="Suodata Pääkara-leukoja...",
+            filter_placeholder_default="Suodata PÃ¤Ã¤kara-leukoja...",
             spindle_side_filter="Main spindle",
         )
         self.sub_jaw_selector = _JawSelectorPanel(
@@ -2109,7 +2109,7 @@ class WorkEditorDialog(QDialog):
         content_layout.addWidget(programs_group)
 
         self.main_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.jaw.main_spindle_jaws", "Pääkaran leuat"),
+            self._t("work_editor.jaw.main_spindle_jaws", "PÃ¤Ã¤karan leuat"),
             translate=self._t,
             spindle_side_filter="Main spindle",
         )
@@ -2783,3 +2783,4 @@ class WorkEditorDialog(QDialog):
                 return
 
         self.accept()
+

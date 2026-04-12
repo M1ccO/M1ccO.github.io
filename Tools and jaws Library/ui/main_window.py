@@ -1,4 +1,4 @@
-import json
+﻿import json
 import sys
 from pathlib import Path
 
@@ -49,10 +49,10 @@ from config import (
 from data.database import Database
 from data.jaw_database import JawDatabase
 from services.jaw_service import JawService
-from services.localization_service import LocalizationService
+from shared.services.localization_service import LocalizationService
 from services.tool_service import ToolService
-from services.ui_preferences_service import UiPreferencesService
-from shared.editor_helpers import style_panel_action_button
+from shared.services.ui_preferences_service import UiPreferencesService
+from shared.ui.helpers.editor_helpers import style_panel_action_button
 from ui.export_page import ExportPage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
@@ -163,7 +163,10 @@ class MainWindow(QMainWindow):
         self.jaw_service = jaw_service
         self.export_service = export_service
         self.settings_service = settings_service
-        self.ui_preferences_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH)
+        self.ui_preferences_service = UiPreferencesService(
+            SHARED_UI_PREFERENCES_PATH,
+            include_setup_db_path=False,
+        )
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization = LocalizationService(I18N_DIR)
         self.localization.set_language(self.ui_preferences.get("language", "en"))
@@ -221,7 +224,7 @@ class MainWindow(QMainWindow):
         if not hasattr(self, 'rail_title'):
             return
         self.rail_title.move(10, 13)
-        # Let it be as wide as its text needs — it's outside the layout.
+        # Let it be as wide as its text needs â€” it's outside the layout.
         self.rail_title.setFixedWidth(self.rail_title.fontMetrics().horizontalAdvance(self.rail_title.text()) + 16)
         self.rail_title.raise_()
 
@@ -366,7 +369,7 @@ class MainWindow(QMainWindow):
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
 
-        # ── Header: absolutely positioned, NOT in any layout ─────────────────
+        # â”€â”€ Header: absolutely positioned, NOT in any layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         # This is the only way to guarantee the title width has zero effect on
         # the rail width.  It's a direct child of central, raised above the
         # layout, and repositioned via _position_rail_title().
@@ -378,7 +381,7 @@ class MainWindow(QMainWindow):
         self.rail_title.adjustSize()
         self.rail_title.raise_()
 
-        # ── Main layout: rail + stack, with a compact shared top gutter ──────
+        # â”€â”€ Main layout: rail + stack, with a compact shared top gutter â”€â”€â”€â”€â”€â”€
         root = QHBoxLayout(central)
         root.setContentsMargins(4, 10, 12, 12)
         root.setSpacing(0)
@@ -596,7 +599,7 @@ class MainWindow(QMainWindow):
         # combo-box dropdown popup which is its own Qt.Popup window).
         if obj.window() is not self:
             return
-        # Skip directly interactive widgets — their own handlers manage state.
+        # Skip directly interactive widgets â€” their own handlers manage state.
         widget = obj
         while widget is not None:
             if isinstance(widget, (QAbstractButton, QLineEdit, QComboBox, QAbstractItemView, QSplitter)):
@@ -611,7 +614,7 @@ class MainWindow(QMainWindow):
         catalog_view = getattr(page, 'tool_list', None) or getattr(page, 'jaw_list', None)
 
         # If the click is anywhere inside the catalog list widget tree, let
-        # the list handle its own selection — do NOT clear here.
+        # the list handle its own selection â€” do NOT clear here.
         if catalog_view is not None:
             w = obj
             while w is not None:
@@ -1285,3 +1288,4 @@ class MainWindow(QMainWindow):
             base_style = _resolve_asset_urls(STYLE_PATH.read_text(encoding='utf-8'))
 
         self.setStyleSheet(base_style + "\n\n" + self._build_ui_preference_overrides())
+

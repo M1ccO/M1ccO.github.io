@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from collections.abc import Callable
 
@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from shared.editor_helpers import style_icon_action_button, style_panel_action_button
+from shared.ui.helpers.editor_helpers import style_icon_action_button, style_panel_action_button
 
 
 def build_selector_card_shell(
@@ -138,3 +138,4 @@ def apply_selector_icon_button(
     danger: bool = False,
 ) -> None:
     style_icon_action_button(button, icon_path, tooltip, danger=danger)
+

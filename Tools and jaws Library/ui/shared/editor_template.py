@@ -1,4 +1,4 @@
-"""Minimal template for a new library editor dialog with 3D models tab.
+﻿"""Minimal template for a new library editor dialog with 3D models tab.
 
 Copy this file into your new library's ``ui/`` folder and customise:
   1. Rename the class (e.g. ``AddEditFixtureDialog``).
@@ -32,12 +32,12 @@ from PySide6.QtWidgets import (
 )
 
 from config import SHARED_UI_PREFERENCES_PATH, TOOL_ICONS_DIR, TOOL_MODELS_ROOT_DEFAULT, JAW_MODELS_ROOT_DEFAULT
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
     create_dialog_buttons,
     setup_editor_dialog,
 )
-from shared.model_paths import format_model_path_for_display, read_model_roots
+from shared.data.model_paths import format_model_path_for_display, read_model_roots
 from ui.shared.editor_models_tab import ModelsTabConfig, build_editor_models_tab
 from ui.shared.preview_controller import EditorPreviewController
 from ui.measurement_editor_dialog import MeasurementEditorDialog
@@ -116,7 +116,7 @@ class AddEditItemDialog(QDialog):
         # TODO: add your own general/detail tabs here
         # build_general_tab(self, self.tabs)
 
-        # 3D models tab — fully handled by shared builder + controller
+        # 3D models tab â€” fully handled by shared builder + controller
         build_editor_models_tab(
             self,
             self.tabs,
@@ -206,7 +206,7 @@ class AddEditItemDialog(QDialog):
         target = row + int(delta)
         if target < 0 or target >= self.model_table.rowCount():
             return
-        # Minimal move — swap the two rows
+        # Minimal move â€” swap the two rows
         for col in range(self.model_table.columnCount()):
             item_a = self.model_table.takeItem(row, col)
             item_b = self.model_table.takeItem(target, col)
@@ -247,7 +247,7 @@ class AddEditItemDialog(QDialog):
             )
 
     # -----------------------------------------------------------------
-    # Host-protocol delegates (one-liners → controller)
+    # Host-protocol delegates (one-liners â†’ controller)
     # -----------------------------------------------------------------
     def _refresh_models_preview(self):
         self._preview_controller.refresh_models_preview()
@@ -346,3 +346,4 @@ class AddEditItemDialog(QDialog):
                 translate=lambda key, default: self._t(key, default),
             ),
         }
+

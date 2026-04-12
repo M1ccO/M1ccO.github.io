@@ -1,11 +1,11 @@
-"""Selector action helpers for HomePage."""
+﻿"""Selector action helpers for HomePage."""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QInputDialog
 
-from shared.mini_assignment_card import MiniAssignmentCard
+from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 
 
 def update_selector_assignment_buttons(page) -> None:
@@ -176,3 +176,4 @@ def on_selector_toggle_clicked(page) -> None:
         page._set_selector_panel_mode("selector")
     else:
         page._set_selector_panel_mode("details")
+

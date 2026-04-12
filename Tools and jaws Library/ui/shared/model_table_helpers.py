@@ -1,4 +1,4 @@
-"""Shared model-table helpers used by tool and jaw editor dialogs.
+﻿"""Shared model-table helpers used by tool and jaw editor dialogs.
 
 Provides ``ModelTableMixin`` -- a mixin class that encapsulates the
 model-table row management logic (add / remove / move / reorder, color
@@ -35,7 +35,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
-from shared.model_paths import format_model_path_for_display, read_model_roots
+from shared.data.model_paths import format_model_path_for_display, read_model_roots
 from ui.widgets.color_picker_dialog import ColorPickerDialog
 
 
@@ -307,3 +307,4 @@ class ModelTableMixin:
                     part['rot_z'] = t.get('rz', 0)
                 result.append(part)
         return result
+

@@ -1,4 +1,4 @@
-from html import escape
+﻿from html import escape
 from pathlib import Path
 import tempfile
 import shutil
@@ -47,7 +47,7 @@ from ui.widgets.common import AutoShrinkLabel, add_shadow, repolish_widget, styl
 from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID, SetupCatalogDelegate
 from ui.work_editor_dialog import WorkEditorDialog
 try:
-    from shared.editor_helpers import (
+    from shared.ui.helpers.editor_helpers import (
         apply_shared_checkbox_style,
         ask_multi_edit_mode,
         create_titled_section,
@@ -1941,3 +1941,4 @@ class SetupPage(QWidget):
                 )
         except Exception as exc:
             QMessageBox.critical(self, self._t("setup_page.message.view_failed", "View failed"), str(exc))
+

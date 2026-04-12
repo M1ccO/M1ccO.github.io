@@ -54,11 +54,11 @@ from ui.drawing_page import DrawingPage
 from ui.logbook_page import LogbookPage
 from ui.preferences_dialog import PreferencesDialog
 from ui.setup_page import SetupPage
-from services.localization_service import LocalizationService
-from services.ui_preferences_service import UiPreferencesService
+from shared.services.ui_preferences_service import UiPreferencesService
+from shared.services.localization_service import LocalizationService
 from ui.widgets.common import add_shadow, clear_focused_dropdown_on_outside_click
 try:
-    from shared.editor_helpers import create_titled_section, setup_editor_dialog
+    from shared.ui.helpers.editor_helpers import create_titled_section, setup_editor_dialog
 except ModuleNotFoundError:
     from editor_helpers import create_titled_section, setup_editor_dialog
 
@@ -82,7 +82,10 @@ class MainWindow(QMainWindow):
         self.logbook_service = logbook_service
         self.draw_service = draw_service
         self.print_service = print_service
-        self.ui_preferences_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH)
+        self.ui_preferences_service = UiPreferencesService(
+            SHARED_UI_PREFERENCES_PATH,
+            include_setup_db_path=True,
+        )
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization = LocalizationService(I18N_DIR)
         self.localization.set_language(self.ui_preferences.get("language", "en"))
@@ -974,3 +977,4 @@ class MainWindow(QMainWindow):
                 self.setStyleSheet(qss + "\n\n" + self._build_ui_preference_overrides())
         except Exception:
             pass
+

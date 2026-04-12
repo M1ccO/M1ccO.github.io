@@ -7,6 +7,7 @@ from pathlib import Path
 class LocalizationService:
     def __init__(self, i18n_dir: Path, fallback_language: str = "en"):
         self.i18n_dir = Path(i18n_dir)
+        self.shared_i18n_dir = self._resolve_shared_i18n_dir(self.i18n_dir)
         self.fallback_language = fallback_language
         self.language = fallback_language
         self._fallback_catalog = self._load_catalog(fallback_language)
@@ -35,7 +36,14 @@ class LocalizationService:
         return text
 
     def _load_catalog(self, language: str) -> dict:
-        path = self.i18n_dir / f"{language}.json"
+        merged = {}
+        if self.shared_i18n_dir is not None:
+            merged.update(self._read_catalog_file(self.shared_i18n_dir / f"{language}.json"))
+        merged.update(self._read_catalog_file(self.i18n_dir / f"{language}.json"))
+        return merged
+
+    @staticmethod
+    def _read_catalog_file(path: Path) -> dict:
         if not path.exists():
             return {}
         try:
@@ -46,3 +54,9 @@ class LocalizationService:
             return {}
         return {str(k): str(v) for k, v in payload.items()}
 
+    @staticmethod
+    def _resolve_shared_i18n_dir(i18n_dir: Path) -> Path | None:
+        # App i18n lives at <workspace>/<App Name>/i18n; shared catalog is <workspace>/shared/i18n.
+        workspace_root = i18n_dir.resolve().parents[1]
+        candidate = workspace_root / "shared" / "i18n"
+        return candidate if candidate.exists() else None

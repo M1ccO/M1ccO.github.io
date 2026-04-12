@@ -1,4 +1,4 @@
-"""Shared 3D models tab builder for editor dialogs (Tool/Jaw)."""
+﻿"""Shared 3D models tab builder for editor dialogs (Tool/Jaw)."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -20,8 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
-from shared.editor_helpers import create_titled_section, style_icon_action_button, style_move_arrow_button
-from ui.stl_preview import StlPreviewWidget
+from shared.ui.helpers.editor_helpers import create_titled_section, style_icon_action_button, style_move_arrow_button
+from shared.ui.stl_preview import StlPreviewWidget
 from ui.widgets.parts_table import PartsTable
 
 
@@ -210,7 +210,7 @@ def build_editor_models_tab(dialog: Any, root_tabs: QTabWidget, config: ModelsTa
     dialog.models_preview.set_control_hint_text(
         dialog._t(
             'tool_editor.hint.rotate_pan_zoom',
-            'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
         )
     )
     preview_panel_layout.addWidget(dialog.models_preview, 1)
@@ -247,12 +247,12 @@ def build_editor_models_tab(dialog: Any, root_tabs: QTabWidget, config: ModelsTa
     dialog.model_down_btn = QPushButton()
     style_move_arrow_button(
         dialog.model_up_btn,
-        dialog._t('work_editor.tools.move_up', '▲'),
+        dialog._t('work_editor.tools.move_up', 'â–²'),
         dialog._t('tool_editor.tooltip.move_row_up', 'Move selected row up'),
     )
     style_move_arrow_button(
         dialog.model_down_btn,
-        dialog._t('work_editor.tools.move_down', '▼'),
+        dialog._t('work_editor.tools.move_down', 'â–¼'),
         dialog._t('tool_editor.tooltip.move_row_down', 'Move selected row down'),
     )
     dialog.add_model_btn.clicked.connect(dialog._add_model_row)
@@ -321,3 +321,4 @@ def build_editor_models_tab(dialog: Any, root_tabs: QTabWidget, config: ModelsTa
 
 
 __all__ = ['ModelsTabConfig', 'build_editor_models_tab']
+

@@ -58,9 +58,9 @@ else:
 DB_DIR.mkdir(parents=True, exist_ok=True)
 DRAWINGS_DIR.mkdir(parents=True, exist_ok=True)
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
-_shared_dir = str(PROJECTS_DIR / 'shared')
-if _shared_dir not in sys.path:
-    sys.path.insert(0, _shared_dir)
+_workspace_dir = str(PROJECTS_DIR)
+if _workspace_dir not in sys.path:
+    sys.path.insert(0, _workspace_dir)
 
 if IS_FROZEN:
     _models_base_dir = local_appdata / "Tools and jaws Library" / "assets" / "3d"

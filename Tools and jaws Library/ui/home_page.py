@@ -1,4 +1,4 @@
-
+﻿
 import json
 import shutil
 from datetime import datetime
@@ -27,7 +27,7 @@ from ui.tool_catalog_delegate import (
     ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON, ROLE_TOOL_UID,
 )
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
     ask_multi_edit_mode,
     create_titled_section,
@@ -36,9 +36,9 @@ from shared.editor_helpers import (
     style_panel_action_button,
     style_move_arrow_button,
 )
-from shared.mini_assignment_card import MiniAssignmentCard
+from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 
-from ui.stl_preview import StlPreviewWidget
+from shared.ui.stl_preview import StlPreviewWidget
 from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
@@ -400,7 +400,7 @@ class HomePage(QWidget):
         self._inline_preview_warmup.set_control_hint_text(
             self._t(
                 'tool_editor.hint.rotate_pan_zoom',
-                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
             )
         )
         self._inline_preview_warmup.hide()
@@ -628,7 +628,7 @@ class HomePage(QWidget):
         selector_card_layout.setContentsMargins(0, 0, 0, 0)
         selector_card_layout.setSpacing(0)
 
-        # ── Selector target header (mirrors detail panel header treatment) ──
+        # â”€â”€ Selector target header (mirrors detail panel header treatment) â”€â”€
         (
             self.selector_info_header,
             self.selector_header_title_label,
@@ -641,7 +641,7 @@ class HomePage(QWidget):
         )
         selector_layout.addWidget(self.selector_info_header, 0)
 
-        # ── DETAILS + SP toggle row (same level, symmetric widths) ──
+        # â”€â”€ DETAILS + SP toggle row (same level, symmetric widths) â”€â”€
         ctx_row = QHBoxLayout()
         ctx_row.setContentsMargins(0, 0, 0, 0)
         ctx_row.setSpacing(10)
@@ -793,7 +793,7 @@ class HomePage(QWidget):
         button_layout.addWidget(self.copy_btn)
         root.addWidget(self.button_bar)
 
-        # ── Selector bottom bar (VALMIS / PERUUTA) — shown in selector mode ──
+        # â”€â”€ Selector bottom bar (VALMIS / PERUUTA) â€” shown in selector mode â”€â”€
         self.selector_bottom_bar = QFrame()
         self.selector_bottom_bar.setProperty('bottomBar', True)
         self.selector_bottom_bar.setVisible(False)
@@ -1239,7 +1239,7 @@ class HomePage(QWidget):
         self._rebuild_selector_assignment_list()
 
     def _on_selector_cancel(self):
-        """Cancel selector — notify main window to clear the session."""
+        """Cancel selector â€” notify main window to clear the session."""
         main_win = self.window()
         if hasattr(main_win, '_clear_selector_session'):
             main_win._clear_selector_session()
@@ -1247,7 +1247,7 @@ class HomePage(QWidget):
             main_win._back_to_setup_manager()
 
     def _on_selector_done(self):
-        """Send selection — delegate to main window."""
+        """Send selection â€” delegate to main window."""
         main_win = self.window()
         if hasattr(main_win, '_send_selector_selection'):
             main_win._send_selector_selection()
@@ -1556,7 +1556,7 @@ class HomePage(QWidget):
             self._detached_preview_widget.set_control_hint_text(
                 self._t(
                     'tool_editor.hint.rotate_pan_zoom',
-                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                    'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
                 )
             )
             self._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -1605,7 +1605,7 @@ class HomePage(QWidget):
         self._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
         tooltip = self._t(
             'tool_library.preview.measurements_hide' if is_enabled else 'tool_library.preview.measurements_show',
-            'Piilota mittaukset' if is_enabled else 'Näytä mittaukset',
+            'Piilota mittaukset' if is_enabled else 'NÃ¤ytÃ¤ mittaukset',
         )
         self._measurement_toggle_btn.setToolTip(tooltip)
 
@@ -2827,7 +2827,7 @@ class HomePage(QWidget):
             viewer.set_control_hint_text(
                 self._t(
                     'tool_editor.hint.rotate_pan_zoom',
-                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                    'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
                 )
             )
         loaded = self._load_preview_content(viewer, stl_path, label='Detail Preview') if viewer is not None else False
@@ -3188,4 +3188,5 @@ class HomePage(QWidget):
             )
         except Exception as exc:
             QMessageBox.critical(self, self._t('tool_library.export.failed_title', 'Export failed'), str(exc))
+
 

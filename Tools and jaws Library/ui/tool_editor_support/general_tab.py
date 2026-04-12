@@ -1,4 +1,4 @@
-"""General-tab builder for ToolEditorDialog.
+﻿"""General-tab builder for ToolEditorDialog.
 
 This keeps the main dialog smaller by moving the large widget-construction
 block into a single place without changing the dialog-owned helper methods.
@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import ALL_TOOL_TYPES
-from shared.editor_helpers import apply_secondary_button_theme
+from shared.ui.helpers.editor_helpers import apply_secondary_button_theme
 
 __all__ = ["build_general_tab"]
 
@@ -333,3 +333,4 @@ def build_general_tab(dialog, root_tabs) -> QWidget:
     general_content_layout.addStretch(1)
     root_tabs.addTab(general_tab, dialog._t("tool_editor.tab.general", "General"))
     return general_tab
+

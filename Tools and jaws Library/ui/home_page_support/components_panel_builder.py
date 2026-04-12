@@ -1,4 +1,4 @@
-"""Component panel builders for HomePage detail cards.
+﻿"""Component panel builders for HomePage detail cards.
 
 HomePage remains the widget/state owner. This module centralizes repetitive
 component/spare rendering and compatibility normalization for legacy tool rows.
@@ -20,7 +20,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from shared.editor_helpers import create_titled_section
+from shared.ui.helpers.editor_helpers import create_titled_section
 
 
 def _component_toggle_arrow_pixmaps(page) -> tuple[QPixmap, QPixmap]:
@@ -401,3 +401,4 @@ def build_components_panel(page, tool: dict, support_parts: list | None):
     body_layout.addLayout(list_layout)
     layout.addWidget(body_host)
     return frame
+

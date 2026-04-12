@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Any, Callable
 
@@ -6,7 +6,7 @@ from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import QCheckBox, QFrame, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout
 
 try:
-    from shared.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
+    from shared.ui.helpers.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 except ModuleNotFoundError:
     from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 from .tool_actions import (
@@ -203,3 +203,4 @@ def build_tools_tab_ui(
     layout.addWidget(dialog.shared_tool_actions, 0)
     sync_tool_head_view(dialog)
     update_shared_tool_actions(dialog)
+

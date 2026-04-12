@@ -1,4 +1,4 @@
-"""Tab builders for the Tool Editor components and spare parts pages.
+﻿"""Tab builders for the Tool Editor components and spare parts pages.
 
 The dialog keeps the behavior and controller methods; this module only
 constructs the widgets, assigns them back onto the dialog, and wires the
@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
-from shared.editor_helpers import style_icon_action_button, style_move_arrow_button
+from shared.ui.helpers.editor_helpers import style_icon_action_button, style_move_arrow_button
 from ui.widgets.parts_table import PartsTable
 
 __all__ = ["build_components_tab", "build_spare_parts_tab"]
@@ -304,3 +304,4 @@ def build_spare_parts_tab(dialog, root_tabs) -> QWidget:
 
     root_tabs.addTab(spare_tab, _t(dialog, "tool_editor.tab.spare_parts", "Spare parts"))
     return spare_tab
+

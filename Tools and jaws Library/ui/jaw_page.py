@@ -1,4 +1,4 @@
-import json
+﻿import json
 import shutil
 import sqlite3
 from datetime import datetime
@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 from config import TOOL_ICONS_DIR, SHARED_UI_PREFERENCES_PATH, PROJECTS_DIR
 from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_DATA, ROLE_JAW_ICON, ROLE_JAW_ID, jaw_icon_for_row
 from ui.jaw_editor_dialog import AddEditJawDialog
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
     apply_titled_section_style,
     ask_multi_edit_mode,
@@ -43,9 +43,9 @@ from shared.editor_helpers import (
     create_dialog_buttons,
     setup_editor_dialog,
 )
-from ui.stl_preview import StlPreviewWidget
+from shared.ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style
-from shared.mini_assignment_card import MiniAssignmentCard
+from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
 from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 from ui.jaw_page_support import (
@@ -1320,7 +1320,7 @@ class JawPage(QWidget):
         self._detached_preview_widget.set_control_hint_text(
             self._t(
                 'tool_editor.hint.rotate_pan_zoom',
-                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
             )
         )
         self._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -1352,7 +1352,7 @@ class JawPage(QWidget):
         self._measurement_toggle_btn.setToolTip(
             self._t(
                 'tool_library.preview.measurements_hide' if enabled else 'tool_library.preview.measurements_show',
-                'Piilota mittaukset' if enabled else 'Näytä mittaukset',
+                'Piilota mittaukset' if enabled else 'NÃ¤ytÃ¤ mittaukset',
             )
         )
 
@@ -1524,7 +1524,7 @@ class JawPage(QWidget):
         viewer.set_control_hint_text(
             self._t(
                 'tool_editor.hint.rotate_pan_zoom',
-                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
             )
         )
 
@@ -1931,4 +1931,5 @@ class JawPage(QWidget):
             self.populate_details(self.jaw_service.get_jaw(self.current_jaw_id))
         else:
             self.populate_details(None)
+
 

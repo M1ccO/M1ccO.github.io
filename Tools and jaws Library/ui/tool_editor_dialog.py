@@ -1,4 +1,4 @@
-from typing import Callable
+﻿from typing import Callable
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -15,7 +15,7 @@ from config import (
     TOOL_ICONS_DIR,
     TOOL_MODELS_ROOT_DEFAULT,
 )
-from shared.model_paths import format_model_path_for_display, read_model_roots
+from shared.data.model_paths import format_model_path_for_display, read_model_roots
 from ui.widgets.parts_table import PartsTable
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
 from ui.shared.editor_dialog_helpers import EditorDialogMixin
@@ -40,7 +40,7 @@ from ui.tool_editor_support.measurement_rules import (
     normalize_float_value,
     normalize_xyz_text,
 )
-from shared.editor_helpers import (
+from shared.ui.helpers.editor_helpers import (
     setup_editor_dialog,
     create_dialog_buttons,
     apply_secondary_button_theme,
@@ -477,7 +477,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             focused = QApplication.focusWidget()
             if focused is self.group_name_edit:
                 self._apply_group_name()
-                return True  # fully consume — prevent dialog default button from firing
+                return True  # fully consume â€” prevent dialog default button from firing
             if focused is self.notes:
                 if event.modifiers() & Qt.ShiftModifier:
                     return False
@@ -1259,3 +1259,4 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def get_tool_data(self):
         return self._payload_adapter.collect_from_dialog(self)
+

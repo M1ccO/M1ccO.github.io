@@ -1,11 +1,11 @@
-"""Preview panel builder for HomePage detail cards."""
+﻿"""Preview panel builder for HomePage detail cards."""
 
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
-from shared.editor_helpers import create_titled_section
+from shared.ui.helpers.editor_helpers import create_titled_section
 
 
 def build_preview_panel(
@@ -45,7 +45,7 @@ def build_preview_panel(
         viewer.set_control_hint_text(
             page._t(
                 "tool_editor.hint.rotate_pan_zoom",
-                "Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel",
+                "Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel",
             )
         )
     loaded = load_preview_content(viewer, stl_path, label="Detail Preview") if viewer is not None else False
@@ -71,3 +71,4 @@ def build_preview_panel(
 
     layout.addWidget(diagram, 1)
     return frame
+

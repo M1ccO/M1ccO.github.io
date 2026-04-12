@@ -315,7 +315,7 @@ def main():
 
     step(8, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_preview', 'Warming up 3D preview...')}")
     try:
-        from ui.stl_preview import StlPreviewWidget
+        from shared.ui.stl_preview import StlPreviewWidget
 
         app._preview_warmup_widget = StlPreviewWidget()
         app._preview_warmup_widget.hide()

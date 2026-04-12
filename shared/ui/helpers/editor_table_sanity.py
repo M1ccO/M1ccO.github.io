@@ -1,15 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 """Minimal sanity-check helper for shared EditorTable serialization behavior.
 
 Run manually:
-    python -m shared.editor_table_sanity
+    python -m shared.ui.helpers.editor_table_sanity
 """
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from shared.editor_table import EditorTable
+from shared.ui.helpers.editor_table import EditorTable
 
 
 def run_editor_table_sanity_checks() -> list[str]:
@@ -59,3 +59,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

@@ -1,8 +1,8 @@
-"""Selector-card builder for HomePage."""
+﻿"""Selector-card builder for HomePage."""
 
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout
 
-from shared.editor_helpers import create_titled_section, style_move_arrow_button, style_panel_action_button
+from shared.ui.helpers.editor_helpers import create_titled_section, style_move_arrow_button, style_panel_action_button
 from .selector_actions import (
     add_selector_comment,
     delete_selector_comment,
@@ -171,3 +171,4 @@ def build_selector_card(
     page.selector_scroll.setWidget(page.selector_panel)
     selector_card_layout.addWidget(page.selector_scroll, 1)
     dc_layout.addWidget(page.selector_card, 1)
+

@@ -200,3 +200,9 @@ def create_or_migrate_schema(conn):
         raise TypeError("conn must be sqlite3.Connection")
     _ensure_works_table(conn)
     _ensure_logbook_table(conn)
+
+
+def migrate_jaws_schema(conn):
+    """Setup Manager does not own the jaws schema; keep compatibility for jaw_database imports."""
+    if not isinstance(conn, sqlite3.Connection):
+        raise TypeError("conn must be sqlite3.Connection")

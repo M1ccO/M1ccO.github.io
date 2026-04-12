@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Callable
+import sys
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
     QFileDialog,
     QFrame,
     QHBoxLayout,
@@ -18,10 +18,17 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+try:
+    from shared.ui.preferences_dialog_base import PreferencesDialogBase
+except ModuleNotFoundError:
+    workspace_root = Path(__file__).resolve().parents[2]
+    if str(workspace_root) not in sys.path:
+        sys.path.insert(0, str(workspace_root))
+    from shared.ui.preferences_dialog_base import PreferencesDialogBase
 from ui.widgets.common import add_shadow, apply_tool_library_combo_style
 
 
-class PreferencesDialog(QDialog):
+class PreferencesDialog(PreferencesDialogBase):
     def __init__(
         self,
         current_preferences: dict,
@@ -30,8 +37,7 @@ class PreferencesDialog(QDialog):
         active_db_path: str = "",
         on_check_compatibility: Callable[[str], None] | None = None,
     ):
-        super().__init__(parent)
-        self._translate = translate
+        super().__init__(translate, parent)
         self._current = dict(current_preferences or {})
         self._active_db_path = str(active_db_path or "").strip()
         self._on_check_compatibility = on_check_compatibility
@@ -302,63 +308,4 @@ class PreferencesDialog(QDialog):
         target_path = self.setup_db_path_edit.text().strip() or self._active_db_path
         self._on_check_compatibility(target_path)
 
-    @staticmethod
-    def _set_combo_by_data(combo: QComboBox, value: str):
-        target = str(value or "").strip()
-        for idx in range(combo.count()):
-            if str(combo.itemData(idx) or "").strip() == target:
-                combo.setCurrentIndex(idx)
-                return
-
-    def _row(self, label_text: str, combo: QComboBox) -> QFrame:
-        row = QFrame()
-        row.setProperty("editorFieldCard", True)
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        label = QLabel(label_text)
-        label.setProperty("detailFieldKey", True)
-        label.setMinimumWidth(130)
-        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        combo.setMinimumWidth(220)
-        combo.setFixedHeight(36)
-        layout.addWidget(label)
-        layout.addWidget(combo, 1)
-        return row
-
-    def _line_row(self, label_text: str, line_edit: QLineEdit) -> QFrame:
-        row = QFrame()
-        row.setProperty("editorFieldCard", True)
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        label = QLabel(label_text)
-        label.setProperty("detailFieldKey", True)
-        label.setMinimumWidth(130)
-        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        line_edit.setMinimumWidth(220)
-        line_edit.setFixedHeight(36)
-        layout.addWidget(label)
-        layout.addWidget(line_edit, 1)
-        return row
-
-    def _path_row(self, label_text: str, line_edit: QLineEdit, browse_btn: QPushButton) -> QFrame:
-        row = QFrame()
-        row.setProperty("editorFieldCard", True)
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        label = QLabel(label_text)
-        label.setProperty("detailFieldKey", True)
-        label.setMinimumWidth(130)
-        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        line_edit.setMinimumWidth(220)
-        line_edit.setFixedHeight(36)
-        browse_btn.setMinimumWidth(96)
-        layout.addWidget(label)
-        layout.addWidget(line_edit, 1)
-        layout.addWidget(browse_btn)
-        return row
-
-    def _t(self, key: str, default: str | None = None) -> str:
-        return self._translate(key, default)
+    # Shared combo/path/line row, translation, and combo-data helpers are inherited.

@@ -54,7 +54,7 @@ _TITLED_SECTION_STYLESHEET = (
 
 _CHECKBOX_EDGE_COLOR = '#8aa0b6'
 _CHECKBOX_EDGE_HOVER_COLOR = '#6f86a0'
-_CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parent / 'assets' / 'check_mark.svg').as_posix()
+_CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parents[2] / 'assets' / 'check_mark.svg').as_posix()
 
 
 # ── Shadow helper ────────────────────────────────────────────────────────

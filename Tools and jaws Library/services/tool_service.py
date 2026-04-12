@@ -1,8 +1,8 @@
-import json
+﻿import json
 import re
 
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
-from shared.model_paths import TOOLS_PREFIX, normalize_model_path_for_storage, read_model_roots
+from shared.data.model_paths import TOOLS_PREFIX, normalize_model_path_for_storage, read_model_roots
 
 
 class ToolService:
@@ -449,7 +449,7 @@ class ToolService:
                 {'variant': 'H1', 'h_code': 'H1', 'b_axis': 'B0', 'spindle': 'Main', 'description': 'Standard main spindle setup'},
                 {'variant': 'H2', 'h_code': 'H2', 'b_axis': 'B90', 'spindle': 'Main', 'description': 'Rotated posture'},
             ],
-            # empty string means no 3‑D model attached yet
+            # empty string means no 3â€‘D model attached yet
             'stl_path': '',
         }
         self.save_tool(sample)
@@ -726,3 +726,4 @@ class ToolService:
         new_uid = self.save_tool(tool, allow_duplicate=allow_duplicate)
         copied = self.get_tool_by_uid(new_uid)
         return copied or tool
+

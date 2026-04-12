@@ -1,4 +1,4 @@
-import json
+﻿import json
 import math
 import re
 from pathlib import Path
@@ -13,8 +13,8 @@ from config import (
     SHARED_UI_PREFERENCES_PATH,
     TOOL_MODELS_ROOT_DEFAULT,
 )
-from ui.preview_bridge_adapter import build_js_call, normalize_index_list, parse_title_event
-from shared.model_paths import read_model_roots, resolve_model_path
+from shared.ui.preview_bridge_adapter import build_js_call, normalize_index_list, parse_title_event
+from shared.data.model_paths import read_model_roots, resolve_model_path
 
 
 class ScrollFriendlyWebView(QWebEngineView):
@@ -883,4 +883,5 @@ class StlPreviewWidget(QWidget):
     def set_point_picking_enabled(self, enabled: bool):
         self._point_picking_enabled = bool(enabled)
         self._call_js('setPointPickingEnabled', bool(self._point_picking_enabled))
+
 

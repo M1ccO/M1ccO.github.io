@@ -1,4 +1,4 @@
-import copy
+﻿import copy
 from typing import Callable
 
 from PySide6.QtCore import QSize, Qt
@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
-from shared.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, style_panel_action_button
-from ui.stl_preview import StlPreviewWidget
+from shared.ui.helpers.editor_helpers import apply_secondary_button_theme, create_dialog_buttons, style_panel_action_button
+from shared.ui.stl_preview import StlPreviewWidget
 
 
 class ModelTransformsDialog(QDialog):
@@ -63,7 +63,7 @@ class ModelTransformsDialog(QDialog):
         self.preview.set_control_hint_text(
             self._t(
                 "tool_editor.hint.rotate_pan_zoom",
-                "Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel",
+                "Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel",
             )
         )
         root.addWidget(self.preview, 1)
@@ -288,3 +288,4 @@ class ModelTransformsDialog(QDialog):
 
     def get_transforms(self) -> list[dict]:
         return copy.deepcopy(self._transforms)
+

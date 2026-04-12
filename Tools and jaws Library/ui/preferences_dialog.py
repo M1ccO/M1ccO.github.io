@@ -1,25 +1,32 @@
 from __future__ import annotations
 
+from pathlib import Path
+import sys
 from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QVBoxLayout,
 )
+try:
+    from shared.ui.preferences_dialog_base import PreferencesDialogBase
+except ModuleNotFoundError:
+    workspace_root = Path(__file__).resolve().parents[2]
+    if str(workspace_root) not in sys.path:
+        sys.path.insert(0, str(workspace_root))
+    from shared.ui.preferences_dialog_base import PreferencesDialogBase
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 
 
-class PreferencesDialog(QDialog):
+class PreferencesDialog(PreferencesDialogBase):
     def __init__(self, current_preferences: dict, translate: Callable[[str, str | None], str], parent=None):
-        super().__init__(parent)
-        self._translate = translate
+        super().__init__(translate, parent)
         self._current = dict(current_preferences or {})
 
         self.setObjectName("appRoot")
@@ -94,29 +101,4 @@ class PreferencesDialog(QDialog):
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
         self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
 
-    @staticmethod
-    def _set_combo_by_data(combo: QComboBox, value: str):
-        target = str(value or "").strip()
-        for idx in range(combo.count()):
-            if str(combo.itemData(idx) or "").strip() == target:
-                combo.setCurrentIndex(idx)
-                return
-
-    def _row(self, label_text: str, combo: QComboBox) -> QFrame:
-        row = QFrame()
-        row.setProperty("editorFieldCard", True)
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
-        label = QLabel(label_text)
-        label.setProperty("detailFieldKey", True)
-        label.setMinimumWidth(130)
-        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        combo.setMinimumWidth(220)
-        combo.setFixedHeight(36)
-        layout.addWidget(label)
-        layout.addWidget(combo, 1)
-        return row
-
-    def _t(self, key: str, default: str | None = None) -> str:
-        return self._translate(key, default)
+    # Shared combo row, translation, and combo-data helpers are inherited.
