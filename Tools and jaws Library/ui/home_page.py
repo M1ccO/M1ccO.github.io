@@ -43,10 +43,14 @@ from ui.selector_state_helpers import (
 from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 from ui.home_page_support import (
     SelectorAssignmentState,
+    sync_selector_assignment_order,
+    sync_selector_card_selection_states,
+    update_selector_assignment_buttons,
     add_three_box_row as build_three_box_row,
     add_two_box_row as build_two_box_row,
     apply_tool_detail_layout_rules,
     build_catalog_list_panel,
+    build_bottom_bars,
     build_detail_field as build_detail_field_widget,
     build_filter_toolbar,
     build_components_panel,
@@ -491,7 +495,13 @@ class HomePage(QWidget):
         detail_card_layout.addWidget(self.detail_scroll, 1)
         dc_layout.addWidget(self.detail_card, 1)
 
-        self._build_selector_card(dc_layout)
+        build_selector_card(
+            self,
+            dc_layout=dc_layout,
+            assignment_list_cls=_ToolAssignmentListWidget,
+            remove_drop_button_cls=_SelectorToolRemoveDropButton,
+            tool_icons_dir=TOOL_ICONS_DIR,
+        )
 
         self.splitter.addWidget(self.detail_container)
         root.addWidget(self.splitter, 1)
@@ -500,90 +510,7 @@ class HomePage(QWidget):
         self.detail_header_container.hide()
         self.splitter.setSizes([1, 0])
 
-        self._build_bottom_bars(root)
-
-
-    def _build_selector_card(self, dc_layout: QVBoxLayout) -> None:
-        build_selector_card(
-            self,
-            dc_layout=dc_layout,
-            assignment_list_cls=_ToolAssignmentListWidget,
-            remove_drop_button_cls=_SelectorToolRemoveDropButton,
-            tool_icons_dir=TOOL_ICONS_DIR,
-        )
-        # ── Selector target header (mirrors detail panel header treatment) ──
-        # ── DETAILS + SP toggle row (same level, symmetric widths) ──
-
-    def _build_bottom_bars(self, root: QVBoxLayout) -> None:
-        """Build normal and selector-mode bottom action bars."""
-        self.button_bar = QFrame()
-        self.button_bar.setProperty('bottomBar', True)
-        button_layout = QHBoxLayout(self.button_bar)
-        button_layout.setContentsMargins(10, 8, 10, 8)
-        button_layout.setSpacing(8)
-
-        self.copy_btn = QPushButton(self._t('tool_library.action.copy_tool', 'COPY TOOL'))
-        self.copy_btn.setProperty('panelActionButton', True)
-        self.copy_btn.clicked.connect(self.copy_tool)
-        self.edit_btn = QPushButton(self._t('tool_library.action.edit_tool', 'EDIT TOOL'))
-        self.edit_btn.setProperty('panelActionButton', True)
-        self.edit_btn.clicked.connect(self.edit_tool)
-        self.delete_btn = QPushButton(self._t('tool_library.action.delete_tool', 'DELETE TOOL'))
-        self.delete_btn.setProperty('panelActionButton', True)
-        self.delete_btn.setProperty('dangerAction', True)
-        self.delete_btn.clicked.connect(self.delete_tool)
-        self.add_btn = QPushButton(self._t('tool_library.action.add_tool', 'ADD TOOL'))
-        self.add_btn.setProperty('panelActionButton', True)
-        self.add_btn.setProperty('primaryAction', True)
-        self.add_btn.clicked.connect(self.add_tool)
-
-        self.module_switch_label = QLabel(self._t('tool_library.module.switch_to', 'Switch to'))
-        self.module_switch_label.setProperty('pageSubtitle', True)
-        self.module_toggle_btn = QPushButton(self._t('tool_library.module.jaws', 'JAWS'))
-        self.module_toggle_btn.setProperty('panelActionButton', True)
-        self.module_toggle_btn.setFixedHeight(28)
-        self.module_toggle_btn.clicked.connect(self._on_module_switch_clicked)
-
-        button_layout.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        button_layout.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        button_layout.addStretch(1)
-        self.selection_count_label = QLabel('')
-        self.selection_count_label.setProperty('detailHint', True)
-        self.selection_count_label.setStyleSheet('background: transparent; border: none;')
-        self.selection_count_label.hide()
-        button_layout.addWidget(self.selection_count_label, 0, Qt.AlignBottom)
-        button_layout.addWidget(self.add_btn)
-        button_layout.addWidget(self.edit_btn)
-        button_layout.addWidget(self.delete_btn)
-        button_layout.addWidget(self.copy_btn)
-        root.addWidget(self.button_bar)
-
-        # ── Selector bottom bar (VALMIS / PERUUTA) — shown in selector mode ──
-        self.selector_bottom_bar = QFrame()
-        self.selector_bottom_bar.setProperty('bottomBar', True)
-        self.selector_bottom_bar.setVisible(False)
-        sel_bar_layout = QHBoxLayout(self.selector_bottom_bar)
-        sel_bar_layout.setContentsMargins(10, 8, 10, 8)
-        sel_bar_layout.setSpacing(8)
-        sel_bar_layout.addStretch(1)
-
-        self.selector_cancel_btn = QPushButton(self._t('tool_library.selector.cancel', 'CANCEL'))
-        self.selector_cancel_btn.setProperty('panelActionButton', True)
-        self.selector_cancel_btn.clicked.connect(self._on_selector_cancel)
-        sel_bar_layout.addWidget(self.selector_cancel_btn)
-
-        self.selector_done_btn = QPushButton(self._t('tool_library.selector.done', 'DONE'))
-        self.selector_done_btn.setProperty('panelActionButton', True)
-        self.selector_done_btn.setProperty('primaryAction', True)
-        self.selector_done_btn.clicked.connect(self._on_selector_done)
-        sel_bar_layout.addWidget(self.selector_done_btn)
-        root.addWidget(self.selector_bottom_bar)
-
-        self._update_selector_assignment_buttons()
-
-    def _on_module_switch_clicked(self):
-        if callable(self._module_switch_callback):
-            self._module_switch_callback()
+        build_bottom_bars(self, root=root)
 
     def set_module_switch_handler(self, callback):
         self._module_switch_callback = callback
@@ -723,56 +650,10 @@ class HomePage(QWidget):
         rows = sorted({index.row() for index in self.selector_assignment_list.selectedIndexes()})
         return [row for row in rows if 0 <= row < len(self._selector_assigned_tools)]
 
-    def _update_selector_assignment_buttons(self):
-        if not hasattr(self, 'selector_remove_btn'):
-            return
-        selected_rows = self._selector_selected_rows()
-        has_row = bool(selected_rows)
-        single_selected = len(selected_rows) == 1
-        current_row = selected_rows[0] if single_selected else -1
-        has_items = bool(getattr(self, 'selector_assignment_list', None) and self.selector_assignment_list.count() > 0)
-        assignment = None
-        if single_selected and 0 <= current_row < len(self._selector_assigned_tools):
-            assignment = self._selector_assigned_tools[current_row]
-        has_comment = bool(str((assignment or {}).get('comment') or '').strip())
-        self.selector_remove_btn.setEnabled(has_row or has_items)
-        self.selector_move_up_btn.setEnabled(single_selected and current_row > 0)
-        self.selector_move_down_btn.setEnabled(single_selected and current_row < self.selector_assignment_list.count() - 1)
-        self.selector_comment_btn.setEnabled(single_selected)
-        self.selector_delete_comment_btn.setVisible(has_comment)
-        self.selector_delete_comment_btn.setEnabled(has_comment)
-
     def _refresh_selector_assignment_rows(self):
         if not hasattr(self, 'selector_assignment_list'):
             return
         self._rebuild_selector_assignment_list()
-
-    def _sync_selector_card_selection_states(self):
-        if not hasattr(self, 'selector_assignment_list'):
-            return
-        for row in range(self.selector_assignment_list.count()):
-            item = self.selector_assignment_list.item(row)
-            widget = self.selector_assignment_list.itemWidget(item)
-            if isinstance(widget, MiniAssignmentCard):
-                widget.set_selected(item.isSelected())
-                continue
-            card = widget.findChild(MiniAssignmentCard) if isinstance(widget, QWidget) else None
-            if isinstance(card, MiniAssignmentCard):
-                card.set_selected(item.isSelected())
-
-    def _sync_selector_assignment_order(self):
-        if not hasattr(self, 'selector_assignment_list'):
-            return
-        ordered: list[dict] = []
-        for row in range(self.selector_assignment_list.count()):
-            item = self.selector_assignment_list.item(row)
-            assignment = item.data(Qt.UserRole)
-            normalized = self._normalize_selector_tool(assignment)
-            if normalized is not None:
-                ordered.append(normalized)
-        self._selector_assigned_tools = ordered
-        self._refresh_selector_assignment_rows()
-        self._update_selector_assignment_buttons()
 
     def _rebuild_selector_assignment_list(self):
         if not hasattr(self, 'selector_assignment_list'):
@@ -828,95 +709,9 @@ class HomePage(QWidget):
                     item.setSelected(True)
         if current >= 0 and current < self.selector_assignment_list.count():
             self.selector_assignment_list.setCurrentRow(current)
-        self._sync_selector_card_selection_states()
-        self._update_selector_assignment_buttons()
+        sync_selector_card_selection_states(self)
+        update_selector_assignment_buttons(self)
 
-    def _on_selector_tools_dropped(self, dropped_items: list, insert_row: int):
-        updated, selected_row = self._selector_assignment_state.apply_dropped_tools(
-            self._selector_assigned_tools,
-            dropped_items,
-            insert_row,
-        )
-        if selected_row is None:
-            return
-        self._selector_assigned_tools = updated
-        self._rebuild_selector_assignment_list()
-        self.selector_assignment_list.setCurrentRow(selected_row)
-
-    def _remove_selector_assignment(self):
-        rows = self._selector_selected_rows()
-        if not rows:
-            return
-        for row in reversed(rows):
-            if 0 <= row < len(self._selector_assigned_tools):
-                self._selector_assigned_tools.pop(row)
-        self._rebuild_selector_assignment_list()
-        if self.selector_assignment_list.count() > 0:
-            self.selector_assignment_list.setCurrentRow(min(rows[0], self.selector_assignment_list.count() - 1))
-
-    def _remove_selector_assignments_by_keys(self, tool_keys: list[tuple[str, str | None]]):
-        remaining = self._selector_assignment_state.remove_assignments_by_keys(
-            self._selector_assigned_tools,
-            tool_keys,
-        )
-        if len(remaining) == len(self._selector_assigned_tools):
-            return
-        self._selector_assigned_tools = remaining
-        self._rebuild_selector_assignment_list()
-
-    def _move_selector_up(self):
-        selected_rows = self._selector_selected_rows()
-        if len(selected_rows) != 1:
-            return
-        row = selected_rows[0]
-        if row <= 0 or row >= len(self._selector_assigned_tools):
-            return
-        self._selector_assigned_tools[row - 1], self._selector_assigned_tools[row] = (
-            self._selector_assigned_tools[row], self._selector_assigned_tools[row - 1])
-        self._rebuild_selector_assignment_list()
-        self.selector_assignment_list.setCurrentRow(row - 1)
-
-    def _move_selector_down(self):
-        selected_rows = self._selector_selected_rows()
-        if len(selected_rows) != 1:
-            return
-        row = selected_rows[0]
-        if row < 0 or row >= len(self._selector_assigned_tools) - 1:
-            return
-        self._selector_assigned_tools[row], self._selector_assigned_tools[row + 1] = (
-            self._selector_assigned_tools[row + 1], self._selector_assigned_tools[row])
-        self._rebuild_selector_assignment_list()
-        self.selector_assignment_list.setCurrentRow(row + 1)
-
-    def _add_selector_comment(self):
-        selected_rows = self._selector_selected_rows()
-        if len(selected_rows) != 1:
-            return
-        row = selected_rows[0]
-        if row < 0 or row >= len(self._selector_assigned_tools):
-            return
-        current = str(self._selector_assigned_tools[row].get('comment') or '').strip()
-        from PySide6.QtWidgets import QInputDialog
-        text, ok = QInputDialog.getText(
-            self, self._t('tool_library.selector.add_comment', 'Add Comment'),
-            self._t('tool_library.selector.comment_prompt', 'Comment:'),
-            text=current,
-        )
-        if ok:
-            self._selector_assigned_tools[row]['comment'] = text.strip()
-            self._rebuild_selector_assignment_list()
-            self.selector_assignment_list.setCurrentRow(row)
-
-    def _delete_selector_comment(self):
-        selected_rows = self._selector_selected_rows()
-        if len(selected_rows) != 1:
-            return
-        row = selected_rows[0]
-        if row < 0 or row >= len(self._selector_assigned_tools):
-            return
-        self._selector_assigned_tools[row].pop('comment', None)
-        self._rebuild_selector_assignment_list()
-        self.selector_assignment_list.setCurrentRow(row)
 
     def _inline_edit_selector_row(self, row: int):
         if row < 0 or row >= len(self._selector_assigned_tools):
@@ -955,28 +750,6 @@ class HomePage(QWidget):
         self._update_selector_assignments_section_title()
         self.refresh_list()
         self._rebuild_selector_assignment_list()
-
-    def _on_selector_cancel(self):
-        """Cancel selector — notify main window to clear the session."""
-        main_win = self.window()
-        if hasattr(main_win, '_clear_selector_session'):
-            main_win._clear_selector_session()
-        if hasattr(main_win, '_back_to_setup_manager'):
-            main_win._back_to_setup_manager()
-
-    def _on_selector_done(self):
-        """Send selection — delegate to main window."""
-        main_win = self.window()
-        if hasattr(main_win, '_send_selector_selection'):
-            main_win._send_selector_selection()
-
-    def _on_selector_toggle_clicked(self):
-        if not self._selector_active:
-            return
-        if self.selector_toggle_btn.isChecked():
-            self._set_selector_panel_mode('selector')
-        else:
-            self._set_selector_panel_mode('details')
 
     def _set_selector_panel_mode(self, mode: str):
         if not self._selector_active:
@@ -1082,7 +855,7 @@ class HomePage(QWidget):
 
     def selector_assigned_tools_for_setup_assignment(self) -> list[dict]:
         # Sync the active bucket from the UI and persist it before reading all buckets.
-        self._sync_selector_assignment_order()
+        sync_selector_assignment_order(self)
         self._store_selector_bucket_for_current_target()
         return self._selector_assignment_state.setup_assignment_payload(
             self._selector_assignments_by_target,
@@ -2245,7 +2018,7 @@ class HomePage(QWidget):
             self.selector_delete_comment_btn.setToolTip(self._t('tool_library.selector.delete_comment', 'Delete Comment'))
         self._update_selection_count_label()
         self._refresh_selector_assignment_rows()
-        self._update_selector_assignment_buttons()
+        update_selector_assignment_buttons(self)
         self.refresh_list()
         if self.current_tool_id or self.current_tool_uid is not None:
             self.populate_details(self._get_selected_tool())

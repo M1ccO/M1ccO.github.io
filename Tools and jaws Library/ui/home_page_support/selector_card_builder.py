@@ -3,6 +3,19 @@
 from PySide6.QtWidgets import QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout
 
 from shared.editor_helpers import create_titled_section, style_move_arrow_button, style_panel_action_button
+from .selector_actions import (
+    add_selector_comment,
+    delete_selector_comment,
+    move_selector_down,
+    move_selector_up,
+    on_selector_toggle_clicked,
+    on_selector_tools_dropped,
+    remove_selector_assignment,
+    remove_selector_assignments_by_keys,
+    sync_selector_assignment_order,
+    sync_selector_card_selection_states,
+    update_selector_assignment_buttons,
+)
 from ui.shared.selector_panel_builders import (
     apply_selector_icon_button,
     build_selector_actions_row,
@@ -46,7 +59,7 @@ def build_selector_card(
 
     page.selector_toggle_btn = build_selector_toggle_button(
         text=page._t("tool_library.selector.mode_details", "DETAILS"),
-        on_clicked=page._on_selector_toggle_clicked,
+        on_clicked=lambda: on_selector_toggle_clicked(page),
     )
     ctx_row.addWidget(page.selector_toggle_btn, 0)
 
@@ -79,10 +92,16 @@ def build_selector_card(
         "#toolIdsOrderList::viewport { background: transparent; border: none; }"
         "#toolIdsOrderList::item { background: transparent; border: none; }"
     )
-    page.selector_assignment_list.externalToolsDropped.connect(page._on_selector_tools_dropped)
-    page.selector_assignment_list.orderChanged.connect(page._sync_selector_assignment_order)
-    page.selector_assignment_list.itemSelectionChanged.connect(page._update_selector_assignment_buttons)
-    page.selector_assignment_list.itemSelectionChanged.connect(page._sync_selector_card_selection_states)
+    page.selector_assignment_list.externalToolsDropped.connect(
+        lambda dropped, insert_row: on_selector_tools_dropped(page, dropped, insert_row)
+    )
+    page.selector_assignment_list.orderChanged.connect(lambda: sync_selector_assignment_order(page))
+    page.selector_assignment_list.itemSelectionChanged.connect(
+        lambda: update_selector_assignment_buttons(page)
+    )
+    page.selector_assignment_list.itemSelectionChanged.connect(
+        lambda: sync_selector_card_selection_states(page)
+    )
 
     page.selector_assignments_frame = create_titled_section(page._selector_assignments_section_title())
     page.selector_assignments_frame.setProperty("selectorAssignmentsFrame", True)
@@ -103,7 +122,7 @@ def build_selector_card(
         "\u25B2",
         page._t("tool_library.selector.move_up", "Move Up"),
     )
-    page.selector_move_up_btn.clicked.connect(page._move_selector_up)
+    page.selector_move_up_btn.clicked.connect(lambda: move_selector_up(page))
     selector_actions.addWidget(page.selector_move_up_btn)
 
     page.selector_move_down_btn = QPushButton("\u25BC")
@@ -112,7 +131,7 @@ def build_selector_card(
         "\u25BC",
         page._t("tool_library.selector.move_down", "Move Down"),
     )
-    page.selector_move_down_btn.clicked.connect(page._move_selector_down)
+    page.selector_move_down_btn.clicked.connect(lambda: move_selector_down(page))
     selector_actions.addWidget(page.selector_move_down_btn)
 
     page.selector_remove_btn = remove_drop_button_cls()
@@ -122,8 +141,10 @@ def build_selector_card(
         tooltip=page._t("tool_library.selector.remove", "Remove"),
         danger=True,
     )
-    page.selector_remove_btn.clicked.connect(page._remove_selector_assignment)
-    page.selector_remove_btn.toolsDropped.connect(page._remove_selector_assignments_by_keys)
+    page.selector_remove_btn.clicked.connect(lambda: remove_selector_assignment(page))
+    page.selector_remove_btn.toolsDropped.connect(
+        lambda keys: remove_selector_assignments_by_keys(page, keys)
+    )
     selector_actions.addWidget(page.selector_remove_btn)
 
     page.selector_comment_btn = QPushButton()
@@ -132,7 +153,7 @@ def build_selector_card(
         icon_path=tool_icons_dir / "comment.svg",
         tooltip=page._t("tool_library.selector.add_comment", "Add Comment"),
     )
-    page.selector_comment_btn.clicked.connect(page._add_selector_comment)
+    page.selector_comment_btn.clicked.connect(lambda: add_selector_comment(page))
     selector_actions.addWidget(page.selector_comment_btn)
 
     page.selector_delete_comment_btn = QPushButton()
@@ -141,7 +162,7 @@ def build_selector_card(
         icon_path=tool_icons_dir / "comment_disable.svg",
         tooltip=page._t("tool_library.selector.delete_comment", "Delete Comment"),
     )
-    page.selector_delete_comment_btn.clicked.connect(page._delete_selector_comment)
+    page.selector_delete_comment_btn.clicked.connect(lambda: delete_selector_comment(page))
     page.selector_delete_comment_btn.setVisible(False)
     selector_actions.addWidget(page.selector_delete_comment_btn)
 

@@ -2,6 +2,11 @@
 
 from __future__ import annotations
 
+from .selector_actions import (
+    apply_selector_slot_selection,
+    update_selector_remove_button,
+    update_selector_spindle_ui,
+)
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
     normalize_selector_mode,
@@ -85,8 +90,8 @@ class SelectorSlotController:
         page.selector_sp1_slot.set_assignment(page._selector_assignments.get('main'))
         page.selector_sp2_slot.set_assignment(page._selector_assignments.get('sub'))
         page._selector_selected_slots = prune_selected_slots(page._selector_selected_slots, page._selector_assignments)
-        page._apply_selector_slot_selection()
-        page._update_selector_remove_button()
+        apply_selector_slot_selection(page)
+        update_selector_remove_button(page)
 
     def on_selector_slot_clicked(self, slot_key: str, ctrl_pressed: bool) -> None:
         page = self._page
@@ -98,8 +103,8 @@ class SelectorSlotController:
             has_assignment=has_assignment,
             ctrl_pressed=ctrl_pressed,
         )
-        page._apply_selector_slot_selection()
-        page._update_selector_remove_button()
+        apply_selector_slot_selection(page)
+        update_selector_remove_button(page)
 
     def on_selector_jaw_dropped(self, slot_key: str, jaw: dict) -> None:
         page = self._page
@@ -190,7 +195,7 @@ class SelectorSlotController:
         was_active = page._selector_active
         page._selector_active = bool(active)
         page._selector_spindle = normalize_selector_spindle(spindle)
-        page._update_selector_spindle_ui()
+        update_selector_spindle_ui(page)
         page.selector_toggle_btn.setVisible(page._selector_active)
         page.toggle_details_btn.setEnabled(not page._selector_active)
         page.button_bar.setVisible(not page._selector_active)

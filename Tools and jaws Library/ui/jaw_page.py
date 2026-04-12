@@ -47,10 +47,7 @@ from ui.stl_preview import StlPreviewWidget
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 from shared.mini_assignment_card import MiniAssignmentCard
 from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
-from ui.selector_state_helpers import (
-    has_any_selector_assignment,
-)
-from ui.selector_ui_helpers import event_point, normalize_selector_spindle, selector_spindle_label, widget_contains_global_point
+from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 from ui.jaw_page_support import (
     SelectorSlotController,
     apply_jaw_detail_grid_rules,
@@ -58,6 +55,12 @@ from ui.jaw_page_support import (
     jaw_preview_label,
     jaw_preview_rotation_steps,
     jaw_preview_stl_path,
+    on_selector_cancel,
+    on_selector_done,
+    on_selector_toggle_clicked,
+    selector_drag_payload_jaw_ids,
+    selector_remove_btn_contains_global_point,
+    update_selector_remove_button,
 )
 from ui.shared.selector_panel_builders import (
     apply_selector_icon_button,
@@ -494,8 +497,8 @@ class JawPage(QWidget):
         self._build_selector_bottom_bar(root)
 
         self._set_view_mode('all', refresh=False)
-        self._refresh_selector_slots()
-        self._update_selector_remove_button()
+        self._selector_slot_controller.refresh_selector_slots()
+        update_selector_remove_button(self)
 
         self._install_layout_event_filters(filter_frame)
 
@@ -707,7 +710,7 @@ class JawPage(QWidget):
 
         self.selector_toggle_btn = build_selector_toggle_button(
             text=self._t('tool_library.selector.mode_details', 'DETAILS'),
-            on_clicked=self._on_selector_toggle_clicked,
+            on_clicked=lambda: on_selector_toggle_clicked(self),
         )
         ctx_row.addWidget(self.selector_toggle_btn, 0)
         ctx_row.addStretch(1)
@@ -725,10 +728,10 @@ class JawPage(QWidget):
         self.selector_sp2_slot.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.selector_sp1_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.selector_sp2_slot.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
-        self.selector_sp1_slot.jawDropped.connect(self._on_selector_jaw_dropped)
-        self.selector_sp2_slot.jawDropped.connect(self._on_selector_jaw_dropped)
-        self.selector_sp1_slot.slotClicked.connect(self._on_selector_slot_clicked)
-        self.selector_sp2_slot.slotClicked.connect(self._on_selector_slot_clicked)
+        self.selector_sp1_slot.jawDropped.connect(self._selector_slot_controller.on_selector_jaw_dropped)
+        self.selector_sp2_slot.jawDropped.connect(self._selector_slot_controller.on_selector_jaw_dropped)
+        self.selector_sp1_slot.slotClicked.connect(self._selector_slot_controller.on_selector_slot_clicked)
+        self.selector_sp2_slot.slotClicked.connect(self._selector_slot_controller.on_selector_slot_clicked)
         selector_layout.addWidget(self.selector_sp1_slot, 0)
         selector_layout.addWidget(self.selector_sp2_slot, 0)
         selector_layout.addStretch(1)
@@ -740,8 +743,8 @@ class JawPage(QWidget):
             tooltip=self._t('tool_library.selector.remove', 'Remove'),
             danger=True,
         )
-        self.selector_remove_btn.clicked.connect(self._remove_selected_selector_jaws)
-        self.selector_remove_btn.jawsDropped.connect(self._on_selector_remove_drop)
+        self.selector_remove_btn.clicked.connect(self._selector_slot_controller.remove_selected_selector_jaws)
+        self.selector_remove_btn.jawsDropped.connect(self._selector_slot_controller.remove_selector_jaws_by_ids)
         selector_actions = build_selector_actions_row(spacing=4)
         selector_actions.addWidget(self.selector_remove_btn, 0, Qt.AlignLeft)
         selector_actions.addStretch(1)
@@ -777,7 +780,9 @@ class JawPage(QWidget):
         self.module_toggle_btn = QPushButton(self._t('tool_library.module.tools', 'TOOLS'))
         self.module_toggle_btn.setProperty('panelActionButton', True)
         self.module_toggle_btn.setFixedHeight(28)
-        self.module_toggle_btn.clicked.connect(self._on_module_switch_clicked)
+        self.module_toggle_btn.clicked.connect(
+            lambda: self._module_switch_callback() if callable(self._module_switch_callback) else None
+        )
 
         actions.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
         actions.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
@@ -804,13 +809,13 @@ class JawPage(QWidget):
 
         self.selector_cancel_btn = QPushButton(self._t('tool_library.selector.cancel', 'CANCEL'))
         self.selector_cancel_btn.setProperty('panelActionButton', True)
-        self.selector_cancel_btn.clicked.connect(self._on_selector_cancel)
+        self.selector_cancel_btn.clicked.connect(lambda: on_selector_cancel(self))
         sel_bar_layout.addWidget(self.selector_cancel_btn)
 
         self.selector_done_btn = QPushButton(self._t('tool_library.selector.done', 'DONE'))
         self.selector_done_btn.setProperty('panelActionButton', True)
         self.selector_done_btn.setProperty('primaryAction', True)
-        self.selector_done_btn.clicked.connect(self._on_selector_done)
+        self.selector_done_btn.clicked.connect(lambda: on_selector_done(self))
         sel_bar_layout.addWidget(self.selector_done_btn)
         root.addWidget(self.selector_bottom_bar)
 
@@ -825,10 +830,6 @@ class JawPage(QWidget):
         self.button_bar.installEventFilter(self)
         self.selector_bottom_bar.installEventFilter(self)
         self.detail_header_container.installEventFilter(self)
-
-    def _on_module_switch_clicked(self):
-        if callable(self._module_switch_callback):
-            self._module_switch_callback()
 
     def set_module_switch_handler(self, callback):
         self._module_switch_callback = callback
@@ -851,93 +852,6 @@ class JawPage(QWidget):
     @staticmethod
     def _selector_spindle_label(spindle: str) -> str:
         return selector_spindle_label(spindle)
-
-    def _normalize_selector_jaw(self, jaw: dict | None) -> dict | None:
-        return self._selector_slot_controller.normalize_selector_jaw(jaw)
-
-    def _normalize_jaw_spindle_side(self, value: str | None) -> str:
-        return self._selector_slot_controller.normalize_jaw_spindle_side(value)
-
-    def _jaw_supports_selector_slot(self, jaw: dict | None, slot: str) -> bool:
-        return self._selector_slot_controller.jaw_supports_selector_slot(jaw, slot)
-
-    def _selector_assignments_from_initial(self, initial_assignments: list[dict] | None) -> dict[str, dict | None]:
-        """Map Setup Manager payload rows into stable SP1/SP2 slot assignments."""
-        return self._selector_slot_controller.selector_assignments_from_initial(initial_assignments)
-
-    def _update_selector_spindle_ui(self):
-        spindle = self._normalize_selector_spindle(self._selector_spindle)
-        if hasattr(self, 'selector_spindle_value_label'):
-            self.selector_spindle_value_label.setText(self._selector_spindle_label(spindle))
-
-    def _refresh_selector_slots(self):
-        self._selector_slot_controller.refresh_selector_slots()
-
-    def _apply_selector_slot_selection(self):
-        if hasattr(self, 'selector_sp1_slot'):
-            self.selector_sp1_slot.set_selected('main' in self._selector_selected_slots)
-        if hasattr(self, 'selector_sp2_slot'):
-            self.selector_sp2_slot.set_selected('sub' in self._selector_selected_slots)
-
-    def _on_selector_slot_clicked(self, slot_key: str, ctrl_pressed: bool):
-        self._selector_slot_controller.on_selector_slot_clicked(slot_key, ctrl_pressed)
-
-    def _update_selector_remove_button(self):
-        if not hasattr(self, 'selector_remove_btn'):
-            return
-        has_selected = any(self._selector_assignments.get(slot) is not None for slot in self._selector_selected_slots)
-        has_assigned = has_any_selector_assignment(self._selector_assignments)
-        enabled = has_selected or has_assigned
-        self.selector_remove_btn.setEnabled(enabled)
-
-    def _on_selector_jaw_dropped(self, slot_key: str, jaw: dict):
-        self._selector_slot_controller.on_selector_jaw_dropped(slot_key, jaw)
-
-    def _remove_selected_selector_jaws(self):
-        self._selector_slot_controller.remove_selected_selector_jaws()
-
-    def _remove_selector_jaws_by_ids(self, jaw_ids: list[str]):
-        self._selector_slot_controller.remove_selector_jaws_by_ids(jaw_ids)
-
-    def _on_selector_remove_drop(self, jaw_ids: list[str]):
-        self._remove_selector_jaws_by_ids(jaw_ids)
-
-    @staticmethod
-    def _event_point(event) -> QPoint | None:
-        return event_point(event)
-
-    def _selector_remove_btn_contains_global_point(self, global_pos: QPoint) -> bool:
-        return widget_contains_global_point(getattr(self, 'selector_remove_btn', None), global_pos)
-
-    def _selector_drag_payload_jaw_ids(self, mime: QMimeData) -> list[str]:
-        if hasattr(self, 'selector_remove_btn') and isinstance(self.selector_remove_btn, _SelectorRemoveDropButton):
-            return self.selector_remove_btn._payload_jaw_ids(mime)
-        return jaw_payload_ids(mime)
-
-    def _on_selector_cancel(self):
-        """Cancel selector — notify main window to clear the session."""
-        main_win = self.window()
-        if hasattr(main_win, '_clear_selector_session'):
-            main_win._clear_selector_session()
-        if hasattr(main_win, '_back_to_setup_manager'):
-            main_win._back_to_setup_manager()
-
-    def _on_selector_done(self):
-        """Send selection — delegate to main window."""
-        main_win = self.window()
-        if hasattr(main_win, '_send_selector_selection'):
-            main_win._send_selector_selection()
-
-    def _on_selector_toggle_clicked(self):
-        if not self._selector_active:
-            return
-        if self.selector_toggle_btn.isChecked():
-            self._set_selector_panel_mode('selector')
-        else:
-            self._set_selector_panel_mode('details')
-
-    def _set_selector_panel_mode(self, mode: str):
-        self._selector_slot_controller.set_selector_panel_mode(mode)
 
     def set_selector_context(
         self,
@@ -1060,13 +974,13 @@ class JawPage(QWidget):
             and event.type() in (QEvent.DragEnter, QEvent.DragMove, QEvent.Drop)
             and hasattr(event, 'mimeData')
         ):
-            jaw_ids = self._selector_drag_payload_jaw_ids(event.mimeData())
-            point = self._event_point(event)
+            jaw_ids = selector_drag_payload_jaw_ids(self, event.mimeData())
+            point = event.position().toPoint() if hasattr(event, 'position') else None
             if jaw_ids and point is not None:
                 global_pos = obj.mapToGlobal(point)
-                if self._selector_remove_btn_contains_global_point(global_pos):
+                if selector_remove_btn_contains_global_point(self, global_pos):
                     if event.type() == QEvent.Drop:
-                        self._remove_selector_jaws_by_ids(jaw_ids)
+                        self._selector_slot_controller.remove_selector_jaws_by_ids(jaw_ids)
                     event.acceptProposedAction()
                     return True
         selector_click_targets = {
@@ -1101,8 +1015,7 @@ class JawPage(QWidget):
                     on_slot = True
             if not on_slot and self._selector_selected_slots:
                 self._selector_selected_slots.clear()
-                self._apply_selector_slot_selection()
-                self._update_selector_remove_button()
+                self._selector_slot_controller.refresh_selector_slots()
         if obj in (getattr(self, 'jaw_list', None),
                    getattr(self, 'jaw_list', None) and self.jaw_list.viewport()):
             if event.type() == QEvent.MouseButtonPress:
@@ -1526,7 +1439,7 @@ class JawPage(QWidget):
 
     def show_details(self):
         if self._selector_active:
-            self._set_selector_panel_mode('details')
+            self._selector_slot_controller.set_selector_panel_mode('details')
             return
         self._details_hidden = False
         self.detail_container.show()
@@ -1539,7 +1452,7 @@ class JawPage(QWidget):
 
     def hide_details(self):
         if self._selector_active:
-            self._set_selector_panel_mode('selector')
+            self._selector_slot_controller.set_selector_panel_mode('selector')
             return
         self._details_hidden = True
         if self.detail_container.isVisible():
@@ -1765,7 +1678,7 @@ class JawPage(QWidget):
         self._build_type_filter_items()
         for mode, btn in self.view_buttons:
             btn.setText(self._nav_mode_title(mode))
-        self._refresh_selector_slots()
+        self._selector_slot_controller.refresh_selector_slots()
         self._update_selection_count_label()
         self.refresh_list()
         if self.current_jaw_id:
