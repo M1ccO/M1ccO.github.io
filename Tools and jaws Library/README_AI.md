@@ -329,13 +329,33 @@ Add/Edit dialog for jaw records. Two tabs: **General** and **3D Model**.
 
 ### `ui/tool_editor_dialog.py`
 
-Add/Edit dialog for tool records. Three tabs: **General**, **Additional Parts**, **3D Models**.
+Add/Edit dialog for tool records. Four tabs: **General**, **Components**, **Spare Parts**, **3D Models**.
 
 - General tab: tool fields + holder/cutting picker buttons + drill/mill conditional fields
-- Additional Parts tab: `PartsTable` widget storing `[{name, code, link}, ...]`
+- Components tab: `PartsTable` storing `[{role, label, code, link, group}, ...]`; grouping controls
+- Spare Parts tab: `PartsTable` storing `[{name, code, link, component_key, group}, ...]`; component linking
 - 3D Models tab: `PartsTable` storing `[{name, file, color}, ...]`; live preview via `StlPreviewWidget.load_parts()`
 - 3D Models tab also includes a transform row below the preview (mode toggle, fine toggle, XYZ values, reset)
 - Transform snapshots are synchronized from the preview before save to avoid stale zero-value saves
+
+**Modular structure (April 2026 refactor):** The dialog has been reduced to a thin coordinator (~970 lines). Tab construction and several self-contained responsibilities were extracted into `tool_editor_support/` modules. See `TOOL_EDITOR_REFACTOR.md` for the full log.
+
+Key support modules:
+
+| Module | Class / exports | Responsibility |
+|---|---|---|
+| `component_picker_dialog.py` | `ComponentPickerDialog` | Searchable picker for borrowing component data from existing tools |
+| `spare_parts_table_coordinator.py` | `SparePartsTableCoordinator` | Spare parts table row management + debounced component dropdown refresh |
+| `component_linking_dialog.py` | `ComponentLinkingDialog` | Modal for linking selected spare rows to a component |
+| `general_tab.py` | `build_general_tab` | General tab widget construction |
+| `components_tab.py` | `build_components_tab`, `build_spare_parts_tab` | Components + Spare Parts tab construction |
+| `models_tab.py` | `build_models_tab` | 3D Models tab construction |
+| `payload_adapter.py` | `ToolEditorPayloadAdapter` | Load/collect tool data to/from dialog widgets |
+| `tool_type_rules.py` | field-state helpers | Determines which fields are visible per tool type |
+| `detail_layout_rules.py` | `build_tool_type_layout_update` | Computes layout transitions for tool type changes |
+| `measurement_rules.py` | normalize helpers | Normalizes XYZ/float/distance-space text values |
+| `transform_rules.py` | transform dict helpers | Compacts/expands transform dicts |
+| `components.py` | component query helpers | Mines existing tools for known component entries |
 
 Component picker scans all existing tool records and deduplicates `(kind, name, code, link)` tuples.
 
