@@ -1,0 +1,18 @@
+{
+  "max_cross_app_signature_collisions": 9,
+  "notes": "Baseline reduced after removing final Wave 1 refactor target on 2026-04-12. Keep max stable or lower; classify every collision signature.",
+  "classification": {
+    "intentional": [
+      "ClassDef:Database:d6393b6f13dc6c50d31786604a137e2ac4d2fb7b",
+      "ClassDef:JawDatabase:88a688dea0ff7e70843b5a7bced6e311cf7ac833",
+      "FunctionDef:__init__:0fdfd269d27bde6017cb0ea6fb10fc615e0b8caf",
+      "FunctionDef:__init__:de7d2249432a275d2d5c6803c0ee9ccc144d351d",
+      "FunctionDef:close:c3cd70d914de1abb288755d9f2077b04b0438175",
+      "FunctionDef:_t:04a38c460d55ff3dac737e1196a9b83ad0d972e4",
+      "ClassDef:FastTooltipStyle:3142344a7d8df1d5e194519871c724d288e5c3cb",
+      "FunctionDef:_build_fixed_light_palette:ac2c569deb1a444f45b4d42744b055ad030df786",
+      "FunctionDef:styleHint:e8ead2836ca78a289a2700bcbdea9aba1f97abfd"
+    ],
+    "refactor_target": []
+  }
+}

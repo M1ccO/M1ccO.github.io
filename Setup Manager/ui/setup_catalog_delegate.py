@@ -60,8 +60,11 @@ class SetupCatalogDelegate(QStyledItemDelegate):
         self._compact_mode = bool(compact_mode)
 
     def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
-        width = option.rect.width() if option.rect.width() > 0 else 600
-        return QSize(width, ROW_HEIGHT + CARD_MARGIN_V * 2)
+        width = option.rect.width()
+        if width <= 0:
+            width = 620 if self._compact_mode else 600
+        row_height = ROW_HEIGHT_COMPACT if self._compact_mode else ROW_HEIGHT
+        return QSize(width, row_height + CARD_MARGIN_V * 2)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
         painter.save()

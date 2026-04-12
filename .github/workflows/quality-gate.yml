@@ -1,0 +1,38 @@
+name: Quality Gate
+
+on:
+  pull_request:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r "Setup Manager/requirements.txt"
+          python -m pip install -r "Tools and jaws Library/requirements.txt"
+
+      - name: Prepare local venv path for scripts
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe -m pip install --upgrade pip
+          .\.venv\Scripts\python.exe -m pip install -r "Setup Manager/requirements.txt"
+          .\.venv\Scripts\python.exe -m pip install -r "Tools and jaws Library/requirements.txt"
+
+      - name: Run quality gate
+        shell: pwsh
+        run: |
+          .\.venv\Scripts\python.exe scripts\run_quality_gate.py

@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "canonicalSharedModules": {
+    "services": [
+      "shared.services.localization_service",
+      "shared.services.ui_preferences_service"
+    ],
+    "models": [
+      "shared.models.tool",
+      "shared.models.jaw"
+    ],
+    "ui": [
+      "shared.ui.stl_preview",
+      "shared.ui.preferences_dialog_base",
+      "shared.ui.helpers.editor_helpers",
+      "shared.ui.helpers.editor_table",
+      "shared.ui.cards.mini_assignment_card"
+    ],
+    "data": [
+      "shared.data.model_paths"
+    ]
+  },
+  "appOwnership": {
+    "setupManager": {
+      "root": "Setup Manager",
+      "ownedDomains": [
+        "works",
+        "logbook",
+        "drawings",
+        "setup database preferences"
+      ],
+      "intentionalBoundaries": [
+        "Setup Manager/data/migrations.py remains app-specific",
+        "Setup Manager/config.py remains app-specific"
+      ]
+    },
+    "toolsAndJawsLibrary": {
+      "root": "Tools and jaws Library",
+      "ownedDomains": [
+        "tools",
+        "jaws",
+        "export",
+        "selector workflows"
+      ],
+      "intentionalBoundaries": [
+        "Tools and jaws Library/data/migrations.py remains app-specific",
+        "Tools and jaws Library/config.py remains app-specific"
+      ]
+    }
+  },
+  "dependencyRules": {
+    "allow": [
+      "app -> shared",
+      "app -> app-local"
+    ],
+    "deny": [
+      "Setup Manager -> Tools and jaws Library direct imports",
+      "Tools and jaws Library -> Setup Manager direct imports",
+      "legacy shared import aliases"
+    ]
+  }
+}
