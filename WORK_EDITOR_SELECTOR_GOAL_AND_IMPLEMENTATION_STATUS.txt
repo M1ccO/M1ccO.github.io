@@ -2,6 +2,12 @@ WORK EDITOR SELECTOR REWORK
 Goal + Current Technical Implementation Status
 Date: 2026-04-10
 
+Update snapshot: 2026-04-12
+- Main modularization pass largely completed (~90% phase progress).
+- Work Editor dialog structure extracted into `work_editor_support/*` helpers.
+- Tool/Jaw selector action paths extracted in Library side (`home_page_support/*`, `jaw_page_support/*`).
+- Current focus shifted to final regression sweep + hygiene cleanup + commit chunking.
+
 ==================================================
 1) GOAL TO IMPLEMENT (TARGET BEHAVIOR)
 ==================================================

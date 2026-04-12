@@ -1,69 +1,70 @@
 # Process Goal + Status (AI Resume)
 
 ## Objective
-Make main modules smaller and more modular, keep runtime behavior stable, and prepare profile-driven machine variants without breaking current DB contracts.
+Refactor oversized UI/editor modules into support modules, preserve behavior and DB compatibility, and prepare capability/profile-driven machine variants.
+
+## Progress
+- Phase completion: ~90% (main-module modularization pass).
 
 ## Completed
-- `Tools and jaws Library/ui/home_page.py`
-  - Large UI construction moved behind support modules:
-    - `ui/home_page_support/topbar_builder.py`
-    - `ui/home_page_support/selector_card_builder.py`
-    - `ui/home_page_support/components_panel_builder.py`
-    - `ui/home_page_support/detail_fields_builder.py`
-    - `ui/home_page_support/preview_panel_builder.py`
-  - Selector assignment state extracted earlier to:
-    - `ui/home_page_support/selector_assignment_state.py`
-  - Main file now delegates major blocks instead of inline-building them.
+- Setup Manager Work Editor refactor (`ui/work_editor_dialog.py`):
+  - extracted tab builders, tools tab builder, selector flow, pot editor, IO/validation, and tool actions into:
+    - `ui/work_editor_support/tab_builders.py`
+    - `ui/work_editor_support/tools_tab_builder.py`
+    - `ui/work_editor_support/selector_flow.py`
+    - `ui/work_editor_support/pot_editor.py`
+    - `ui/work_editor_support/io_validation.py`
+    - `ui/work_editor_support/tool_actions.py`
+  - removed large wrapper/delegate blocks from dialog.
+  - size reduction: `work_editor_dialog.py` ~2785 -> ~2035 lines.
 
-- `Tools and jaws Library/ui/jaw_page.py`
-  - Selector-slot orchestration extracted to:
-    - `ui/jaw_page_support/selector_slot_controller.py`
-  - Dead legacy classes/constants removed (unused row widget paths).
+- Tools & Jaws Library Home page refactor (`ui/home_page.py`):
+  - moved selector action logic into:
+    - `ui/home_page_support/selector_actions.py`
+  - rewired selector card/bottom bars to direct support callbacks.
+  - removed thin selector wrapper methods.
+  - size reduction: `home_page.py` ~2361 -> ~2199 lines.
 
-- `Tools and jaws Library/ui/tool_editor_dialog.py`
-  - Tool-type detail branching extracted to:
-    - `ui/tool_editor_support/detail_layout_rules.py`
-  - Measurement overlay normalization/serialization extracted to:
-    - `ui/tool_editor_support/measurement_rules.py`
-  - Transform normalization/compaction extracted to:
-    - `ui/tool_editor_support/transform_rules.py`
-  - Dead helper methods/import paths removed from dialog.
+- Tools & Jaws Library Jaw page refactor (`ui/jaw_page.py`):
+  - moved selector actions into:
+    - `ui/jaw_page_support/selector_actions.py`
+  - rewired selector slot/card actions to controller/helper callbacks.
+  - removed selector wrapper methods.
+  - size reduction: `jaw_page.py` ~1775 -> ~1691 lines.
 
-- Shared and wiring
-  - `ui/shared/selector_panel_builders.py` reused by Home/Jaw flows.
-  - `ui/main_window_support/selector_session.py` in use for selector session mapping.
-  - `__init__.py` exports updated in support packages to make extracted modules first-class.
+- Shared support wiring:
+  - support-package `__init__.py` exports updated for extracted modules.
+  - selector card/bottom bar builders now call support helpers directly.
 
-- Stability and verification
-  - Repeated `py_compile` and `compileall` passes done on edited modules.
-  - Offscreen smoke checks passed for `HomePage`, `JawPage`, `AddEditToolDialog`.
-  - Setup Manager -> Tools/Jaws open-path regression fixed (selector-context mismatch issue).
+## Validation Done
+- `py_compile` on touched modules.
+- support `compileall` for `work_editor_support`, `home_page_support`, `jaw_page_support`.
+- import smoke:
+  - `WorkEditorDialog`
+  - `HomePage`
+  - `JawPage`
+  - `AddEditToolDialog`
 
-## Open
-- Machine-profile capability layer is still partial:
-  - no full central profile contract yet for station/axis/feature gating.
-- Compatibility view-model layer is still partial:
-  - legacy schema adapters are improved but not fully centralized for all editors.
-- `Setup Manager/ui/work_editor_dialog.py` still oversized and needs the same extraction depth.
-- Automated regression suite is still missing (current checks are compile + smoke).
+## Open / Remaining
+- Machine profile capability layer still partial (gating exists, not yet fully centralized into one explicit profile contract).
+- Compatibility view-model layer still partial (legacy adapters improved, not fully unified across all editors).
+- No automated regression test suite yet (current verification is compile/import + manual behavior checks).
+- Repo still has staged-unready mixed edits; needs final cleanup + commit segmentation.
 
-## Next (Priority)
-1. `Setup Manager/ui/work_editor_dialog.py`
-   - extract large UI sections + selector/jaw hardcoded construction into `work_editor_support/*`.
-   - keep schema and service interfaces unchanged.
-2. Machine profile core
-   - add explicit profile capability object (spindles, heads/stations, axis/features toggles).
-   - use profile gating instead of scattered conditionals.
-3. Compatibility adapters
-   - centralize work/tool/jaw payload normalization + serialization.
-4. Lightweight tests
-   - selector payload mapping
-   - profile gating behavior
-   - save/load compatibility smoke fixtures.
+## Next Priority
+1. Final doc/status sync:
+   - update top-level selector status doc with this phase outcomes.
+2. Final manual regression sweep:
+   - Setup Manager -> Tool/Jaw selector open/return
+   - tool/jaw assignment save/load
+   - selector cancel/done semantics
+3. Small hygiene pass:
+   - remove residual unused imports/helpers from touched modules.
+4. Commit in 1-2 coherent chunks.
 
 ## Constraints
-- Keep Python + PySide6 core.
-- Keep DB compatibility-first (additive-only if migration needed).
-- Keep ownership split:
-  - Setup Manager consumes references
-  - Tools/Jaws Library remains master-data source.
+- Keep Python/PySide6 architecture.
+- Keep DB compatibility-first (additive-only migrations).
+- Keep ownership boundary:
+  - Setup Manager = reference consumer
+  - Tool/Jaw Library = master-data owner.
