@@ -17,6 +17,7 @@ from .selector_actions import (
     update_selector_remove_button,
 )
 from .selector_slot_controller import SelectorSlotController
+from .selector_widgets import JawAssignmentSlot, SelectorRemoveDropButton
 
 __all__ = [
     "apply_jaw_detail_grid_rules",
@@ -32,4 +33,6 @@ __all__ = [
     "selector_remove_btn_contains_global_point",
     "update_selector_remove_button",
     "SelectorSlotController",
+    "JawAssignmentSlot",
+    "SelectorRemoveDropButton",
 ]

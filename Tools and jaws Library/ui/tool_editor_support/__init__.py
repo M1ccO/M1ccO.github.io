@@ -1,3 +1,5 @@
+from .component_picker_dialog import ComponentPickerDialog
+from .component_linking_dialog import ComponentLinkingDialog
 from .components import (
     component_display_for_key,
     component_dropdown_values,
@@ -8,6 +10,7 @@ from .components import (
     spare_parts_from_rows,
 )
 from .payload_adapter import ToolEditorPayloadAdapter
+from .spare_parts_table_coordinator import SparePartsTableCoordinator
 from .detail_layout_rules import ToolTypeLayoutUpdate, build_tool_type_layout_update
 from .measurement_rules import (
     empty_measurement_editor_state,
@@ -24,6 +27,8 @@ from .tool_type_rules import ToolTypeFieldState, build_tool_type_field_state, is
 __all__ = [
     "all_part_transforms_payload",
     "compact_transform_dict",
+    "ComponentLinkingDialog",
+    "ComponentPickerDialog",
     "empty_measurement_editor_state",
     "measurement_overlays_from_state",
     "normalize_distance_space",
@@ -32,6 +37,7 @@ __all__ = [
     "normalize_transform_dict",
     "normalize_xyz_text",
     "parse_measurement_overlays",
+    "SparePartsTableCoordinator",
     "ToolEditorPayloadAdapter",
     "ToolTypeLayoutUpdate",
     "ToolTypeFieldState",

@@ -1,6 +1,19 @@
 from .bridge import SelectorSessionBridge
+from .bridge_actions import (
+    ensure_selector_callback_server,
+    open_external_selector_session,
+    show_selector_warning,
+    shutdown_selector_bridge,
+)
+from .dragdrop_widgets import (
+    WorkEditorToolAssignmentListWidget,
+    WorkEditorToolRemoveDropButton,
+)
 from .io_validation import collect_unresolved_reference_messages, refresh_external_refs
+from .icon_resolvers import toolbar_icon, tool_icon_for_type, tool_icon_for_type_in_spindle
+from .jaw_selector_panel import WorkEditorJawSelectorPanel
 from .model import WorkEditorPayloadAdapter
+from .ordered_tool_list import WorkEditorOrderedToolList
 from .selectors import (
     apply_jaw_selector_items_to_selectors,
     apply_tool_selector_items_to_ordered_list,
@@ -27,6 +40,26 @@ from .selector_flow import (
     open_jaw_selector_session,
     open_tool_selector_session,
 )
+from .selector_adapter import (
+    apply_jaw_selector_result,
+    apply_tool_selector_result,
+    head_label,
+    merge_jaw_refs,
+    merge_tool_refs,
+    open_external_selector_session_for_dialog,
+    show_selector_warning_for_dialog,
+    spindle_label,
+)
+from .selector_state import (
+    current_tools_head_value,
+    default_jaw_selector_spindle,
+    default_selector_head,
+    default_selector_spindle,
+    selector_target_ordered_list,
+    set_tools_head_value,
+    toggle_tools_head_view,
+    update_tools_head_switch_text,
+)
 from .tab_builders import (
     build_general_tab_ui,
     build_notes_tab_ui,
@@ -50,13 +83,31 @@ from .tool_actions import (
     update_shared_tool_actions,
     visible_tool_lists,
 )
+from .tool_picker_dialog import WorkEditorToolPickerDialog
 from .tools_tab_builder import build_tools_tab_ui
+from .zero_points import (
+    build_spindle_zero_group,
+    make_zero_axis_input,
+    set_coord_combo,
+    set_zero_xy_visibility,
+)
 
 __all__ = [
     "WorkEditorPayloadAdapter",
+    "WorkEditorOrderedToolList",
     "SelectorSessionBridge",
+    "WorkEditorToolAssignmentListWidget",
+    "WorkEditorToolRemoveDropButton",
+    "ensure_selector_callback_server",
+    "open_external_selector_session",
+    "show_selector_warning",
+    "shutdown_selector_bridge",
     "collect_unresolved_reference_messages",
     "refresh_external_refs",
+    "toolbar_icon",
+    "tool_icon_for_type",
+    "tool_icon_for_type_in_spindle",
+    "WorkEditorJawSelectorPanel",
     "apply_jaw_selector_items_to_selectors",
     "apply_tool_selector_items_to_ordered_list",
     "build_tool_selector_bucket",
@@ -87,6 +138,22 @@ __all__ = [
     "open_combined_tools_jaws_selector_session",
     "open_jaw_selector_session",
     "open_tool_selector_session",
+    "head_label",
+    "spindle_label",
+    "merge_tool_refs",
+    "merge_jaw_refs",
+    "apply_tool_selector_result",
+    "apply_jaw_selector_result",
+    "show_selector_warning_for_dialog",
+    "open_external_selector_session_for_dialog",
+    "current_tools_head_value",
+    "default_jaw_selector_spindle",
+    "default_selector_head",
+    "default_selector_spindle",
+    "selector_target_ordered_list",
+    "set_tools_head_value",
+    "toggle_tools_head_view",
+    "update_tools_head_switch_text",
     "refresh_tool_head_widgets",
     "remove_dragged_tool_assignments",
     "populate_default_pots",
@@ -99,4 +166,9 @@ __all__ = [
     "sync_tool_head_view",
     "update_shared_tool_actions",
     "visible_tool_lists",
+    "WorkEditorToolPickerDialog",
+    "make_zero_axis_input",
+    "set_zero_xy_visibility",
+    "build_spindle_zero_group",
+    "set_coord_combo",
 ]

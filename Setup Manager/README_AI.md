@@ -20,6 +20,7 @@
 - `services/draw_service.py`: drawing + read-only master refs.
 - `ui/main_window.py`: navigation + Tool Library IPC handoff.
 - `ui/setup_page.py`, `ui/work_editor_dialog.py`, `ui/logbook_page.py`.
+- `ui/work_editor_support/`: app-local extracted responsibilities for work editor behavior.
 
 ## IPC / Handoff
 - Setup Manager <-> Tool Library switch uses local IPC (`QLocalSocket`/`QLocalServer`).
@@ -37,3 +38,9 @@
 2. Setup Manager opens Tool Library and returns.
 3. Work editor load/save unchanged.
 4. Logbook add/filter/export unchanged.
+
+## Work Editor Refactor Tracking
+- Follow `WORK_EDITOR_REFACTOR_STATUS.md` for:
+  - completed extraction slices
+  - remaining safe next steps
+  - constraints for behavior-preserving passes

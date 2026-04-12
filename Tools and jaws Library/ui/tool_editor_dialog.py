@@ -34,12 +34,15 @@ from ui.tool_editor_support import (
     compact_transform_dict,
     normalize_transform_dict,
 )
+from ui.tool_editor_support.component_picker_dialog import ComponentPickerDialog
+from ui.tool_editor_support.component_linking_dialog import ComponentLinkingDialog
 from ui.tool_editor_support.detail_layout_rules import build_tool_type_layout_update
 from ui.tool_editor_support.measurement_rules import (
     normalize_distance_space,
     normalize_float_value,
     normalize_xyz_text,
 )
+from ui.tool_editor_support.spare_parts_table_coordinator import SparePartsTableCoordinator
 from shared.ui.helpers.editor_helpers import (
     setup_editor_dialog,
     create_dialog_buttons,
@@ -48,241 +51,6 @@ from shared.ui.helpers.editor_helpers import (
     build_editor_field_card,
     build_picker_row,
 )
-
-
-class ComponentPickerDialog(QDialog):
-    def __init__(
-        self,
-        title: str,
-        entries: list[dict],
-        parent=None,
-        translate: Callable[[str, str | None], str] | None = None,
-    ):
-        super().__init__(parent)
-        self._entries = entries
-        self._selected_entry = None
-        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
-        self._picker_syncing_widths = False
-        self._picker_min_widths = [72, 110, 64]
-        self._picker_name_ratio = 0.31
-        self._picker_code_ratio = 0.68
-        self.setWindowTitle(title)
-        self.resize(560, 520)
-        self.setMinimumSize(360, 420)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(12, 12, 12, 12)
-        root.setSpacing(8)
-
-        self.search = QLineEdit()
-        self.search.setPlaceholderText(self._t('tool_editor.component.search_placeholder', 'Search by name, code, link, or source...'))
-        self.search.textChanged.connect(self._refresh)
-        root.addWidget(self.search)
-
-        self.list_widget = QTreeWidget()
-        self.list_widget.setObjectName('componentPickerTable')
-        self.list_widget.setColumnCount(3)
-        self.list_widget.setHeaderLabels([
-            self._t('tool_editor.table.part_name', 'Part name'),
-            self._t('tool_editor.table.code', 'Code'),
-            self._t('tool_editor.component.column_tcode', 'T-code'),
-        ])
-        self.list_widget.setRootIsDecorated(False)
-        self.list_widget.setUniformRowHeights(True)
-        self.list_widget.setAlternatingRowColors(False)
-        self.list_widget.setIndentation(0)
-        self.list_widget.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.list_widget.setAllColumnsShowFocus(False)
-        self.list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.list_widget.setSortingEnabled(True)
-        picker_style = """
-            QTreeWidget#componentPickerTable {
-                background-color: #ffffff;
-                border: 1px solid #d8e0e8;
-                outline: none;
-                selection-background-color: #cfe4f8;
-                selection-color: #16334e;
-                show-decoration-selected: 1;
-            }
-            QTreeWidget#componentPickerTable::item {
-                padding: 7px 10px;
-                border: none;
-                border-left: none;
-                border-right: none;
-                border-top: none;
-                border-bottom: 1px solid #d8e0e8;
-                background-color: #ffffff;
-                color: #25313b;
-            }
-            QTreeWidget#componentPickerTable::item:selected,
-            QTreeWidget#componentPickerTable::item:selected:active,
-            QTreeWidget#componentPickerTable::item:selected:!active {
-                background-color: #cfe4f8;
-                color: #16334e;
-                border: none;
-                border-left: none;
-                border-right: none;
-                border-top: none;
-                border-bottom: 1px solid #d8e0e8;
-            }
-            QTreeWidget#componentPickerTable QHeaderView::section {
-                background-color: #f3f6f8;
-                border: 1px solid #d9e0e6;
-                padding: 7px 8px;
-                font-weight: 700;
-                color: #25313b;
-            }
-            QTreeWidget#componentPickerTable QHeaderView::up-arrow,
-            QTreeWidget#componentPickerTable QHeaderView::down-arrow {
-                width: 14px;
-                height: 14px;
-            }
-            """
-        self.list_widget.setStyleSheet(picker_style)
-        header = self.list_widget.header()
-        header.setMinimumSectionSize(32)
-        header.setStretchLastSection(False)
-        header.setSectionsClickable(True)
-        header.setSortIndicatorShown(True)
-        header.setSectionResizeMode(0, QHeaderView.Interactive)
-        header.setSectionResizeMode(1, QHeaderView.Interactive)
-        header.setSectionResizeMode(2, QHeaderView.Interactive)
-        header.sectionResized.connect(self._on_picker_header_resized)
-        self.list_widget.itemDoubleClicked.connect(lambda _: self._accept_selected())
-        root.addWidget(self.list_widget, 1)
-
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        cancel_btn = QPushButton(self._t('common.cancel', 'Cancel').upper())
-        select_btn = QPushButton(self._t('tool_editor.component.select', 'SELECT'))
-        cancel_btn.setProperty('panelActionButton', True)
-        select_btn.setProperty('panelActionButton', True)
-        select_btn.setProperty('primaryAction', True)
-        cancel_btn.clicked.connect(self.reject)
-        select_btn.clicked.connect(self._accept_selected)
-        btn_row.addWidget(cancel_btn)
-        btn_row.addWidget(select_btn)
-        root.addLayout(btn_row)
-
-        # Use the same shared button theme as other editor dialogs.
-        apply_secondary_button_theme(self, select_btn)
-
-        QTimer.singleShot(0, self._set_picker_initial_widths)
-        self.list_widget.sortItems(0, Qt.AscendingOrder)
-        header.setSortIndicator(0, Qt.AscendingOrder)
-        self._refresh()
-
-    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
-        return self._translate(key, default, **kwargs)
-
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._apply_picker_column_widths()
-
-    def _set_picker_initial_widths(self):
-        if not hasattr(self, 'list_widget'):
-            return
-        self._picker_syncing_widths = True
-        header = self.list_widget.header()
-        header.blockSignals(True)
-        try:
-            self.list_widget.setColumnWidth(0, 176)
-            self.list_widget.setColumnWidth(1, 230)
-        finally:
-            header.blockSignals(False)
-            self._picker_syncing_widths = False
-        self._capture_picker_column_layout()
-        self._apply_picker_column_widths()
-
-    def _capture_picker_column_layout(self):
-        if not hasattr(self, 'list_widget'):
-            return
-        widths = [max(1, self.list_widget.columnWidth(idx)) for idx in range(self.list_widget.columnCount())]
-        total = sum(widths)
-        if total <= 0:
-            return
-        self._picker_name_ratio = widths[0] / total
-        remaining = widths[1] + widths[2]
-        if remaining <= 0:
-            return
-        self._picker_code_ratio = widths[1] / remaining
-
-    def _apply_picker_column_widths(self):
-        if not hasattr(self, 'list_widget') or self._picker_syncing_widths:
-            return
-        viewport_width = self.list_widget.viewport().width()
-        if viewport_width <= 0:
-            return
-
-        min_name, min_code, min_tcode = self._picker_min_widths
-        max_name_width = max(min_name, viewport_width - min_code - min_tcode)
-        name_width = min(max_name_width, max(min_name, int(viewport_width * self._picker_name_ratio)))
-
-        remaining = max(min_code + min_tcode, viewport_width - name_width)
-        code_width = int(remaining * self._picker_code_ratio)
-        code_width = max(min_code, min(code_width, remaining - min_tcode))
-        tcode_width = viewport_width - name_width - code_width
-
-        if tcode_width < min_tcode:
-            tcode_width = min_tcode
-            code_width = max(min_code, viewport_width - name_width - tcode_width)
-            name_width = max(min_name, viewport_width - code_width - tcode_width)
-
-        self._picker_syncing_widths = True
-        header = self.list_widget.header()
-        header.blockSignals(True)
-        try:
-            self.list_widget.setColumnWidth(0, max(min_name, name_width))
-            self.list_widget.setColumnWidth(1, code_width)
-            self.list_widget.setColumnWidth(2, tcode_width)
-        finally:
-            header.blockSignals(False)
-            self._picker_syncing_widths = False
-
-    def _on_picker_header_resized(self, _logical_index: int, _old_size: int, _new_size: int):
-        if self._picker_syncing_widths:
-            return
-        self._capture_picker_column_layout()
-        self._apply_picker_column_widths()
-
-    def _refresh(self):
-        text = self.search.text().strip().lower()
-        self.list_widget.clear()
-        for entry in self._entries:
-            searchable = ' '.join([
-                entry.get('name', ''),
-                entry.get('code', ''),
-                entry.get('link', ''),
-                entry.get('source', ''),
-            ]).lower()
-            if text and text not in searchable:
-                continue
-            source = entry.get('source', '')
-            item = QTreeWidgetItem([
-                entry.get('name', self._t('tool_library.field.part', 'Part')),
-                entry.get('code', ''),
-                source,
-            ])
-            item.setData(0, Qt.UserRole, entry)
-            self.list_widget.addTopLevelItem(item)
-
-        if self.list_widget.topLevelItemCount() > 0:
-            self.list_widget.setCurrentItem(self.list_widget.topLevelItem(0))
-
-    def _accept_selected(self):
-        item = self.list_widget.currentItem()
-        if item is None:
-            QMessageBox.information(
-                self,
-                self._t('tool_editor.component.select_title', 'Select component'),
-                self._t('tool_editor.component.select_first', 'Select a component first.'),
-            )
-            return
-        self._selected_entry = item.data(0, Qt.UserRole)
-        self.accept()
-
-    def selected_entry(self):
-        return self._selected_entry
 
 
 class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
@@ -310,10 +78,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._general_field_columns = None
         self._turning_drill_geometry_mode = False
         self._spindle_orientation_mode = 'main'
-        self._spare_refresh_timer = QTimer(self)
-        self._spare_refresh_timer.setSingleShot(True)
-        self._spare_refresh_timer.setInterval(75)
-        self._spare_refresh_timer.timeout.connect(self._refresh_spare_component_dropdowns)
+        self._spare_parts_coordinator = None  # Initialized after _build_ui()
         self._payload_adapter = ToolEditorPayloadAdapter(
             translate=self._t,
             localized_cutting_type=self._localized_cutting_type,
@@ -328,6 +93,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.setModal(True)
         setup_editor_dialog(self)
         self._build_ui()
+        self._init_spare_parts_coordinator()
         self._load_tool()
         self._update_cutting_label()
         self._update_tool_type_fields()
@@ -471,6 +237,16 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._update_general_header()
         self._update_spindle_orientation_visibility()
         self._update_notes_editor_height()
+
+    def _init_spare_parts_coordinator(self):
+        """Initialize the spare parts table coordinator after UI is built."""
+        if hasattr(self, 'spare_parts_table'):
+            self._spare_parts_coordinator = SparePartsTableCoordinator(
+                table=self.spare_parts_table,
+                component_dropdown_values=self._component_dropdown_values,
+                component_display_for_key=self._component_display_for_key,
+                refresh_on_structure_change=lambda: self._refresh_measurement_part_dropdowns(),
+            )
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Return, Qt.Key_Enter):
@@ -649,7 +425,8 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
                 self.parts_table.set_cell_text(row, 'link', link)
                 return
         self.parts_table.add_row_dict({'role': role, 'label': name, 'code': code, 'link': link, 'group': ''})
-        self._schedule_spare_component_refresh()
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
 
     def _pick_holder_component(self):
         entry = self._open_component_picker(self._t('tool_editor.component.select_holder', 'Select holder'), ('holder', 'holder-extra'))
@@ -694,7 +471,8 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             'link': entry.get('link', ''),
             'group': '',
         })
-        self._schedule_spare_component_refresh()
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
 
     def _pick_spare_part(self):
         entry = self._open_component_picker(
@@ -703,15 +481,16 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         )
         if not entry:
             return
-        self._add_spare_part_row(
-            {
-                'name': entry.get('name', self._t('tool_library.field.part', 'Part')),
-                'code': entry.get('code', ''),
-                'link': entry.get('link', ''),
-                'component_key': '',
-                'group': '',
-            }
-        )
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.add_spare_part_row(
+                {
+                    'name': entry.get('name', self._t('tool_library.field.part', 'Part')),
+                    'code': entry.get('code', ''),
+                    'link': entry.get('link', ''),
+                    'component_key': '',
+                    'group': '',
+                }
+            )
 
     def _component_dropdown_values(self):
         return component_dropdown_values(self.parts_table.row_dicts())
@@ -719,53 +498,15 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     def _component_display_for_key(self, key: str) -> str:
         return component_display_for_key(key, self.parts_table.row_dicts())
 
-    def _get_spare_component_key(self, row: int) -> str:
-        return str(self.spare_parts_table.cell_user_data(row, 'linked_component', Qt.UserRole, '') or '').strip()
-
-    def _set_spare_component_key(self, row: int, current_key: str = ''):
-        current_key = (current_key or '').strip()
-        # Keep linked-component column as plain item data to avoid item/widget desync.
-        existing_widget = self.spare_parts_table.cellWidget(row, 3)
-        if existing_widget is not None:
-            self.spare_parts_table.removeCellWidget(row, 3)
-
-        self.spare_parts_table.set_cell_text(row, 'linked_component', self._component_display_for_key(current_key))
-        self.spare_parts_table.set_cell_user_data(row, 'linked_component', Qt.UserRole, current_key)
-
-    def _schedule_spare_component_refresh(self, *_args):
-        if hasattr(self, '_spare_refresh_timer'):
-            self._spare_refresh_timer.start()
-
-    def _refresh_spare_component_dropdowns(self):
-        options = self._component_dropdown_values()
-        option_map = {key: display for display, key in options}
-        for row in range(self.spare_parts_table.rowCount()):
-            current_key = self._get_spare_component_key(row)
-            display = option_map.get(current_key, self._component_display_for_key(current_key))
-            self.spare_parts_table.set_cell_text(row, 'linked_component', display)
-            self.spare_parts_table.set_cell_user_data(row, 'linked_component', Qt.UserRole, current_key)
-
-    def _add_spare_part_row(self, part: dict | None = None):
-        part = part or {}
-        self.spare_parts_table.add_row_dict(
-            {
-                'name': (part.get('name') or '').strip(),
-                'code': (part.get('code') or '').strip(),
-                'link': (part.get('link') or '').strip(),
-                'linked_component': '',
-                'group': (part.get('group') or '').strip(),
-            }
-        )
-        row = self.spare_parts_table.rowCount() - 1
-        self._set_spare_component_key(row, (part.get('component_key') or '').strip())
-
     def _remove_component_row(self):
         self.parts_table.remove_selected_row()
-        self._schedule_spare_component_refresh()
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
 
     def _move_component_row(self, delta: int):
         self.parts_table.move_selected_row(delta)
-        self._schedule_spare_component_refresh()
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
 
     def _selected_component_ref(self) -> str:
         row = self.parts_table.currentRow()
@@ -797,70 +538,24 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             )
             return
 
-        dlg = QDialog(self)
-        dlg.setWindowTitle(self._t('tool_editor.component.picker_title', 'Component picker'))
-        dlg.setProperty('workEditorDialog', True)
-        dlg.resize(460, 0)
-        dlg_layout = QVBoxLayout(dlg)
-        dlg_layout.setContentsMargins(18, 18, 18, 18)
-        dlg_layout.setSpacing(12)
-
-        prompt = QLabel(self._t('tool_editor.component.pick_component', 'Link selected spare parts to:'))
-        prompt.setProperty('detailSectionTitle', True)
-        dlg_layout.addWidget(prompt)
-
-        combo = QComboBox()
-        for display, key in options:
-            combo.addItem(display, key)
-
-        preselected = self._selected_component_ref()
-        if preselected:
-            for idx in range(combo.count()):
-                if str(combo.itemData(idx) or '').strip() == preselected:
-                    combo.setCurrentIndex(idx)
-                    break
-
-        self._style_combo(combo)
-        combo.setMinimumHeight(28)
-        combo.setMaximumHeight(28)
-        combo.setMaxVisibleItems(8)
-        self._configure_combo_popup(combo, max_rows=8, row_height=44)
-
-        combo_field = QFrame()
-        combo_field.setProperty('editorFieldCard', True)
-        combo_field_layout = QHBoxLayout(combo_field)
-        combo_field_layout.setContentsMargins(2, 2, 2, 2)
-        combo_field_layout.setSpacing(0)
-        combo_field_layout.addWidget(combo, 1)
-        dlg_layout.addWidget(combo_field)
-
-        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        ok_btn = btn_box.button(QDialogButtonBox.Ok)
-        cancel_btn = btn_box.button(QDialogButtonBox.Cancel)
-        if ok_btn is not None:
-            ok_btn.setProperty('panelActionButton', True)
-            ok_btn.setProperty('primaryAction', True)
-            ok_btn.setText(self._t('common.ok', 'OK'))
-        if cancel_btn is not None:
-            cancel_btn.setProperty('panelActionButton', True)
-            cancel_btn.setProperty('secondaryAction', True)
-            cancel_btn.setText(self._t('common.cancel', 'Cancel'))
-
-        apply_secondary_button_theme(dlg, ok_btn)
-        btn_box.accepted.connect(dlg.accept)
-        btn_box.rejected.connect(dlg.reject)
-        dlg_layout.addWidget(btn_box)
-
+        dlg = ComponentLinkingDialog(
+            options,
+            preselected_key=self._selected_component_ref(),
+            parent=self,
+            translate=self._t,
+        )
         if dlg.exec() != QDialog.Accepted:
             return
 
-        component_ref = str(combo.currentData() or '').strip()
+        component_ref = dlg.selected_component_key()
         if not component_ref:
             return
 
         for row in selected_rows:
-            self._set_spare_component_key(row, component_ref)
-        self._schedule_spare_component_refresh()
+            if self._spare_parts_coordinator:
+                self._spare_parts_coordinator.set_component_key(row, component_ref)
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
 
     def _add_component_row(self, role: str = 'support'):
         normalized_role = (role or 'support').strip().lower()
@@ -880,7 +575,8 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
                 'group': '',
             }
         )
-        self._schedule_spare_component_refresh()
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
 
     def _update_group_button_visibility(self):
         if self.group_name_edit.isVisible():

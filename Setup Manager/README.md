@@ -20,6 +20,7 @@ Operational app for CNC setup execution data.
 - `ui/main_window.py`: shell, page routing, cross-app handoff.
 - `ui/setup_page.py`: work list + setup actions.
 - `ui/work_editor_dialog.py`: setup editor.
+- `ui/work_editor_support/`: app-local support modules used to keep `work_editor_dialog.py` orchestration-focused.
 - `ui/logbook_page.py`: run history + export.
 - `services/work_service.py`: work CRUD.
 - `services/logbook_service.py`: log CRUD + serial generation.
@@ -55,3 +56,8 @@ Or from `Setup Manager`:
 3. Create/edit a work with tool/jaw IDs.
 4. Add logbook entry and verify serial.
 5. Export logbook and print setup card.
+
+## Work Editor Refactor Status
+- Current behavior-preserving refactor status and remaining safe extractions:
+  - `WORK_EDITOR_REFACTOR_STATUS.md`
+- Use this status file when continuing `ui/work_editor_dialog.py` responsibility-reduction work.

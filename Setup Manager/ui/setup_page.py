@@ -1,4 +1,3 @@
-﻿from html import escape
 from pathlib import Path
 import tempfile
 import shutil
@@ -45,6 +44,16 @@ from config import (
 )
 from ui.widgets.common import AutoShrinkLabel, add_shadow, repolish_widget, styled_list_item_height
 from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID, SetupCatalogDelegate
+from ui.setup_page_support import (
+    build_library_launch_context_payload,
+    clear_section,
+    collect_library_filter_ids,
+    format_lookup,
+    format_lookup_list,
+    head_zero_fields,
+    make_detail_field,
+    set_section_fields,
+)
 from ui.work_editor_dialog import WorkEditorDialog
 try:
     from shared.ui.helpers.editor_helpers import (
@@ -981,24 +990,10 @@ class SetupPage(QWidget):
         self.refresh_works()
 
     def _format_lookup(self, item_id, ref_lookup):
-        item_id = (item_id or "").strip()
-        if not item_id:
-            return "-"
-        ref = ref_lookup(item_id)
-        if not ref:
-            return self._t(
-                "setup_page.message.missing_from_master_db",
-                "{item_id} (missing from master database)",
-                item_id=item_id,
-            )
-        description = (ref.get("description") or "").strip()
-        return f"{item_id} - {description}" if description else item_id
+        return format_lookup(item_id, ref_lookup, translate=self._t)
 
     def _format_lookup_list(self, values, ref_lookup):
-        clean_values = [str(value).strip() for value in (values or []) if str(value).strip()]
-        if not clean_values:
-            return "-"
-        return "\n".join(self._format_lookup(value, ref_lookup) for value in clean_values)
+        return format_lookup_list(values, ref_lookup, translate=self._t)
 
     def refresh_works(self):
         search = self.search_input.text().strip()
@@ -1305,52 +1300,18 @@ class SetupPage(QWidget):
         self.work_list.viewport().update()
 
     def _set_section_fields(self, key: str, fields: list):
-        """Rebuild a detail section with (label, value) field pairs.
-
-        Matches the Tool Library detailField / detailFieldKey / detailFieldValue pattern.
-        """
-        layout = self.detail_sections[key]
-        # Remove everything except the section title (always index 0)
-        while layout.count() > 1:
-            item = layout.takeAt(1)
-            w = item.widget()
-            if w:
-                w.deleteLater()
-        added = 0
-        for label_text, value_text in fields:
-            vt = (value_text or "").strip()
-            if not vt or vt == "-":
-                continue
-            layout.addWidget(self._make_detail_field(label_text, vt))
-            added += 1
-        if added == 0:
-            placeholder = QLabel("-")
-            placeholder.setProperty("detailHint", True)
-            layout.addWidget(placeholder)
+        set_section_fields(
+            self.detail_sections,
+            key,
+            fields,
+            make_detail_field_fn=self._make_detail_field,
+        )
 
     def _make_detail_field(self, label_text: str, value_text: str) -> QFrame:
-        field = QFrame()
-        field.setProperty("detailField", True)
-        fl = QVBoxLayout(field)
-        fl.setContentsMargins(6, 4, 6, 4)
-        fl.setSpacing(4)
-        key_lbl = QLabel(label_text)
-        key_lbl.setProperty("detailFieldKey", True)
-        val_lbl = QLabel((value_text or "").strip())
-        val_lbl.setProperty("detailFieldValue", True)
-        val_lbl.setWordWrap(True)
-        val_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        fl.addWidget(key_lbl)
-        fl.addWidget(val_lbl)
-        return field
+        return make_detail_field(label_text, value_text)
 
     def _clear_section(self, key: str):
-        layout = self.detail_sections[key]
-        while layout.count() > 1:
-            item = layout.takeAt(1)
-            w = item.widget()
-            if w:
-                w.deleteLater()
+        clear_section(self.detail_sections, key)
 
     def _set_jaw_overview(
         self,
@@ -1464,41 +1425,14 @@ class SetupPage(QWidget):
             layout.addWidget(row)
 
     def _update_open_library_viewer_visibility(self, work=None):
-        tool_ids, jaw_ids = self._collect_library_filter_ids(work)
+        tool_ids, jaw_ids = collect_library_filter_ids(work)
         return bool(tool_ids or jaw_ids)
 
     def _collect_library_filter_ids(self, work):
-        if not work:
-            return [], []
-
-        jaw_ids = []
-        for jid in (work.get("main_jaw_id") or "", work.get("sub_jaw_id") or ""):
-            sid = str(jid).strip()
-            if sid and sid not in jaw_ids:
-                jaw_ids.append(sid)
-
-        tool_ids = []
-        for tid in (work.get("head1_tool_ids") or []) + (work.get("head2_tool_ids") or []):
-            sid = str(tid).strip()
-            if sid and sid not in tool_ids:
-                tool_ids.append(sid)
-        return tool_ids, jaw_ids
+        return collect_library_filter_ids(work)
 
     def _emit_library_launch_context(self, work=None):
-        tool_ids, jaw_ids = self._collect_library_filter_ids(work)
-        payload = {
-            "selected": bool(work),
-            "work_id": (work.get("work_id") or "").strip() if work else "",
-            "drawing_id": (work.get("drawing_id") or "").strip() if work else "",
-            "drawing_path": (work.get("drawing_path") or "").strip() if work else "",
-            "description": (work.get("description") or "").strip() if work else "",
-            "tool_ids": tool_ids,
-            "jaw_ids": jaw_ids,
-            "has_tools": bool(tool_ids),
-            "has_jaws": bool(jaw_ids),
-            "has_data": bool(tool_ids or jaw_ids),
-        }
-        self.libraryLaunchContextChanged.emit(payload)
+        self.libraryLaunchContextChanged.emit(build_library_launch_context_payload(work))
 
     def _refresh_details(self):
         if not self.current_work_id:
@@ -1536,45 +1470,8 @@ class SetupPage(QWidget):
         sub_stop_screws = (work.get("sub_stop_screws") or "").strip()
         self._update_open_library_viewer_visibility(work)
 
-        # Show only zero-point axes that have an explicit value entered.
-        def _spindle_zero_text(coord, axis_values):
-            coord = (coord or "").strip()
-            axis_colors = {
-                "z": "#1E5AA8",  # blue
-                "x": "#3A495A",
-                "y": "#3A6E45",
-                "c": "#C96A12",  # orange
-            }
-            axis_parts = []
-            for axis in ("z", "x", "y", "c"):
-                value = (axis_values.get(axis) or "").strip()
-                if value:
-                    color = axis_colors.get(axis, "#22303c")
-                    axis_parts.append(
-                        f"<span style='font-weight:700; color:{color};'>{axis.upper()}</span>{escape(value)}"
-                    )
-            if not axis_parts:
-                return ""
-            axis_text = " ".join(axis_parts)
-            if coord:
-                return f"{escape(coord)} | {axis_text}"
-            return axis_text
-
-        def _append_spindle_axis_field(fields, prefix, spindle_key, spindle_title):
-            coord = work.get(f"{prefix}_{spindle_key}_coord") or work.get(f"{prefix}_zero")
-            values = {
-                axis: work.get(f"{prefix}_{spindle_key}_{axis}")
-                for axis in ("z", "x", "y", "c")
-            }
-            text = _spindle_zero_text(coord, values)
-            if text:
-                fields.append((spindle_title, text))
-
-        def _head_fields(prefix):
-            fields = []
-            _append_spindle_axis_field(fields, prefix, "main", self._t("setup_page.field.sp1", "SP1"))
-            _append_spindle_axis_field(fields, prefix, "sub", self._t("setup_page.field.sp2", "SP2"))
-            return fields
+        sp1_label = self._t("setup_page.field.sp1", "SP1")
+        sp2_label = self._t("setup_page.field.sp2", "SP2")
 
         self._set_section_fields("programs", [
             (self._t("setup_page.field.main_program", "Main Program"), (work.get("main_program", "") or "").strip()),
@@ -1582,12 +1479,15 @@ class SetupPage(QWidget):
             (self._t("setup_page.field.sub_programs_head2", "Sub Programs Head 2"), (work.get("head2_sub_program", "") or "").strip()),
         ])
         self._set_jaw_overview(main_jaw, sub_jaw, main_stop_screws, sub_stop_screws)
-        self._set_section_fields("head1", _head_fields("head1"))
+        self._set_section_fields(
+            "head1",
+            head_zero_fields(work, "head1", sp1_label, sp2_label),
+        )
         self._set_tool_cards(
             "head1_tools",
             work.get("head1_tool_assignments") or work.get("head1_tool_ids") or [],
         )
-        head2_fields = _head_fields("head2")
+        head2_fields = head_zero_fields(work, "head2", sp1_label, sp2_label)
         self._set_section_fields(
             "head2",
             head2_fields if head2_fields else [
