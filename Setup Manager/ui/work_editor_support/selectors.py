@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 def normalize_selector_head(value: str | None, known_heads: tuple[str, ...] | list[str] | None = None) -> str:
     text = str(value or "").strip().upper()
     known = tuple(str(item).strip().upper() for item in (known_heads or ("HEAD1", "HEAD2")) if str(item).strip())
@@ -120,6 +117,27 @@ def merge_tool_refs(
     return merged_by_head, merged_combined
 
 
+def merge_tool_refs_and_sync_lists(
+    refs_by_head: dict[str, list[dict]],
+    combined_refs: list[dict],
+    *,
+    head_key: str,
+    selected_items: list[dict],
+    tool_column_lists: dict[str, dict[str, object]],
+) -> tuple[dict[str, list[dict]], list[dict]]:
+    merged_by_head, merged_combined = merge_tool_refs(
+        refs_by_head,
+        combined_refs,
+        head_key=head_key,
+        selected_items=selected_items,
+    )
+    for head, columns in tool_column_lists.items():
+        refs = merged_by_head.get(head, merged_combined) or []
+        for ordered_list in columns.values():
+            ordered_list._all_tools = refs
+    return merged_by_head, merged_combined
+
+
 def merge_jaw_refs(jaw_refs: list[dict], selected_items: list[dict]) -> tuple[list[dict], bool]:
     merged_refs = [dict(jaw) for jaw in (jaw_refs or []) if isinstance(jaw, dict)]
     jaw_map = {jaw_ref_key(jaw): index for index, jaw in enumerate(merged_refs)}
@@ -142,6 +160,140 @@ def merge_jaw_refs(jaw_refs: list[dict], selected_items: list[dict]) -> tuple[li
             merged_refs.append(ref)
         changed = True
     return merged_refs, changed
+
+
+def merge_jaw_refs_and_sync_selectors(
+    jaw_refs: list[dict],
+    selected_items: list[dict],
+    jaw_selectors: dict[str, object],
+) -> tuple[list[dict], bool]:
+    merged_refs, changed = merge_jaw_refs(jaw_refs, selected_items)
+    if changed:
+        for selector in jaw_selectors.values():
+            selector.populate(merged_refs)
+    return merged_refs, changed
+
+
+def build_tool_selector_bucket(
+    selected_items: list[dict],
+    *,
+    spindle: str,
+    assignment_key_fn,
+) -> list[dict]:
+    """Normalize selector payload into a de-duplicated assignment bucket."""
+    bucket: list[dict] = []
+    seen_keys: set[str] = set()
+    for item in selected_items:
+        if not isinstance(item, dict):
+            continue
+        tool_id = str(item.get("tool_id") or item.get("id") or "").strip()
+        if not tool_id:
+            continue
+        entry = {
+            "tool_id": tool_id,
+            "spindle": spindle,
+            "comment": "",
+            "pot": "",
+            "override_id": "",
+            "override_description": "",
+        }
+        tool_uid = parse_optional_int(item.get("tool_uid", item.get("uid")))
+        if tool_uid is not None:
+            entry["tool_uid"] = tool_uid
+        key = assignment_key_fn(entry)
+        if not key or key in seen_keys:
+            continue
+        bucket.append(entry)
+        seen_keys.add(key)
+    return bucket
+
+
+def jaw_selection_by_spindle(selected_items: list[dict], *, normalize_spindle_fn=normalize_selector_spindle) -> dict[str, str]:
+    """Return spindle->jaw mapping when selector payload includes slot metadata."""
+    selected_by_spindle: dict[str, str] = {}
+    for item in selected_items:
+        if not isinstance(item, dict):
+            continue
+        jaw_id = str(item.get("jaw_id") or item.get("id") or "").strip()
+        if not jaw_id:
+            continue
+        item_spindle = normalize_spindle_fn(item.get("spindle") or item.get("slot") or "")
+        if item_spindle in ("main", "sub"):
+            selected_by_spindle[item_spindle] = jaw_id
+    return selected_by_spindle
+
+
+def unique_selected_jaw_ids(selected_items: list[dict]) -> list[str]:
+    selected_jaws: list[str] = []
+    for item in selected_items:
+        if not isinstance(item, dict):
+            continue
+        jaw_id = str(item.get("jaw_id") or item.get("id") or "").strip()
+        if jaw_id and jaw_id not in selected_jaws:
+            selected_jaws.append(jaw_id)
+    return selected_jaws
+
+
+def apply_tool_selector_items_to_ordered_list(
+    ordered_list,
+    selected_items: list[dict],
+    *,
+    spindle: str,
+) -> list[dict]:
+    """Build and apply selector bucket for one ordered-list spindle target."""
+    bucket = build_tool_selector_bucket(
+        selected_items,
+        spindle=spindle,
+        assignment_key_fn=ordered_list._assignment_key,
+    )
+    ordered_list._assignments_by_spindle[spindle] = bucket
+    return bucket
+
+
+def apply_jaw_selector_items_to_selectors(
+    jaw_selectors: dict[str, object],
+    selected_items: list[dict],
+    *,
+    target_spindle: str,
+    normalize_spindle_fn=normalize_selector_spindle,
+) -> bool:
+    """Apply selector jaw payload to main/sub selectors.
+
+    Handles both explicit spindle-tagged payloads and legacy flat jaw lists.
+    """
+    selected_by_spindle = jaw_selection_by_spindle(
+        selected_items,
+        normalize_spindle_fn=normalize_spindle_fn,
+    )
+    main_selector = jaw_selectors.get("main")
+    sub_selector = jaw_selectors.get("sub")
+
+    if selected_by_spindle:
+        if main_selector is not None:
+            main_selector.set_value(selected_by_spindle.get("main", ""))
+        if sub_selector is not None:
+            sub_selector.set_value(selected_by_spindle.get("sub", ""))
+        return True
+
+    selected_jaws = unique_selected_jaw_ids(selected_items)
+    if not selected_jaws:
+        if main_selector is not None:
+            main_selector.set_value("")
+        if sub_selector is not None:
+            sub_selector.set_value("")
+        return True
+
+    if len(selected_jaws) >= 2:
+        if main_selector is not None:
+            main_selector.set_value(selected_jaws[0])
+        if sub_selector is not None:
+            sub_selector.set_value(selected_jaws[1])
+        return True
+
+    target_selector = jaw_selectors.get(target_spindle, main_selector)
+    if target_selector is not None:
+        target_selector.set_value(selected_jaws[0])
+    return True
 
 
 def selector_initial_tool_assignments(ordered_list, spindle: str) -> list[dict]:

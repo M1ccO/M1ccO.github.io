@@ -1,0 +1,324 @@
+from __future__ import annotations
+
+from typing import Any, Callable
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFormLayout,
+    QFrame,
+    QHBoxLayout,
+    QLineEdit,
+    QPushButton,
+    QScrollArea,
+    QSizePolicy,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
+try:
+    from shared.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
+except ModuleNotFoundError:
+    from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
+from .selector_flow import open_combined_tools_jaws_selector_session
+
+
+def _setup_jaw_selectors(
+    dialog: Any,
+    *,
+    jaw_selector_panel_cls: type,
+    main_title: str,
+    sub_title: str,
+    main_filter_placeholder: tuple[str, str] | None = None,
+    sub_filter_placeholder: tuple[str, str] | None = None,
+    main_spindle_side_filter: str | None = None,
+    sub_spindle_side_filter: str | None = None,
+) -> None:
+    """Create and register jaw selector panels with machine-profile visibility."""
+    main_kwargs = {"translate": dialog._t}
+    sub_kwargs = {"translate": dialog._t}
+    if main_filter_placeholder:
+        main_kwargs["filter_placeholder_key"] = main_filter_placeholder[0]
+        main_kwargs["filter_placeholder_default"] = main_filter_placeholder[1]
+    if sub_filter_placeholder:
+        sub_kwargs["filter_placeholder_key"] = sub_filter_placeholder[0]
+        sub_kwargs["filter_placeholder_default"] = sub_filter_placeholder[1]
+    if main_spindle_side_filter:
+        main_kwargs["spindle_side_filter"] = main_spindle_side_filter
+    if sub_spindle_side_filter:
+        sub_kwargs["spindle_side_filter"] = sub_spindle_side_filter
+
+    dialog.main_jaw_selector = jaw_selector_panel_cls(main_title, **main_kwargs)
+    dialog.sub_jaw_selector = jaw_selector_panel_cls(sub_title, **sub_kwargs)
+    dialog.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    dialog.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    dialog._jaw_selectors["main"] = dialog.main_jaw_selector
+    dialog._jaw_selectors["sub"] = dialog.sub_jaw_selector
+    dialog.sub_jaw_selector.setVisible("sub" in dialog._spindle_profiles)
+    dialog._apply_machine_profile_to_jaw_selectors()
+
+
+def build_general_tab_ui(
+    dialog: Any,
+    *,
+    create_titled_section_fn: Callable[[str], object],
+) -> None:
+    layout = QVBoxLayout(dialog.general_tab)
+    layout.setContentsMargins(18, 18, 18, 18)
+    layout.setSpacing(12)
+
+    dialog.work_id_input = QLineEdit()
+    dialog.drawing_id_input = QLineEdit()
+    dialog.description_input = QLineEdit()
+    dialog.raw_part_od_input = QLineEdit()
+    dialog.raw_part_id_input = QLineEdit()
+    dialog.raw_part_length_input = QLineEdit()
+
+    drawing_row = QWidget()
+    drawing_layout = QHBoxLayout(drawing_row)
+    drawing_layout.setContentsMargins(0, 0, 0, 0)
+    dialog.drawing_path_input = QLineEdit()
+    browse_btn = QPushButton(dialog._t("work_editor.action.browse", "Browse"))
+    browse_btn.clicked.connect(dialog._browse_drawing)
+    drawing_layout.addWidget(dialog.drawing_path_input, 1)
+    drawing_layout.addWidget(browse_btn)
+
+    general_group = create_titled_section_fn(dialog._t("work_editor.general.section.general", "General"))
+    general_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    general_form = QFormLayout(general_group)
+    general_form.setSpacing(8)
+    general_form.addRow(dialog._t("setup_page.field.work_id", "Work ID"), dialog.work_id_input)
+    general_form.addRow(dialog._t("setup_page.field.drawing_id", "Drawing ID"), dialog.drawing_id_input)
+    general_form.addRow(dialog._t("setup_page.field.description", "Description"), dialog.description_input)
+    dialog._drawing_row = drawing_row
+    dialog._drawing_row_label = dialog._t("work_editor.field.drawing_path", "Drawing path")
+    if dialog._drawings_enabled:
+        general_form.addRow(dialog._drawing_row_label, drawing_row)
+
+    raw_part_group = create_titled_section_fn(dialog._t("work_editor.general.section.raw_part", "Raw Part"))
+    raw_part_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    raw_form = QFormLayout(raw_part_group)
+    raw_form.setSpacing(8)
+    raw_form.addRow(
+        dialog._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
+        dialog.raw_part_od_input,
+    )
+    raw_form.addRow(
+        dialog._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
+        dialog.raw_part_id_input,
+    )
+    raw_form.addRow(
+        dialog._t("work_editor.general.raw_length", "Length"),
+        dialog.raw_part_length_input,
+    )
+
+    layout.addWidget(general_group)
+    layout.addWidget(raw_part_group)
+
+    selector_row = QHBoxLayout()
+    selector_row.setContentsMargins(0, 4, 0, 0)
+    selector_row.setSpacing(8)
+    dialog.tools_jaws_selector_btn = QPushButton(
+        dialog._t("work_editor.selector.tools_jaws_button", "Tools && Jaws Selector")
+    )
+    dialog.tools_jaws_selector_btn.setProperty("panelActionButton", True)
+    dialog.tools_jaws_selector_btn.clicked.connect(
+        lambda: open_combined_tools_jaws_selector_session(dialog)
+    )
+    selector_row.addWidget(dialog.tools_jaws_selector_btn, 0)
+    selector_row.addStretch(1)
+    layout.addLayout(selector_row)
+    layout.addStretch(1)
+
+
+def build_spindles_tab_ui(
+    dialog: Any,
+    *,
+    jaw_selector_panel_cls: type,
+) -> None:
+    layout = QVBoxLayout(dialog.spindles_tab)
+    layout.setContentsMargins(18, 18, 18, 18)
+    layout.setSpacing(12)
+
+    selector_row = QHBoxLayout()
+    selector_row.setContentsMargins(0, 0, 0, 0)
+    selector_row.setSpacing(8)
+    dialog.open_jaw_selector_btn = QPushButton(
+        dialog._t("work_editor.selector.jaws_button", "Select Jaws")
+    )
+    dialog.open_jaw_selector_btn.setProperty("panelActionButton", True)
+    dialog.open_jaw_selector_btn.clicked.connect(dialog._open_jaw_selector)
+    selector_row.addWidget(dialog.open_jaw_selector_btn, 0)
+    selector_row.addStretch(1)
+    layout.addLayout(selector_row)
+
+    _setup_jaw_selectors(
+        dialog,
+        jaw_selector_panel_cls=jaw_selector_panel_cls,
+        main_title=dialog._t("work_editor.spindles.sp1_jaw", "Pääkara"),
+        sub_title=dialog._t("work_editor.spindles.sp2_jaw", "Vastakara"),
+        main_filter_placeholder=(
+            "work_editor.jaw.filter_sp1_placeholder",
+            "Suodata Pääkara-leukoja...",
+        ),
+        sub_filter_placeholder=(
+            "work_editor.jaw.filter_sp2_placeholder",
+            "Suodata Vastakara-leukoja...",
+        ),
+        main_spindle_side_filter="Main spindle",
+        sub_spindle_side_filter="Sub spindle",
+    )
+
+    host = ResponsiveColumnsHost(switch_width=860, separator_property="jawColumnSeparator")
+    host.add_widget(dialog.main_jaw_selector, 1)
+    if "sub" in dialog._spindle_profiles:
+        host.add_widget(dialog.sub_jaw_selector, 1)
+    layout.addWidget(host, 1)
+
+
+def build_zeros_tab_ui(
+    dialog: Any,
+    *,
+    jaw_selector_panel_cls: type,
+    create_titled_section_fn: Callable[[str], object],
+) -> None:
+    dialog.zeros_tab.setProperty("zeroPointsSurface", True)
+    layout = QVBoxLayout(dialog.zeros_tab)
+    layout.setContentsMargins(18, 18, 18, 18)
+    layout.setSpacing(0)
+
+    scroll = QScrollArea()
+    scroll.setWidgetResizable(True)
+    scroll.setFrameShape(QFrame.NoFrame)
+    content = QWidget()
+    content.setProperty("zeroPointsSurface", True)
+    content_layout = QVBoxLayout(content)
+    content_layout.setContentsMargins(0, 0, 0, 0)
+    content_layout.setSpacing(12)
+    scroll.setWidget(content)
+    layout.addWidget(scroll, 1)
+
+    programs_group = create_titled_section_fn(dialog._t("work_editor.zeros.nc_programs", "NC Programs"))
+    programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    programs_form = QFormLayout(programs_group)
+    programs_form.setSpacing(8)
+    dialog.main_program_input = QLineEdit()
+    programs_form.addRow(dialog._t("setup_page.field.main_program", "Main program"), dialog.main_program_input)
+    for head in dialog.machine_profile.heads:
+        sub_program_input = QLineEdit()
+        dialog._sub_program_inputs[head.key] = sub_program_input
+        setattr(dialog, f"{head.key.lower()}_sub_program_input", sub_program_input)
+        programs_form.addRow(
+            dialog._t(
+                f"setup_page.field.sub_programs_{head.key.lower()}",
+                f"Sub program {head.label_default}",
+            ),
+            sub_program_input,
+        )
+    content_layout.addWidget(programs_group)
+
+    # Keep these on the historical main/sub attributes so payload adapters and
+    # selector merge logic remain schema-compatible with existing saved works.
+    _setup_jaw_selectors(
+        dialog,
+        jaw_selector_panel_cls=jaw_selector_panel_cls,
+        main_title=dialog._t("work_editor.jaw.main_spindle_jaws", "Pääkaran leuat"),
+        sub_title=dialog._t("work_editor.jaw.sub_spindle_jaws", "Vastakaran leuat"),
+        main_spindle_side_filter="Main spindle",
+        sub_spindle_side_filter="Sub spindle",
+    )
+
+    controls_row = QHBoxLayout()
+    controls_row.setContentsMargins(2, 0, 2, 0)
+    controls_row.setSpacing(10)
+    dialog.open_jaw_selector_btn = QPushButton(
+        dialog._t("work_editor.selector.jaws_button", "Select Jaws")
+    )
+    dialog.open_jaw_selector_btn.setProperty("panelActionButton", True)
+    dialog.open_jaw_selector_btn.setMinimumWidth(176)
+    dialog.open_jaw_selector_btn.setMaximumWidth(220)
+    dialog.open_jaw_selector_btn.setFixedHeight(32)
+    dialog.open_jaw_selector_btn.clicked.connect(dialog._open_jaw_selector)
+    controls_row.addWidget(dialog.open_jaw_selector_btn, 0)
+
+    dialog.zero_show_xy_checkbox = QCheckBox(
+        dialog._t("work_editor.zeros.show_xy", "Show X/Y columns")
+    )
+    apply_shared_checkbox_style(dialog.zero_show_xy_checkbox, indicator_size=16)
+    dialog.zero_show_xy_checkbox.setChecked(dialog.machine_profile.default_zero_xy_visible)
+    dialog.zero_show_xy_checkbox.toggled.connect(dialog._set_zero_xy_visibility)
+    dialog.zero_show_xy_checkbox.setVisible(dialog.machine_profile.supports_zero_xy_toggle)
+    controls_row.addWidget(dialog.zero_show_xy_checkbox, 0, Qt.AlignVCenter)
+    controls_row.addStretch(1)
+    content_layout.addLayout(controls_row)
+
+    dialog.zero_points_host = ResponsiveColumnsHost(switch_width=1320)
+    for spindle_key in dialog._spindle_profiles.keys():
+        default_title = (
+            "Main spindle"
+            if spindle_key == "main"
+            else ("Sub spindle" if spindle_key == "sub" else spindle_key.upper())
+        )
+        title = dialog._spindle_label(spindle_key, default_title)
+        dialog.zero_points_host.add_widget(
+            dialog._build_spindle_zero_group(
+                title,
+                spindle_key,
+            ),
+            1,
+        )
+    content_layout.addWidget(dialog.zero_points_host)
+
+    jaw_row_host = QWidget()
+    jaw_row = QHBoxLayout(jaw_row_host)
+    jaw_row.setContentsMargins(0, 0, 0, 0)
+    jaw_row.setSpacing(12)
+    dialog.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    jaw_row.addWidget(dialog.main_jaw_selector, 1)
+    if "sub" in dialog._spindle_profiles:
+        dialog.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        jaw_row.addWidget(dialog.sub_jaw_selector, 1)
+    else:
+        jaw_row.addStretch(1)
+    content_layout.addWidget(jaw_row_host, 0)
+
+    dialog._set_zero_xy_visibility(dialog.zero_show_xy_checkbox.isChecked())
+
+    if dialog.machine_profile.supports_sub_pickup:
+        sub_group = create_titled_section_fn(dialog._t("setup_page.field.sp2", "SP2"))
+        sub_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sub_form = QFormLayout(sub_group)
+        sub_form.setSpacing(8)
+        dialog.sub_pickup_z_input = QLineEdit()
+        sub_form.addRow(dialog._t("setup_page.field.sub_pickup_z", "Pickup Z"), dialog.sub_pickup_z_input)
+        content_layout.addWidget(sub_group)
+    content_layout.addStretch(1)
+
+
+def build_notes_tab_ui(
+    dialog: Any,
+    *,
+    create_titled_section_fn: Callable[[str], object],
+) -> None:
+    layout = QVBoxLayout(dialog.notes_tab)
+    layout.setContentsMargins(18, 18, 18, 18)
+    layout.setSpacing(8)
+    dialog.notes_input = QTextEdit()
+    dialog.robot_info_input = QTextEdit()
+    dialog.notes_input.setMinimumHeight(150)
+    dialog.robot_info_input.setMaximumHeight(96)
+
+    notes_group = create_titled_section_fn(dialog._t("setup_page.field.notes", "Notes"))
+    notes_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+    notes_group_layout = QVBoxLayout(notes_group)
+    notes_group_layout.setContentsMargins(10, 8, 10, 10)
+    notes_group_layout.addWidget(dialog.notes_input, 1)
+    layout.addWidget(notes_group, 1)
+
+    robot_group = create_titled_section_fn(dialog._t("setup_page.field.robot_info", "Robot info"))
+    robot_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    robot_group_layout = QVBoxLayout(robot_group)
+    robot_group_layout.setContentsMargins(10, 8, 10, 10)
+    robot_group_layout.addWidget(dialog.robot_info_input, 0)
+    layout.addWidget(robot_group, 0)

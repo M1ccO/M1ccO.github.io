@@ -4,12 +4,11 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QMimeData, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QDrag, QFont, QFontMetrics, QIcon, QPainter, QPixmap, QTransform
+from PySide6.QtGui import QColor, QDrag, QIcon, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
     QBoxLayout,
-    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -26,7 +25,6 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
-    QScrollArea,
     QSizePolicy,
     QTabWidget,
     QTextEdit,
@@ -38,16 +36,31 @@ from machine_profiles import NTX_MACHINE_PROFILE
 from ui.work_editor_support import (
     WorkEditorPayloadAdapter,
     SelectorSessionBridge,
+    apply_jaw_selector_items_to_selectors,
+    apply_tool_selector_items_to_ordered_list,
+    collect_unresolved_reference_messages,
     jaw_ref_key,
-    load_external_tool_refs,
-    merge_jaw_refs,
-    merge_tool_refs,
+    merge_jaw_refs_and_sync_selectors,
+    merge_tool_refs_and_sync_lists,
     normalize_selector_head,
     normalize_selector_spindle,
     parse_optional_int,
     selector_initial_tool_assignment_buckets,
     selector_initial_tool_assignments,
     tool_ref_key,
+    build_general_tab_ui,
+    build_notes_tab_ui,
+    build_spindles_tab_ui,
+    build_zeros_tab_ui,
+    build_tools_tab_ui,
+    open_jaw_selector_session,
+    open_tool_selector_session,
+    open_pot_editor_dialog,
+    refresh_tool_head_widgets,
+    refresh_external_refs,
+    sync_tool_head_view,
+    default_pot_for_assignment,
+    populate_default_pots,
 )
 from config import (
     DEFAULT_TOOL_ICON,
@@ -63,13 +76,10 @@ from config import (
 from ui.widgets.common import apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
 try:
     from shared.editor_helpers import (
-        ResponsiveColumnsHost,
-        apply_shared_checkbox_style,
-        apply_titled_section_style,
         create_titled_section,
     )
 except ModuleNotFoundError:
-    from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style, apply_titled_section_style, create_titled_section
+    from editor_helpers import create_titled_section
 
 
 WORK_COORDINATES = ["G54", "G55", "G56", "G57", "G58", "G59"]
@@ -1238,7 +1248,7 @@ class _OrderedToolList(QWidget):
         desc_input.setText((assignment.get("override_description") or "").strip())
         form.addRow(self._t("work_editor.tools.override_description", "Description"), desc_input)
 
-        effective_pot = (assignment.get("pot") or "").strip() or self._default_pot_for_assignment(self, assignment)
+        effective_pot = (assignment.get("pot") or "").strip() or default_pot_for_assignment(self, assignment)
         pot_input = QLineEdit()
         pot_input.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "e.g. P1"))
         pot_input.setText(effective_pot)
@@ -1608,7 +1618,7 @@ class WorkEditorDialog(QDialog):
             return
         target = "HEAD2" if self.tools_head_switch.isChecked() else "HEAD1"
         self._set_tools_head_value(target)
-        self._sync_tool_head_view()
+        sync_tool_head_view(self)
 
     def _default_selector_head(self) -> str:
         for head_key, columns in self._tool_column_lists.items():
@@ -1664,23 +1674,22 @@ class WorkEditorDialog(QDialog):
 
     def _merge_tool_refs(self, head_key: str, selected_items: list[dict]):
         target_head = self._normalize_selector_head(head_key)
-        self._tool_cache_by_head, self._tool_cache_all = merge_tool_refs(
+        self._tool_cache_by_head, self._tool_cache_all = merge_tool_refs_and_sync_lists(
             self._tool_cache_by_head,
             self._tool_cache_all,
             head_key=target_head,
             selected_items=selected_items,
+            tool_column_lists=self._tool_column_lists,
         )
-        for head, columns in self._tool_column_lists.items():
-            refs = self._tool_cache_by_head.get(head, self._tool_cache_all) or []
-            for ordered_list in columns.values():
-                ordered_list._all_tools = refs
 
     def _merge_jaw_refs(self, selected_items: list[dict]):
-        jaw_refs, changed = merge_jaw_refs(self._jaw_cache, selected_items)
+        jaw_refs, changed = merge_jaw_refs_and_sync_selectors(
+            self._jaw_cache,
+            selected_items,
+            self._jaw_selectors,
+        )
         if changed:
             self._jaw_cache = jaw_refs
-            for selector in self._jaw_selectors.values():
-                selector.populate(jaw_refs)
 
     def _apply_tool_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
         head_key = self._normalize_selector_head(request.get("head"))
@@ -1689,95 +1698,27 @@ class WorkEditorDialog(QDialog):
         self._merge_tool_refs(head_key, selected_items)
 
         # Selector order is authoritative for the active target bucket.
-        # Rebuild bucket from payload to preserve exact user ordering.
-        bucket: list[dict] = []
-        seen_keys: set[str] = set()
-
-        for item in selected_items:
-            if not isinstance(item, dict):
-                continue
-            tool_id = str(item.get("tool_id") or item.get("id") or "").strip()
-            if not tool_id:
-                continue
-            entry = {
-                "tool_id": tool_id,
-                "spindle": spindle,
-                "comment": "",
-                "pot": "",
-                "override_id": "",
-                "override_description": "",
-            }
-            tool_uid = self._parse_optional_int(item.get("tool_uid", item.get("uid")))
-            if tool_uid is not None:
-                entry["tool_uid"] = tool_uid
-            key = ordered_list._assignment_key(entry)
-            if not key or key in seen_keys:
-                continue
-            bucket.append(entry)
-            seen_keys.add(key)
-
-        ordered_list._assignments_by_spindle[spindle] = bucket
+        apply_tool_selector_items_to_ordered_list(
+            ordered_list,
+            selected_items,
+            spindle=spindle,
+        )
 
         # Keep both spindle columns in sync for the target head and show that head.
         self._set_tools_head_value(head_key)
-        self._sync_tool_head_view()
-        self._refresh_tool_head_widgets(head_key)
+        sync_tool_head_view(self)
+        refresh_tool_head_widgets(self, head_key)
         return True
 
     def _apply_jaw_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
         spindle = self._normalize_selector_spindle(request.get("spindle"))
         self._merge_jaw_refs(selected_items)
-
-        selected_by_spindle: dict[str, str] = {}
-        for item in selected_items:
-            if not isinstance(item, dict):
-                continue
-            jaw_id = str(item.get("jaw_id") or item.get("id") or "").strip()
-            if not jaw_id:
-                continue
-            item_spindle = self._normalize_selector_spindle(item.get("spindle") or item.get("slot") or "")
-            if item_spindle in ("main", "sub"):
-                selected_by_spindle[item_spindle] = jaw_id
-
-        if selected_by_spindle:
-            main_selector = self._jaw_selectors.get("main")
-            sub_selector = self._jaw_selectors.get("sub")
-            if main_selector is not None:
-                main_selector.set_value(selected_by_spindle.get("main", ""))
-            if sub_selector is not None:
-                sub_selector.set_value(selected_by_spindle.get("sub", ""))
-            return True
-
-        selected_jaws: list[str] = []
-        for item in selected_items:
-            if not isinstance(item, dict):
-                continue
-            jaw_id = str(item.get("jaw_id") or item.get("id") or "").strip()
-            if jaw_id and jaw_id not in selected_jaws:
-                selected_jaws.append(jaw_id)
-
-        if not selected_jaws:
-            main_selector = self._jaw_selectors.get("main")
-            sub_selector = self._jaw_selectors.get("sub")
-            if main_selector is not None:
-                main_selector.set_value("")
-            if sub_selector is not None:
-                sub_selector.set_value("")
-            return True
-
-        if len(selected_jaws) >= 2:
-            main_selector = self._jaw_selectors.get("main")
-            sub_selector = self._jaw_selectors.get("sub")
-            if main_selector is not None:
-                main_selector.set_value(selected_jaws[0])
-            if sub_selector is not None:
-                sub_selector.set_value(selected_jaws[1])
-            return True
-
-        target_selector = self._jaw_selectors.get(spindle, self._jaw_selectors.get("main"))
-        if target_selector is not None:
-            target_selector.set_value(selected_jaws[0])
-        return True
+        return apply_jaw_selector_items_to_selectors(
+            self._jaw_selectors,
+            selected_items,
+            target_spindle=spindle,
+            normalize_spindle_fn=self._normalize_selector_spindle,
+        )
 
     def _dialog_title(self) -> str:
         if self._group_edit_mode:
@@ -1962,629 +1903,35 @@ class WorkEditorDialog(QDialog):
             selector._spindle_side_filter = profile.jaw_filter
 
     def _build_general_tab(self):
-        layout = QVBoxLayout(self.general_tab)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
-
-        self.work_id_input = QLineEdit()
-        self.drawing_id_input = QLineEdit()
-        self.description_input = QLineEdit()
-        self.raw_part_od_input = QLineEdit()
-        self.raw_part_id_input = QLineEdit()
-        self.raw_part_length_input = QLineEdit()
-
-        drawing_row = QWidget()
-        drawing_layout = QHBoxLayout(drawing_row)
-        drawing_layout.setContentsMargins(0, 0, 0, 0)
-        self.drawing_path_input = QLineEdit()
-        browse_btn = QPushButton(self._t("work_editor.action.browse", "Browse"))
-        browse_btn.clicked.connect(self._browse_drawing)
-        drawing_layout.addWidget(self.drawing_path_input, 1)
-        drawing_layout.addWidget(browse_btn)
-
-        general_group = create_titled_section(self._t("work_editor.general.section.general", "General"))
-        general_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        general_form = QFormLayout(general_group)
-        general_form.setSpacing(8)
-        general_form.addRow(self._t("setup_page.field.work_id", "Work ID"), self.work_id_input)
-        general_form.addRow(self._t("setup_page.field.drawing_id", "Drawing ID"), self.drawing_id_input)
-        general_form.addRow(self._t("setup_page.field.description", "Description"), self.description_input)
-        self._drawing_row = drawing_row
-        self._drawing_row_label = self._t("work_editor.field.drawing_path", "Drawing path")
-        if self._drawings_enabled:
-            general_form.addRow(self._drawing_row_label, drawing_row)
-
-        raw_part_group = create_titled_section(self._t("work_editor.general.section.raw_part", "Raw Part"))
-        raw_part_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        raw_form = QFormLayout(raw_part_group)
-        raw_form.setSpacing(8)
-        raw_form.addRow(
-            self._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
-            self.raw_part_od_input,
-        )
-        raw_form.addRow(
-            self._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
-            self.raw_part_id_input,
-        )
-        raw_form.addRow(
-            self._t("work_editor.general.raw_length", "Length"),
-            self.raw_part_length_input,
-        )
-
-        layout.addWidget(general_group)
-        layout.addWidget(raw_part_group)
-
-        selector_row = QHBoxLayout()
-        selector_row.setContentsMargins(0, 4, 0, 0)
-        selector_row.setSpacing(8)
-        self.tools_jaws_selector_btn = QPushButton(
-            self._t("work_editor.selector.tools_jaws_button", "Tools && Jaws Selector")
-        )
-        self.tools_jaws_selector_btn.setProperty("panelActionButton", True)
-        self.tools_jaws_selector_btn.clicked.connect(self._open_combined_tools_jaws_selector)
-        selector_row.addWidget(self.tools_jaws_selector_btn, 0)
-        selector_row.addStretch(1)
-        layout.addLayout(selector_row)
-
-        layout.addStretch(1)
+        build_general_tab_ui(self, create_titled_section_fn=create_titled_section)
 
     def _build_spindles_tab(self):
-        layout = QVBoxLayout(self.spindles_tab)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
-
-        selector_row = QHBoxLayout()
-        selector_row.setContentsMargins(0, 0, 0, 0)
-        selector_row.setSpacing(8)
-        self.open_jaw_selector_btn = QPushButton(
-            self._t("work_editor.selector.jaws_button", "Select Jaws")
-        )
-        self.open_jaw_selector_btn.setProperty("panelActionButton", True)
-        self.open_jaw_selector_btn.clicked.connect(self._open_jaw_selector)
-        selector_row.addWidget(self.open_jaw_selector_btn, 0)
-        selector_row.addStretch(1)
-        layout.addLayout(selector_row)
-
-        self.main_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.spindles.sp1_jaw", "Pääkara"),
-            translate=self._t,
-            filter_placeholder_key="work_editor.jaw.filter_sp1_placeholder",
-            filter_placeholder_default="Suodata Pääkara-leukoja...",
-            spindle_side_filter="Main spindle",
-        )
-        self.sub_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.spindles.sp2_jaw", "Vastakara"),
-            translate=self._t,
-            filter_placeholder_key="work_editor.jaw.filter_sp2_placeholder",
-            filter_placeholder_default="Suodata Vastakara-leukoja...",
-            spindle_side_filter="Sub spindle",
-        )
-        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._jaw_selectors["main"] = self.main_jaw_selector
-        self._jaw_selectors["sub"] = self.sub_jaw_selector
-        self.sub_jaw_selector.setVisible("sub" in self._spindle_profiles)
-        self._apply_machine_profile_to_jaw_selectors()
-
-        host = ResponsiveColumnsHost(switch_width=860, separator_property="jawColumnSeparator")
-        host.add_widget(self.main_jaw_selector, 1)
-        if "sub" in self._spindle_profiles:
-            host.add_widget(self.sub_jaw_selector, 1)
-        layout.addWidget(host, 1)
+        build_spindles_tab_ui(self, jaw_selector_panel_cls=_JawSelectorPanel)
 
     def _build_zeros_tab(self):
-        self.zeros_tab.setProperty("zeroPointsSurface", True)
-        layout = QVBoxLayout(self.zeros_tab)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(0)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.NoFrame)
-        content = QWidget()
-        content.setProperty("zeroPointsSurface", True)
-        content_layout = QVBoxLayout(content)
-        content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(12)
-        scroll.setWidget(content)
-        layout.addWidget(scroll, 1)
-
-        programs_group = create_titled_section(self._t("work_editor.zeros.nc_programs", "NC Programs"))
-        programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        programs_form = QFormLayout(programs_group)
-        programs_form.setSpacing(8)
-        self.main_program_input = QLineEdit()
-        programs_form.addRow(self._t("setup_page.field.main_program", "Main program"), self.main_program_input)
-        for head in self.machine_profile.heads:
-            sub_program_input = QLineEdit()
-            self._sub_program_inputs[head.key] = sub_program_input
-            setattr(self, f"{head.key.lower()}_sub_program_input", sub_program_input)
-            programs_form.addRow(
-                self._t(
-                    f"setup_page.field.sub_programs_{head.key.lower()}",
-                    f"Sub program {head.label_default}",
-                ),
-                sub_program_input,
-            )
-        content_layout.addWidget(programs_group)
-
-        self.main_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.jaw.main_spindle_jaws", "Pääkaran leuat"),
-            translate=self._t,
-            spindle_side_filter="Main spindle",
+        build_zeros_tab_ui(
+            self,
+            jaw_selector_panel_cls=_JawSelectorPanel,
+            create_titled_section_fn=create_titled_section,
         )
-        self.sub_jaw_selector = _JawSelectorPanel(
-            self._t("work_editor.jaw.sub_spindle_jaws", "Vastakaran leuat"),
-            translate=self._t,
-            spindle_side_filter="Sub spindle",
-        )
-        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self._jaw_selectors["main"] = self.main_jaw_selector
-        self._jaw_selectors["sub"] = self.sub_jaw_selector
-        self.sub_jaw_selector.setVisible("sub" in self._spindle_profiles)
-        self._apply_machine_profile_to_jaw_selectors()
-
-        controls_row = QHBoxLayout()
-        controls_row.setContentsMargins(2, 0, 2, 0)
-        controls_row.setSpacing(10)
-        self.open_jaw_selector_btn = QPushButton(
-            self._t("work_editor.selector.jaws_button", "Select Jaws")
-        )
-        self.open_jaw_selector_btn.setProperty("panelActionButton", True)
-        self.open_jaw_selector_btn.setMinimumWidth(176)
-        self.open_jaw_selector_btn.setMaximumWidth(220)
-        self.open_jaw_selector_btn.setFixedHeight(32)
-        self.open_jaw_selector_btn.clicked.connect(self._open_jaw_selector)
-        controls_row.addWidget(self.open_jaw_selector_btn, 0)
-
-        self.zero_show_xy_checkbox = QCheckBox(
-            self._t("work_editor.zeros.show_xy", "Show X/Y columns")
-        )
-        apply_shared_checkbox_style(self.zero_show_xy_checkbox, indicator_size=16)
-        self.zero_show_xy_checkbox.setChecked(self.machine_profile.default_zero_xy_visible)
-        self.zero_show_xy_checkbox.toggled.connect(self._set_zero_xy_visibility)
-        self.zero_show_xy_checkbox.setVisible(self.machine_profile.supports_zero_xy_toggle)
-        controls_row.addWidget(self.zero_show_xy_checkbox, 0, Qt.AlignVCenter)
-        controls_row.addStretch(1)
-        content_layout.addLayout(controls_row)
-
-        self.zero_points_host = ResponsiveColumnsHost(switch_width=1320)
-        for spindle_key in self._spindle_profiles.keys():
-            default_title = "Main spindle" if spindle_key == "main" else ("Sub spindle" if spindle_key == "sub" else spindle_key.upper())
-            title = self._spindle_label(spindle_key, default_title)
-            self.zero_points_host.add_widget(
-                self._build_spindle_zero_group(
-                    title,
-                    spindle_key,
-                ),
-                1,
-            )
-        content_layout.addWidget(self.zero_points_host)
-
-        jaw_row_host = QWidget()
-        jaw_row = QHBoxLayout(jaw_row_host)
-        jaw_row.setContentsMargins(0, 0, 0, 0)
-        jaw_row.setSpacing(12)
-        self.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        jaw_row.addWidget(self.main_jaw_selector, 1)
-        if "sub" in self._spindle_profiles:
-            self.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            jaw_row.addWidget(self.sub_jaw_selector, 1)
-        else:
-            jaw_row.addStretch(1)
-        content_layout.addWidget(jaw_row_host, 0)
-
-        self._set_zero_xy_visibility(self.zero_show_xy_checkbox.isChecked())
-
-        if self.machine_profile.supports_sub_pickup:
-            sub_group = create_titled_section(self._t("setup_page.field.sp2", "SP2"))
-            sub_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-            sub_form = QFormLayout(sub_group)
-            sub_form.setSpacing(8)
-            self.sub_pickup_z_input = QLineEdit()
-            sub_form.addRow(self._t("setup_page.field.sub_pickup_z", "Pickup Z"), self.sub_pickup_z_input)
-            content_layout.addWidget(sub_group)
-        content_layout.addStretch(1)
 
     def _build_tools_tab(self):
-        layout = QVBoxLayout(self.tools_tab)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(12)
-
-        toolbar = QHBoxLayout()
-        toolbar.setContentsMargins(0, 0, 0, 0)
-        toolbar.setSpacing(8)
-        toolbar.addWidget(_section_label(self._t("work_editor.tools.head_view", "Head View")))
-
-        self.tools_head_switch = QPushButton()
-        self.tools_head_switch.setProperty("panelActionButton", True)
-        self.tools_head_switch.setCheckable(True)
-        self.tools_head_switch.setMinimumWidth(112)
-        self.tools_head_switch.setMaximumWidth(146)
-        self.tools_head_switch.setFixedHeight(30)
-        self.tools_head_switch.clicked.connect(self._toggle_tools_head_view)
-        self.tools_head_switch.setProperty("head", next(iter(self._head_profiles.keys()), "HEAD1"))
-        self._update_tools_head_switch_text()
-        self.tools_head_switch.setVisible(len(self.machine_profile.heads) > 1)
-        toolbar.addWidget(self.tools_head_switch)
-
-        self.open_tool_selector_btn = QPushButton(
-            self._t("work_editor.selector.tools_button", "Select Tools")
+        build_tools_tab_ui(
+            self,
+            ordered_tool_list_cls=_OrderedToolList,
+            remove_drop_button_cls=_WorkEditorToolRemoveDropButton,
+            section_label_factory=_section_label,
         )
-        self.open_tool_selector_btn.setProperty("panelActionButton", True)
-        self.open_tool_selector_btn.clicked.connect(self._open_tool_selector)
-        toolbar.addWidget(self.open_tool_selector_btn)
-
-        toolbar.addStretch(1)
-
-        self.print_pots_checkbox = QCheckBox(self._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"))
-        apply_shared_checkbox_style(self.print_pots_checkbox, indicator_size=16, min_height=30)
-        self.print_pots_checkbox.setFixedHeight(30)
-        self.print_pots_checkbox.setVisible(self.machine_profile.supports_print_pots)
-
-        self.edit_pots_btn = QPushButton(self._t("work_editor.tools.edit_pots", "Edit Pots"))
-        self.edit_pots_btn.setProperty("secondaryButton", True)
-        self.edit_pots_btn.setFixedHeight(30)
-        button_metrics = QFontMetrics(self.edit_pots_btn.font())
-        button_text = self.edit_pots_btn.text().upper()
-        button_width = max(180, button_metrics.horizontalAdvance(button_text) + 42)
-        self.edit_pots_btn.setFixedWidth(button_width)
-        edit_pots_size_policy = self.edit_pots_btn.sizePolicy()
-        edit_pots_size_policy.setRetainSizeWhenHidden(True)
-        self.edit_pots_btn.setSizePolicy(edit_pots_size_policy)
-        self.edit_pots_btn.setVisible(False)
-        self.edit_pots_btn.clicked.connect(self._open_pot_editor)
-        toolbar.addWidget(self.edit_pots_btn)
-        toolbar.addWidget(self.print_pots_checkbox)
-
-        self.print_pots_checkbox.toggled.connect(
-            lambda checked: self.edit_pots_btn.setVisible(self.machine_profile.supports_print_pots and checked)
-        )
-        self.print_pots_checkbox.toggled.connect(self._on_print_pots_toggled)
-
-        layout.addLayout(toolbar)
-
-        host = ResponsiveColumnsHost(switch_width=820)
-        for head in self.machine_profile.heads:
-            shared_assignments = {"main": [], "sub": []}
-            main_ordered = _OrderedToolList(
-                self._spindle_label("main", "Main spindle tools"),
-                head.key,
-                translate=self._t,
-            )
-            sub_ordered = _OrderedToolList(
-                self._spindle_label("sub", "Sub spindle tools"),
-                head.key,
-                translate=self._t,
-            )
-            main_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            main_ordered.spindle_selector.setVisible(False)
-            sub_ordered.spindle_selector.setVisible(False)
-            main_ordered.set_controls_visible(False)
-            sub_ordered.set_controls_visible(False)
-            main_ordered.set_current_spindle("main")
-            sub_ordered.set_current_spindle("sub")
-            main_ordered._assignments_by_spindle = shared_assignments
-            sub_ordered._assignments_by_spindle = shared_assignments
-            main_ordered.selectorRequested.connect(self._open_tool_selector_for_bucket)
-            sub_ordered.selectorRequested.connect(self._open_tool_selector_for_bucket)
-            main_ordered.tool_list.currentRowChanged.connect(lambda _row, ordered=main_ordered: self._on_tool_list_interaction(ordered))
-            sub_ordered.tool_list.currentRowChanged.connect(lambda _row, ordered=sub_ordered: self._on_tool_list_interaction(ordered))
-            main_ordered.tool_list.itemSelectionChanged.connect(lambda ordered=main_ordered: self._on_tool_list_interaction(ordered))
-            sub_ordered.tool_list.itemSelectionChanged.connect(lambda ordered=sub_ordered: self._on_tool_list_interaction(ordered))
-            self._ordered_tool_lists[head.key] = main_ordered
-            self._tool_column_lists[head.key] = {"main": main_ordered, "sub": sub_ordered}
-            self._all_tool_list_widgets.extend([main_ordered, sub_ordered])
-            if head.key == "HEAD1":
-                self.head1_ordered = main_ordered
-            elif head.key == "HEAD2":
-                self.head2_ordered = main_ordered
-            host.add_widget(main_ordered, 1)
-            host.add_widget(sub_ordered, 1)
-
-        host_surface = QFrame()
-        host_surface.setProperty("toolIdsHostSurface", True)
-        host_surface_layout = QVBoxLayout(host_surface)
-        host_surface_layout.setContentsMargins(8, 8, 8, 8)
-        host_surface_layout.setSpacing(0)
-        host_surface_layout.addWidget(host, 1)
-        layout.addWidget(host_surface, 1)
-
-        self.shared_tool_actions = QFrame()
-        shared_actions_layout = QHBoxLayout(self.shared_tool_actions)
-        shared_actions_layout.setContentsMargins(8, 8, 8, 0)
-        shared_actions_layout.setSpacing(8)
-
-        self.shared_move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "\u25B2"))
-        self.shared_move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "\u25BC"))
-        for btn in (self.shared_move_up_btn, self.shared_move_down_btn):
-            btn.setProperty("panelActionButton", True)
-            btn.setMinimumWidth(52)
-            btn.setMaximumWidth(64)
-            btn.setStyleSheet("font-size: 16px; font-weight: 700;")
-
-        self.shared_remove_btn = _WorkEditorToolRemoveDropButton()
-        _OrderedToolList._configure_icon_action(
-            self.shared_remove_btn,
-            "delete",
-            self._t("work_editor.tools.remove", "Remove Tool"),
-            danger=True,
-        )
-
-        self.shared_comment_btn = QPushButton()
-        _OrderedToolList._configure_icon_action(
-            self.shared_comment_btn,
-            "comment",
-            self._t("work_editor.tools.add_comment", "Add Comment"),
-        )
-
-        self.shared_delete_comment_btn = QPushButton()
-        _OrderedToolList._configure_icon_action(
-            self.shared_delete_comment_btn,
-            "comment_delete",
-            self._t("work_editor.tools.delete_comment", "Delete Comment"),
-        )
-        self.shared_delete_comment_btn.setVisible(False)
-
-        self.shared_move_up_btn.clicked.connect(self._shared_move_tool_up)
-        self.shared_move_down_btn.clicked.connect(self._shared_move_tool_down)
-        self.shared_remove_btn.clicked.connect(self._shared_remove_selected_tool)
-        self.shared_remove_btn.assignmentsDropped.connect(self._remove_dragged_tool_assignments)
-        self.shared_comment_btn.clicked.connect(self._shared_add_tool_comment)
-        self.shared_delete_comment_btn.clicked.connect(self._shared_delete_tool_comment)
-
-        shared_actions_layout.addStretch(1)
-        shared_actions_layout.addWidget(self.shared_move_up_btn)
-        shared_actions_layout.addWidget(self.shared_move_down_btn)
-        shared_actions_layout.addWidget(self.shared_remove_btn)
-        shared_actions_layout.addWidget(self.shared_comment_btn)
-        shared_actions_layout.addWidget(self.shared_delete_comment_btn)
-        shared_actions_layout.addStretch(1)
-        layout.addWidget(self.shared_tool_actions, 0)
-        self._sync_tool_head_view()
-        self._update_shared_tool_actions()
-
-    def _visible_tool_lists(self) -> list[_OrderedToolList]:
-        return list(self._tool_column_lists.get(self._current_tools_head_value(), {}).values())
-
-    def _effective_active_tool_list(self) -> _OrderedToolList | None:
-        if self._active_tool_list in self._visible_tool_lists():
-            return self._active_tool_list
-        for ordered_list in self._visible_tool_lists():
-            if ordered_list.tool_list.currentRow() >= 0:
-                return ordered_list
-        return next(iter(self._visible_tool_lists()), None)
-
-    def _on_tool_list_interaction(self, ordered_list: _OrderedToolList):
-        if self._syncing_tool_list_state:
-            return
-        if ordered_list.tool_list.currentRow() >= 0 or ordered_list.tool_list.selectedIndexes():
-            self._set_active_tool_list(ordered_list)
-            return
-        if self._active_tool_list is ordered_list:
-            self._update_shared_tool_actions()
-
-    def _set_active_tool_list(self, ordered_list: _OrderedToolList | None):
-        if ordered_list is None:
-            self._active_tool_list = None
-            self._update_shared_tool_actions()
-            return
-        self._syncing_tool_list_state = True
-        try:
-            self._active_tool_list = ordered_list
-            for other in self._visible_tool_lists():
-                if other is ordered_list:
-                    continue
-                other.tool_list.blockSignals(True)
-                other.tool_list.clearSelection()
-                other.tool_list.setCurrentRow(-1)
-                other.tool_list.blockSignals(False)
-                other._sync_row_selection_states()
-                other._update_action_states()
-        finally:
-            self._syncing_tool_list_state = False
-        ordered_list._sync_row_selection_states()
-        ordered_list._update_action_states()
-        self._update_shared_tool_actions()
-
-    def _update_shared_tool_actions(self):
-        ordered_list = self._effective_active_tool_list()
-        has_selection = bool(ordered_list and ordered_list.tool_list.currentRow() >= 0)
-        current_row = ordered_list.tool_list.currentRow() if ordered_list is not None else -1
-        count = ordered_list.tool_list.count() if ordered_list is not None else 0
-        assignment = ordered_list._tool_assignment() if ordered_list is not None else None
-        has_comment = bool((assignment or {}).get("comment"))
-
-        self.shared_move_up_btn.setEnabled(has_selection and current_row > 0)
-        self.shared_move_down_btn.setEnabled(has_selection and 0 <= current_row < count - 1)
-        self.shared_remove_btn.setEnabled(has_selection)
-        self.shared_comment_btn.setEnabled(has_selection)
-        self.shared_delete_comment_btn.setVisible(has_comment)
-        self.shared_delete_comment_btn.setEnabled(has_comment)
-
-    def _shared_move_tool_up(self):
-        ordered_list = self._effective_active_tool_list()
-        if ordered_list is None:
-            return
-        ordered_list._move_up()
-        self._update_shared_tool_actions()
-
-    def _shared_move_tool_down(self):
-        ordered_list = self._effective_active_tool_list()
-        if ordered_list is None:
-            return
-        ordered_list._move_down()
-        self._update_shared_tool_actions()
-
-    def _shared_remove_selected_tool(self):
-        ordered_list = self._effective_active_tool_list()
-        if ordered_list is None:
-            return
-        ordered_list._remove_selected()
-        self._update_shared_tool_actions()
-
-    def _shared_add_tool_comment(self):
-        ordered_list = self._effective_active_tool_list()
-        if ordered_list is None:
-            return
-        ordered_list._add_or_edit_comment()
-        self._update_shared_tool_actions()
-
-    def _shared_delete_tool_comment(self):
-        ordered_list = self._effective_active_tool_list()
-        if ordered_list is None:
-            return
-        ordered_list._delete_comment()
-        self._update_shared_tool_actions()
-
-    def _remove_dragged_tool_assignments(self, dropped_items: list[dict]):
-        active_head = self._current_tools_head_value()
-        columns = self._tool_column_lists.get(active_head, {})
-        affected_list: _OrderedToolList | None = None
-        for spindle in ("main", "sub"):
-            target_list = columns.get(spindle)
-            if target_list is None:
-                continue
-            keys = [
-                target_list._assignment_key(item)
-                for item in (dropped_items or [])
-                if isinstance(item, dict)
-                and self._normalize_selector_spindle(item.get("spindle")) == spindle
-                and target_list._assignment_key(item)
-            ]
-            if keys:
-                target_list._remove_assignments_by_keys(keys)
-                affected_list = target_list
-        if affected_list is not None:
-            self._set_active_tool_list(affected_list)
-        else:
-            self._update_shared_tool_actions()
-
-    def _refresh_tool_head_widgets(self, head_key: str):
-        columns = self._tool_column_lists.get(self._normalize_selector_head(head_key), {})
-        for spindle, ordered_list in columns.items():
-            ordered_list.set_current_spindle(spindle)
-            ordered_list._render_current_spindle()
-
-    def _sync_tool_head_view(self):
-        active_head = self._current_tools_head_value()
-        for head_key, columns in self._tool_column_lists.items():
-            visible = head_key == active_head
-            for spindle, ordered_list in columns.items():
-                ordered_list.set_current_spindle(spindle)
-                ordered_list.setVisible(visible)
-                if visible:
-                    ordered_list._render_current_spindle()
-        active_columns = self._tool_column_lists.get(active_head, {})
-        preferred_active = None
-        for spindle in ("main", "sub"):
-            candidate = active_columns.get(spindle)
-            if candidate is not None and candidate.tool_list.currentRow() >= 0:
-                preferred_active = candidate
-                break
-        if preferred_active is None:
-            preferred_active = active_columns.get("main") or next(iter(active_columns.values()), None)
-        if preferred_active is not None:
-            self._set_active_tool_list(preferred_active)
-        else:
-            self._update_shared_tool_actions()
 
     def _on_print_pots_toggled(self, checked: bool):
         if checked:
-            self._populate_default_pots()
+            populate_default_pots(self)
         for ordered_list in self._all_tool_list_widgets:
             ordered_list._show_pot = checked
             ordered_list._render_current_spindle()
 
-    @staticmethod
-    def _default_pot_for_assignment(ordered_list, assignment: dict) -> str:
-        assignment_key = ordered_list._assignment_key(assignment)
-        tool_id = (assignment.get("tool_id") or "").strip()
-        for tool in ordered_list._all_tools or []:
-            if not isinstance(tool, dict):
-                continue
-            tool_key = ordered_list._assignment_key(
-                {
-                    "tool_id": (tool.get("id") or "").strip(),
-                    "tool_uid": tool.get("uid"),
-                }
-            )
-            if tool_key == assignment_key:
-                return str(tool.get("default_pot") or "").strip()
-        if not tool_id:
-            return ""
-        for tool in ordered_list._all_tools or []:
-            if not isinstance(tool, dict):
-                continue
-            if str(tool.get("id") or "").strip() == tool_id:
-                return str(tool.get("default_pot") or "").strip()
-        return ""
-
-    def _populate_default_pots(self):
-        changed = False
-        for ordered_list in self._ordered_tool_lists.values():
-            for spindle in self._spindle_profiles.keys():
-                for assignment in ordered_list._assignments_by_spindle.get(spindle, []):
-                    if (assignment.get("pot") or "").strip():
-                        continue
-                    default_pot = self._default_pot_for_assignment(ordered_list, assignment)
-                    if default_pot:
-                        assignment["pot"] = default_pot
-                        changed = True
-        if changed:
-            for ordered_list in self._all_tool_list_widgets:
-                ordered_list._render_current_spindle()
-
     def _open_pot_editor(self):
-        self._populate_default_pots()
-        all_items = []
-        for head_name, ordered_list in self._ordered_tool_lists.items():
-            for spindle in self._spindle_profiles.keys():
-                for item in ordered_list._assignments_by_spindle.get(spindle, []):
-                    tool_id = (item.get("tool_id") or "").strip()
-                    if not tool_id:
-                        continue
-                    label = ordered_list._tool_label(item)
-                    all_items.append((item, label, head_name, spindle))
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle(self._t("work_editor.tools.pot_editor_title", "Pot Editor"))
-        dlg.setMinimumWidth(420)
-        dlg_layout = QVBoxLayout(dlg)
-        dlg_layout.setContentsMargins(16, 16, 16, 16)
-        dlg_layout.setSpacing(10)
-
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        container = QWidget()
-        form = QFormLayout(container)
-        form.setContentsMargins(4, 4, 4, 4)
-        form.setSpacing(8)
-
-        pot_inputs = []
-        for item, label, head_name, spindle in all_items:
-            inp = QLineEdit()
-            inp.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "Pot #"))
-            inp.setMaximumWidth(100)
-            inp.setText(item.get("pot") or "")
-            form.addRow(QLabel(f"[{head_name}/{spindle.upper()}]  {label}"), inp)
-            pot_inputs.append((item, inp))
-
-        scroll.setWidget(container)
-        dlg_layout.addWidget(scroll, 1)
-
-        btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        btn_box.accepted.connect(dlg.accept)
-        btn_box.rejected.connect(dlg.reject)
-        dlg_layout.addWidget(btn_box)
-
-        if dlg.exec() == QDialog.Accepted:
-            for item, inp in pot_inputs:
-                item["pot"] = inp.text().strip()
-            for ordered_list in self._all_tool_list_widgets:
-                ordered_list._render_current_spindle()
+        open_pot_editor_dialog(self)
 
     def _open_tool_selector_for_bucket(self, head_key: str, spindle: str):
         self._open_tool_selector(
@@ -2611,87 +1958,18 @@ class WorkEditorDialog(QDialog):
         initial_spindle: str | None = None,
         initial_assignments: list[dict] | None = None,
     ) -> bool:
-        self._load_external_refs()
-        resolved_head = initial_head or self._default_selector_head()
-        resolved_spindle = initial_spindle or self._default_selector_spindle()
-        if initial_assignments is None:
-            initial_assignments = self._selector_initial_tool_assignments(resolved_head, resolved_spindle)
-        return self._open_external_selector_session(
-            kind="tools",
-            head=resolved_head,
-            spindle=resolved_spindle,
+        return open_tool_selector_session(
+            self,
+            initial_head=initial_head,
+            initial_spindle=initial_spindle,
             initial_assignments=initial_assignments,
         )
 
-    def _selector_initial_jaw_assignments(self) -> list[dict]:
-        assignments: list[dict] = []
-        jaws_by_id: dict[str, dict] = {
-            str(jaw.get("id") or "").strip(): jaw
-            for jaw in (self._jaw_cache or [])
-            if isinstance(jaw, dict) and str(jaw.get("id") or "").strip()
-        }
-        for spindle_key in ("main", "sub"):
-            selector = self._jaw_selectors.get(spindle_key)
-            if selector is None:
-                continue
-            jaw_id = str(selector.get_value() or "").strip()
-            if not jaw_id:
-                continue
-            jaw_ref = jaws_by_id.get(jaw_id, {})
-            entry = {
-                "jaw_id": jaw_id,
-                "spindle": spindle_key,
-            }
-            jaw_type = str(jaw_ref.get("jaw_type") or "").strip()
-            if jaw_type:
-                entry["jaw_type"] = jaw_type
-            description = str(jaw_ref.get("description") or "").strip()
-            if description:
-                entry["description"] = description
-            assignments.append(entry)
-        return assignments
-
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
-        self._load_external_refs()
-        return self._open_external_selector_session(
-            kind="jaws",
-            spindle=initial_spindle or self._default_jaw_selector_spindle(),
-            initial_assignments=self._selector_initial_jaw_assignments(),
-        )
-
-    def _open_combined_tools_jaws_selector(self):
-        spindle = self._default_selector_spindle()
-        default_head = self._default_selector_head()
-        self._open_external_selector_session(
-            kind="tools",
-            head=default_head,
-            spindle=spindle,
-            follow_up={"kind": "jaws", "spindle": spindle},
-            initial_assignments=self._selector_initial_tool_assignments(default_head, spindle),
-        )
+        return open_jaw_selector_session(self, initial_spindle=initial_spindle)
 
     def _build_notes_tab(self):
-        layout = QVBoxLayout(self.notes_tab)
-        layout.setContentsMargins(18, 18, 18, 18)
-        layout.setSpacing(8)
-        self.notes_input = QTextEdit()
-        self.robot_info_input = QTextEdit()
-        self.notes_input.setMinimumHeight(150)
-        self.robot_info_input.setMaximumHeight(96)
-
-        notes_group = create_titled_section(self._t("setup_page.field.notes", "Notes"))
-        notes_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        notes_group_layout = QVBoxLayout(notes_group)
-        notes_group_layout.setContentsMargins(10, 8, 10, 10)
-        notes_group_layout.addWidget(self.notes_input, 1)
-        layout.addWidget(notes_group, 1)
-
-        robot_group = create_titled_section(self._t("setup_page.field.robot_info", "Robot info"))
-        robot_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        robot_group_layout = QVBoxLayout(robot_group)
-        robot_group_layout.setContentsMargins(10, 8, 10, 10)
-        robot_group_layout.addWidget(self.robot_info_input, 0)
-        layout.addWidget(robot_group, 0)
+        build_notes_tab_ui(self, create_titled_section_fn=create_titled_section)
 
     # ------------------------------------------------------------------
     # IO helpers
@@ -2708,28 +1986,15 @@ class WorkEditorDialog(QDialog):
             self.drawing_path_input.setText(path)
 
     def _load_external_refs(self):
-        # Keep selector caches head-aware so future machine profiles can expose
-        # different stations without duplicating lookup/merge rules in the dialog.
-        self._tool_cache_by_head, self._tool_cache_all = load_external_tool_refs(
-            self.draw_service,
-            tuple(self._head_profiles.keys()),
-        )
-        self._jaw_cache = self.draw_service.list_jaw_refs(force_reload=True)
-
-        for selector in self._jaw_selectors.values():
-            selector.populate(self._jaw_cache)
-        for head_key, columns in self._tool_column_lists.items():
-            refs = self._tool_cache_by_head.get(head_key, self._tool_cache_all)
-            for ordered_list in columns.values():
-                ordered_list._all_tools = refs
+        refresh_external_refs(self)
 
     def _load_work(self):
         if not self.work:
             return
         self._payload_adapter.populate_dialog(self, self.work)
         for head_key in self._head_profiles.keys():
-            self._refresh_tool_head_widgets(head_key)
-        self._sync_tool_head_view()
+            refresh_tool_head_widgets(self, head_key)
+        sync_tool_head_view(self)
 
     def get_work_data(self) -> dict:
         return self._payload_adapter.collect_payload(
@@ -2750,22 +2015,7 @@ class WorkEditorDialog(QDialog):
             self.work_id_input.setFocus()
             return
 
-        tool_ids = {item["id"] for item in (self._tool_cache_all or []) if item.get("id")}
-        jaw_ids = {item["id"] for item in (self._jaw_cache or []) if item.get("id")}
-
-        missing = []
-        for spindle_key, selector in self._jaw_selectors.items():
-            jaw_key = self._spindle_label(spindle_key, spindle_key)
-            jaw_value = selector.get_value()
-            if jaw_value and jaw_ids and jaw_value not in jaw_ids:
-                missing.append(f"{jaw_key}: {jaw_value}")
-
-        for head_key, ordered_list in self._ordered_tool_lists.items():
-            head_name = self._head_label(head_key, head_key)
-            values = ordered_list.get_tool_ids()
-            for tool_id in values:
-                if tool_ids and tool_id not in tool_ids:
-                    missing.append(f"{head_name}: {tool_id}")
+        missing = collect_unresolved_reference_messages(self)
 
         if missing:
             answer = QMessageBox.question(
