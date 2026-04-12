@@ -9,7 +9,6 @@ from PySide6.QtCore import QEvent, QProcess, QTimer, QSize, Qt
 from PySide6.QtGui import QIcon
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import (
-    QAbstractButton,
     QAbstractItemView,
     QApplication,
     QComboBox,
@@ -22,7 +21,6 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
-    QSplitter,
     QStackedWidget,
     QStatusBar,
     QToolButton,
@@ -57,22 +55,18 @@ from ui.setup_page import SetupPage
 from shared.services.ui_preferences_service import UiPreferencesService
 from shared.services.localization_service import LocalizationService
 from ui.widgets.common import add_shadow, clear_focused_dropdown_on_outside_click
+from shared.ui.main_window_helpers import (
+    THEME_PALETTES,
+    current_window_rect,
+    fade_in as _shared_fade_in,
+    fade_out_and as _shared_fade_out_and,
+    get_active_theme_palette,
+    is_interactive_widget_click,
+)
 try:
     from shared.ui.helpers.editor_helpers import create_titled_section, setup_editor_dialog
 except ModuleNotFoundError:
     from editor_helpers import create_titled_section, setup_editor_dialog
-
-
-THEME_PALETTES = {
-    "classic": {
-        "surface_bg": "rgba(205, 212, 238, 0.97)",
-        "detail_box_bg": "rgba(232, 240, 250, 0.98)",
-    },
-    "graphite": {
-        "surface_bg": "rgba(168, 179, 198, 0.98)",
-        "detail_box_bg": "rgba(207, 217, 233, 0.98)",
-    },
-}
 
 
 class MainWindow(QMainWindow):
@@ -109,16 +103,8 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def _clear_active_page_selection_on_background_click(self, obj):
-        if not isinstance(obj, QWidget) or obj.window() is not self:
+        if is_interactive_widget_click(obj, self):
             return
-
-        widget = obj
-        while widget is not None:
-            # Skip interactive widgets and splitters
-            if isinstance(widget, (QAbstractButton, QComboBox, QLineEdit, QAbstractItemView, QSplitter)):
-                return
-            widget = widget.parentWidget()
-
         page = self.stack.currentWidget() if hasattr(self, 'stack') else None
         if page is not None:
             self._clear_page_selection(page)
@@ -335,31 +321,13 @@ class MainWindow(QMainWindow):
         return False
 
     def _fade_out_and(self, callback):
-        """Immediately run *callback* without transition animation."""
-        if getattr(self, '_fade_anim', None) is not None:
-            self._fade_anim.stop()
-        self._fade_anim = None
-        self.setWindowOpacity(1.0)
-        callback()
+        _shared_fade_out_and(self, callback)
 
     def fade_in(self):
-        """Show fully visible without transition animation."""
-        if getattr(self, '_fade_anim', None) is not None:
-            self._fade_anim.stop()
-        self._fade_anim = None
-        self.setWindowOpacity(1.0)
+        _shared_fade_in(self)
 
     def _current_window_rect(self) -> tuple[int, int, int, int]:
-        """Return the actual on-screen window rectangle, including snap placement."""
-        try:
-            rect = ctypes.wintypes.RECT()
-            hwnd = int(self.winId())
-            if ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
-                return rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top
-        except Exception:
-            pass
-        geom = self.frameGeometry()
-        return geom.x(), geom.y(), geom.width(), geom.height()
+        return current_window_rect(self)
 
     def _open_tool_library_together(self):
         """Backward-compatible helper that opens Tool Library tools module without filters."""
@@ -907,8 +875,7 @@ class MainWindow(QMainWindow):
         )
 
     def _build_ui_preference_overrides(self) -> str:
-        theme_name = self.ui_preferences.get("color_theme", "classic")
-        palette = THEME_PALETTES.get(theme_name, THEME_PALETTES["classic"])
+        palette = get_active_theme_palette(self.ui_preferences)
         font_family = self.ui_preferences.get("font_family", "Segoe UI").replace("'", "\\'")
         return (
             "/* Runtime UI preference overrides */\n"

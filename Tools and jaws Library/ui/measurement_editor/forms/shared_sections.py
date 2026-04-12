@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout
+from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
 SECTION_GROUPBOX_STYLESHEET = (
     "QGroupBox {"
@@ -63,7 +63,37 @@ def build_adjust_header_row(
     return row
 
 
+def build_xyz_header_row(
+    translate: Callable[[str, str | None], str],
+    with_pick: bool,
+    axis_order: list | None = None,
+) -> QWidget:
+    """Build a row of axis header labels (X / Y / Z) above coordinate edits."""
+    if axis_order is None:
+        axis_order = ['x', 'y', 'z']
+
+    row_widget = QWidget()
+    row_layout = QHBoxLayout(row_widget)
+    row_layout.setContentsMargins(0, 0, 0, 0)
+    row_layout.setSpacing(6)
+
+    for axis in axis_order:
+        key = f'tool_editor.measurements.axis_{axis}'
+        fallback = axis.upper()
+        lbl = QLabel(translate(key, fallback))
+        lbl.setFixedWidth(56)
+        lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
+        lbl.setStyleSheet('color: #6b7b8e; font-size: 10px; background: transparent;')
+        row_layout.addWidget(lbl)
+
+    row_layout.addStretch(1)
+    if with_pick:
+        row_layout.addSpacing(50)
+    return row_widget
+
+
 __all__ = [
     "apply_section_groupbox_style",
     "build_adjust_header_row",
+    "build_xyz_header_row",
 ]

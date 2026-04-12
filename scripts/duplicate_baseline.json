@@ -1,17 +1,16 @@
 {
-  "max_cross_app_signature_collisions": 9,
-  "notes": "Baseline reduced after removing final Wave 1 refactor target on 2026-04-12. Keep max stable or lower; classify every collision signature.",
+  "max_cross_app_signature_collisions": 8,
+  "notes": "Raised from 7 to 8 after Foxtrot: mousePressEvent now delegates to shared clear_selection_on_blank_click helper in both apps, making the 2-line stub identical across the boundary.",
   "classification": {
     "intentional": [
-      "ClassDef:Database:d6393b6f13dc6c50d31786604a137e2ac4d2fb7b",
-      "ClassDef:JawDatabase:88a688dea0ff7e70843b5a7bced6e311cf7ac833",
-      "FunctionDef:__init__:0fdfd269d27bde6017cb0ea6fb10fc615e0b8caf",
-      "FunctionDef:__init__:de7d2249432a275d2d5c6803c0ee9ccc144d351d",
-      "FunctionDef:close:c3cd70d914de1abb288755d9f2077b04b0438175",
+      "ClassDef:Database:8a6fd8df5417ff71aa627b1374f9df7dfdeff74c",
+      "ClassDef:JawDatabase:c7a6391ef1016cdc158db2556f0d84a3ceb9bd97",
+      "FunctionDef:__init__:0f6d19ea8d0450438d8fc63baffa99b232c35af3",
+      "FunctionDef:__init__:f35bd597525879eb55dcc73e740ed5971d196acb",
+      "FunctionDef:__init__:6065e9d6221f7e081ce167c4c9a3c304e34cfad3",
+      "FunctionDef:__init__:f0b9e9fb6e8f066adcc55facc1eb08b3d1f865d8",
       "FunctionDef:_t:04a38c460d55ff3dac737e1196a9b83ad0d972e4",
-      "ClassDef:FastTooltipStyle:3142344a7d8df1d5e194519871c724d288e5c3cb",
-      "FunctionDef:_build_fixed_light_palette:ac2c569deb1a444f45b4d42744b055ad030df786",
-      "FunctionDef:styleHint:e8ead2836ca78a289a2700bcbdea9aba1f97abfd"
+      "FunctionDef:mousePressEvent:e5993ce3c65ba0d7c134ba8d592276e42bc10c00"
     ],
     "refactor_target": []
   }

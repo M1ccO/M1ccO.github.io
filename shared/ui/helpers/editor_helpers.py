@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFrame,
-    QGraphicsDropShadowEffect,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -57,15 +56,7 @@ _CHECKBOX_EDGE_HOVER_COLOR = '#6f86a0'
 _CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parents[2] / 'assets' / 'check_mark.svg').as_posix()
 
 
-# ── Shadow helper ────────────────────────────────────────────────────────
-
-def add_shadow(widget, blur_radius=6, x_offset=0, y_offset=1):
-    """Apply a subtle drop shadow effect to *widget*."""
-    effect = QGraphicsDropShadowEffect(widget)
-    effect.setBlurRadius(blur_radius)
-    effect.setOffset(x_offset, y_offset)
-    effect.setColor(_SHADOW_COLOR)
-    widget.setGraphicsEffect(effect)
+from shared.ui.helpers.common_widgets import add_shadow
 
 
 class ResponsiveColumnsHost(QWidget):

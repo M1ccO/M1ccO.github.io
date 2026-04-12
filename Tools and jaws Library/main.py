@@ -3,38 +3,18 @@ import sys
 import ctypes
 import ctypes.wintypes
 import traceback
+from pathlib import Path
+
+# Add parent directory to path so shared module can be imported
+if str(Path(__file__).resolve().parent.parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from PySide6.QtCore import QTimer, Qt
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
-from PySide6.QtGui import QColor, QGuiApplication, QPalette
-from PySide6.QtWidgets import QApplication, QProgressDialog, QProxyStyle, QStyle
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QApplication, QProgressDialog
 
-
-class FastTooltipStyle(QProxyStyle):
-    def styleHint(self, hint, option=None, widget=None, returnData=None):
-        if hint == QStyle.SH_ToolTip_WakeUpDelay:
-            return 150
-        if hint == QStyle.SH_ToolTip_FallAsleepDelay:
-            return 20000
-        return super().styleHint(hint, option, widget, returnData)
-
-
-def _build_fixed_light_palette() -> QPalette:
-    palette = QPalette()
-    palette.setColor(QPalette.Window, QColor('#eef3f8'))
-    palette.setColor(QPalette.WindowText, QColor('#1f252b'))
-    palette.setColor(QPalette.Base, QColor('#ffffff'))
-    palette.setColor(QPalette.AlternateBase, QColor('#f6f9fc'))
-    palette.setColor(QPalette.ToolTipBase, QColor('#ffffff'))
-    palette.setColor(QPalette.ToolTipText, QColor('#1f252b'))
-    palette.setColor(QPalette.Text, QColor('#1f252b'))
-    palette.setColor(QPalette.Button, QColor('#f7fafc'))
-    palette.setColor(QPalette.ButtonText, QColor('#1f252b'))
-    palette.setColor(QPalette.BrightText, QColor('#ffffff'))
-    palette.setColor(QPalette.Highlight, QColor('#2fa1ee'))
-    palette.setColor(QPalette.HighlightedText, QColor('#ffffff'))
-    palette.setColor(QPalette.Link, QColor('#2fa1ee'))
-    palette.setColor(QPalette.PlaceholderText, QColor('#6c7a88'))
-    return palette
+from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
 
 
 def _split_csv(text: str) -> list[str]:

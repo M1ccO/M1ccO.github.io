@@ -1,15 +1,13 @@
 ﻿
 import json
-import shutil
-from datetime import datetime
 from pathlib import Path
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QMimeData, Signal
-from PySide6.QtGui import QDrag, QIcon, QDesktopServices, QFontMetrics, QKeySequence, QShortcut, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, Signal
+from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QStandardItemModel, QStandardItem, QColor, QPainter, QPixmap, QTransform
 # import QtSvg so that SVG image support is initialized early
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QHBoxLayout,
-    QDialogButtonBox, QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
+    QLabel, QLineEdit, QListView, QListWidget, QListWidgetItem, QMessageBox, QPushButton,
     QScrollArea, QSplitter, QVBoxLayout, QWidget, QSizePolicy, QToolButton
 )
 from config import (
@@ -28,18 +26,12 @@ from ui.tool_catalog_delegate import (
 )
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 from shared.ui.helpers.editor_helpers import (
-    apply_secondary_button_theme,
     ask_multi_edit_mode,
     create_titled_section,
-    create_dialog_buttons,
-    setup_editor_dialog,
     style_panel_action_button,
     style_move_arrow_button,
 )
-from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
-
 from shared.ui.stl_preview import StlPreviewWidget
-from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
     normalize_selector_bucket,
@@ -51,16 +43,31 @@ from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_
 from ui.home_page_support import (
     add_selector_comment,
     apply_tool_detail_layout_rules,
+    close_detached_preview,
+    confirm_yes_no as _confirm_yes_no_fn,
     delete_selector_comment,
+    ensure_detached_preview_dialog,
+    load_preview_content,
     move_selector_down,
     move_selector_up,
+    normalize_selector_head_value as _normalize_selector_head_value_fn,
+    normalize_selector_spindle_value as _normalize_selector_spindle_value_fn,
+    normalize_selector_tool as _normalize_selector_tool_fn,
+    normalize_tool_spindle_orientation as _normalize_tool_spindle_orientation_fn,
     on_selector_cancel,
     on_selector_done,
     on_selector_toggle_clicked,
+    prompt_text as _prompt_text_fn,
     remove_selector_assignment,
+    selector_target_key as _selector_target_key_fn,
+    selector_tool_key as _selector_tool_key_fn,
     sync_selector_assignment_order,
     sync_selector_card_selection_states,
     update_selector_assignment_buttons,
+    SelectorAssignmentRowWidget as _SelectorAssignmentRowWidget,
+    SelectorToolRemoveDropButton as _SelectorToolRemoveDropButton,
+    ToolAssignmentListWidget as _ToolAssignmentListWidget,
+    ToolCatalogListView as _ToolCatalogListView,
 )
 from ui.shared.selector_panel_builders import (
     apply_selector_icon_button,
@@ -70,269 +77,6 @@ from ui.shared.selector_panel_builders import (
     build_selector_info_header,
     build_selector_toggle_button,
 )
-
-
-class _ToolCatalogListView(QListView):
-    def startDrag(self, supportedActions):
-        selection_model = self.selectionModel()
-        if selection_model is None:
-            return
-        indexes = sorted(selection_model.selectedRows(), key=lambda idx: idx.row())
-        if not indexes:
-            index = self.currentIndex()
-            if index.isValid():
-                indexes = [index]
-        if not indexes:
-            return
-
-        payload: list[dict] = []
-        for index in indexes:
-            tool_id = str(index.data(ROLE_TOOL_ID) or '').strip()
-            if not tool_id:
-                continue
-            entry: dict = {'tool_id': tool_id}
-            tool_uid = index.data(ROLE_TOOL_UID)
-            try:
-                parsed_uid = int(tool_uid) if tool_uid is not None and str(tool_uid).strip() else None
-            except Exception:
-                parsed_uid = None
-            if parsed_uid is not None:
-                entry['tool_uid'] = parsed_uid
-            tool_data = index.data(ROLE_TOOL_DATA)
-            if isinstance(tool_data, dict):
-                entry['description'] = str(tool_data.get('description') or '').strip()
-                entry['tool_type'] = str(tool_data.get('tool_type') or '').strip()
-                entry['default_pot'] = str(tool_data.get('default_pot') or '').strip()
-            payload.append(entry)
-
-        if not payload:
-            return
-
-        mime = QMimeData()
-        encode_selector_payload(mime, SELECTOR_TOOL_MIME, payload)
-        drag = QDrag(self)
-        drag.setMimeData(mime)
-
-        # Build a semi-transparent ghost card showing the first tool
-        first = payload[0]
-        ghost_text = first.get('tool_id', '')
-        desc = first.get('description', '')
-        if desc:
-            ghost_text = f'{ghost_text} - {desc}'
-        if len(payload) > 1:
-            ghost_text += f'  (+{len(payload) - 1})'
-        pixmap = QPixmap(220, 40)
-        pixmap.fill(QColor(0, 0, 0, 0))
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.setOpacity(0.75)
-        painter.setBrush(QColor('#f0f6fc'))
-        painter.setPen(QColor('#637282'))
-        painter.drawRoundedRect(1, 1, 218, 38, 6, 6)
-        painter.setOpacity(1.0)
-        painter.setPen(QColor('#22303c'))
-        from PySide6.QtGui import QFont
-        font = QFont()
-        font.setPointSizeF(9.0)
-        font.setWeight(QFont.DemiBold)
-        painter.setFont(font)
-        painter.drawText(10, 4, 200, 32, Qt.AlignVCenter | Qt.TextSingleLine, ghost_text)
-        painter.end()
-        drag.setPixmap(pixmap)
-        drag.setHotSpot(pixmap.rect().center())
-
-        drag.exec(Qt.CopyAction)
-
-
-class _ToolAssignmentListWidget(QListWidget):
-    externalToolsDropped = Signal(list, int)
-    orderChanged = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setDragEnabled(True)
-        self.setAcceptDrops(True)
-        self.setDragDropMode(QAbstractItemView.DragDrop)
-        self.setDefaultDropAction(Qt.MoveAction)
-
-    def startDrag(self, supportedActions):
-        indexes = sorted(self.selectedIndexes(), key=lambda idx: idx.row())
-        if not indexes:
-            current = self.currentIndex()
-            if current.isValid():
-                indexes = [current]
-        if not indexes:
-            return
-
-        mime = self.model().mimeData(indexes)
-        if mime is None:
-            mime = QMimeData()
-
-        payload: list[dict] = []
-        for index in indexes:
-            item = self.item(index.row())
-            if item is None:
-                continue
-            assignment = item.data(Qt.UserRole)
-            if isinstance(assignment, dict):
-                payload.append(dict(assignment))
-        encode_selector_payload(mime, SELECTOR_TOOL_MIME, payload)
-
-        drag = QDrag(self)
-        drag.setMimeData(mime)
-
-        first_row = indexes[0].row()
-        ghost_item = self.item(first_row)
-        ghost_widget = self.itemWidget(ghost_item) if ghost_item is not None else None
-        if isinstance(ghost_widget, QWidget):
-            card_widget = ghost_widget.findChild(MiniAssignmentCard)
-            preview_widget = card_widget if isinstance(card_widget, QWidget) else ghost_widget
-            grabbed = preview_widget.grab()
-            if not grabbed.isNull():
-                translucent = QPixmap(grabbed.size())
-                translucent.fill(Qt.transparent)
-                painter = QPainter(translucent)
-                painter.setOpacity(0.7)
-                painter.drawPixmap(0, 0, grabbed)
-                painter.end()
-                drag.setPixmap(translucent)
-                drag.setHotSpot(translucent.rect().center())
-
-        drag.exec(Qt.MoveAction)
-
-    def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
-            event.acceptProposedAction()
-            return
-        if event.source() is self:
-            super().dragEnterEvent(event)
-            return
-        event.ignore()
-
-    def dragMoveEvent(self, event):
-        if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
-            event.acceptProposedAction()
-            return
-        if event.source() is self:
-            super().dragMoveEvent(event)
-            return
-        event.ignore()
-
-    def dropEvent(self, event):
-        if event.mimeData().hasFormat(SELECTOR_TOOL_MIME) and event.source() is not self:
-            dropped = decode_tool_payload(event.mimeData())
-            point = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-            row = self.indexAt(point).row()
-            if row < 0:
-                row = self.count()
-            self.externalToolsDropped.emit(dropped if isinstance(dropped, list) else [], row)
-            event.acceptProposedAction()
-            return
-        super().dropEvent(event)
-        if event.source() is self:
-            self.orderChanged.emit()
-
-    def mousePressEvent(self, event):
-        point = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-        if self.itemAt(point) is None:
-            self.clearSelection()
-            self.setCurrentRow(-1)
-        super().mousePressEvent(event)
-
-
-class _SelectorToolRemoveDropButton(QPushButton):
-    toolsDropped = Signal(list)
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAcceptDrops(True)
-
-    @staticmethod
-    def _payload_tool_keys(mime: QMimeData) -> list[tuple[str, str | None]]:
-        return tool_payload_keys(mime)
-
-    def dragEnterEvent(self, event):
-        if self._payload_tool_keys(event.mimeData()):
-            event.acceptProposedAction()
-            return
-        event.ignore()
-
-    def dragMoveEvent(self, event):
-        if self._payload_tool_keys(event.mimeData()):
-            event.acceptProposedAction()
-            return
-        event.ignore()
-
-    def dropEvent(self, event):
-        tool_keys = self._payload_tool_keys(event.mimeData())
-        if not tool_keys:
-            event.ignore()
-            return
-        self.toolsDropped.emit(tool_keys)
-        event.acceptProposedAction()
-
-
-class _SelectorAssignmentRowWidget(MiniAssignmentCard):
-    def __init__(
-        self,
-        icon: QIcon,
-        text: str,
-        subtitle: str = '',
-        comment: str = '',
-        pot: str = '',
-        parent=None,
-    ):
-        badges: list[str] = []
-        if pot:
-            badges.append(f'P:{pot}')
-        if comment:
-            badges.append('C')
-        super().__init__(
-            icon=icon,
-            title=text,
-            subtitle=subtitle,
-            badges=badges,
-            editable=True,
-            compact=True,
-            parent=parent,
-        )
-        self.setObjectName('selectorAssignmentRowCard')
-        self._apply_visual_style(False)
-
-    def _apply_visual_style(self, selected: bool) -> None:
-        background = '#ffffff'
-        border = '#00C8FF' if selected else '#99acbf'
-        border_width = '2px' if selected else '1px'
-        padding = '0px' if selected else '1px'
-        title_color = '#24303c' if selected else '#171a1d'
-        meta_color = '#2b3136'
-        hint_color = '#617180'
-        self.setStyleSheet(
-            'QFrame#selectorAssignmentRowCard {'
-            f'  background-color: {background};'
-            f'  border: {border_width} solid {border};'
-            '  border-radius: 8px;'
-            f'  padding: {padding};'
-            '}'
-            'QFrame#selectorAssignmentRowCard QLabel {'
-            '  background-color: transparent;'
-            '  border: none;'
-            '}'
-            'QFrame#selectorAssignmentRowCard QLabel[miniAssignmentTitle="true"] {'
-            f'  color: {title_color};'
-            '}'
-            'QFrame#selectorAssignmentRowCard QLabel[miniAssignmentMeta="true"] {'
-            f'  color: {meta_color};'
-            '}'
-            'QFrame#selectorAssignmentRowCard QLabel[miniAssignmentHint="true"] {'
-            f'  color: {hint_color};'
-            '}'
-        )
-
-    def set_selected(self, selected: bool):
-        super().set_selected(selected)
-        self._apply_visual_style(bool(selected))
 
 
 # ==============================
@@ -854,37 +598,11 @@ class HomePage(QWidget):
 
     @staticmethod
     def _selector_tool_key(tool: dict | None) -> str:
-        if not isinstance(tool, dict):
-            return ''
-        tool_uid = tool.get('tool_uid', tool.get('uid'))
-        if tool_uid is not None and str(tool_uid).strip():
-            return f'uid:{tool_uid}'
-        tool_id = str(tool.get('tool_id') or tool.get('id') or '').strip()
-        return f'id:{tool_id}' if tool_id else ''
+        return _selector_tool_key_fn(tool)
 
     @staticmethod
     def _normalize_selector_tool(tool: dict | None) -> dict | None:
-        if not isinstance(tool, dict):
-            return None
-        tool_id = str(tool.get('tool_id') or tool.get('id') or '').strip()
-        if not tool_id:
-            return None
-        normalized = {'tool_id': tool_id}
-        tool_uid = tool.get('tool_uid', tool.get('uid'))
-        try:
-            parsed_uid = int(tool_uid) if tool_uid is not None and str(tool_uid).strip() else None
-        except Exception:
-            parsed_uid = None
-        if parsed_uid is not None:
-            normalized['tool_uid'] = parsed_uid
-        for key in ('description', 'tool_type', 'default_pot'):
-            value = str(tool.get(key) or '').strip()
-            if value:
-                normalized[key] = value
-        comment = str(tool.get('comment') or '').strip()
-        if comment:
-            normalized['comment'] = comment
-        return normalized
+        return _normalize_selector_tool_fn(tool)
 
     @staticmethod
     def _selector_spindle_label(spindle: str) -> str:
@@ -892,22 +610,15 @@ class HomePage(QWidget):
 
     @staticmethod
     def _normalize_selector_head_value(head: str) -> str:
-        return 'HEAD2' if str(head or '').strip().upper() == 'HEAD2' else 'HEAD1'
+        return _normalize_selector_head_value_fn(head)
 
     @staticmethod
     def _normalize_selector_spindle_value(spindle: str) -> str:
-        return normalize_selector_spindle(spindle)
+        return _normalize_selector_spindle_value_fn(spindle)
 
     @staticmethod
     def _normalize_tool_spindle_orientation(value: str | None) -> str:
-        raw = str(value or '').strip().lower().replace('_', ' ')
-        if not raw:
-            return 'main'
-        if 'both' in raw:
-            return 'both'
-        if raw in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}:
-            return 'sub'
-        return 'main'
+        return _normalize_tool_spindle_orientation_fn(value)
 
     def _tool_matches_selector_spindle(self, tool: dict) -> bool:
         if not self._selector_active:
@@ -933,7 +644,7 @@ class HomePage(QWidget):
 
     @classmethod
     def _selector_target_key(cls, head: str, spindle: str) -> str:
-        return f"{cls._normalize_selector_head_value(head)}:{cls._normalize_selector_spindle_value(spindle)}"
+        return _selector_target_key_fn(head, spindle)
 
     def _selector_current_target_key(self) -> str:
         return self._selector_target_key(self._selector_head or 'HEAD1', self._current_selector_spindle_value())
@@ -1394,257 +1105,47 @@ class HomePage(QWidget):
         return QIcon(str(path)) if path.exists() else QIcon()
 
     def _load_preview_content(self, viewer, stl_path: str | None, label: str | None = None) -> bool:
-        if StlPreviewWidget is None or viewer is None or not stl_path:
-            return False
-
-        try:
-            parsed = json.loads(stl_path)
-
-            if isinstance(parsed, list):
-                viewer.load_parts(parsed)
-                return True
-
-            if isinstance(parsed, str) and parsed.strip():
-                viewer.load_stl(parsed, label=label)
-                return True
-        except Exception:
-            viewer.load_stl(stl_path, label=label)
-            return True
-
-        return False
+        return load_preview_content(viewer, stl_path, label=label)
 
     def _set_preview_button_checked(self, checked: bool):
-        self.preview_window_btn.blockSignals(True)
-        self.preview_window_btn.setChecked(checked)
-        self.preview_window_btn.blockSignals(False)
+        from ui.home_page_support.detached_preview import set_preview_button_checked
+        set_preview_button_checked(self, checked)
 
     def _ensure_detached_preview_dialog(self):
-        if self._detached_preview_dialog is not None:
-            return
-
-        dialog = QDialog(self)
-        dialog.setProperty('detachedPreviewDialog', True)
-        dialog.setWindowTitle(self._t('tool_library.preview.window_title', '3D Preview'))
-        dialog.resize(620, 820)
-        dialog.finished.connect(self._on_detached_preview_closed)
-        self._close_preview_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), dialog)
-        self._close_preview_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
-        self._close_preview_shortcut.activated.connect(dialog.close)
-
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
-
-        controls_host = QWidget(dialog)
-        controls_host.setProperty('detachedPreviewToolbar', True)
-        controls_host.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        controls_layout = QHBoxLayout(controls_host)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setSpacing(8)
-        controls_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-
-        self._measurement_toggle_btn = QToolButton(controls_host)
-        self._measurement_toggle_btn.setCheckable(True)
-        self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled)
-        self._measurement_toggle_btn.setIconSize(QSize(28, 28))
-        self._measurement_toggle_btn.setAutoRaise(True)
-        self._measurement_toggle_btn.setProperty('topBarIconButton', True)
-        self._measurement_toggle_btn.setFixedSize(36, 36)
-        self._update_detached_measurement_toggle_icon(self._measurement_toggle_btn.isChecked())
-        self._measurement_toggle_btn.clicked.connect(self._on_detached_measurements_toggled)
-        controls_layout.addWidget(self._measurement_toggle_btn)
-
-        measurements_label = QLabel(self._t('tool_library.preview.measurements_label', 'Mittaukset'))
-        measurements_label.setProperty('detailHint', True)
-        measurements_label.setProperty('detachedPreviewToolbarLabel', True)
-        measurements_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        controls_layout.addWidget(measurements_label)
-
-        self._measurement_filter_combo = None
-        controls_layout.addStretch(1)
-        layout.addWidget(controls_host)
-
-        if StlPreviewWidget is not None:
-            self._detached_preview_widget = StlPreviewWidget()
-            self._detached_preview_widget.set_control_hint_text(
-                self._t(
-                    'tool_editor.hint.rotate_pan_zoom',
-                    'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
-                )
-            )
-            self._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            layout.addWidget(self._detached_preview_widget, 1)
-        else:
-            fallback = QLabel(self._t('tool_library.preview.unavailable', 'Preview component not available.'))
-            fallback.setWordWrap(True)
-            fallback.setAlignment(Qt.AlignCenter)
-            self._detached_preview_widget = None
-            fallback.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            layout.addWidget(fallback, 1)
-
-        self._detached_preview_dialog = dialog
-        self._refresh_detached_measurement_controls([])
+        ensure_detached_preview_dialog(self)
 
     def _apply_detached_preview_default_bounds(self):
-        if self._detached_preview_dialog is None:
-            return
-        host_window = self.window()
-        if host_window is None:
-            return
-
-        host_frame = host_window.frameGeometry()
-        if host_frame.width() <= 0 or host_frame.height() <= 0:
-            return
-
-        width = max(520, int(host_frame.width() * 0.37))
-        width = min(width, 700)
-        max_height = max(420, host_frame.height() - 30)
-        height = max(600, int(host_frame.height() * 0.86))
-        height = min(height, max_height)
-
-        x = host_frame.right() - width + 1
-        y = host_frame.bottom() - height + 1
-        min_y = host_frame.top() + 30
-        if y < min_y:
-            y = min_y
-
-        self._detached_preview_dialog.setGeometry(x, y, width, height)
+        from ui.home_page_support.detached_preview import apply_detached_preview_default_bounds
+        apply_detached_preview_default_bounds(self)
 
     def _update_detached_measurement_toggle_icon(self, enabled: bool):
-        if self._measurement_toggle_btn is None:
-            return
-        is_enabled = bool(enabled)
-        icon_name = 'comment_disable.svg' if is_enabled else 'comment.svg'
-        self._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
-        tooltip = self._t(
-            'tool_library.preview.measurements_hide' if is_enabled else 'tool_library.preview.measurements_show',
-            'Piilota mittaukset' if is_enabled else 'NÃ¤ytÃ¤ mittaukset',
-        )
-        self._measurement_toggle_btn.setToolTip(tooltip)
+        from ui.home_page_support.detached_preview import update_detached_measurement_toggle_icon
+        update_detached_measurement_toggle_icon(self, enabled)
 
     def _on_detached_preview_closed(self, _result):
-        if self._detached_preview_widget is not None:
-            self._detached_preview_widget.set_measurement_focus_index(-1)
-        self._detached_preview_last_model_key = None
-        self._set_preview_button_checked(False)
+        from ui.home_page_support.detached_preview import on_detached_preview_closed
+        on_detached_preview_closed(self)
 
     def _refresh_detached_measurement_controls(self, overlays):
-        if self._measurement_toggle_btn is None:
-            return
-
-        names = []
-        seen = set()
-        for overlay in overlays or []:
-            if not isinstance(overlay, dict):
-                continue
-            name = str(overlay.get('name') or '').strip()
-            if not name or name in seen:
-                continue
-            names.append(name)
-            seen.add(name)
-
-        has_measurements = bool(names)
-        self._measurement_toggle_btn.setEnabled(has_measurements)
-
-        self._measurement_toggle_btn.blockSignals(True)
-        self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled and has_measurements)
-        self._measurement_toggle_btn.blockSignals(False)
-        self._update_detached_measurement_toggle_icon(self._measurement_toggle_btn.isChecked())
-        self._detached_measurement_filter = None
+        from ui.home_page_support.detached_preview import refresh_detached_measurement_controls
+        refresh_detached_measurement_controls(self, overlays)
 
     def _apply_detached_measurement_state(self, overlays):
-        if self._detached_preview_widget is None:
-            return
-        self._detached_preview_widget.set_measurement_overlays(overlays or [])
-        self._detached_preview_widget.set_measurements_visible(
-            bool(overlays) and self._detached_measurements_enabled
-        )
-        self._detached_preview_widget.set_measurement_filter(self._detached_measurement_filter)
+        from ui.home_page_support.detached_preview import apply_detached_measurement_state
+        apply_detached_measurement_state(self, overlays)
 
     def _on_detached_measurements_toggled(self, checked: bool):
-        self._detached_measurements_enabled = bool(checked)
-        self._update_detached_measurement_toggle_icon(self._detached_measurements_enabled)
-        if self._detached_preview_widget is not None:
-            self._detached_preview_widget.set_measurements_visible(self._detached_measurements_enabled)
+        from ui.home_page_support.detached_preview import on_detached_measurements_toggled
+        on_detached_measurements_toggled(self, checked)
 
     def _close_detached_preview(self):
-        if self._detached_preview_dialog is not None:
-            self._detached_preview_dialog.close()
-        else:
-            self._set_preview_button_checked(False)
+        close_detached_preview(self)
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
-        if not self.preview_window_btn.isChecked():
-            return False
-
-        if not self.current_tool_id:
-            self._close_detached_preview()
-            return False
-
-        tool = self._get_selected_tool()
-        if not tool:
-            self._close_detached_preview()
-            return False
-
-        stl_path = tool.get('stl_path')
-        if not stl_path:
-            if show_errors:
-                QMessageBox.information(
-                    self,
-                    self._t('tool_library.preview.window_title', '3D Preview'),
-                    self._t('tool_library.preview.none_assigned_selected', 'The selected tool has no 3D model assigned.'),
-                )
-            self._close_detached_preview()
-            return False
-
-        self._ensure_detached_preview_dialog()
-        was_visible = bool(self._detached_preview_dialog and self._detached_preview_dialog.isVisible())
-        label = tool.get('description', '').strip() or tool.get('id', '3D Preview')
-        raw_model_key = stl_path if isinstance(stl_path, str) else json.dumps(stl_path, ensure_ascii=False, sort_keys=True)
-        model_key = (
-            int(tool.get('uid')) if str(tool.get('uid', '')).strip().isdigit() else str(tool.get('id') or '').strip(),
-            str(raw_model_key or ''),
-        )
-        loaded = True
-        if self._detached_preview_last_model_key != model_key:
-            loaded = self._load_preview_content(self._detached_preview_widget, stl_path, label=label)
-            if loaded:
-                self._detached_preview_last_model_key = model_key
-            else:
-                self._detached_preview_last_model_key = None
-        if not loaded:
-            if show_errors:
-                QMessageBox.information(
-                    self,
-                    self._t('tool_library.preview.window_title', '3D Preview'),
-                    self._t('tool_library.preview.no_valid_selected', 'No valid 3D model data found for the selected tool.'),
-                )
-            self._close_detached_preview()
-            return False
-
-        overlays = tool.get('measurement_overlays', []) if isinstance(tool, dict) else []
-        self._refresh_detached_measurement_controls(overlays)
-        self._apply_detached_measurement_state(overlays)
-
-        tool_id = self._tool_id_display_value(tool.get('id', ''))
-        self._detached_preview_dialog.setWindowTitle(
-            self._t('tool_library.preview.window_title_tool', '3D Preview - {tool_id}', tool_id=tool_id).rstrip(' -')
-        )
-        if not was_visible:
-            self._apply_detached_preview_default_bounds()
-            self._detached_preview_dialog.show()
-            self._detached_preview_dialog.raise_()
-            self._detached_preview_dialog.activateWindow()
-        self._set_preview_button_checked(True)
-        return True
+        return sync_detached_preview(self, show_errors=show_errors)
 
     def toggle_preview_window(self):
-        if self.preview_window_btn.isChecked():
-            if not self._sync_detached_preview(show_errors=True):
-                self._set_preview_button_checked(False)
-            return
-
-        self._close_detached_preview()
+        toggle_preview_window(self)
 
     def select_tool_by_id(self, tool_id: str):
         """Navigate the list to the tool with the given id."""
@@ -1878,126 +1379,13 @@ class HomePage(QWidget):
             return
         self.selection_count_label.hide()
 
-    @staticmethod
-    def _prune_backups(db_path: Path, tag: str, keep: int = 5):
-        prefix = f"{db_path.stem}_{tag}_"
-        backups = sorted(
-            db_path.parent.glob(f"{prefix}*.bak"),
-            key=lambda item: item.stat().st_mtime,
-            reverse=True,
-        )
-        for stale in backups[keep:]:
-            try:
-                stale.unlink()
-            except Exception:
-                pass
-
-    def _create_db_backup(self, tag: str) -> Path:
-        db_path = Path(self.tool_service.db.path)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_path = db_path.parent / f"{db_path.stem}_{tag}_{timestamp}.bak"
-        shutil.copy2(db_path, backup_path)
-        self._prune_backups(db_path, tag)
-        return backup_path
-
-    def _prompt_batch_cancel_behavior(self) -> str:
-        box = QMessageBox(self)
-        box.setIcon(QMessageBox.Question)
-        box.setWindowTitle(self._t('tool_library.batch.cancel.title', 'Batch edit cancelled'))
-        box.setText(
-            self._t(
-                'tool_library.batch.cancel.body',
-                'You stopped editing partway through the batch. Do you want to keep the changes you\'ve already saved, or undo all of them?',
-            )
-        )
-        keep_btn = box.addButton(
-            self._t('tool_library.batch.cancel.keep', 'Keep'),
-            QMessageBox.AcceptRole,
-        )
-        undo_btn = box.addButton(
-            self._t('tool_library.batch.cancel.undo', 'Undo'),
-            QMessageBox.DestructiveRole,
-        )
-        box.addButton(self._t('common.cancel', 'Cancel'), QMessageBox.RejectRole)
-        box.exec()
-        clicked = box.clickedButton()
-        if clicked is undo_btn:
-            return 'undo'
-        if clicked is keep_btn:
-            return 'keep'
-        return 'keep'
-
     def _batch_edit_tools(self, uids: list[int]):
-        saved_before: list[dict] = []
-        total = len(uids)
-        for idx, uid in enumerate(uids, 1):
-            tool = self.tool_service.get_tool_by_uid(uid)
-            if not tool:
-                continue
-            draft_tool = dict(tool)
-            while True:
-                dlg = AddEditToolDialog(
-                    self,
-                    tool=draft_tool,
-                    tool_service=self.tool_service,
-                    translate=self._t,
-                    batch_label=f"{idx}/{total}",
-                )
-                if dlg.exec() != QDialog.Accepted:
-                    if saved_before:
-                        action = self._prompt_batch_cancel_behavior()
-                        if action == 'undo':
-                            for previous in reversed(saved_before):
-                                self.tool_service.save_tool(previous, allow_duplicate=True)
-                    self.refresh_list()
-                    return
-                result = self._save_from_dialog(dlg)
-                if result == 'saved':
-                    saved_before.append(tool)
-                    break
-                if result == 'retry':
-                    draft_tool = dlg.get_tool_data()
-                    draft_tool['uid'] = uid
-                    continue
-                self.refresh_list()
-                return
-        self.refresh_list()
+        from ui.home_page_support.batch_actions import batch_edit_tools
+        batch_edit_tools(self, uids)
 
     def _group_edit_tools(self, uids: list[int]):
-        dlg = AddEditToolDialog(
-            self,
-            tool_service=self.tool_service,
-            translate=self._t,
-            group_edit_mode=True,
-            group_count=len(uids),
-        )
-        baseline = dlg.get_tool_data()
-        if dlg.exec() != QDialog.Accepted:
-            return
-        edited_data = dlg.get_tool_data()
-        changed_fields = {
-            key: value
-            for key, value in edited_data.items()
-            if value != baseline.get(key)
-        }
-        if not changed_fields:
-            QMessageBox.information(
-                self,
-                self._t('tool_library.group_edit.no_changes_title', 'No changes'),
-                self._t('tool_library.group_edit.no_changes_body', 'No fields were changed.'),
-            )
-            return
-
-        self._create_db_backup('group_edit')
-        for uid in uids:
-            existing = self.tool_service.get_tool_by_uid(uid)
-            if not existing:
-                continue
-            merged = dict(existing)
-            merged.update(changed_fields)
-            merged['uid'] = uid
-            self.tool_service.save_tool(merged, allow_duplicate=True)
-        self.refresh_list()
+        from ui.home_page_support.batch_actions import group_edit_tools
+        group_edit_tools(self, uids)
 
     def keyPressEvent(self, event):
         """Handle escape key to deselect any selected tool row."""
@@ -2993,71 +2381,10 @@ class HomePage(QWidget):
             QMessageBox.warning(self, self._t('tool_library.action.copy_tool_title', 'Copy tool'), str(exc))
 
     def _prompt_text(self, title: str, label: str, initial: str = '') -> tuple[str, bool]:
-        dlg = QDialog(self)
-        setup_editor_dialog(dlg)
-        dlg.setWindowTitle(title)
-        dlg.setModal(True)
-
-        root = QVBoxLayout(dlg)
-        root.setContentsMargins(12, 12, 12, 12)
-        root.setSpacing(8)
-
-        prompt = QLabel(label)
-        prompt.setProperty('detailFieldKey', True)
-        prompt.setWordWrap(True)
-        root.addWidget(prompt)
-
-        editor = QLineEdit()
-        editor.setText(initial)
-        root.addWidget(editor)
-
-        buttons = create_dialog_buttons(
-            dlg,
-            save_text=self._t('common.ok', 'OK'),
-            cancel_text=self._t('common.cancel', 'Cancel'),
-            on_save=dlg.accept,
-            on_cancel=dlg.reject,
-        )
-        root.addWidget(buttons)
-
-        apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
-        editor.setFocus()
-        editor.selectAll()
-
-        accepted = dlg.exec() == QDialog.Accepted
-        return editor.text(), accepted
+        return _prompt_text_fn(self, self._t, title, label, initial)
 
     def _confirm_yes_no(self, title: str, text: str, *, danger: bool) -> bool:
-        box = QMessageBox(self)
-        setup_editor_dialog(box)
-        box.setIcon(QMessageBox.Warning if danger else QMessageBox.Question)
-        box.setWindowTitle(title)
-        main_text = text
-        info_text = ''
-        if '\n\n' in text:
-            main_text, info_text = text.split('\n\n', 1)
-        box.setText(main_text)
-        if info_text:
-            box.setInformativeText(info_text)
-            # Style only the secondary line to be subtler.
-            box.setStyleSheet(
-                '#qt_msgbox_informativelabel { font-style: italic; font-weight: 400; color: #5f6a74; }'
-            )
-        box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-
-        yes_btn = box.button(QMessageBox.Yes)
-        no_btn = box.button(QMessageBox.No)
-        if yes_btn is not None:
-            yes_btn.setText(self._t('common.yes', 'Yes'))
-            yes_btn.setProperty('panelActionButton', True)
-            yes_btn.setProperty('dangerAction', bool(danger))
-            yes_btn.setProperty('primaryAction', not danger)
-        if no_btn is not None:
-            no_btn.setText(self._t('common.no', 'No'))
-            no_btn.setProperty('panelActionButton', True)
-            no_btn.setProperty('secondaryAction', True)
-
-        return box.exec() == QMessageBox.Yes
+        return _confirm_yes_no_fn(self, self._t, title, text, danger=danger)
 
     def delete_tool(self):
         if not self.current_tool_id:

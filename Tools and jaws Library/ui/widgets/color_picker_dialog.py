@@ -25,7 +25,8 @@ from PySide6.QtWidgets import (
 )
 
 from config import SETTINGS_PATH, TOOL_ICONS_DIR
-from shared.ui.helpers.editor_helpers import add_shadow, setup_editor_dialog
+from shared.ui.helpers.common_widgets import add_shadow
+from shared.ui.helpers.editor_helpers import setup_editor_dialog
 
 
 def _noop_translate(_key: str, default: str | None = None, **_kwargs) -> str:

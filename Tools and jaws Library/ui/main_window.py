@@ -13,19 +13,14 @@ from PySide6.QtCore import (
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
-    QAbstractButton,
-    QAbstractItemView,
     QApplication,
     QButtonGroup,
-    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QMainWindow,
     QMessageBox,
     QPushButton,
-    QSplitter,
     QStackedWidget,
     QToolButton,
     QVBoxLayout,
@@ -59,18 +54,14 @@ from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
 from ui.main_window_support import empty_selector_session_state, selector_session_from_payload
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
-
-
-THEME_PALETTES = {
-    "classic": {
-        "surface_bg": "rgba(205, 212, 238, 0.97)",
-        "detail_box_bg": "rgba(232, 240, 250, 0.98)",
-    },
-    "graphite": {
-        "surface_bg": "rgba(168, 179, 198, 0.98)",
-        "detail_box_bg": "rgba(207, 217, 233, 0.98)",
-    },
-}
+from shared.ui.main_window_helpers import (
+    THEME_PALETTES,
+    current_window_rect,
+    fade_in as _shared_fade_in,
+    fade_out_and as _shared_fade_out_and,
+    get_active_theme_palette,
+    is_interactive_widget_click,
+)
 
 
 class RailHeadToggleButton(QPushButton):
@@ -593,18 +584,8 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def _clear_active_page_selection_on_background_click(self, obj):
-        if not isinstance(obj, QWidget):
+        if is_interactive_widget_click(obj, self):
             return
-        # Skip events that belong to a different top-level window (e.g. a
-        # combo-box dropdown popup which is its own Qt.Popup window).
-        if obj.window() is not self:
-            return
-        # Skip directly interactive widgets â€” their own handlers manage state.
-        widget = obj
-        while widget is not None:
-            if isinstance(widget, (QAbstractButton, QLineEdit, QComboBox, QAbstractItemView, QSplitter)):
-                return
-            widget = widget.parentWidget()
 
         page = self.stack.currentWidget() if hasattr(self, 'stack') else None
         if page is None:
@@ -879,8 +860,7 @@ class MainWindow(QMainWindow):
             self.jaws_page.apply_localization(self._t)
 
     def _build_ui_preference_overrides(self) -> str:
-        theme_name = self.ui_preferences.get("color_theme", "classic")
-        palette = THEME_PALETTES.get(theme_name, THEME_PALETTES["classic"])
+        palette = get_active_theme_palette(self.ui_preferences)
         return (
             "/* Runtime UI preference overrides */\n"
             "QFrame[catalogShell=\"true\"],\n"
@@ -921,43 +901,13 @@ class MainWindow(QMainWindow):
         self._disabled_graphics_effects = disabled_effects
 
     def _fade_out_and(self, callback):
-        """Immediately run *callback* without animation."""
-        if getattr(self, '_fade_anim', None) is not None:
-            self._fade_anim.stop()
-        self._fade_anim = None
-        self.setWindowOpacity(1.0)
-        self._set_graphics_effects_enabled(True)
-        callback()
+        _shared_fade_out_and(self, callback, pre_callback=lambda: self._set_graphics_effects_enabled(True))
 
     def fade_in(self):
-        """Show fully visible without animation."""
-        if getattr(self, '_fade_anim', None) is not None:
-            self._fade_anim.stop()
-        self._fade_anim = None
-        self.setWindowOpacity(1.0)
-        self._set_graphics_effects_enabled(True)
+        _shared_fade_in(self, post_restore=lambda: self._set_graphics_effects_enabled(True))
 
     def _current_window_rect(self) -> tuple[int, int, int, int]:
-        """Return the actual on-screen window rectangle, including snap placement."""
-        try:
-            import ctypes
-
-            class RECT(ctypes.Structure):
-                _fields_ = [
-                    ("left", ctypes.c_long),
-                    ("top", ctypes.c_long),
-                    ("right", ctypes.c_long),
-                    ("bottom", ctypes.c_long),
-                ]
-
-            rect = RECT()
-            hwnd = int(self.winId())
-            if ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
-                return rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top
-        except Exception:
-            pass
-        geom = self.frameGeometry()
-        return geom.x(), geom.y(), geom.width(), geom.height()
+        return current_window_rect(self)
 
     def _back_to_setup_manager(self):
         """Switch back to Setup Manager."""

@@ -1,6 +1,6 @@
 # Work Editor Refactor Status
 
-Last updated: 2026-04-12
+Last updated: 2026-04-13
 
 ## Goal
 Reduce responsibility in `Setup Manager/ui/work_editor_dialog.py` so the dialog remains orchestration-focused, while behavior stays unchanged.
@@ -38,6 +38,12 @@ Reduce responsibility in `Setup Manager/ui/work_editor_dialog.py` so the dialog 
   - `Setup Manager/ui/work_editor_support/selector_adapter.py`
 - Includes head/spindle labeling, selector result application, ref merges, and warning/session adapters.
 
+### 7) Dialog lifecycle setup extraction
+- Extracted tab creation, button row setup, combo repolish/event-filter wiring, and secondary button theme into:
+  - `Setup Manager/ui/work_editor_support/dialog_lifecycle.py`
+- Dialog `__init__` now delegates to `setup_tabs`, `setup_button_row`, `finalize_ui`, and `apply_secondary_button_theme`.
+- Reduced dialog from ~590 to 480 lines.
+
 ## Files Added During This Track
 - `Setup Manager/ui/work_editor_support/jaw_selector_panel.py`
 - `Setup Manager/ui/work_editor_support/tool_picker_dialog.py`
@@ -45,6 +51,7 @@ Reduce responsibility in `Setup Manager/ui/work_editor_dialog.py` so the dialog 
 - `Setup Manager/ui/work_editor_support/icon_resolvers.py`
 - `Setup Manager/ui/work_editor_support/zero_points.py`
 - `Setup Manager/ui/work_editor_support/selector_adapter.py`
+- `Setup Manager/ui/work_editor_support/dialog_lifecycle.py`
 
 ## Core File Still Being Reduced
 - `Setup Manager/ui/work_editor_dialog.py`
@@ -55,12 +62,7 @@ Reduce responsibility in `Setup Manager/ui/work_editor_dialog.py` so the dialog 
 - Many dialog methods are now one-line delegations.
 - Next step: group these wrappers by concern and move only repeated boilerplate or facade-like wrappers to a small app-local facade module, while keeping bridge callback surface stable.
 
-### B) Isolate dialog lifecycle setup blocks
-- Extract small setup helpers for:
-  - tab creation and registration
-  - dialog button row setup
-  - final combo repolish/event-filter wiring
-- Keep ownership of signals/lifecycle in dialog class.
+### ~~B) Isolate dialog lifecycle setup blocks~~ — DONE (step 7 above)
 
 ### C) Normalize support module boundaries
 - Ensure support modules stay responsibility-focused:

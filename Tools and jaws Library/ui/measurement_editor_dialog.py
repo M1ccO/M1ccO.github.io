@@ -72,6 +72,26 @@ from ui.measurement_editor.controllers.diameter_controller import (
 from ui.measurement_editor.forms.shared_sections import (
     apply_section_groupbox_style as _apply_section_groupbox_style,
     build_adjust_header_row as _build_adjust_header_row,
+    build_xyz_header_row as _build_xyz_header_row_fn,
+)
+from ui.measurement_editor.forms.type_picker import (
+    build_measurement_type_picker as _build_measurement_type_picker_fn,
+)
+from ui.measurement_editor.forms.radius_form import (
+    build_radius_form as _build_radius_form_fn,
+)
+from ui.measurement_editor.forms.angle_form import (
+    build_angle_form as _build_angle_form_fn,
+)
+from ui.measurement_editor.forms.distance_form import (
+    build_distance_form as _build_distance_form_fn,
+)
+from ui.measurement_editor.forms.diameter_form import (
+    build_diameter_form as _build_diameter_form_fn,
+)
+from ui.measurement_editor.controllers.measurement_registry import (
+    measurement_kind_order as _measurement_kind_order_fn,
+    find_item_by_uid as _find_item_by_uid_fn,
 )
 from ui.measurement_editor.bridge.preview_sync import (
     apply_diameter_overlay_update as _apply_diameter_overlay_update,
@@ -381,145 +401,34 @@ class MeasurementEditorDialog(QDialog):
         apply_secondary_button_theme(self, save_btn)
 
     def _build_distance_form(self) -> QWidget:
-        container = QWidget()
-        form = QFormLayout(container)
-        form.setContentsMargins(4, 4, 4, 4)
-        form.setHorizontalSpacing(6)
-        form.setVerticalSpacing(4)
-        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        self._dist_basic_section = QGroupBox(self._t('tool_editor.measurements.basic_functions', 'Basic functions'))
-        _apply_section_groupbox_style(self._dist_basic_section)
-        basic_form = QFormLayout(self._dist_basic_section)
-        basic_form.setContentsMargins(8, 6, 8, 6)
-        basic_form.setHorizontalSpacing(6)
-        basic_form.setVerticalSpacing(3)
-        basic_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self._dist_basic_section.setMinimumHeight(160)
-        self._dist_basic_section.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-
-        self._dist_name_edit = QLineEdit()
-        self._dist_name_edit.setPlaceholderText('Distance 1')
-        self._dist_name_edit.editingFinished.connect(self._schedule_commit)
-        basic_form.addRow(self._t('common.name', 'Name') + ':', self._dist_name_edit)
-
-        pick_row = QHBoxLayout()
-        pick_row.setSpacing(6)
-        self._dist_pick_points_btn = QPushButton(
-            ''
+        container, refs = _build_distance_form_fn(
+            self._t,
+            icon=self._icon,
+            on_schedule_commit=self._schedule_commit,
+            on_pick_target=self._on_pick_target,
+            on_value_mode_toggled=self._on_distance_value_mode_toggled,
+            on_point_nudge=self._on_distance_point_nudge,
+            on_adjust_mode_toggled=self._on_distance_adjust_mode_toggled,
+            on_nudge_point_toggled=self._on_nudge_point_toggled,
+            event_filter=self,
         )
-        self._dist_pick_points_btn.setIcon(self._icon('points_select.svg'))
-        self._dist_pick_points_btn.setIconSize(QSize(24, 24))
-        self._dist_pick_points_btn.setToolTip(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._dist_pick_points_btn.setFixedWidth(46)
-        self._dist_pick_points_btn.clicked.connect(self._on_pick_target)
-        self._dist_pick_status_label = QLabel('')
-        self._dist_pick_status_label.setStyleSheet('color: #6b7b8e; background: transparent;')
-        pick_row.addWidget(self._dist_pick_points_btn)
-        pick_row.addWidget(self._dist_pick_status_label, 1)
-        basic_form.addRow(self._t('tool_editor.measurements.points', 'Points') + ':', pick_row)
-
-        value_row = QHBoxLayout()
-        value_row.setSpacing(6)
-        self._dist_value_mode_btn = QPushButton(self._t('tool_editor.measurements.value_mode_measured', 'Measured'))
-        self._dist_value_mode_btn.setCheckable(True)
-        self._dist_value_mode_btn.setChecked(False)  # checked = custom, unchecked = measured
-        self._dist_value_mode_btn.setFixedWidth(100)
-        self._dist_value_mode_btn.clicked.connect(self._on_distance_value_mode_toggled)
-        self._dist_value_edit = QLineEdit()
-        self._dist_value_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.value_placeholder', 'Measured or custom value')
-        )
-        self._dist_value_edit.editingFinished.connect(self._schedule_commit)
-        value_row.addWidget(self._dist_value_mode_btn)
-        value_row.addWidget(self._dist_value_edit, 1)
-        _display_lbl = QLabel(self._t('tool_editor.measurements.display_value', 'Display\nValue') + ':')
-        _display_lbl.setAlignment(Qt.AlignRight | Qt.AlignTop)
-        _display_lbl.setStyleSheet('padding-top: 0px; margin-top: -2px;')
-        basic_form.addRow(_display_lbl, value_row)
-        form.addRow(self._dist_basic_section)
-
-        self._dist_adjust_section = QGroupBox('')
-        _apply_section_groupbox_style(self._dist_adjust_section)
-        adjust_section_layout = QVBoxLayout(self._dist_adjust_section)
-        adjust_section_layout.setContentsMargins(8, 6, 8, 4)
-        adjust_section_layout.setSpacing(2)
-
-        # Keep each label in the same column as its value input for stable alignment.
-        self._dist_adjust_x_edit = QLineEdit('0')
-        self._dist_adjust_y_edit = QLineEdit('0')
-        self._dist_adjust_z_edit = QLineEdit('0')
-        self._dist_adjust_axis_by_edit = {
-            self._dist_adjust_x_edit: 'x',
-            self._dist_adjust_y_edit: 'y',
-            self._dist_adjust_z_edit: 'z',
-        }
-        self._dist_adjust_active_axis = 'x'
-        for _ae in (self._dist_adjust_x_edit, self._dist_adjust_y_edit, self._dist_adjust_z_edit):
-            _ae.setFixedWidth(74)
-            _ae.editingFinished.connect(self._schedule_commit)
-            _ae.installEventFilter(self)
-        self._dist_nudge_step_edit = QLineEdit('1.0')
-        self._dist_nudge_step_edit.setFixedWidth(74)
-
-        precise_top_row = _build_adjust_header_row(self._t, [
-            ('tool_editor.measurements.axis_x', 'X', self._dist_adjust_x_edit),
-            ('tool_editor.measurements.axis_y', 'Y', self._dist_adjust_y_edit),
-            ('tool_editor.measurements.axis_z', 'Z', self._dist_adjust_z_edit),
-            (None, 'mm', self._dist_nudge_step_edit),
-        ])
-
-        self._dist_nudge_minus_btn = QPushButton('-')
-        self._dist_nudge_minus_btn.setText('\u2212')
-        self._dist_nudge_minus_btn.setFixedSize(34, 34)
-        self._dist_nudge_minus_btn.setStyleSheet('font-size: 19px; font-weight: 700; padding: 0px 0px 2px 0px;')
-        self._dist_nudge_minus_btn.setProperty('arrowMoveButton', True)
-        self._dist_nudge_minus_btn.clicked.connect(lambda: self._on_distance_point_nudge('-'))
-        self._dist_nudge_minus_btn.setFocusPolicy(Qt.NoFocus)
-        self._dist_nudge_plus_btn = QPushButton('+')
-        self._dist_nudge_plus_btn.setFixedSize(34, 34)
-        self._dist_nudge_plus_btn.setStyleSheet('font-size: 19px; font-weight: 700; padding: 0px 0px 1px 0px;')
-        self._dist_nudge_plus_btn.setProperty('arrowMoveButton', True)
-        self._dist_nudge_plus_btn.clicked.connect(lambda: self._on_distance_point_nudge('+'))
-        self._dist_nudge_plus_btn.setFocusPolicy(Qt.NoFocus)
-        _pm_container = QWidget()
-        _pm_layout = QVBoxLayout(_pm_container)
-        _pm_layout.setContentsMargins(0, 0, 0, 0)
-        _pm_layout.setSpacing(2)
-        _pm_layout.addWidget(self._dist_nudge_plus_btn)
-        _pm_layout.addWidget(self._dist_nudge_minus_btn)
-        precise_top_row.addSpacing(4)
-        precise_top_row.addWidget(_pm_container, 0, Qt.AlignBottom)
-        precise_top_row.addStretch(1)
-        adjust_section_layout.addLayout(precise_top_row)
-
-        adjust_bottom_row = QHBoxLayout()
-        adjust_bottom_row.setSpacing(6)
-        adjust_bottom_row.setContentsMargins(0, 0, 0, 0)
-        self._dist_adjust_mode_btn = QPushButton('')
-        self._dist_adjust_mode_btn.setCheckable(True)
-        self._dist_adjust_mode_btn.setChecked(False)  # checked = nudge, unchecked = arrow offset
-        self._dist_adjust_mode_btn.setFixedWidth(46)
-        self._dist_adjust_mode_btn.setIconSize(QSize(24, 24))
-        self._dist_adjust_mode_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self._dist_adjust_mode_btn.clicked.connect(self._on_distance_adjust_mode_toggled)
-        self._dist_adjust_mode_btn.setFocusPolicy(Qt.NoFocus)
-        self._dist_nudge_point_btn = QPushButton('')
-        self._dist_nudge_point_btn.setCheckable(True)
-        self._dist_nudge_point_btn.setChecked(False)  # checked = end, unchecked = start
-        self._dist_nudge_point_btn.setFixedWidth(46)
-        self._dist_nudge_point_btn.setIconSize(QSize(24, 24))
-        self._dist_nudge_point_btn.clicked.connect(self._on_nudge_point_toggled)
-        self._dist_nudge_point_btn.setVisible(False)
-        self._dist_nudge_point_btn.setFocusPolicy(Qt.NoFocus)
-        adjust_bottom_row.addWidget(self._dist_adjust_mode_btn)
-        adjust_bottom_row.addWidget(self._dist_nudge_point_btn)
-        adjust_bottom_row.addStretch(1)
-        adjust_section_layout.addLayout(adjust_bottom_row)
-
-        form.addRow(self._dist_adjust_section)
-        self._dist_adjust_section.setVisible(False)
-
+        self._dist_basic_section = refs.basic_section
+        self._dist_name_edit = refs.name_edit
+        self._dist_pick_points_btn = refs.pick_points_btn
+        self._dist_pick_status_label = refs.pick_status_label
+        self._dist_value_mode_btn = refs.value_mode_btn
+        self._dist_value_edit = refs.value_edit
+        self._dist_adjust_section = refs.adjust_section
+        self._dist_adjust_x_edit = refs.adjust_x_edit
+        self._dist_adjust_y_edit = refs.adjust_y_edit
+        self._dist_adjust_z_edit = refs.adjust_z_edit
+        self._dist_adjust_axis_by_edit = refs.adjust_axis_by_edit
+        self._dist_adjust_active_axis = refs.adjust_active_axis
+        self._dist_nudge_step_edit = refs.nudge_step_edit
+        self._dist_nudge_minus_btn = refs.nudge_minus_btn
+        self._dist_nudge_plus_btn = refs.nudge_plus_btn
+        self._dist_adjust_mode_btn = refs.adjust_mode_btn
+        self._dist_nudge_point_btn = refs.nudge_point_btn
         self._distance_edit_model = None
         self._dist_pick_stage = None
         self._set_distance_axis('z', commit=False)
@@ -529,356 +438,98 @@ class MeasurementEditorDialog(QDialog):
         self._update_distance_precise_visibility()
         self._update_distance_measured_value_box()
         self._update_distance_pick_status()
-
         return container
 
     def _build_diameter_form(self) -> QWidget:
-        container = QWidget()
-        form = QFormLayout(container)
-        form.setContentsMargins(4, 4, 4, 4)
-        form.setHorizontalSpacing(6)
-        form.setVerticalSpacing(4)
-        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        self._diam_basic_section = QGroupBox(self._t('tool_editor.measurements.basic_functions', 'Basic functions'))
-        _apply_section_groupbox_style(self._diam_basic_section)
-        basic_form = QFormLayout(self._diam_basic_section)
-        basic_form.setContentsMargins(8, 6, 8, 6)
-        basic_form.setHorizontalSpacing(6)
-        basic_form.setVerticalSpacing(3)
-        basic_form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self._diam_basic_section.setMinimumHeight(160)
-        self._diam_basic_section.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-
-        self._diam_name_edit = QLineEdit()
-        self._diam_name_edit.setPlaceholderText('Diameter 1')
-        self._diam_name_edit.editingFinished.connect(self._schedule_commit)
-        basic_form.addRow(self._t('common.name', 'Name') + ':', self._diam_name_edit)
-
-        pick_row = QHBoxLayout()
-        pick_row.setSpacing(6)
-        self._diam_pick_points_btn = QPushButton('')
-        self._diam_pick_points_btn.setIcon(self._icon('points_select.svg'))
-        self._diam_pick_points_btn.setIconSize(QSize(24, 24))
-        self._diam_pick_points_btn.setToolTip(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._diam_pick_points_btn.setFixedWidth(46)
-        self._diam_pick_points_btn.clicked.connect(self._on_pick_diameter_points)
-        self._diam_pick_status_label = QLabel('')
-        self._diam_pick_status_label.setStyleSheet('color: #6b7b8e; background: transparent;')
-        pick_row.addWidget(self._diam_pick_points_btn)
-        pick_row.addWidget(self._diam_pick_status_label, 1)
-        basic_form.addRow(self._t('tool_editor.measurements.points', 'Points') + ':', pick_row)
-
-        value_row = QHBoxLayout()
-        value_row.setSpacing(6)
-        self._diam_value_mode_btn = QPushButton(self._t('tool_editor.measurements.value_mode_manual', 'Mukautettu'))
-        self._diam_value_mode_btn.setCheckable(True)
-        self._diam_value_mode_btn.setChecked(True)  # checked = manual, unchecked = measured
-        self._diam_value_mode_btn.setFixedWidth(100)
-        self._diam_value_mode_btn.clicked.connect(self._on_diameter_value_mode_toggled)
-        self._diam_value_edit = QLineEdit()
-        self._diam_value_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.diameter_value_placeholder', 'Measured or manual diameter')
+        container, refs = _build_diameter_form_fn(
+            self._t,
+            icon=self._icon,
+            on_schedule_commit=self._schedule_commit,
+            on_pick_diameter_points=self._on_pick_diameter_points,
+            on_value_mode_toggled=self._on_diameter_value_mode_toggled,
+            on_offset_nudge=self._on_diameter_offset_nudge,
+            on_adjust_mode_toggled=self._on_diameter_adjust_mode_toggled,
+            on_geometry_target_toggled=self._on_diameter_geometry_target_toggled,
+            event_filter=self,
         )
-        self._diam_value_edit.editingFinished.connect(self._schedule_commit)
-        value_row.addWidget(self._diam_value_mode_btn)
-        value_row.addWidget(self._diam_value_edit, 1)
-        basic_form.addRow(self._t('tool_editor.measurements.diameter', 'Diameter (mm)') + ':', value_row)
-        form.addRow(self._diam_basic_section)
-
-        self._diam_adjust_section = QGroupBox('')
-        _apply_section_groupbox_style(self._diam_adjust_section)
-        adjust_section_layout = QVBoxLayout(self._diam_adjust_section)
-        adjust_section_layout.setContentsMargins(8, 6, 8, 4)
-        adjust_section_layout.setSpacing(2)
-
-        self._diam_adjust_x_edit = QLineEdit('0')
-        self._diam_adjust_y_edit = QLineEdit('0')
-        self._diam_adjust_z_edit = QLineEdit('0')
-        self._diam_adjust_axis_by_edit = {
-            self._diam_adjust_x_edit: 'x',
-            self._diam_adjust_y_edit: 'y',
-            self._diam_adjust_z_edit: 'z',
-        }
-        self._diam_adjust_active_axis = 'x'
-        for _ae in (self._diam_adjust_x_edit, self._diam_adjust_y_edit, self._diam_adjust_z_edit):
-            _ae.setFixedWidth(74)
-            _ae.editingFinished.connect(self._schedule_commit)
-            _ae.installEventFilter(self)
-        self._diam_nudge_step_edit = QLineEdit('1.0')
-        self._diam_nudge_step_edit.setFixedWidth(74)
-
-        def _on_diameter_header_created(label: QLabel, header_key: str | None):
-            if header_key is None:
-                self._diam_adjust_step_unit_lbl = label
-
-        precise_top_row = _build_adjust_header_row(self._t, [
-            ('tool_editor.measurements.axis_x', 'X', self._diam_adjust_x_edit),
-            ('tool_editor.measurements.axis_y', 'Y', self._diam_adjust_y_edit),
-            ('tool_editor.measurements.axis_z', 'Z', self._diam_adjust_z_edit),
-            (None, 'mm', self._diam_nudge_step_edit),
-        ], on_header_created=_on_diameter_header_created)
-
-        self._diam_nudge_minus_btn = QPushButton('-')
-        self._diam_nudge_minus_btn.setText('\u2212')
-        self._diam_nudge_minus_btn.setFixedSize(34, 34)
-        self._diam_nudge_minus_btn.setStyleSheet('font-size: 19px; font-weight: 700; padding: 0px 0px 2px 0px;')
-        self._diam_nudge_minus_btn.setProperty('arrowMoveButton', True)
-        self._diam_nudge_minus_btn.clicked.connect(lambda: self._on_diameter_offset_nudge('-'))
-        self._diam_nudge_minus_btn.setFocusPolicy(Qt.NoFocus)
-        self._diam_nudge_plus_btn = QPushButton('+')
-        self._diam_nudge_plus_btn.setFixedSize(34, 34)
-        self._diam_nudge_plus_btn.setStyleSheet('font-size: 19px; font-weight: 700; padding: 0px 0px 1px 0px;')
-        self._diam_nudge_plus_btn.setProperty('arrowMoveButton', True)
-        self._diam_nudge_plus_btn.clicked.connect(lambda: self._on_diameter_offset_nudge('+'))
-        self._diam_nudge_plus_btn.setFocusPolicy(Qt.NoFocus)
-        _pm_container = QWidget()
-        _pm_layout = QVBoxLayout(_pm_container)
-        _pm_layout.setContentsMargins(0, 0, 0, 0)
-        _pm_layout.setSpacing(2)
-        _pm_layout.addWidget(self._diam_nudge_plus_btn)
-        _pm_layout.addWidget(self._diam_nudge_minus_btn)
-        precise_top_row.addSpacing(4)
-        precise_top_row.addWidget(_pm_container, 0, Qt.AlignBottom)
-        precise_top_row.addStretch(1)
-        adjust_section_layout.addLayout(precise_top_row)
-
-        visual_offset_row = QHBoxLayout()
-        visual_offset_row.setSpacing(6)
-        visual_offset_row.setContentsMargins(0, 2, 0, 0)
-        self._diam_visual_offset_label = QLabel(
-            self._t('tool_editor.measurements.diameter_visual_offset', 'Ring offset (mm):')
-        )
-        self._diam_visual_offset_label.setStyleSheet('color: #6b7b8e; background: transparent;')
-        self._diam_visual_offset_edit = QLineEdit('1.0')
-        self._diam_visual_offset_edit.setFixedWidth(88)
-        self._diam_visual_offset_edit.editingFinished.connect(self._schedule_commit)
-        self._diam_visual_offset_edit.installEventFilter(self)
-        visual_offset_row.addWidget(self._diam_visual_offset_label)
-        visual_offset_row.addWidget(self._diam_visual_offset_edit)
-        visual_offset_row.addStretch(1)
-        adjust_section_layout.addLayout(visual_offset_row)
-
-        adjust_bottom_row = QHBoxLayout()
-        adjust_bottom_row.setSpacing(6)
-        adjust_bottom_row.setContentsMargins(0, 0, 0, 0)
-        self._diam_adjust_mode_btn = QPushButton('')
-        self._diam_adjust_mode_btn.setCheckable(True)
-        self._diam_adjust_mode_btn.setChecked(False)  # checked = geometry, unchecked = callout
-        self._diam_adjust_mode_btn.setFixedWidth(46)
-        self._diam_adjust_mode_btn.setIconSize(QSize(24, 24))
-        self._diam_adjust_mode_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self._diam_adjust_mode_btn.clicked.connect(self._on_diameter_adjust_mode_toggled)
-        self._diam_adjust_mode_btn.setFocusPolicy(Qt.NoFocus)
-        self._diam_geometry_target_btn = QPushButton('')
-        self._diam_geometry_target_btn.setCheckable(True)
-        self._diam_geometry_target_btn.setChecked(False)  # checked = rotation, unchecked = axis position
-        self._diam_geometry_target_btn.setFixedWidth(46)
-        self._diam_geometry_target_btn.setIconSize(QSize(24, 24))
-        self._diam_geometry_target_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self._diam_geometry_target_btn.clicked.connect(self._on_diameter_geometry_target_toggled)
-        self._diam_geometry_target_btn.setVisible(False)
-        self._diam_geometry_target_btn.setFocusPolicy(Qt.NoFocus)
-        adjust_bottom_row.addWidget(self._diam_adjust_mode_btn)
-        adjust_bottom_row.addWidget(self._diam_geometry_target_btn)
-        adjust_bottom_row.addStretch(1)
-        adjust_section_layout.addLayout(adjust_bottom_row)
-
-        form.addRow(self._diam_adjust_section)
-        self._diam_adjust_section.setVisible(False)
-
+        self._diam_basic_section = refs.basic_section
+        self._diam_name_edit = refs.name_edit
+        self._diam_pick_points_btn = refs.pick_points_btn
+        self._diam_pick_status_label = refs.pick_status_label
+        self._diam_value_mode_btn = refs.value_mode_btn
+        self._diam_value_edit = refs.value_edit
+        self._diam_adjust_section = refs.adjust_section
+        self._diam_adjust_x_edit = refs.adjust_x_edit
+        self._diam_adjust_y_edit = refs.adjust_y_edit
+        self._diam_adjust_z_edit = refs.adjust_z_edit
+        self._diam_adjust_axis_by_edit = refs.adjust_axis_by_edit
+        self._diam_adjust_active_axis = refs.adjust_active_axis
+        self._diam_nudge_step_edit = refs.nudge_step_edit
+        self._diam_adjust_step_unit_lbl = refs.adjust_step_unit_lbl
+        self._diam_nudge_minus_btn = refs.nudge_minus_btn
+        self._diam_nudge_plus_btn = refs.nudge_plus_btn
+        self._diam_visual_offset_label = refs.visual_offset_label
+        self._diam_visual_offset_edit = refs.visual_offset_edit
+        self._diam_adjust_mode_btn = refs.adjust_mode_btn
+        self._diam_geometry_target_btn = refs.geometry_target_btn
         self._set_diameter_geometry_target('axis', commit=False)
         self._set_diameter_adjust_mode('callout', commit=False)
         self._set_diameter_axis('z', commit=False, store_adjust_edits=False)
         self._set_diameter_value_mode('manual', commit=False)
         self._update_diameter_measured_value_box()
         self._update_diameter_pick_status()
-
         return container
 
     def _build_radius_form(self) -> QWidget:
-        container = QWidget()
-        form = QFormLayout(container)
-        form.setContentsMargins(4, 4, 4, 4)
-        form.setSpacing(6)
-        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        self._radius_name_edit = QLineEdit()
-        self._radius_name_edit.setPlaceholderText('Radius 1')
-        self._radius_name_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('common.name', 'Name') + ':', self._radius_name_edit)
-
-        self._radius_part_edit = QLineEdit()
-        self._radius_part_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.part_placeholder', '(part name, blank = assembly)'))
-        self._radius_part_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('tool_editor.measurements.part', 'Part') + ':', self._radius_part_edit)
-
-        form.addRow('', self._build_xyz_header_row(with_pick=True))
-        center_row = QHBoxLayout()
-        self._radius_center_x_edit = QLineEdit('0')
-        self._radius_center_y_edit = QLineEdit('0')
-        self._radius_center_z_edit = QLineEdit('0')
-        for axis_edit in (self._radius_center_x_edit, self._radius_center_y_edit, self._radius_center_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-        self._radius_center_pick_btn = QPushButton(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._radius_center_pick_btn.setFixedWidth(50)
-        self._radius_center_pick_btn.clicked.connect(self._on_pick_radius_center)
-        center_row.addWidget(self._radius_center_x_edit)
-        center_row.addWidget(self._radius_center_y_edit)
-        center_row.addWidget(self._radius_center_z_edit)
-        center_row.addStretch(1)
-        center_row.addWidget(self._radius_center_pick_btn)
-        form.addRow(self._t('tool_editor.measurements.center_xyz', 'Center XYZ') + ':', center_row)
-
-        form.addRow('', self._build_xyz_header_row(with_pick=False))
-        axis_row = QHBoxLayout()
-        self._radius_axis_x_edit = QLineEdit('0')
-        self._radius_axis_y_edit = QLineEdit('1')
-        self._radius_axis_z_edit = QLineEdit('0')
-        for axis_edit in (self._radius_axis_x_edit, self._radius_axis_y_edit, self._radius_axis_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-            axis_row.addWidget(axis_edit)
-        axis_row.addStretch(1)
-        form.addRow(self._t('tool_editor.measurements.axis_xyz', 'Axis XYZ') + ':', axis_row)
-
-        self._radius_value_edit = QLineEdit('10')
-        self._radius_value_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('tool_editor.measurements.radius', 'Radius (mm)') + ':', self._radius_value_edit)
-
+        container, refs = _build_radius_form_fn(
+            translate=self._t,
+            on_schedule_commit=self._schedule_commit,
+            on_pick_center=self._on_pick_radius_center,
+        )
+        self._radius_name_edit = refs.name_edit
+        self._radius_part_edit = refs.part_edit
+        self._radius_center_x_edit = refs.center_x_edit
+        self._radius_center_y_edit = refs.center_y_edit
+        self._radius_center_z_edit = refs.center_z_edit
+        self._radius_center_pick_btn = refs.center_pick_btn
+        self._radius_axis_x_edit = refs.axis_x_edit
+        self._radius_axis_y_edit = refs.axis_y_edit
+        self._radius_axis_z_edit = refs.axis_z_edit
+        self._radius_value_edit = refs.value_edit
         return container
 
     def _build_angle_form(self) -> QWidget:
-        container = QWidget()
-        form = QFormLayout(container)
-        form.setContentsMargins(4, 4, 4, 4)
-        form.setSpacing(6)
-        form.setLabelAlignment(Qt.AlignRight | Qt.AlignVCenter)
-
-        self._angle_name_edit = QLineEdit()
-        self._angle_name_edit.setPlaceholderText('Angle 1')
-        self._angle_name_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('common.name', 'Name') + ':', self._angle_name_edit)
-
-        self._angle_part_edit = QLineEdit()
-        self._angle_part_edit.setPlaceholderText(
-            self._t('tool_editor.measurements.part_placeholder', '(part name, blank = assembly)'))
-        self._angle_part_edit.editingFinished.connect(self._schedule_commit)
-        form.addRow(self._t('tool_editor.measurements.part', 'Part') + ':', self._angle_part_edit)
-
-        form.addRow('', self._build_xyz_header_row(with_pick=True))
-        center_row = QHBoxLayout()
-        self._angle_center_x_edit = QLineEdit('0')
-        self._angle_center_y_edit = QLineEdit('0')
-        self._angle_center_z_edit = QLineEdit('0')
-        for axis_edit in (self._angle_center_x_edit, self._angle_center_y_edit, self._angle_center_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-        self._angle_center_pick_btn = QPushButton(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._angle_center_pick_btn.setFixedWidth(50)
-        self._angle_center_pick_btn.clicked.connect(self._on_pick_angle_center)
-        center_row.addWidget(self._angle_center_x_edit)
-        center_row.addWidget(self._angle_center_y_edit)
-        center_row.addWidget(self._angle_center_z_edit)
-        center_row.addStretch(1)
-        center_row.addWidget(self._angle_center_pick_btn)
-        form.addRow(self._t('tool_editor.measurements.center_xyz', 'Center XYZ') + ':', center_row)
-
-        form.addRow('', self._build_xyz_header_row(with_pick=True))
-        start_row = QHBoxLayout()
-        self._angle_start_x_edit = QLineEdit('0')
-        self._angle_start_y_edit = QLineEdit('0')
-        self._angle_start_z_edit = QLineEdit('0')
-        for axis_edit in (self._angle_start_x_edit, self._angle_start_y_edit, self._angle_start_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-        self._angle_start_pick_btn = QPushButton(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._angle_start_pick_btn.setFixedWidth(50)
-        self._angle_start_pick_btn.clicked.connect(self._on_pick_angle_start)
-        start_row.addWidget(self._angle_start_x_edit)
-        start_row.addWidget(self._angle_start_y_edit)
-        start_row.addWidget(self._angle_start_z_edit)
-        start_row.addStretch(1)
-        start_row.addWidget(self._angle_start_pick_btn)
-        form.addRow(self._t('tool_editor.measurements.start_xyz', 'Start XYZ') + ':', start_row)
-
-        form.addRow('', self._build_xyz_header_row(with_pick=True))
-        end_row = QHBoxLayout()
-        self._angle_end_x_edit = QLineEdit('0')
-        self._angle_end_y_edit = QLineEdit('0')
-        self._angle_end_z_edit = QLineEdit('0')
-        for axis_edit in (self._angle_end_x_edit, self._angle_end_y_edit, self._angle_end_z_edit):
-            axis_edit.setFixedWidth(56)
-            axis_edit.editingFinished.connect(self._schedule_commit)
-        self._angle_end_pick_btn = QPushButton(self._t('tool_editor.measurements.pick', 'Pick'))
-        self._angle_end_pick_btn.setFixedWidth(50)
-        self._angle_end_pick_btn.clicked.connect(self._on_pick_angle_end)
-        end_row.addWidget(self._angle_end_x_edit)
-        end_row.addWidget(self._angle_end_y_edit)
-        end_row.addWidget(self._angle_end_z_edit)
-        end_row.addStretch(1)
-        end_row.addWidget(self._angle_end_pick_btn)
-        form.addRow(self._t('tool_editor.measurements.end_xyz', 'End XYZ') + ':', end_row)
-
+        container, refs = _build_angle_form_fn(
+            translate=self._t,
+            on_schedule_commit=self._schedule_commit,
+            on_pick_center=self._on_pick_angle_center,
+            on_pick_start=self._on_pick_angle_start,
+            on_pick_end=self._on_pick_angle_end,
+        )
+        self._angle_name_edit = refs.name_edit
+        self._angle_part_edit = refs.part_edit
+        self._angle_center_x_edit = refs.center_x_edit
+        self._angle_center_y_edit = refs.center_y_edit
+        self._angle_center_z_edit = refs.center_z_edit
+        self._angle_center_pick_btn = refs.center_pick_btn
+        self._angle_start_x_edit = refs.start_x_edit
+        self._angle_start_y_edit = refs.start_y_edit
+        self._angle_start_z_edit = refs.start_z_edit
+        self._angle_start_pick_btn = refs.start_pick_btn
+        self._angle_end_x_edit = refs.end_x_edit
+        self._angle_end_y_edit = refs.end_y_edit
+        self._angle_end_z_edit = refs.end_z_edit
+        self._angle_end_pick_btn = refs.end_pick_btn
         return container
 
     def _build_xyz_header_row(self, with_pick: bool, axis_order: list = None) -> QWidget:
-        if axis_order is None:
-            axis_order = ['x', 'y', 'z']
-        
-        row_widget = QWidget()
-        row_layout = QHBoxLayout(row_widget)
-        row_layout.setContentsMargins(0, 0, 0, 0)
-        row_layout.setSpacing(6)
-
-        for axis in axis_order:
-            key = f'tool_editor.measurements.axis_{axis}'
-            fallback = axis.upper()
-            lbl = QLabel(self._t(key, fallback))
-            lbl.setFixedWidth(56)
-            lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-            lbl.setStyleSheet('color: #6b7b8e; font-size: 10px; background: transparent;')
-            row_layout.addWidget(lbl)
-
-        row_layout.addStretch(1)
-        if with_pick:
-            row_layout.addSpacing(50)
-        return row_widget
+        return _build_xyz_header_row_fn(self._t, with_pick=with_pick, axis_order=axis_order)
 
     def _build_measurement_type_picker(self) -> QWidget:
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
-
-        title = QLabel(self._t('tool_editor.measurements.select_type_to_add', 'Select measurement type to add'))
-        title.setStyleSheet('color: #5f7082; font-size: 10.5pt; font-weight: 600; background: transparent;')
-        layout.addWidget(title)
-
-        top_row = QHBoxLayout()
-        top_row.setSpacing(8)
-        bottom_row = QHBoxLayout()
-        bottom_row.setSpacing(8)
-
-        buttons = [
-            (self._t('tool_editor.measurements.type_length', 'Length'), 'length', top_row),
-            (self._t('tool_editor.measurements.type_diameter', 'Diameter'), 'diameter', top_row),
-            (self._t('tool_editor.measurements.type_radius', 'Radius'), 'radius', bottom_row),
-            (self._t('tool_editor.measurements.type_angle', 'Angle'), 'angle', bottom_row),
-        ]
-        for text, kind, row in buttons:
-            btn = QPushButton(text)
-            btn.setProperty('panelActionButton', True)
-            btn.setMinimumHeight(34)
-            btn.clicked.connect(lambda _checked=False, k=kind: self._add_measurement_of_kind(k))
-            row.addWidget(btn, 1)
-
-        layout.addLayout(top_row)
-        layout.addLayout(bottom_row)
-        layout.addStretch(1)
-        return container
+        return _build_measurement_type_picker_fn(
+            translate=self._t,
+            on_kind_clicked=self._add_measurement_of_kind,
+        )
 
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # MEASUREMENT LIST MANAGEMENT
@@ -894,7 +545,7 @@ class MeasurementEditorDialog(QDialog):
 
     @staticmethod
     def _measurement_kind_order() -> tuple[str, ...]:
-        return ('length', 'diameter', 'radius', 'angle')
+        return _measurement_kind_order_fn()
 
     def _hidden_list_for_kind(self, kind: str) -> QListWidget | None:
         return {
@@ -925,15 +576,7 @@ class MeasurementEditorDialog(QDialog):
         return meta if isinstance(meta, dict) else None
 
     def _find_item_by_uid(self, src_list: QListWidget, uid: str) -> tuple[int, QListWidgetItem | None]:
-        uid_str = str(uid or '').strip()
-        if not uid_str:
-            return -1, None
-        for row in range(src_list.count()):
-            item = src_list.item(row)
-            data = dict(item.data(Qt.UserRole) or {})
-            if str(data.get('_uid') or '').strip() == uid_str:
-                return row, item
-        return -1, None
+        return _find_item_by_uid_fn(src_list, uid)
 
     def _clear_current_measurement_refs(self):
         self._current_distance_item = None

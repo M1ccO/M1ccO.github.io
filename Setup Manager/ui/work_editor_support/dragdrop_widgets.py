@@ -5,16 +5,26 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QMimeData, Qt, Signal
-from PySide6.QtGui import QColor, QDrag, QPainter, QPixmap
+from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QAbstractItemView, QListWidget, QPushButton, QWidget
 
 try:
     from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
+    from shared.ui.helpers.dragdrop_helpers import (
+        build_text_drag_ghost,
+        build_widget_drag_ghost,
+        clear_selection_on_blank_click,
+    )
 except ModuleNotFoundError:
     _workspace_root = Path(__file__).resolve().parents[3]
     if str(_workspace_root) not in sys.path:
         sys.path.insert(0, str(_workspace_root))
     from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
+    from shared.ui.helpers.dragdrop_helpers import (
+        build_text_drag_ghost,
+        build_widget_drag_ghost,
+        clear_selection_on_blank_click,
+    )
 
 
 WORK_EDITOR_TOOL_ASSIGNMENT_MIME = "application/x-setup-manager-tool-assignment"
@@ -77,35 +87,14 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
         first_row = indexes[0].row()
         ghost_item = self.item(first_row)
         ghost_widget = self.itemWidget(ghost_item) if ghost_item is not None else None
+        ghost_applied = False
         if isinstance(ghost_widget, QWidget):
             card_widget = ghost_widget.findChild(MiniAssignmentCard)
             preview_widget = card_widget if isinstance(card_widget, QWidget) else ghost_widget
-            grabbed = preview_widget.grab()
-            if not grabbed.isNull():
-                translucent = QPixmap(grabbed.size())
-                translucent.fill(Qt.transparent)
-                painter = QPainter(translucent)
-                painter.setOpacity(0.7)
-                painter.drawPixmap(0, 0, grabbed)
-                painter.end()
-                drag.setPixmap(translucent)
-                drag.setHotSpot(translucent.rect().center())
-        elif payload:
+            ghost_applied = build_widget_drag_ghost(preview_widget, drag)
+        if not ghost_applied and payload:
             text = str(payload[0].get("tool_id") or "").strip()
-            pixmap = QPixmap(220, 40)
-            pixmap.fill(QColor(0, 0, 0, 0))
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.setOpacity(0.75)
-            painter.setBrush(QColor("#f0f6fc"))
-            painter.setPen(QColor("#637282"))
-            painter.drawRoundedRect(1, 1, 218, 38, 6, 6)
-            painter.setOpacity(1.0)
-            painter.setPen(QColor("#22303c"))
-            painter.drawText(10, 4, 200, 32, Qt.AlignVCenter | Qt.TextSingleLine, text)
-            painter.end()
-            drag.setPixmap(pixmap)
-            drag.setHotSpot(pixmap.rect().center())
+            build_text_drag_ghost(text, drag)
 
         drag.exec(Qt.MoveAction)
 
@@ -142,10 +131,7 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
             self.orderChanged.emit()
 
     def mousePressEvent(self, event):
-        point = event.position().toPoint() if hasattr(event, "position") else event.pos()
-        if self.itemAt(point) is None:
-            self.clearSelection()
-            self.setCurrentRow(-1)
+        clear_selection_on_blank_click(self, event)
         super().mousePressEvent(event)
 
 

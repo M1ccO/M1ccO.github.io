@@ -3,8 +3,7 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QDate, QEvent, Qt, QSize, Signal
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPalette, QPixmap
-from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtGui import QColor, QFont, QIcon, QPalette
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDateEdit,
@@ -28,77 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import ICONS_DIR, TOOL_LIBRARY_TOOL_ICONS_DIR
-
-
-def _svg_icon(path: Path, size: int = 24) -> QIcon:
-    renderer = QSvgRenderer(str(path))
-    if not renderer.isValid():
-        return QIcon()
-    pixmap = QPixmap(size, size)
-    pixmap.fill(Qt.transparent)
-    painter = QPainter(pixmap)
-    renderer.render(painter)
-    painter.end()
-    return QIcon(pixmap)
-
-
-def _svg_icon(path: Path, size: int = 24) -> QIcon:
-    renderer = QSvgRenderer(str(path))
-    if not renderer.isValid():
-        return QIcon()
-    pixmap = QPixmap(size, size)
-    pixmap.fill(Qt.transparent)
-    painter = QPainter(pixmap)
-    renderer.render(painter)
-    painter.end()
-    return QIcon(pixmap)
-
-
-def _toolbar_icon_with_svg_render_fallback(name: str, size: int = 28) -> QIcon:
-    """Load toolbar icons robustly even when Qt SVG image plugin is unavailable."""
-    svg_candidates = [
-        ICONS_DIR / 'tools' / f'{name}.svg',
-        TOOL_LIBRARY_TOOL_ICONS_DIR / 'tools' / f'{name}.svg',
-    ]
-    for svg_path in svg_candidates:
-        if not svg_path.exists():
-            continue
-        icon = QIcon(str(svg_path))
-        if not icon.isNull():
-            return icon
-        renderer = QSvgRenderer(str(svg_path))
-        if renderer.isValid():
-            pixmap = QPixmap(size, size)
-            pixmap.fill(Qt.transparent)
-            painter = QPainter(pixmap)
-            renderer.render(painter)
-            painter.end()
-            return QIcon(pixmap)
-    png_candidates = [
-        ICONS_DIR / 'tools' / f'{name}.png',
-        TOOL_LIBRARY_TOOL_ICONS_DIR / 'tools' / f'{name}.png',
-    ]
-    for png_path in png_candidates:
-        if png_path.exists():
-            return QIcon(str(png_path))
-    return QIcon()
-
-
-def _toolbar_icon(name: str) -> QIcon:
-    svg = ICONS_DIR / 'tools' / f'{name}.svg'
-    if svg.exists():
-        return _svg_icon(svg)
-    shared_svg = TOOL_LIBRARY_TOOL_ICONS_DIR / f'{name}.svg'
-    if shared_svg.exists():
-        return _svg_icon(shared_svg)
-    png = ICONS_DIR / 'tools' / f'{name}.png'
-    if png.exists():
-        return QIcon(str(png))
-    shared_png = TOOL_LIBRARY_TOOL_ICONS_DIR / f'{name}.png'
-    if shared_png.exists():
-        return QIcon(str(shared_png))
-    return QIcon()
+from ui.icon_helpers import toolbar_icon_with_svg_render_fallback as _toolbar_icon_with_svg_render_fallback
 
 
 _SORT_VALUE_ROLE = Qt.UserRole + 1

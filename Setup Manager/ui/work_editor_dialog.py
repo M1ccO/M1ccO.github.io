@@ -101,6 +101,12 @@ from config import (
     TOOL_LIBRARY_PROJECT_DIR,
     TOOL_LIBRARY_SERVER_NAME,
 )
+from ui.work_editor_support.dialog_lifecycle import (
+    apply_secondary_button_theme,
+    finalize_ui,
+    setup_button_row,
+    setup_tabs,
+)
 from ui.widgets.common import apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
 try:
     from shared.ui.helpers.editor_helpers import (
@@ -194,31 +200,14 @@ class WorkEditorDialog(QDialog):
             tool_library_exe_candidates=TOOL_LIBRARY_EXE_CANDIDATES,
         )
 
-        self.tabs = QTabWidget(self)
-
-        self.general_tab = QWidget()
-        self.zeros_tab = QWidget()
-        self.tools_tab = QWidget()
-        self.notes_tab = QWidget()
-
-        self.tabs.addTab(self.general_tab, self._t("work_editor.tab.general", "General"))
-        self.tabs.addTab(self.zeros_tab, self._t("work_editor.tab.zero_points", "Zero Points"))
-        self.tabs.addTab(self.tools_tab, self._t("work_editor.tab.tool_ids", "Tool IDs"))
-        self.tabs.addTab(self.notes_tab, self._t("work_editor.tab.notes", "Notes"))
+        setup_tabs(self)
 
         self._build_general_tab()
         self._build_zeros_tab()
         self._build_tools_tab()
         self._build_notes_tab()
 
-        root = QVBoxLayout(self)
-        root.addWidget(self.tabs, 1)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self._on_save)
-        buttons.rejected.connect(self.reject)
-        self._dialog_buttons = buttons
-        root.addWidget(buttons)
+        setup_button_row(self)
 
         # Keep dialog actions visually consistent with secondary gray buttons.
         self._set_secondary_button_theme()
@@ -226,16 +215,7 @@ class WorkEditorDialog(QDialog):
         self._load_external_refs()
         self._load_work()
 
-        # Force re-polish now that all combos are in the full widget hierarchy so
-        # parent selectors like QDialog[workEditorDialog="true"] resolve correctly.
-        for _combo in self.findChildren(QComboBox):
-            if _combo.property("toolLibraryCombo"):
-                _combo.style().unpolish(_combo)
-                _combo.style().polish(_combo)
-
-        self._ensure_selector_callback_server()
-        self.destroyed.connect(lambda *_args: self._shutdown_selector_bridge())
-        QApplication.instance().installEventFilter(self)
+        finalize_ui(self)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.ToolTip and isinstance(obj, QWidget):
@@ -367,22 +347,7 @@ class WorkEditorDialog(QDialog):
         return base
 
     def _set_secondary_button_theme(self):
-        save_btn = None
-        cancel_btn = None
-        if hasattr(self, "_dialog_buttons"):
-            save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
-            cancel_btn = self._dialog_buttons.button(QDialogButtonBox.Cancel)
-            if save_btn is not None:
-                save_btn.setText(self._t("common.save", "Save"))
-            if cancel_btn is not None:
-                cancel_btn.setText(self._t("common.cancel", "Cancel"))
-        for btn in self.findChildren(QPushButton):
-            btn.setProperty("secondaryAction", False)
-            btn.setProperty("panelActionButton", True)
-            if btn is save_btn:
-                btn.setProperty("primaryAction", True)
-            btn.style().unpolish(btn)
-            btn.style().polish(btn)
+        apply_secondary_button_theme(self)
 
     def _apply_coord_combo_popup_style(self, combo: QComboBox):
         apply_tool_library_combo_style(combo)
