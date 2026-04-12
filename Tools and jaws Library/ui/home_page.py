@@ -26,11 +26,15 @@ from ui.tool_catalog_delegate import (
     ToolCatalogDelegate, tool_icon_for_type,
     ROLE_TOOL_ID, ROLE_TOOL_DATA, ROLE_TOOL_ICON, ROLE_TOOL_UID,
 )
+from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 from shared.editor_helpers import (
     apply_secondary_button_theme,
     ask_multi_edit_mode,
+    create_titled_section,
     create_dialog_buttons,
     setup_editor_dialog,
+    style_panel_action_button,
+    style_move_arrow_button,
 )
 from shared.mini_assignment_card import MiniAssignmentCard
 
@@ -38,24 +42,20 @@ from ui.stl_preview import StlPreviewWidget
 from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
+    normalize_selector_bucket,
     normalize_selector_mode,
+    selector_assignments_for_target,
+    selector_bucket_map,
 )
 from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
-from ui.home_page_support import (
-    SelectorAssignmentState,
-    sync_selector_assignment_order,
-    sync_selector_card_selection_states,
-    update_selector_assignment_buttons,
-    add_three_box_row as build_three_box_row,
-    add_two_box_row as build_two_box_row,
-    apply_tool_detail_layout_rules,
-    build_catalog_list_panel,
-    build_bottom_bars,
-    build_detail_field as build_detail_field_widget,
-    build_filter_toolbar,
-    build_components_panel,
-    build_preview_panel,
-    build_selector_card,
+from ui.home_page_support import apply_tool_detail_layout_rules
+from ui.shared.selector_panel_builders import (
+    apply_selector_icon_button,
+    build_selector_actions_row,
+    build_selector_card_shell,
+    build_selector_hint_label,
+    build_selector_info_header,
+    build_selector_toggle_button,
 )
 
 
@@ -369,9 +369,6 @@ class HomePage(QWidget):
         self._selector_assigned_tools: list[dict] = []
         self._selector_assignments_by_target: dict[str, list[dict]] = {}
         self._selector_saved_details_hidden = True
-        self._selector_assignment_state = SelectorAssignmentState(
-            normalize_head=self._normalize_selector_head_value,
-        )
         self._build_ui()
         self._warmup_preview_engine()
         self.refresh_list()
@@ -422,23 +419,6 @@ class HomePage(QWidget):
         """
         self.tool_list.viewport().update()
 
-    def _build_type_filter_widget(self) -> QComboBox:
-        combo = QComboBox()
-        combo.setObjectName('topTypeFilter')
-        self.type_filter = combo
-        self._build_tool_type_filter_items()
-        combo.setMaxVisibleItems(8)
-        type_popup_view = combo.view()
-        type_popup_view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-        type_popup_view.setMinimumHeight(0)
-        type_popup_view.setMaximumHeight(8 * 40)
-        type_popup_view.window().setMinimumHeight(0)
-        type_popup_view.window().setMaximumHeight(8 * 40 + 8)
-        combo.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        combo.setMinimumWidth(60)
-        combo.currentIndexChanged.connect(self._on_type_changed)
-        return combo
-
     # ==============================
     # Home Page Layout
     # ==============================
@@ -448,7 +428,115 @@ class HomePage(QWidget):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(10)
 
-        filter_frame = build_filter_toolbar(self, tool_icons_dir=TOOL_ICONS_DIR)
+        filter_frame = QFrame()
+        filter_frame.setObjectName('filterFrame')
+        filter_frame.setProperty('card', True)
+        self.filter_layout = QHBoxLayout(filter_frame)
+        # Left margin must clear the absolutely-positioned rail_title label in
+        # main_window, which starts at x=10 on the central widget and can extend
+        # ~200px for long Finnish titles, bleeding ~90px into the stack area.
+        # 108px ensures the first toolbar button is always visible.
+        self.filter_layout.setContentsMargins(108, 6, 0, 6)
+        self.filter_layout.setSpacing(4)
+
+        self.toolbar_title_label = QLabel(self.page_title)
+        self.toolbar_title_label.setProperty('pageTitle', True)
+        self.toolbar_title_label.setStyleSheet('padding-left: 0px; padding-right: 20px;')
+
+        self.search_toggle = QToolButton()
+        self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
+        self.close_icon = QIcon(str(TOOL_ICONS_DIR / 'close_icon.svg'))
+        self.search_toggle.setIcon(self.search_icon)
+        self.search_toggle.setIconSize(QSize(28, 28))
+        self.search_toggle.setCheckable(True)
+        self.search_toggle.setAutoRaise(True)
+        self.search_toggle.setProperty('topBarIconButton', True)
+        self.search_toggle.setFixedSize(36, 36)
+        self.search_toggle.clicked.connect(self._toggle_search)
+
+        # details toggle as icon-only toolbutton (tooltip SVG) - moved next to search
+        self.toggle_details_btn = QToolButton()
+        self.toggle_details_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'tooltip.svg')))
+        self.toggle_details_btn.setIconSize(QSize(28, 28))
+        self.toggle_details_btn.setAutoRaise(True)
+        self.toggle_details_btn.setProperty('topBarIconButton', True)
+        self.toggle_details_btn.setProperty('secondaryAction', True)
+        self.toggle_details_btn.setFixedSize(36, 36)
+        self.toggle_details_btn.clicked.connect(self.toggle_details)
+
+        # actual search entry, hidden initially
+        self.search = QLineEdit()
+        self.search.setPlaceholderText(self._t('tool_library.search.placeholder', 'Tool ID, description, holder or cutting code'))
+        self.search.textChanged.connect(self.refresh_list)
+        self.search.setVisible(False)
+        # restrict search width so it doesn't force layout centering
+        from PySide6.QtWidgets import QSizePolicy
+        self.search.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.search.setMaximumWidth(300)
+
+        # type filter icon (initially no active filter)
+        self.filter_icon = QToolButton()
+        self.filter_icon.setIcon(QIcon(str(TOOL_ICONS_DIR / 'filter_arrow_right.svg')))
+        # match search button size
+        self.filter_icon.setIconSize(QSize(28, 28))
+        self.filter_icon.setAutoRaise(True)
+        self.filter_icon.setProperty('topBarIconButton', True)
+        self.filter_icon.setFixedSize(36, 36)
+        self.filter_icon.clicked.connect(self._clear_filter)
+
+        self.type_filter = QComboBox()
+        self.type_filter.setObjectName('topTypeFilter')
+        self._build_tool_type_filter_items()
+        self.type_filter.setMaxVisibleItems(8)
+        type_popup_view = self.type_filter.view()
+        type_popup_view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        type_popup_view.setMinimumHeight(0)
+        type_popup_view.setMaximumHeight(8 * 40)
+        type_popup_view.window().setMinimumHeight(0)
+        type_popup_view.window().setMaximumHeight(8 * 40 + 8)
+        # make the combo just wide enough for its content, don't stretch
+        from PySide6.QtWidgets import QSizePolicy
+        self.type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        self.type_filter.setMinimumWidth(60)  # kept narrow from stylesheet
+        self.type_filter.currentIndexChanged.connect(self._on_type_changed)
+        add_shadow(self.type_filter)
+        # give property hover tracking and monitor the popup view
+        self.type_filter.installEventFilter(self)
+        self.type_filter.view().installEventFilter(self)
+        apply_shared_dropdown_style(self.type_filter)
+
+        self.preview_window_btn = QToolButton()
+        self.preview_window_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / '3d_icon.svg')))
+        self.preview_window_btn.setIconSize(QSize(28, 28))
+        self.preview_window_btn.setAutoRaise(True)
+        self.preview_window_btn.setProperty('topBarIconButton', True)
+        self.preview_window_btn.setCheckable(True)
+        self.preview_window_btn.setToolTip(self._t('tool_library.preview.toggle', 'Toggle detached 3D preview'))
+        self.preview_window_btn.setFixedSize(36, 36)
+        self.preview_window_btn.clicked.connect(self.toggle_preview_window)
+
+        # right-side details header that stays aligned with top-bar icons
+        self.detail_header_container = QWidget()
+        detail_top = QHBoxLayout(self.detail_header_container)
+        detail_top.setContentsMargins(0, 0, 0, 0)
+        detail_top.setSpacing(6)
+        self.detail_section_label = QLabel(self._t('tool_library.section.tool_details', 'Tool details'))
+        self.detail_section_label.setProperty('detailSectionTitle', True)
+        self.detail_section_label.setStyleSheet('padding: 0 2px 0 0; font-size: 18px;')
+        detail_top.addWidget(self.detail_section_label)
+
+        detail_top.addStretch(1)
+
+        self.detail_close_btn = QToolButton()
+        self.detail_close_btn.setIcon(self.close_icon)
+        self.detail_close_btn.setIconSize(QSize(20, 20))
+        self.detail_close_btn.setAutoRaise(True)
+        self.detail_close_btn.setProperty('topBarIconButton', True)
+        self.detail_close_btn.setFixedSize(32, 32)
+        self.detail_close_btn.clicked.connect(self.hide_details)
+        detail_top.addWidget(self.detail_close_btn)
+
+        self._rebuild_filter_row()
         root.addWidget(filter_frame)
 
         self.splitter = QSplitter(Qt.Horizontal)
@@ -456,12 +544,38 @@ class HomePage(QWidget):
         self.splitter.setChildrenCollapsible(False)
 
         # catalogue and detail panes
-        left_card = build_catalog_list_panel(
-            self,
-            tool_list_cls=_ToolCatalogListView,
-            tool_model_cls=QStandardItemModel,
-            tool_delegate_cls=ToolCatalogDelegate,
+        left_card = QFrame()
+        left_card.setProperty('catalogShell', True)
+        left_layout = QVBoxLayout(left_card)
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(10)
+
+        self.tool_list = _ToolCatalogListView()
+        self.tool_list.setObjectName('toolCatalog')
+        self.tool_list.setVerticalScrollMode(QListView.ScrollPerPixel)
+        self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.tool_list.setSelectionMode(QListView.ExtendedSelection)
+        self.tool_list.setDragEnabled(True)
+        self.tool_list.setMouseTracking(True)   # needed for hover in delegate
+        self.tool_list.setStyleSheet(
+            "QListView#toolCatalog { border: none; outline: none; padding: 8px; }"
+            " QListView#toolCatalog::item { background: transparent; border: none; }"
         )
+        self.tool_list.setSpacing(4)
+        self._tool_model = QStandardItemModel(self)
+        self.tool_list.setModel(self._tool_model)
+        self._tool_delegate = ToolCatalogDelegate(
+            parent=self.tool_list,
+            view_mode=self.view_mode,
+            translate=self._t,
+        )
+        self.tool_list.setItemDelegate(self._tool_delegate)
+        self.tool_list.selectionModel().currentChanged.connect(self._on_current_changed)
+        self.tool_list.selectionModel().selectionChanged.connect(self._on_multi_selection_changed)
+        self.tool_list.doubleClicked.connect(self._on_double_clicked)
+        self.tool_list.installEventFilter(self)
+        self.tool_list.viewport().installEventFilter(self)
+        left_layout.addWidget(self.tool_list, 1)
         self.splitter.addWidget(left_card)
 
         self.detail_container = QWidget()
@@ -495,13 +609,7 @@ class HomePage(QWidget):
         detail_card_layout.addWidget(self.detail_scroll, 1)
         dc_layout.addWidget(self.detail_card, 1)
 
-        build_selector_card(
-            self,
-            dc_layout=dc_layout,
-            assignment_list_cls=_ToolAssignmentListWidget,
-            remove_drop_button_cls=_SelectorToolRemoveDropButton,
-            tool_icons_dir=TOOL_ICONS_DIR,
-        )
+        self._build_selector_card(dc_layout)
 
         self.splitter.addWidget(self.detail_container)
         root.addWidget(self.splitter, 1)
@@ -510,7 +618,207 @@ class HomePage(QWidget):
         self.detail_header_container.hide()
         self.splitter.setSizes([1, 0])
 
-        build_bottom_bars(self, root=root)
+        self._build_bottom_bars(root)
+
+
+    def _build_selector_card(self, dc_layout: QVBoxLayout) -> None:
+        """Build the selector context card shown when assigning tools externally."""
+        self.selector_card, self.selector_scroll, self.selector_panel, selector_layout = build_selector_card_shell(spacing=8)
+        selector_card_layout = QVBoxLayout(self.selector_card)
+        selector_card_layout.setContentsMargins(0, 0, 0, 0)
+        selector_card_layout.setSpacing(0)
+
+        # ── Selector target header (mirrors detail panel header treatment) ──
+        (
+            self.selector_info_header,
+            self.selector_header_title_label,
+            self.selector_spindle_value_label,
+            self.selector_head_value_label,
+        ) = build_selector_info_header(
+            title_text=self._t('tool_library.selector.header_title', 'Tool Selector'),
+            left_badge_text='SP1',
+            right_badge_text='HEAD1',
+        )
+        selector_layout.addWidget(self.selector_info_header, 0)
+
+        # ── DETAILS + SP toggle row (same level, symmetric widths) ──
+        ctx_row = QHBoxLayout()
+        ctx_row.setContentsMargins(0, 0, 0, 0)
+        ctx_row.setSpacing(10)
+        ctx_row.addStretch(1)
+
+        self.selector_toggle_btn = build_selector_toggle_button(
+            text=self._t('tool_library.selector.mode_details', 'DETAILS'),
+            on_clicked=self._on_selector_toggle_clicked,
+        )
+        ctx_row.addWidget(self.selector_toggle_btn, 0)
+
+        self.selector_spindle_btn = QPushButton('SP1')
+        self.selector_spindle_btn.setProperty('panelActionButton', True)
+        self.selector_spindle_btn.setCheckable(True)
+        self.selector_spindle_btn.setMinimumWidth(120)
+        self.selector_spindle_btn.setMaximumWidth(140)
+        self.selector_spindle_btn.setFixedHeight(30)
+        self.selector_spindle_btn.setProperty('spindle', 'main')
+        self.selector_spindle_btn.clicked.connect(self._toggle_selector_spindle)
+        style_panel_action_button(self.selector_spindle_btn)
+        ctx_row.addWidget(self.selector_spindle_btn, 0)
+        ctx_row.addStretch(1)
+        selector_layout.addLayout(ctx_row)
+
+        self.selector_drop_hint = build_selector_hint_label(
+            text=self._t(
+                'tool_library.selector.drop_hint',
+                'Drag tools from the catalog to this list and reorder them by dragging.',
+            ),
+            multiline=True,
+        )
+        selector_layout.addWidget(self.selector_drop_hint, 0)
+
+        self.selector_assignment_list = _ToolAssignmentListWidget()
+        self.selector_assignment_list.setObjectName('toolIdsOrderList')
+        self.selector_assignment_list.setStyleSheet(
+            '#toolIdsOrderList { background: transparent; border: none; }'
+            '#toolIdsOrderList::viewport { background: transparent; border: none; }'
+            '#toolIdsOrderList::item { background: transparent; border: none; }'
+        )
+        self.selector_assignment_list.externalToolsDropped.connect(self._on_selector_tools_dropped)
+        self.selector_assignment_list.orderChanged.connect(self._sync_selector_assignment_order)
+        self.selector_assignment_list.itemSelectionChanged.connect(self._update_selector_assignment_buttons)
+        self.selector_assignment_list.itemSelectionChanged.connect(self._sync_selector_card_selection_states)
+
+        self.selector_assignments_frame = create_titled_section(self._selector_assignments_section_title())
+        self.selector_assignments_frame.setProperty('selectorAssignmentsFrame', True)
+        self.selector_assignments_frame.setProperty('toolIdsPanel', True)
+        self.selector_assignments_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        selector_assignments_layout = QVBoxLayout(self.selector_assignments_frame)
+        selector_assignments_layout.setContentsMargins(8, 10, 8, 8)
+        selector_assignments_layout.setSpacing(0)
+        selector_assignments_layout.addWidget(self.selector_assignment_list, 1)
+        selector_layout.addWidget(self.selector_assignments_frame, 1)
+
+        # Icon button row (matches Work Editor tool-IDs pattern).
+        selector_actions = build_selector_actions_row(spacing=4)
+
+        selector_actions.addStretch(1)
+        self.selector_move_up_btn = QPushButton('\u25B2')
+        style_move_arrow_button(self.selector_move_up_btn, '\u25B2',
+                                self._t('tool_library.selector.move_up', 'Move Up'))
+        self.selector_move_up_btn.clicked.connect(self._move_selector_up)
+        selector_actions.addWidget(self.selector_move_up_btn)
+
+        self.selector_move_down_btn = QPushButton('\u25BC')
+        style_move_arrow_button(self.selector_move_down_btn, '\u25BC',
+                                self._t('tool_library.selector.move_down', 'Move Down'))
+        self.selector_move_down_btn.clicked.connect(self._move_selector_down)
+        selector_actions.addWidget(self.selector_move_down_btn)
+
+        self.selector_remove_btn = _SelectorToolRemoveDropButton()
+        apply_selector_icon_button(
+            self.selector_remove_btn,
+            icon_path=TOOL_ICONS_DIR / 'delete.svg',
+            tooltip=self._t('tool_library.selector.remove', 'Remove'),
+            danger=True,
+        )
+        self.selector_remove_btn.clicked.connect(self._remove_selector_assignment)
+        self.selector_remove_btn.toolsDropped.connect(self._remove_selector_assignments_by_keys)
+        selector_actions.addWidget(self.selector_remove_btn)
+
+        self.selector_comment_btn = QPushButton()
+        apply_selector_icon_button(
+            self.selector_comment_btn,
+            icon_path=TOOL_ICONS_DIR / 'comment.svg',
+            tooltip=self._t('tool_library.selector.add_comment', 'Add Comment'),
+        )
+        self.selector_comment_btn.clicked.connect(self._add_selector_comment)
+        selector_actions.addWidget(self.selector_comment_btn)
+
+        self.selector_delete_comment_btn = QPushButton()
+        apply_selector_icon_button(
+            self.selector_delete_comment_btn,
+            icon_path=TOOL_ICONS_DIR / 'comment_disable.svg',
+            tooltip=self._t('tool_library.selector.delete_comment', 'Delete Comment'),
+        )
+        self.selector_delete_comment_btn.clicked.connect(self._delete_selector_comment)
+        self.selector_delete_comment_btn.setVisible(False)
+        selector_actions.addWidget(self.selector_delete_comment_btn)
+
+        selector_actions.addStretch(1)
+        selector_layout.addLayout(selector_actions)
+        self.selector_scroll.setWidget(self.selector_panel)
+        selector_card_layout.addWidget(self.selector_scroll, 1)
+        dc_layout.addWidget(self.selector_card, 1)
+
+    def _build_bottom_bars(self, root: QVBoxLayout) -> None:
+        """Build normal and selector-mode bottom action bars."""
+        self.button_bar = QFrame()
+        self.button_bar.setProperty('bottomBar', True)
+        button_layout = QHBoxLayout(self.button_bar)
+        button_layout.setContentsMargins(10, 8, 10, 8)
+        button_layout.setSpacing(8)
+
+        self.copy_btn = QPushButton(self._t('tool_library.action.copy_tool', 'COPY TOOL'))
+        self.copy_btn.setProperty('panelActionButton', True)
+        self.copy_btn.clicked.connect(self.copy_tool)
+        self.edit_btn = QPushButton(self._t('tool_library.action.edit_tool', 'EDIT TOOL'))
+        self.edit_btn.setProperty('panelActionButton', True)
+        self.edit_btn.clicked.connect(self.edit_tool)
+        self.delete_btn = QPushButton(self._t('tool_library.action.delete_tool', 'DELETE TOOL'))
+        self.delete_btn.setProperty('panelActionButton', True)
+        self.delete_btn.setProperty('dangerAction', True)
+        self.delete_btn.clicked.connect(self.delete_tool)
+        self.add_btn = QPushButton(self._t('tool_library.action.add_tool', 'ADD TOOL'))
+        self.add_btn.setProperty('panelActionButton', True)
+        self.add_btn.setProperty('primaryAction', True)
+        self.add_btn.clicked.connect(self.add_tool)
+
+        self.module_switch_label = QLabel(self._t('tool_library.module.switch_to', 'Switch to'))
+        self.module_switch_label.setProperty('pageSubtitle', True)
+        self.module_toggle_btn = QPushButton(self._t('tool_library.module.jaws', 'JAWS'))
+        self.module_toggle_btn.setProperty('panelActionButton', True)
+        self.module_toggle_btn.setFixedHeight(28)
+        self.module_toggle_btn.clicked.connect(self._on_module_switch_clicked)
+
+        button_layout.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        button_layout.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        button_layout.addStretch(1)
+        self.selection_count_label = QLabel('')
+        self.selection_count_label.setProperty('detailHint', True)
+        self.selection_count_label.setStyleSheet('background: transparent; border: none;')
+        self.selection_count_label.hide()
+        button_layout.addWidget(self.selection_count_label, 0, Qt.AlignBottom)
+        button_layout.addWidget(self.add_btn)
+        button_layout.addWidget(self.edit_btn)
+        button_layout.addWidget(self.delete_btn)
+        button_layout.addWidget(self.copy_btn)
+        root.addWidget(self.button_bar)
+
+        # ── Selector bottom bar (VALMIS / PERUUTA) — shown in selector mode ──
+        self.selector_bottom_bar = QFrame()
+        self.selector_bottom_bar.setProperty('bottomBar', True)
+        self.selector_bottom_bar.setVisible(False)
+        sel_bar_layout = QHBoxLayout(self.selector_bottom_bar)
+        sel_bar_layout.setContentsMargins(10, 8, 10, 8)
+        sel_bar_layout.setSpacing(8)
+        sel_bar_layout.addStretch(1)
+
+        self.selector_cancel_btn = QPushButton(self._t('tool_library.selector.cancel', 'CANCEL'))
+        self.selector_cancel_btn.setProperty('panelActionButton', True)
+        self.selector_cancel_btn.clicked.connect(self._on_selector_cancel)
+        sel_bar_layout.addWidget(self.selector_cancel_btn)
+
+        self.selector_done_btn = QPushButton(self._t('tool_library.selector.done', 'DONE'))
+        self.selector_done_btn.setProperty('panelActionButton', True)
+        self.selector_done_btn.setProperty('primaryAction', True)
+        self.selector_done_btn.clicked.connect(self._on_selector_done)
+        sel_bar_layout.addWidget(self.selector_done_btn)
+        root.addWidget(self.selector_bottom_bar)
+
+        self._update_selector_assignment_buttons()
+
+    def _on_module_switch_clicked(self):
+        if callable(self._module_switch_callback):
+            self._module_switch_callback()
 
     def set_module_switch_handler(self, callback):
         self._module_switch_callback = callback
@@ -531,11 +839,39 @@ class HomePage(QWidget):
         self._master_filter_active = bool(active) and bool(self._master_filter_ids)
         self.refresh_list()
 
-    def _selector_tool_key(self, tool: dict | None) -> str:
-        return self._selector_assignment_state.selector_tool_key(tool)
+    @staticmethod
+    def _selector_tool_key(tool: dict | None) -> str:
+        if not isinstance(tool, dict):
+            return ''
+        tool_uid = tool.get('tool_uid', tool.get('uid'))
+        if tool_uid is not None and str(tool_uid).strip():
+            return f'uid:{tool_uid}'
+        tool_id = str(tool.get('tool_id') or tool.get('id') or '').strip()
+        return f'id:{tool_id}' if tool_id else ''
 
-    def _normalize_selector_tool(self, tool: dict | None) -> dict | None:
-        return self._selector_assignment_state.normalize_selector_tool(tool)
+    @staticmethod
+    def _normalize_selector_tool(tool: dict | None) -> dict | None:
+        if not isinstance(tool, dict):
+            return None
+        tool_id = str(tool.get('tool_id') or tool.get('id') or '').strip()
+        if not tool_id:
+            return None
+        normalized = {'tool_id': tool_id}
+        tool_uid = tool.get('tool_uid', tool.get('uid'))
+        try:
+            parsed_uid = int(tool_uid) if tool_uid is not None and str(tool_uid).strip() else None
+        except Exception:
+            parsed_uid = None
+        if parsed_uid is not None:
+            normalized['tool_uid'] = parsed_uid
+        for key in ('description', 'tool_type', 'default_pot'):
+            value = str(tool.get(key) or '').strip()
+            if value:
+                normalized[key] = value
+        comment = str(tool.get('comment') or '').strip()
+        if comment:
+            normalized['comment'] = comment
+        return normalized
 
     @staticmethod
     def _selector_spindle_label(spindle: str) -> str:
@@ -582,28 +918,21 @@ class HomePage(QWidget):
         mirrored = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
         return QIcon(mirrored)
 
-    def _selector_target_key(self, head: str, spindle: str) -> str:
-        return self._selector_assignment_state.selector_target_key(head, spindle)
+    @classmethod
+    def _selector_target_key(cls, head: str, spindle: str) -> str:
+        return f"{cls._normalize_selector_head_value(head)}:{cls._normalize_selector_spindle_value(spindle)}"
 
     def _selector_current_target_key(self) -> str:
-        return self._selector_assignment_state.current_target_key(
-            self._selector_head or 'HEAD1',
-            self._current_selector_spindle_value(),
-        )
+        return self._selector_target_key(self._selector_head or 'HEAD1', self._current_selector_spindle_value())
 
     def _store_selector_bucket_for_current_target(self) -> None:
-        self._selector_assignment_state.store_bucket_for_target(
-            self._selector_assignments_by_target,
-            self._selector_assigned_tools,
-            head=self._selector_head or 'HEAD1',
-            spindle=self._current_selector_spindle_value(),
-        )
+        key = self._selector_current_target_key()
+        self._selector_assignments_by_target[key] = [dict(item) for item in self._selector_assigned_tools]
 
     def _load_selector_bucket_for_current_target(self) -> None:
-        self._selector_assigned_tools = self._selector_assignment_state.load_bucket_for_target(
+        self._selector_assigned_tools = selector_assignments_for_target(
             self._selector_assignments_by_target,
-            head=self._selector_head or 'HEAD1',
-            spindle=self._current_selector_spindle_value(),
+            self._selector_current_target_key(),
         )
 
     def _current_selector_spindle_value(self) -> str:
@@ -650,10 +979,56 @@ class HomePage(QWidget):
         rows = sorted({index.row() for index in self.selector_assignment_list.selectedIndexes()})
         return [row for row in rows if 0 <= row < len(self._selector_assigned_tools)]
 
+    def _update_selector_assignment_buttons(self):
+        if not hasattr(self, 'selector_remove_btn'):
+            return
+        selected_rows = self._selector_selected_rows()
+        has_row = bool(selected_rows)
+        single_selected = len(selected_rows) == 1
+        current_row = selected_rows[0] if single_selected else -1
+        has_items = bool(getattr(self, 'selector_assignment_list', None) and self.selector_assignment_list.count() > 0)
+        assignment = None
+        if single_selected and 0 <= current_row < len(self._selector_assigned_tools):
+            assignment = self._selector_assigned_tools[current_row]
+        has_comment = bool(str((assignment or {}).get('comment') or '').strip())
+        self.selector_remove_btn.setEnabled(has_row or has_items)
+        self.selector_move_up_btn.setEnabled(single_selected and current_row > 0)
+        self.selector_move_down_btn.setEnabled(single_selected and current_row < self.selector_assignment_list.count() - 1)
+        self.selector_comment_btn.setEnabled(single_selected)
+        self.selector_delete_comment_btn.setVisible(has_comment)
+        self.selector_delete_comment_btn.setEnabled(has_comment)
+
     def _refresh_selector_assignment_rows(self):
         if not hasattr(self, 'selector_assignment_list'):
             return
         self._rebuild_selector_assignment_list()
+
+    def _sync_selector_card_selection_states(self):
+        if not hasattr(self, 'selector_assignment_list'):
+            return
+        for row in range(self.selector_assignment_list.count()):
+            item = self.selector_assignment_list.item(row)
+            widget = self.selector_assignment_list.itemWidget(item)
+            if isinstance(widget, MiniAssignmentCard):
+                widget.set_selected(item.isSelected())
+                continue
+            card = widget.findChild(MiniAssignmentCard) if isinstance(widget, QWidget) else None
+            if isinstance(card, MiniAssignmentCard):
+                card.set_selected(item.isSelected())
+
+    def _sync_selector_assignment_order(self):
+        if not hasattr(self, 'selector_assignment_list'):
+            return
+        ordered: list[dict] = []
+        for row in range(self.selector_assignment_list.count()):
+            item = self.selector_assignment_list.item(row)
+            assignment = item.data(Qt.UserRole)
+            normalized = self._normalize_selector_tool(assignment)
+            if normalized is not None:
+                ordered.append(normalized)
+        self._selector_assigned_tools = ordered
+        self._refresh_selector_assignment_rows()
+        self._update_selector_assignment_buttons()
 
     def _rebuild_selector_assignment_list(self):
         if not hasattr(self, 'selector_assignment_list'):
@@ -709,9 +1084,121 @@ class HomePage(QWidget):
                     item.setSelected(True)
         if current >= 0 and current < self.selector_assignment_list.count():
             self.selector_assignment_list.setCurrentRow(current)
-        sync_selector_card_selection_states(self)
-        update_selector_assignment_buttons(self)
+        self._sync_selector_card_selection_states()
+        self._update_selector_assignment_buttons()
 
+    def _on_selector_tools_dropped(self, dropped_items: list, insert_row: int):
+        if not isinstance(dropped_items, list):
+            return
+
+        existing_keys = {
+            self._selector_tool_key(item)
+            for item in self._selector_assigned_tools
+            if self._selector_tool_key(item)
+        }
+        insert_at = insert_row if isinstance(insert_row, int) and insert_row >= 0 else len(self._selector_assigned_tools)
+        insert_at = min(insert_at, len(self._selector_assigned_tools))
+        added = False
+        for tool in dropped_items:
+            normalized = self._normalize_selector_tool(tool)
+            if normalized is None:
+                continue
+            key = self._selector_tool_key(normalized)
+            if not key or key in existing_keys:
+                continue
+            self._selector_assigned_tools.insert(insert_at, normalized)
+            existing_keys.add(key)
+            insert_at += 1
+            added = True
+
+        if added:
+            self._rebuild_selector_assignment_list()
+            self.selector_assignment_list.setCurrentRow(min(insert_at - 1, self.selector_assignment_list.count() - 1))
+
+    def _remove_selector_assignment(self):
+        rows = self._selector_selected_rows()
+        if not rows:
+            return
+        for row in reversed(rows):
+            if 0 <= row < len(self._selector_assigned_tools):
+                self._selector_assigned_tools.pop(row)
+        self._rebuild_selector_assignment_list()
+        if self.selector_assignment_list.count() > 0:
+            self.selector_assignment_list.setCurrentRow(min(rows[0], self.selector_assignment_list.count() - 1))
+
+    def _remove_selector_assignments_by_keys(self, tool_keys: list[tuple[str, str | None]]):
+        if not tool_keys:
+            return
+        target_counts: dict[tuple[str, str | None], int] = {}
+        for key in tool_keys:
+            target_counts[key] = target_counts.get(key, 0) + 1
+        remaining: list[dict] = []
+        for assignment in self._selector_assigned_tools:
+            tool_id = str(assignment.get('tool_id') or '').strip()
+            tool_uid_raw = assignment.get('tool_uid')
+            tool_uid = str(tool_uid_raw).strip() if tool_uid_raw is not None and str(tool_uid_raw).strip() else None
+            key = (tool_id, tool_uid)
+            if tool_id and target_counts.get(key, 0) > 0:
+                target_counts[key] -= 1
+                continue
+            remaining.append(assignment)
+        if len(remaining) != len(self._selector_assigned_tools):
+            self._selector_assigned_tools = remaining
+            self._rebuild_selector_assignment_list()
+
+    def _move_selector_up(self):
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
+        if row <= 0 or row >= len(self._selector_assigned_tools):
+            return
+        self._selector_assigned_tools[row - 1], self._selector_assigned_tools[row] = (
+            self._selector_assigned_tools[row], self._selector_assigned_tools[row - 1])
+        self._rebuild_selector_assignment_list()
+        self.selector_assignment_list.setCurrentRow(row - 1)
+
+    def _move_selector_down(self):
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
+        if row < 0 or row >= len(self._selector_assigned_tools) - 1:
+            return
+        self._selector_assigned_tools[row], self._selector_assigned_tools[row + 1] = (
+            self._selector_assigned_tools[row + 1], self._selector_assigned_tools[row])
+        self._rebuild_selector_assignment_list()
+        self.selector_assignment_list.setCurrentRow(row + 1)
+
+    def _add_selector_comment(self):
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
+        if row < 0 or row >= len(self._selector_assigned_tools):
+            return
+        current = str(self._selector_assigned_tools[row].get('comment') or '').strip()
+        from PySide6.QtWidgets import QInputDialog
+        text, ok = QInputDialog.getText(
+            self, self._t('tool_library.selector.add_comment', 'Add Comment'),
+            self._t('tool_library.selector.comment_prompt', 'Comment:'),
+            text=current,
+        )
+        if ok:
+            self._selector_assigned_tools[row]['comment'] = text.strip()
+            self._rebuild_selector_assignment_list()
+            self.selector_assignment_list.setCurrentRow(row)
+
+    def _delete_selector_comment(self):
+        selected_rows = self._selector_selected_rows()
+        if len(selected_rows) != 1:
+            return
+        row = selected_rows[0]
+        if row < 0 or row >= len(self._selector_assigned_tools):
+            return
+        self._selector_assigned_tools[row].pop('comment', None)
+        self._rebuild_selector_assignment_list()
+        self.selector_assignment_list.setCurrentRow(row)
 
     def _inline_edit_selector_row(self, row: int):
         if row < 0 or row >= len(self._selector_assigned_tools):
@@ -750,6 +1237,28 @@ class HomePage(QWidget):
         self._update_selector_assignments_section_title()
         self.refresh_list()
         self._rebuild_selector_assignment_list()
+
+    def _on_selector_cancel(self):
+        """Cancel selector — notify main window to clear the session."""
+        main_win = self.window()
+        if hasattr(main_win, '_clear_selector_session'):
+            main_win._clear_selector_session()
+        if hasattr(main_win, '_back_to_setup_manager'):
+            main_win._back_to_setup_manager()
+
+    def _on_selector_done(self):
+        """Send selection — delegate to main window."""
+        main_win = self.window()
+        if hasattr(main_win, '_send_selector_selection'):
+            main_win._send_selector_selection()
+
+    def _on_selector_toggle_clicked(self):
+        if not self._selector_active:
+            return
+        if self.selector_toggle_btn.isChecked():
+            self._set_selector_panel_mode('selector')
+        else:
+            self._set_selector_panel_mode('details')
 
     def _set_selector_panel_mode(self, mode: str):
         if not self._selector_active:
@@ -801,6 +1310,8 @@ class HomePage(QWidget):
     ) -> None:
         was_active = self._selector_active
         self._selector_active = bool(active)
+        self._selector_head = self._normalize_selector_head_value(str(head or '').strip().upper())
+        self._set_selector_spindle_value(str(spindle or '').strip().lower())
         self.selector_toggle_btn.setVisible(self._selector_active)
         self.toggle_details_btn.setEnabled(not self._selector_active)
 
@@ -811,16 +1322,21 @@ class HomePage(QWidget):
         if self._selector_active:
             if not was_active:
                 self._selector_saved_details_hidden = self._details_hidden
-            context = self._selector_assignment_state.prepare_context(
-                head=str(head or '').strip().upper(),
-                spindle=str(spindle or '').strip().lower(),
-                initial_assignments=initial_assignments,
-                initial_assignment_buckets=initial_assignment_buckets,
+            loaded_buckets = selector_bucket_map(
+                initial_assignment_buckets,
+                self._normalize_selector_tool,
+                self._selector_tool_key,
+                self._selector_target_key,
             )
-            self._selector_head = context.head
-            self._set_selector_spindle_value(context.spindle)
-            self._selector_assignments_by_target = context.buckets
-            self._selector_assigned_tools = context.assignments
+            if not loaded_buckets and isinstance(initial_assignments, list):
+                loaded_buckets[self._selector_current_target_key()] = normalize_selector_bucket(
+                    initial_assignments,
+                    self._normalize_selector_tool,
+                    self._selector_tool_key,
+                )
+
+            self._selector_assignments_by_target = loaded_buckets
+            self._load_selector_bucket_for_current_target()
             self._update_selector_spindle_button_text()
             self._update_selector_context_header()
             self._update_selector_assignments_section_title()
@@ -829,8 +1345,6 @@ class HomePage(QWidget):
             self._set_selector_panel_mode('selector')
             return
 
-        self._selector_head = self._normalize_selector_head_value(str(head or '').strip().upper())
-        self._set_selector_spindle_value(str(spindle or '').strip().lower())
         self._details_hidden = self._selector_saved_details_hidden
         self._selector_assigned_tools = []
         self._selector_assignments_by_target = {}
@@ -855,19 +1369,41 @@ class HomePage(QWidget):
 
     def selector_assigned_tools_for_setup_assignment(self) -> list[dict]:
         # Sync the active bucket from the UI and persist it before reading all buckets.
-        sync_selector_assignment_order(self)
+        self._sync_selector_assignment_order()
         self._store_selector_bucket_for_current_target()
-        return self._selector_assignment_state.setup_assignment_payload(
-            self._selector_assignments_by_target,
-            head=self._selector_head or 'HEAD1',
-        )
+        head = self._normalize_selector_head_value(self._selector_head or 'HEAD1')
+        payload: list[dict] = []
+        for key, tools in self._selector_assignments_by_target.items():
+            parts = key.split(':', 1)
+            bucket_head = self._normalize_selector_head_value(parts[0]) if parts else head
+            bucket_spindle = self._normalize_selector_spindle_value(parts[1]) if len(parts) > 1 else 'main'
+            if bucket_head != head:
+                continue  # only include the currently active head
+            for item in tools:
+                entry = dict(item)
+                entry['spindle'] = bucket_spindle
+                entry['head'] = head
+                payload.append(entry)
+        return payload
 
     def selector_assignment_buckets_for_setup_assignment(self) -> dict[str, list[dict]]:
         """Return per-target buckets (already persisted by selector_assigned_tools_for_setup_assignment)."""
-        return self._selector_assignment_state.setup_assignment_buckets(
-            self._selector_assignments_by_target,
-            head=self._selector_head or 'HEAD1',
-        )
+        head = self._normalize_selector_head_value(self._selector_head or 'HEAD1')
+        result: dict[str, list[dict]] = {}
+        for key, tools in self._selector_assignments_by_target.items():
+            parts = key.split(':', 1)
+            bucket_head = self._normalize_selector_head_value(parts[0]) if parts else head
+            bucket_spindle = self._normalize_selector_spindle_value(parts[1]) if len(parts) > 1 else 'main'
+            if bucket_head != head:
+                continue
+            normalized: list[dict] = []
+            for item in tools:
+                entry = dict(item)
+                entry['spindle'] = bucket_spindle
+                entry['head'] = head
+                normalized.append(entry)
+            result[key] = normalized
+        return result
 
     def update_selector_head(self, head: str) -> None:
         """Update the selector HEAD target (called when the HEAD dropdown changes)."""
@@ -1797,13 +2333,343 @@ class HomePage(QWidget):
         layout.addStretch(1)
         self.detail_layout.addWidget(card)
 
-    def _build_detail_field(self, label_text: str, value_text: str, multiline: bool = False) -> QWidget:
-        return build_detail_field_widget(
-            page=self,
-            label_text=label_text,
-            value_text=value_text,
-            multiline=multiline,
+    def _value_label(self, text):
+        lbl = QLabel(text or '-')
+        lbl.setWordWrap(True)
+        lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        lbl.setProperty('detailValue', True)
+        lbl.setMinimumWidth(0)
+        lbl.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        return lbl
+    
+    def _component_toggle_arrow_pixmaps(self):
+        cached = getattr(self, '_component_toggle_arrows', None)
+        if cached is not None:
+            return cached
+
+        canvas_size = 20
+        font = self.font()
+        font.setPixelSize(16)
+        font.setBold(True)
+
+        up_arrow = QPixmap(canvas_size, canvas_size)
+        up_arrow.fill(Qt.transparent)
+
+        painter = QPainter(up_arrow)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.TextAntialiasing, True)
+        painter.setFont(font)
+        painter.setPen(QColor('#2b3640'))
+        painter.drawText(up_arrow.rect(), Qt.AlignCenter, '\u25b2')
+        painter.end()
+
+        left_arrow = up_arrow.transformed(QTransform().rotate(-90), Qt.SmoothTransformation)
+        self._component_toggle_arrows = (left_arrow, up_arrow)
+        return self._component_toggle_arrows
+
+    @staticmethod
+    def _component_key(item: dict, fallback_idx: int) -> str:
+        explicit = (item.get('component_key') or '').strip()
+        if explicit:
+            return explicit
+        role = (item.get('role') or 'component').strip().lower()
+        code = (item.get('code') or '').strip()
+        if code:
+            return f"{role}:{code}"
+        return f"{role}:idx:{fallback_idx}"
+
+    def _legacy_component_candidates(self, tool: dict) -> list[dict]:
+        """Build compatibility rows when tool data predates `component_items`."""
+        raw_cutting_name = tool.get('cutting_type', '')
+        cutting_name = self._localized_cutting_type(raw_cutting_name) if raw_cutting_name else self._t(
+            'tool_library.field.cutting_part',
+            'Cutting part',
         )
+        candidates = [
+            {
+                'role': 'holder',
+                'label': self._t('tool_library.field.holder', 'Holder'),
+                'code': tool.get('holder_code', ''),
+                'link': (tool.get('holder_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'holder:' + (tool.get('holder_code', '') or '').strip(),
+                'order': 0,
+            },
+            {
+                'role': 'holder',
+                'label': self._t('tool_library.field.add_element', 'Add. Element'),
+                'code': tool.get('holder_add_element', ''),
+                'link': (tool.get('holder_add_element_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'holder:' + (tool.get('holder_add_element', '') or '').strip(),
+                'order': 1,
+            },
+            {
+                'role': 'cutting',
+                'label': cutting_name,
+                'code': tool.get('cutting_code', ''),
+                'link': (tool.get('cutting_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'cutting:' + (tool.get('cutting_code', '') or '').strip(),
+                'order': 2,
+            },
+            {
+                'role': 'cutting',
+                'label': self._t('tool_library.field.add_cutting', 'Add. {cutting_type}', cutting_type=cutting_name),
+                'code': tool.get('cutting_add_element', ''),
+                'link': (tool.get('cutting_add_element_link', '') or '').strip(),
+                'group': '',
+                'component_key': 'cutting:' + (tool.get('cutting_add_element', '') or '').strip(),
+                'order': 3,
+            },
+        ]
+        return [item for item in candidates if (item.get('code') or '').strip()]
+
+    def _normalized_component_items(self, tool: dict) -> list[dict]:
+        component_items = tool.get('component_items', [])
+        if isinstance(component_items, str):
+            try:
+                component_items = json.loads(component_items or '[]')
+            except Exception:
+                component_items = []
+
+        normalized: list[dict] = []
+        if isinstance(component_items, list):
+            for idx, item in enumerate(component_items):
+                if not isinstance(item, dict):
+                    continue
+                role = (item.get('role') or '').strip().lower()
+                if role not in {'holder', 'cutting', 'support'}:
+                    continue
+                code = (item.get('code') or '').strip()
+                if not code:
+                    continue
+                try:
+                    order = int(item.get('order', idx))
+                except Exception:
+                    order = idx
+                normalized.append(
+                    {
+                        'role': role,
+                        'label': (item.get('label') or '').strip(),
+                        'code': code,
+                        'link': (item.get('link') or '').strip(),
+                        'group': (item.get('group') or '').strip(),
+                        'component_key': (item.get('component_key') or '').strip(),
+                        'order': order,
+                    }
+                )
+
+        if not normalized:
+            normalized.extend(self._legacy_component_candidates(tool))
+
+        normalized.sort(key=lambda entry: int(entry.get('order', 0)))
+        return normalized
+
+    @staticmethod
+    def _spare_index_by_component(support_parts: list | None) -> dict[str, list[dict]]:
+        index: dict[str, list[dict]] = {}
+        for part in support_parts or []:
+            if isinstance(part, str):
+                try:
+                    part = json.loads(part)
+                except Exception:
+                    part = {'name': part, 'code': '', 'link': '', 'component_key': ''}
+            if not isinstance(part, dict):
+                continue
+            part_key = (
+                (part.get('component_key') or '').strip()
+                or (part.get('component') or '').strip()
+                or (part.get('component_code') or '').strip()
+            )
+            if not part_key:
+                continue
+            index.setdefault(part_key, []).append(part)
+        return index
+
+    def _build_component_row_widget(self, item: dict, display_name: str) -> tuple[QFrame, QLabel, str, str]:
+        row_card = QFrame()
+        row_card.setProperty('editorFieldCard', True)
+        row_layout = QHBoxLayout(row_card)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(8)
+
+        button_text = (display_name or '').strip()
+        btn = QPushButton(button_text)
+        btn.setProperty('panelActionButton', True)
+        btn.setProperty('componentCompact', True)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setToolTip(
+            (item.get('link') or '').strip()
+            or self._t('tool_library.part.no_link', 'No link set for: {name}', name=display_name)
+        )
+        btn.setMinimumWidth(100)
+        fm = QFontMetrics(btn.font())
+        required_width = fm.horizontalAdvance(button_text) + 34
+        btn.setFixedWidth(max(88, min(360, required_width)))
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        btn.clicked.connect(lambda _=False, p=item: self.part_clicked(p))
+        row_layout.addWidget(btn, 0)
+
+        raw_code = (item.get('code', '') or '').strip()
+        code_lbl = QLabel(raw_code if raw_code else '-')
+        code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        code_style_default = (
+            'background: transparent;'
+            'border: none;'
+            'padding: 0 2px;'
+            'font-size: 11pt;'
+            'color: #22303c;'
+            'font-weight: 400;'
+            'border-bottom: 1px solid transparent;'
+        )
+        code_style_hover = (
+            'background: transparent;'
+            'border: none;'
+            'padding: 0 2px;'
+            'font-size: 11pt;'
+            'color: #1f5f9a;'
+            'font-weight: 400;'
+            'border-bottom: 1px solid #1f5f9a;'
+        )
+        code_lbl.setStyleSheet(code_style_default)
+        row_layout.addWidget(code_lbl, 1)
+        return row_card, code_lbl, code_style_default, code_style_hover
+
+    def _build_component_spare_host(self, linked_spares: list[dict]) -> QFrame:
+        spare_host = QFrame()
+        spare_host.setProperty('editorFieldGroup', True)
+        spare_host_layout = QVBoxLayout(spare_host)
+        spare_host_layout.setContentsMargins(12, 4, 0, 2)
+        spare_host_layout.setSpacing(4)
+        spare_host.setVisible(False)
+
+        for spare in linked_spares:
+            spare_row = QFrame()
+            spare_row.setProperty('editorFieldCard', True)
+            spare_row_layout = QHBoxLayout(spare_row)
+            spare_row_layout.setContentsMargins(0, 0, 0, 0)
+            spare_row_layout.setSpacing(8)
+
+            spare_name = (spare.get('name') or self._t('tool_library.field.part', 'Part')).strip()
+            spare_btn = QPushButton(spare_name)
+            spare_btn.setProperty('panelActionButton', True)
+            spare_btn.setProperty('componentCompact', True)
+            spare_btn.setCursor(Qt.PointingHandCursor)
+            spare_btn.setToolTip(
+                (spare.get('link') or '').strip()
+                or self._t('tool_library.part.no_link', 'No link set for: {name}', name=spare_name)
+            )
+            spare_btn_fm = QFontMetrics(spare_btn.font())
+            spare_required_width = spare_btn_fm.horizontalAdvance(spare_name) + 48
+            spare_btn.setFixedWidth(max(110, min(360, spare_required_width)))
+            spare_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+            spare_btn.clicked.connect(lambda _=False, p=spare: self.part_clicked(p))
+
+            spare_code = (spare.get('code') or '').strip()
+            spare_code_lbl = QLabel(spare_code if spare_code else '-')
+            spare_code_lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            spare_code_lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            spare_code_lbl.setStyleSheet(
+                'background: transparent;'
+                'border: none;'
+                'padding: 0 2px;'
+                'font-size: 10.5pt;'
+                'color: #22303c;'
+            )
+
+            spare_row_layout.addWidget(spare_btn, 0)
+            spare_row_layout.addWidget(spare_code_lbl, 1)
+            spare_host_layout.addWidget(spare_row)
+        return spare_host
+
+    def _wire_spare_toggle(
+        self,
+        *,
+        frame: QFrame,
+        spare_host: QFrame,
+        code_lbl: QLabel,
+        arrow_lbl: QLabel,
+        arrow_up: QPixmap,
+        arrow_left: QPixmap,
+        code_style_default: str,
+        code_style_hover: str,
+    ) -> None:
+        def _set_code_hover(hovered: bool):
+            code_lbl.setStyleSheet(code_style_hover if hovered else code_style_default)
+
+        def _toggle_spares(_e):
+            visible = not spare_host.isVisible()
+            spare_host.setVisible(visible)
+            arrow_lbl.setPixmap(arrow_up if visible else arrow_left)
+            _set_code_hover(False)
+            frame.updateGeometry()
+            frame.update()
+
+        def _hover_enter(_e):
+            _set_code_hover(True)
+
+        def _hover_leave(_e):
+            _set_code_hover(False)
+
+        code_lbl.mousePressEvent = _toggle_spares
+        arrow_lbl.mousePressEvent = _toggle_spares
+        code_lbl.enterEvent = _hover_enter
+        code_lbl.leaveEvent = _hover_leave
+        arrow_lbl.enterEvent = _hover_enter
+        arrow_lbl.leaveEvent = _hover_leave
+
+    def _build_detail_field(self, label_text: str, value_text: str, multiline: bool = False) -> QWidget:
+        field_group = create_titled_section(label_text)
+        field_group.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        field_group.setMinimumWidth(0)
+        field_group.setProperty('elideGroupTitle', True)
+        field_group.setProperty('fullGroupTitle', label_text)
+        field_group.installEventFilter(self)
+        QTimer.singleShot(0, lambda g=field_group: self._refresh_elided_group_title(g))
+
+        flayout = QVBoxLayout(field_group)
+        flayout.setContentsMargins(6, 4, 6, 4)
+        flayout.setSpacing(4)
+
+        raw_value = '' if value_text is None else str(value_text)
+        if multiline:
+            normalized_value = (
+                raw_value
+                .replace('\r\n', '\n')
+                .replace('\r', '\n')
+                .replace('\u2028', '\n')
+                .replace('\u2029', '\n')
+                .replace('\\n', '\n')
+            )
+            value_edit = QLabel(normalized_value if normalized_value.strip() else '-')
+            value_edit.setWordWrap(True)
+            value_edit.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            value_edit.setFocusPolicy(Qt.NoFocus)
+            value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            value_edit.setMinimumHeight(32)
+            value_edit.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            value_edit.setStyleSheet(
+                'QLabel {'
+                '  background-color: #ffffff;'
+                '  border: 1px solid #c8d4e0;'
+                '  border-radius: 6px;'
+                '  padding: 6px;'
+                '  font-size: 10.5pt;'
+                '}'
+            )
+            value_edit.setToolTip('')
+        else:
+            value_edit = QLineEdit(raw_value if raw_value.strip() else '-')
+            value_edit.setReadOnly(True)
+            value_edit.setFocusPolicy(Qt.NoFocus)
+            value_edit.setCursorPosition(0)
+            value_edit.setToolTip(raw_value.strip() or '-')
+            value_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+        flayout.addWidget(value_edit)
+        return field_group
 
     def _add_two_box_row(
         self,
@@ -1814,15 +2680,8 @@ class HomePage(QWidget):
         right_label: str,
         right_value: str,
     ) -> None:
-        build_two_box_row(
-            info=info,
-            row=row,
-            left_label=left_label,
-            left_value=left_value,
-            right_label=right_label,
-            right_value=right_value,
-            build_field=lambda label, value: self._build_detail_field(label, value),
-        )
+        info.addWidget(self._build_detail_field(left_label, left_value), row, 0, 1, 3, Qt.AlignTop)
+        info.addWidget(self._build_detail_field(right_label, right_value), row, 3, 1, 3, Qt.AlignTop)
 
     def _add_three_box_row(
         self,
@@ -1835,32 +2694,165 @@ class HomePage(QWidget):
         third_label: str,
         third_value: str,
     ) -> None:
-        build_three_box_row(
-            info=info,
-            row=row,
-            first_label=first_label,
-            first_value=first_value,
-            second_label=second_label,
-            second_value=second_value,
-            third_label=third_label,
-            third_value=third_value,
-            build_field=lambda label, value: self._build_detail_field(label, value),
-        )
+        info.addWidget(self._build_detail_field(first_label, first_value), row, 0, 1, 2, Qt.AlignTop)
+        info.addWidget(self._build_detail_field(second_label, second_value), row, 2, 1, 2, Qt.AlignTop)
+        info.addWidget(self._build_detail_field(third_label, third_value), row, 4, 1, 2, Qt.AlignTop)
 
     # ==============================
     # Detail Panel Sections
     # ==============================
     def _build_components_panel(self, tool, support_parts):
-        return build_components_panel(self, tool, support_parts)
+        frame = create_titled_section(self._t('tool_library.section.tool_components', 'Tool components'))
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        layout = QVBoxLayout(frame)
+        layout.setContentsMargins(6, 4, 6, 6)
+        layout.setSpacing(6)
+
+        body_host = QFrame()
+        body_host.setObjectName('toolComponentsBodyHost')
+        body_host.setStyleSheet(
+            'QFrame#toolComponentsBodyHost {'
+            '  background-color: #ffffff;'
+            '  border: none;'
+            '  border-radius: 4px;'
+            '}'
+        )
+        body_layout = QVBoxLayout(body_host)
+        body_layout.setContentsMargins(8, 8, 8, 8)
+        body_layout.setSpacing(6)
+
+        list_layout = QVBoxLayout()
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.setSpacing(4)
+        normalized = self._normalized_component_items(tool)
+        spare_index = self._spare_index_by_component(support_parts)
+
+        last_group = None
+        for idx, item in enumerate(normalized):
+            group = (item.get('group') or '').strip()
+            if group != last_group:
+                last_group = group
+                if group:
+                    group_label = QLabel(group)
+                    group_label.setProperty('detailFieldKey', True)
+                    group_label.setStyleSheet(
+                        'background: transparent;'
+                        'font-weight: 600; font-size: 9pt; color: #5a6a7a;'
+                        'border-bottom: 1px solid #d0d8e0; padding: 4px 0 2px 0;'
+                    )
+                    list_layout.addWidget(group_label)
+
+            display_name = item.get('label', self._t('tool_library.field.part', 'Part'))
+            component_key = self._component_key(item, idx)
+            linked_spares = spare_index.get(component_key, [])
+            row_card, code_lbl, code_style_default, code_style_hover = self._build_component_row_widget(item, display_name)
+            row_layout = row_card.layout()
+
+            if linked_spares:
+                arrow_style_default = 'background: transparent; border: none; padding: 0 4px;'
+                arrow_left, arrow_up = self._component_toggle_arrow_pixmaps()
+                arrow_lbl = QLabel()
+                arrow_lbl.setPixmap(arrow_left)
+                arrow_lbl.setStyleSheet(arrow_style_default)
+                arrow_lbl.setAlignment(Qt.AlignCenter)
+                arrow_lbl.setFixedWidth(24)
+                arrow_lbl.setCursor(Qt.PointingHandCursor)
+                arrow_lbl.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+                row_layout.addWidget(arrow_lbl, 0)
+                # Make the whole code area clickable to toggle spares
+                code_lbl.setCursor(Qt.PointingHandCursor)
+
+            list_layout.addWidget(row_card)
+
+            if linked_spares:
+                spare_host = self._build_component_spare_host(linked_spares)
+                self._wire_spare_toggle(
+                    frame=frame,
+                    spare_host=spare_host,
+                    code_lbl=code_lbl,
+                    arrow_lbl=arrow_lbl,
+                    arrow_up=arrow_up,
+                    arrow_left=arrow_left,
+                    code_style_default=code_style_default,
+                    code_style_hover=code_style_hover,
+                )
+                list_layout.addWidget(spare_host)
+
+        if not normalized:
+            empty_row = QFrame()
+            empty_row.setProperty('editorFieldCard', True)
+            empty_row_layout = QVBoxLayout(empty_row)
+            empty_row_layout.setContentsMargins(0, 0, 0, 0)
+            empty_row_layout.setSpacing(0)
+
+            empty_edit = QLineEdit('-')
+            empty_edit.setReadOnly(True)
+            empty_edit.setFocusPolicy(Qt.NoFocus)
+            empty_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            empty_row_layout.addWidget(empty_edit)
+            list_layout.addWidget(empty_row)
+
+        body_layout.addLayout(list_layout)
+        layout.addWidget(body_host)
+        return frame
 
     def _build_preview_panel(self, stl_path: str | None = None):
-        return build_preview_panel(
-            page=self,
-            stl_path=stl_path,
-            stl_preview_widget_cls=StlPreviewWidget,
-            load_preview_content=self._load_preview_content,
-        )
+        frame = create_titled_section(self._t('tool_library.section.preview', 'Preview'))
+        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+        layout = QVBoxLayout(frame)
+        layout.setSpacing(10)
+        layout.setContentsMargins(6, 4, 6, 6)
+
+        diagram = QWidget()
+        diagram.setObjectName('detailPreviewGradientHost')
+        diagram.setAttribute(Qt.WA_StyledBackground, True)
+        diagram.setStyleSheet(
+            'QWidget#detailPreviewGradientHost {'
+            '  background-color: #d6d9de;'
+            '  border: none;'
+            '  border-radius: 6px;'
+            '}'
+        )
+        diagram.setMinimumHeight(300)
+        diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        dlay = QVBoxLayout(diagram)
+        dlay.setContentsMargins(6, 6, 6, 6)
+        dlay.setSpacing(0)
+
+        viewer = StlPreviewWidget() if StlPreviewWidget is not None else None
+        if viewer is not None:
+            viewer.setStyleSheet('background: transparent; border: none;')
+            viewer.set_control_hint_text(
+                self._t(
+                    'tool_editor.hint.rotate_pan_zoom',
+                    'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+                )
+            )
+        loaded = self._load_preview_content(viewer, stl_path, label='Detail Preview') if viewer is not None else False
+        if viewer is not None:
+            viewer.setMinimumHeight(260)
+            viewer.set_measurement_overlays([])
+            viewer.set_measurements_visible(False)
+
+        if loaded:
+            dlay.addWidget(viewer, 1)
+            viewer.show()
+        else:
+            txt = QLabel(
+                self._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
+                if stl_path else
+                self._t('tool_library.preview.none_assigned', 'No 3D model assigned.')
+            )
+            txt.setWordWrap(True)
+            txt.setAlignment(Qt.AlignCenter)
+            dlay.addStretch(1)
+            dlay.addWidget(txt)
+            dlay.addStretch(1)
+
+        layout.addWidget(diagram, 1)
+        return frame
 
     # ==============================
     # Dialogs + CRUD Actions
@@ -2018,7 +3010,7 @@ class HomePage(QWidget):
             self.selector_delete_comment_btn.setToolTip(self._t('tool_library.selector.delete_comment', 'Delete Comment'))
         self._update_selection_count_label()
         self._refresh_selector_assignment_rows()
-        update_selector_assignment_buttons(self)
+        self._update_selector_assignment_buttons()
         self.refresh_list()
         if self.current_tool_id or self.current_tool_uid is not None:
             self.populate_details(self._get_selected_tool())

@@ -1,3 +1,5 @@
+import json
+
 from config import JAW_MODELS_ROOT_DEFAULT, SHARED_UI_PREFERENCES_PATH, TOOL_MODELS_ROOT_DEFAULT
 from shared.model_paths import JAWS_PREFIX, normalize_model_path_for_storage, read_model_roots
 
@@ -8,6 +10,58 @@ class JawService:
 
     def __init__(self, db):
         self.db = db
+
+    @staticmethod
+    def _parse_json_list(raw, default=None):
+        fallback = [] if default is None else list(default)
+        if isinstance(raw, list):
+            return raw
+        text = str(raw or '').strip()
+        if not text:
+            return fallback
+        try:
+            parsed = json.loads(text)
+        except Exception:
+            return fallback
+        return parsed if isinstance(parsed, list) else fallback
+
+    @staticmethod
+    def _normalize_measurement_overlays(raw) -> list[dict]:
+        overlays = []
+        for item in JawService._parse_json_list(raw):
+            if isinstance(item, dict):
+                overlays.append(dict(item))
+        return overlays
+
+    @staticmethod
+    def _normalize_selected_parts(raw) -> list[int]:
+        values: list[int] = []
+        for item in JawService._parse_json_list(raw):
+            try:
+                numeric = int(item)
+            except Exception:
+                continue
+            if numeric >= 0:
+                values.append(numeric)
+        return values
+
+    def _normalize_jaw_3d_payload(self, jaw: dict) -> dict:
+        data = dict(jaw or {})
+        data['measurement_overlays'] = self._normalize_measurement_overlays(
+            data.get('measurement_overlays', [])
+        )
+        data['preview_selected_parts'] = self._normalize_selected_parts(
+            data.get('preview_selected_parts', [])
+        )
+        try:
+            selected_part = int(data.get('preview_selected_part', -1) or -1)
+        except Exception:
+            selected_part = -1
+        data['preview_selected_part'] = selected_part if selected_part >= 0 else -1
+        transform_mode = str(data.get('preview_transform_mode', 'translate') or 'translate').strip().lower()
+        data['preview_transform_mode'] = transform_mode if transform_mode in {'translate', 'rotate'} else 'translate'
+        data['preview_fine_transform'] = bool(data.get('preview_fine_transform', False))
+        return data
 
     @staticmethod
     def _norm(value: str) -> str:
@@ -109,7 +163,9 @@ class JawService:
 
     def get_jaw(self, jaw_id: str):
         row = self.db.conn.execute('SELECT * FROM jaws WHERE jaw_id = ?', (jaw_id,)).fetchone()
-        return dict(row) if row else None
+        if not row:
+            return None
+        return self._normalize_jaw_3d_payload(dict(row))
 
     def save_jaw(self, jaw: dict):
         jaw_id = (jaw.get('jaw_id', '') or '').strip()
@@ -150,6 +206,15 @@ class JawService:
             int(jaw.get('preview_rot_x', 0) or 0) % 360,
             int(jaw.get('preview_rot_y', 0) or 0) % 360,
             int(jaw.get('preview_rot_z', 0) or 0) % 360,
+            json.dumps(self._normalize_measurement_overlays(jaw.get('measurement_overlays', []))),
+            int(jaw.get('preview_selected_part', -1) or -1),
+            json.dumps(self._normalize_selected_parts(jaw.get('preview_selected_parts', []))),
+            (
+                'rotate'
+                if str(jaw.get('preview_transform_mode', 'translate') or 'translate').strip().lower() == 'rotate'
+                else 'translate'
+            ),
+            1 if bool(jaw.get('preview_fine_transform', False)) else 0,
         )
 
         with self.db.conn:
@@ -158,8 +223,10 @@ class JawService:
                 INSERT INTO jaws (
                     jaw_id, jaw_type, spindle_side, clamping_diameter_text, clamping_length,
                     used_in_work, turning_washer, last_modified, notes, stl_path,
-                    preview_plane, preview_rot_x, preview_rot_y, preview_rot_z
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    preview_plane, preview_rot_x, preview_rot_y, preview_rot_z,
+                    measurement_overlays, preview_selected_part, preview_selected_parts,
+                    preview_transform_mode, preview_fine_transform
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(jaw_id) DO UPDATE SET
                     jaw_type=excluded.jaw_type,
                     spindle_side=excluded.spindle_side,
@@ -173,7 +240,12 @@ class JawService:
                     preview_plane=excluded.preview_plane,
                     preview_rot_x=excluded.preview_rot_x,
                     preview_rot_y=excluded.preview_rot_y,
-                    preview_rot_z=excluded.preview_rot_z
+                    preview_rot_z=excluded.preview_rot_z,
+                    measurement_overlays=excluded.measurement_overlays,
+                    preview_selected_part=excluded.preview_selected_part,
+                    preview_selected_parts=excluded.preview_selected_parts,
+                    preview_transform_mode=excluded.preview_transform_mode,
+                    preview_fine_transform=excluded.preview_fine_transform
                 """,
                 payload,
             )

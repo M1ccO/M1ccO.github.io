@@ -2,9 +2,10 @@
 
 from .detail_layout_rules import apply_jaw_detail_grid_rules
 from .preview_rules import (
-    jaw_preview_alignment_plane,
+    jaw_preview_has_model_payload,
     jaw_preview_label,
-    jaw_preview_rotation_steps,
+    jaw_preview_measurement_overlays,
+    jaw_preview_parts_payload,
     jaw_preview_stl_path,
 )
 from .selector_actions import (
@@ -19,9 +20,10 @@ from .selector_slot_controller import SelectorSlotController
 
 __all__ = [
     "apply_jaw_detail_grid_rules",
-    "jaw_preview_alignment_plane",
+    "jaw_preview_has_model_payload",
     "jaw_preview_label",
-    "jaw_preview_rotation_steps",
+    "jaw_preview_measurement_overlays",
+    "jaw_preview_parts_payload",
     "jaw_preview_stl_path",
     "on_selector_cancel",
     "on_selector_done",

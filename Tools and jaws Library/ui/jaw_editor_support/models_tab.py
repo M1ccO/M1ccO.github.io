@@ -1,4 +1,4 @@
-"""Tool editor wrapper for the shared 3D models tab builder."""
+"""Jaw editor wrapper for the shared 3D models tab builder."""
 
 from typing import Any
 
@@ -12,8 +12,7 @@ def build_models_tab(dialog: Any, root_tabs: QTabWidget) -> QWidget:
         dialog,
         root_tabs,
         config=ModelsTabConfig(
-            move_button_fallback_text='SIIRRA',
-            reset_button_fallback_text='NOLLAA',
+            move_button_fallback_text='MOVE',
+            reset_button_fallback_text='RESET',
         ),
     )
-

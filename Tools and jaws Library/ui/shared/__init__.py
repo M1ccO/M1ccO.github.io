@@ -8,6 +8,7 @@ from .selector_panel_builders import (
     build_selector_hint_label,
     build_selector_toggle_button,
 )
+from .preview_controller import EditorPreviewController
 
 __all__ = [
     "apply_selector_icon_button",
@@ -16,4 +17,5 @@ __all__ = [
     "build_selector_info_header",
     "build_selector_hint_label",
     "build_selector_toggle_button",
+    "EditorPreviewController",
 ]

@@ -232,6 +232,13 @@ def migrate_jaws_schema(conn: sqlite3.Connection):
         'preview_rot_x': "INTEGER DEFAULT 0",
         'preview_rot_y': "INTEGER DEFAULT 0",
         'preview_rot_z': "INTEGER DEFAULT 0",
+        # Mirror tool 3D payload shape so jaw editor can reuse the same
+        # models/measurements workflow while remaining schema-compatible.
+        'measurement_overlays': "TEXT DEFAULT '[]'",
+        'preview_selected_part': "INTEGER DEFAULT -1",
+        'preview_selected_parts': "TEXT DEFAULT '[]'",
+        'preview_transform_mode': "TEXT DEFAULT 'translate'",
+        'preview_fine_transform': "INTEGER DEFAULT 0",
     }
     with conn:
         for name, ddl in additions.items():

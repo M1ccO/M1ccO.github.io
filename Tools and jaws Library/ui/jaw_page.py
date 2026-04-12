@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QModelIndex, QPoint, QSize, Qt, QMimeData, Signal, QTimer
-from PySide6.QtGui import QColor, QDrag, QIcon, QPainter, QPixmap, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QColor, QDrag, QIcon, QKeySequence, QPainter, QPixmap, QShortcut, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -51,9 +51,10 @@ from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_
 from ui.jaw_page_support import (
     SelectorSlotController,
     apply_jaw_detail_grid_rules,
-    jaw_preview_alignment_plane,
+    jaw_preview_has_model_payload,
     jaw_preview_label,
-    jaw_preview_rotation_steps,
+    jaw_preview_measurement_overlays,
+    jaw_preview_parts_payload,
     jaw_preview_stl_path,
     on_selector_cancel,
     on_selector_done,
@@ -468,6 +469,14 @@ class JawPage(QWidget):
         self._selector_selected_slots: set[str] = set()
         self._selector_saved_details_hidden = True
         self._selector_slot_controller = SelectorSlotController(self)
+        self._detail_preview_widget = None
+        self._detail_preview_model_key = None
+        self._detached_preview_dialog = None
+        self._detached_preview_widget = None
+        self._detached_preview_last_model_key = None
+        self._detached_measurements_enabled = True
+        self._measurement_toggle_btn = None
+        self._close_preview_shortcut = None
         self._build_ui()
         self.refresh_list()
 
@@ -579,6 +588,16 @@ class JawPage(QWidget):
         apply_shared_dropdown_style(self.jaw_type_filter)
         self.jaw_type_filter.installEventFilter(self)
         self.jaw_type_filter.view().installEventFilter(self)
+
+        self.preview_window_btn = QToolButton()
+        self.preview_window_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / '3d_icon.svg')))
+        self.preview_window_btn.setIconSize(QSize(28, 28))
+        self.preview_window_btn.setCheckable(True)
+        self.preview_window_btn.setAutoRaise(True)
+        self.preview_window_btn.setProperty('topBarIconButton', True)
+        self.preview_window_btn.setToolTip(self._t('tool_library.preview.toggle', 'Toggle detached 3D preview'))
+        self.preview_window_btn.setFixedSize(36, 36)
+        self.preview_window_btn.clicked.connect(self.toggle_preview_window)
 
         self._rebuild_filter_row()
         return filter_frame
@@ -946,6 +965,7 @@ class JawPage(QWidget):
             self.filter_layout.addWidget(self.search, 1)
         self.filter_layout.addWidget(self.filter_icon)
         self.filter_layout.addWidget(self.jaw_type_filter)
+        self.filter_layout.addWidget(self.preview_window_btn)
         self.filter_layout.addStretch(1)
         self.filter_layout.addWidget(self.detail_header_container)
 
@@ -1031,6 +1051,7 @@ class JawPage(QWidget):
         self.current_jaw_id = None
         self._update_selection_count_label()
         self.populate_details(None)
+        self._sync_detached_preview(show_errors=False)
         if details_were_open:
             self.hide_details()
 
@@ -1192,6 +1213,8 @@ class JawPage(QWidget):
         super().keyPressEvent(event)
 
     def _clear_details(self):
+        self._detail_preview_widget = None
+        self._detail_preview_model_key = None
         while self.detail_layout.count():
             item = self.detail_layout.takeAt(0)
             widget = item.widget()
@@ -1200,6 +1223,223 @@ class JawPage(QWidget):
 
     def _split_used_in_works(self, value: str) -> list[str]:
         return [p.strip() for p in (value or '').split('|') if p.strip()]
+
+    @staticmethod
+    def _preview_model_key(jaw: dict | None):
+        if not isinstance(jaw, dict):
+            return None
+        jaw_id = str(jaw.get('jaw_id') or '').strip()
+        raw_stl = jaw.get('stl_path')
+        if isinstance(raw_stl, str):
+            stl_key = raw_stl
+        else:
+            try:
+                stl_key = json.dumps(raw_stl, ensure_ascii=False, sort_keys=True)
+            except Exception:
+                stl_key = str(raw_stl)
+        raw_meas = jaw.get('measurement_overlays', [])
+        if isinstance(raw_meas, str):
+            meas_key = raw_meas
+        else:
+            try:
+                meas_key = json.dumps(raw_meas, ensure_ascii=False, sort_keys=True)
+            except Exception:
+                meas_key = str(raw_meas)
+        return jaw_id, stl_key, meas_key
+
+    def _set_preview_button_checked(self, checked: bool):
+        if not hasattr(self, 'preview_window_btn'):
+            return
+        self.preview_window_btn.blockSignals(True)
+        self.preview_window_btn.setChecked(checked)
+        self.preview_window_btn.blockSignals(False)
+
+    def _load_preview_content(self, viewer: StlPreviewWidget, jaw: dict, *, label: str | None = None) -> bool:
+        if viewer is None or not isinstance(jaw, dict):
+            return False
+
+        # Match Tool preview behavior: each selection starts from a clean global orientation.
+        viewer.set_alignment_plane('XZ')
+        viewer.reset_model_rotation()
+
+        parts = jaw_preview_parts_payload(jaw)
+        if parts:
+            viewer.load_parts(parts)
+            return True
+
+        stl_path = jaw_preview_stl_path(jaw)
+        if not stl_path:
+            return False
+        viewer.load_stl(stl_path, label=label or jaw_preview_label(jaw, self._t))
+        return True
+
+    def _ensure_detached_preview_dialog(self):
+        if self._detached_preview_dialog is not None:
+            return
+
+        dialog = QDialog(self)
+        dialog.setProperty('detachedPreviewDialog', True)
+        dialog.setWindowTitle(self._t('tool_library.preview.window_title', '3D Preview'))
+        dialog.resize(620, 820)
+        dialog.finished.connect(self._on_detached_preview_closed)
+        self._close_preview_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), dialog)
+        self._close_preview_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+        self._close_preview_shortcut.activated.connect(dialog.close)
+
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
+
+        controls_host = QWidget(dialog)
+        controls_host.setProperty('detachedPreviewToolbar', True)
+        controls_layout = QHBoxLayout(controls_host)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(8)
+        controls_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+
+        self._measurement_toggle_btn = QToolButton(controls_host)
+        self._measurement_toggle_btn.setCheckable(True)
+        self._measurement_toggle_btn.setChecked(self._detached_measurements_enabled)
+        self._measurement_toggle_btn.setIconSize(QSize(28, 28))
+        self._measurement_toggle_btn.setAutoRaise(True)
+        self._measurement_toggle_btn.setProperty('topBarIconButton', True)
+        self._measurement_toggle_btn.setFixedSize(36, 36)
+        self._update_detached_measurement_toggle_icon(self._measurement_toggle_btn.isChecked())
+        self._measurement_toggle_btn.clicked.connect(self._on_detached_measurements_toggled)
+        controls_layout.addWidget(self._measurement_toggle_btn)
+
+        measurements_label = QLabel(self._t('tool_library.preview.measurements_label', 'Mittaukset'))
+        measurements_label.setProperty('detailHint', True)
+        measurements_label.setProperty('detachedPreviewToolbarLabel', True)
+        measurements_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        controls_layout.addWidget(measurements_label)
+        controls_layout.addStretch(1)
+        layout.addWidget(controls_host)
+
+        self._detached_preview_widget = StlPreviewWidget()
+        self._detached_preview_widget.set_control_hint_text(
+            self._t(
+                'tool_editor.hint.rotate_pan_zoom',
+                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            )
+        )
+        self._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        layout.addWidget(self._detached_preview_widget, 1)
+
+        self._detached_preview_dialog = dialog
+
+    def _apply_detached_preview_default_bounds(self):
+        if self._detached_preview_dialog is None:
+            return
+        host_window = self.window()
+        if host_window is None:
+            return
+        host_frame = host_window.frameGeometry()
+        if host_frame.width() <= 0 or host_frame.height() <= 0:
+            return
+        width = min(max(520, int(host_frame.width() * 0.37)), 700)
+        max_height = max(420, host_frame.height() - 30)
+        height = min(max(600, int(host_frame.height() * 0.86)), max_height)
+        x = host_frame.right() - width + 1
+        y = max(host_frame.top() + 30, host_frame.bottom() - height + 1)
+        self._detached_preview_dialog.setGeometry(x, y, width, height)
+
+    def _update_detached_measurement_toggle_icon(self, enabled: bool):
+        if self._measurement_toggle_btn is None:
+            return
+        icon_name = 'comment_disable.svg' if enabled else 'comment.svg'
+        self._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
+        self._measurement_toggle_btn.setToolTip(
+            self._t(
+                'tool_library.preview.measurements_hide' if enabled else 'tool_library.preview.measurements_show',
+                'Piilota mittaukset' if enabled else 'Näytä mittaukset',
+            )
+        )
+
+    def _on_detached_measurements_toggled(self, checked: bool):
+        self._detached_measurements_enabled = bool(checked)
+        self._update_detached_measurement_toggle_icon(self._detached_measurements_enabled)
+        if self._detached_preview_widget is not None:
+            self._detached_preview_widget.set_measurements_visible(self._detached_measurements_enabled)
+
+    def _apply_detached_measurement_state(self, jaw: dict):
+        if self._detached_preview_widget is None:
+            return
+        overlays = jaw_preview_measurement_overlays(jaw)
+        self._detached_preview_widget.set_measurement_overlays(overlays)
+        self._detached_preview_widget.set_measurements_visible(bool(overlays) and self._detached_measurements_enabled)
+        if self._measurement_toggle_btn is not None:
+            self._measurement_toggle_btn.setEnabled(bool(overlays))
+
+    def _on_detached_preview_closed(self, _result):
+        if self._detached_preview_widget is not None:
+            self._detached_preview_widget.set_measurement_focus_index(-1)
+        self._detached_preview_last_model_key = None
+        self._set_preview_button_checked(False)
+
+    def _close_detached_preview(self):
+        if self._detached_preview_dialog is not None:
+            self._detached_preview_dialog.close()
+        else:
+            self._set_preview_button_checked(False)
+
+    def _sync_detached_preview(self, show_errors: bool = False) -> bool:
+        if not self.preview_window_btn.isChecked():
+            return False
+        if not self.current_jaw_id:
+            self._close_detached_preview()
+            return False
+
+        jaw = self.jaw_service.get_jaw(self.current_jaw_id)
+        if not jaw or not jaw_preview_has_model_payload(jaw):
+            if show_errors:
+                QMessageBox.information(
+                    self,
+                    self._t('tool_library.preview.window_title', '3D Preview'),
+                    self._t('tool_library.preview.none_assigned_selected', 'The selected item has no 3D model assigned.'),
+                )
+            self._close_detached_preview()
+            return False
+
+        self._ensure_detached_preview_dialog()
+        was_visible = bool(self._detached_preview_dialog and self._detached_preview_dialog.isVisible())
+        model_key = self._preview_model_key(jaw)
+        loaded = True
+        if self._detached_preview_last_model_key != model_key:
+            loaded = self._load_preview_content(self._detached_preview_widget, jaw, label=jaw_preview_label(jaw, self._t))
+            if loaded:
+                self._detached_preview_last_model_key = model_key
+            else:
+                self._detached_preview_last_model_key = None
+        if not loaded:
+            if show_errors:
+                QMessageBox.information(
+                    self,
+                    self._t('tool_library.preview.window_title', '3D Preview'),
+                    self._t('tool_library.preview.no_valid_selected', 'No valid 3D model data found for the selected item.'),
+                )
+            self._close_detached_preview()
+            return False
+
+        self._apply_detached_measurement_state(jaw)
+        jaw_id = str(jaw.get('jaw_id') or '').strip()
+        self._detached_preview_dialog.setWindowTitle(
+            self._t('tool_library.preview.window_title_tool', '3D Preview - {tool_id}', tool_id=jaw_id).rstrip(' -')
+        )
+        if not was_visible:
+            self._apply_detached_preview_default_bounds()
+            self._detached_preview_dialog.show()
+            self._detached_preview_dialog.raise_()
+            self._detached_preview_dialog.activateWindow()
+        self._set_preview_button_checked(True)
+        return True
+
+    def toggle_preview_window(self):
+        if self.preview_window_btn.isChecked():
+            if not self._sync_detached_preview(show_errors=True):
+                self._set_preview_button_checked(False)
+            return
+        self._close_detached_preview()
 
     def _build_empty_details_card(self) -> QFrame:
         card = QFrame()
@@ -1279,26 +1519,26 @@ class JawPage(QWidget):
         diagram_layout.setContentsMargins(6, 6, 6, 6)
         diagram_layout.setSpacing(0)
 
-        stl_path = jaw_preview_stl_path(jaw)
-        loaded = False
-        if stl_path:
-            viewer = StlPreviewWidget()
-            viewer.setStyleSheet('background: transparent; border: none;')
-            viewer.set_control_hint_text(
-                self._t(
-                    'tool_editor.hint.rotate_pan_zoom',
-                    'Rotate: left mouse ? Pan: right mouse ? Zoom: mouse wheel',
-                )
+        viewer = StlPreviewWidget()
+        viewer.setStyleSheet('background: transparent; border: none;')
+        viewer.set_control_hint_text(
+            self._t(
+                'tool_editor.hint.rotate_pan_zoom',
+                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
             )
-            loaded = bool(viewer.load_stl(stl_path, label=jaw_preview_label(jaw, self._t)))
-            if loaded:
-                viewer.set_alignment_plane(jaw_preview_alignment_plane(jaw))
-                for axis, degrees in jaw_preview_rotation_steps(jaw):
-                    viewer.rotate_model(axis, degrees)
-                viewer.setMinimumHeight(260)
-                diagram_layout.addWidget(viewer, 1)
+        )
 
-        if not loaded:
+        loaded = self._load_preview_content(viewer, jaw, label=jaw_preview_label(jaw, self._t))
+        if loaded:
+            viewer.setMinimumHeight(260)
+            overlays = jaw_preview_measurement_overlays(jaw)
+            viewer.set_measurement_overlays(overlays)
+            viewer.set_measurements_visible(bool(overlays))
+            diagram_layout.addWidget(viewer, 1)
+            self._detail_preview_widget = viewer
+            self._detail_preview_model_key = self._preview_model_key(jaw)
+        else:
+            stl_path = jaw_preview_stl_path(jaw)
             placeholder = QLabel(
                 self._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
                 if stl_path
@@ -1310,6 +1550,8 @@ class JawPage(QWidget):
             diagram_layout.addStretch(1)
             diagram_layout.addWidget(placeholder)
             diagram_layout.addStretch(1)
+            self._detail_preview_widget = None
+            self._detail_preview_model_key = None
 
         preview_layout.addWidget(diagram, 1)
         return preview_card
@@ -1381,6 +1623,7 @@ class JawPage(QWidget):
         layout.addWidget(self._build_jaw_preview_card(jaw))
         layout.addStretch(1)
         self.detail_layout.addWidget(card)
+        self._sync_detached_preview(show_errors=False)
 
     def select_jaw_by_id(self, jaw_id: str):
         """Navigate the list to the jaw with the given jaw_id."""
@@ -1421,6 +1664,7 @@ class JawPage(QWidget):
         self.jaw_list.doItemsLayout()
         self.jaw_list.viewport().update()
         self.jaw_list.viewport().repaint()
+        self._sync_detached_preview(show_errors=False)
 
     def toggle_details(self):
         if self._details_hidden:
@@ -1467,6 +1711,7 @@ class JawPage(QWidget):
             self.current_jaw_id = None
             self._update_selection_count_label()
             self.populate_details(None)
+            self._sync_detached_preview(show_errors=False)
             return
 
         self.current_jaw_id = current.data(ROLE_JAW_ID)
@@ -1475,6 +1720,7 @@ class JawPage(QWidget):
         if not self._details_hidden:
             jaw = self.jaw_service.get_jaw(self.current_jaw_id)
             self.populate_details(jaw)
+        self._sync_detached_preview(show_errors=False)
 
     def on_item_double_clicked(self, index: QModelIndex):
         self.current_jaw_id = index.data(ROLE_JAW_ID)

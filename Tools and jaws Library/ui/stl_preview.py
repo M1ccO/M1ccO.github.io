@@ -213,15 +213,20 @@ class StlPreviewWidget(QWidget):
 
         host_window = self.window()
         window_ready = True
+        is_detached_preview = False
         if host_window is not None:
             # Detached 3D preview should keep rendering while visible even when
             # the main Tool Library window is the active one.
-            if bool(host_window.property('detachedPreviewDialog')):
+            is_detached_preview = bool(host_window.property('detachedPreviewDialog'))
+            if is_detached_preview:
                 window_ready = host_window.isVisible()
             else:
                 window_ready = host_window.isActiveWindow()
 
-        should_render = bool(self.isVisible() and app_active and window_ready)
+        if is_detached_preview:
+            should_render = bool(self.isVisible() and window_ready)
+        else:
+            should_render = bool(self.isVisible() and app_active and window_ready)
         if should_render == self._rendering_enabled:
             return
 

@@ -1,6 +1,6 @@
 import json
 from typing import Callable
-from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QItemSelectionModel, QEventLoop
+from PySide6.QtCore import QEvent, Qt, QTimer, QSize, QEventLoop
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import (
     QApplication,
@@ -21,6 +21,7 @@ from ui.widgets.parts_table import PartsTable
 from ui.measurement_editor_dialog import MeasurementEditorDialog
 from ui.widgets.color_picker_dialog import ColorPickerDialog
 from ui.widgets.common import clear_focused_dropdown_on_outside_click, apply_shared_dropdown_style
+from ui.shared.preview_controller import EditorPreviewController
 from ui.tool_editor_support.components_tab import build_components_tab, build_spare_parts_tab
 from ui.tool_editor_support.general_tab import build_general_tab
 from ui.tool_editor_support.models_tab import build_models_tab
@@ -327,6 +328,7 @@ class AddEditToolDialog(QDialog):
         self._turning_drill_geometry_mode = False
         self._spindle_orientation_mode = 'main'
         self._suspend_preview_refresh = False
+        self._preview_controller = EditorPreviewController(self)
         self._spare_refresh_timer = QTimer(self)
         self._spare_refresh_timer.setSingleShot(True)
         self._spare_refresh_timer.setInterval(75)
@@ -1411,28 +1413,13 @@ class AddEditToolDialog(QDialog):
             return
 
         parts = self._model_table_to_parts()
-
-        if not parts:
-            if hasattr(self.models_preview, 'clear'):
-                self.models_preview.clear()
-            return
-
-        if hasattr(self.models_preview, 'load_parts'):
-            self.models_preview.load_parts(parts)
-        elif hasattr(self.models_preview, 'load_stl'):
-            # temporary fallback for current single-model preview
-            first_existing = next((p.get('file') for p in parts if p.get('file')), None)
-            self.models_preview.load_stl(first_existing)
-
-        if hasattr(self.models_preview, 'set_measurement_overlays'):
-            self.models_preview.set_measurement_overlays([])
-        if hasattr(self.models_preview, 'set_measurements_visible'):
-            self.models_preview.set_measurements_visible(False)
-        if hasattr(self.models_preview, 'set_measurement_drag_enabled'):
-            self.models_preview.set_measurement_drag_enabled(False)
-
-        if self._assembly_transform_enabled:
-            self.models_preview.set_transform_edit_enabled(True)
+        self._preview_controller.refresh_embedded_models_preview(
+            parts,
+            transform_edit_enabled=bool(self._assembly_transform_enabled),
+            measurement_overlays=[],
+            measurements_visible=False,
+            measurement_drag_enabled=False,
+        )
 
     def _empty_measurement_editor_state(self):
         return empty_measurement_editor_state()
@@ -1502,43 +1489,13 @@ class AddEditToolDialog(QDialog):
             self._refresh_transform_selection_state()
 
     def _on_viewer_part_selected(self, index: int):
-        self._selected_part_indices = [index] if index >= 0 else []
-        self._selected_part_index = index
-        self._refresh_transform_selection_state()
-        self._sync_model_table_selection()
-        self._request_preview_transform_snapshot(refresh_selection=True)
+        self._preview_controller.on_viewer_part_selected(index)
 
     def _on_viewer_part_selection_changed(self, indices: list[int]):
-        normalized = [idx for idx in indices if isinstance(idx, int) and idx >= 0]
-        self._selected_part_indices = normalized
-        self._selected_part_index = normalized[-1] if normalized else -1
-        self._refresh_transform_selection_state()
-        self._sync_model_table_selection()
-        self._request_preview_transform_snapshot(refresh_selection=True)
+        self._preview_controller.on_viewer_part_selection_changed(indices)
 
     def _sync_model_table_selection(self):
-        if not hasattr(self, 'model_table'):
-            return
-        selection_model = self.model_table.selectionModel()
-        if selection_model is None:
-            return
-        selection_model.blockSignals(True)
-        self.model_table.blockSignals(True)
-        selection_model.clearSelection()
-        for index in self._selected_part_indices:
-            model_index = self.model_table.model().index(index, 0)
-            if not model_index.isValid():
-                continue
-            selection_model.select(
-                model_index,
-                QItemSelectionModel.Select | QItemSelectionModel.Rows,
-            )
-        if self._selected_part_index >= 0:
-            current_index = self.model_table.model().index(self._selected_part_index, 0)
-            if current_index.isValid():
-                selection_model.setCurrentIndex(current_index, QItemSelectionModel.NoUpdate)
-        self.model_table.blockSignals(False)
-        selection_model.blockSignals(False)
+        self._preview_controller.sync_model_table_selection()
 
     def _saved_transform_for_index(self, index: int) -> dict:
         return normalize_transform_dict(self._saved_part_transforms.get(index, {}))
