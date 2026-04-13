@@ -320,18 +320,30 @@ class SelectorSessionBridge(QObject):
             self._open_jaw_selector(follow_up.get("spindle"))
 
     def _send_to_tool_library(self, payload: dict) -> bool:
-        socket = QLocalSocket()
-        socket.connectToServer(self._tool_library_server_name)
-        if not socket.waitForConnected(300):
-            return False
-        try:
-            socket.write(json.dumps(payload).encode("utf-8"))
-            socket.flush()
-            return socket.waitForBytesWritten(300)
-        except Exception:
-            return False
-        finally:
-            socket.disconnectFromServer()
+        # Connection can legitimately take longer while Tool Library warms up.
+        # Use a few short attempts before declaring the IPC path unavailable.
+        for _ in range(3):
+            socket = QLocalSocket()
+            socket.connectToServer(self._tool_library_server_name)
+            if not socket.waitForConnected(900):
+                try:
+                    socket.disconnectFromServer()
+                except Exception:
+                    pass
+                continue
+            try:
+                socket.write(json.dumps(payload).encode("utf-8"))
+                socket.flush()
+                if socket.waitForBytesWritten(900):
+                    return True
+            except Exception:
+                pass
+            finally:
+                try:
+                    socket.disconnectFromServer()
+                except Exception:
+                    pass
+        return False
 
     def _launch_tool_library(self, extra_args: list[str] | None = None) -> bool:
         args = list(extra_args or [])
@@ -376,8 +388,8 @@ class SelectorSessionBridge(QObject):
         self,
         request_id: str,
         payload: dict,
-        attempts_remaining: int = 12,
-        delay_ms: int = 250,
+        attempts_remaining: int = 36,
+        delay_ms: int = 300,
     ) -> None:
         if request_id not in self._pending_requests:
             return

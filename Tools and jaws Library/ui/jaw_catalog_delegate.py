@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import QRect, QSize, Qt
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap, QTransform
 from PySide6.QtWidgets import QStyle, QStyleOptionViewItem
 
 from config import TOOL_ICONS_DIR
@@ -50,9 +50,7 @@ def _value_font(point_size: float) -> QFont:
 
 
 def jaw_icon_for_row(jaw: dict) -> QIcon:
-    spindle_side = str(jaw.get('spindle_side') or '').strip().lower()
-    filename = 'jaw_sub.png' if ('sub' in spindle_side or 'vasta' in spindle_side or 'ala' in spindle_side) else 'jaw_main.png'
-    path = TOOL_ICONS_DIR / filename
+    path = TOOL_ICONS_DIR / 'jaw_main.png'
     if not path.exists():
         fallback = TOOL_ICONS_DIR / 'jaw_icon.png'
         path = fallback if fallback.exists() else path
@@ -62,6 +60,11 @@ def jaw_icon_for_row(jaw: dict) -> QIcon:
     if cache_key not in _ICON_OBJECT_CACHE:
         _ICON_OBJECT_CACHE[cache_key] = QIcon(str(path))
     return _ICON_OBJECT_CACHE[cache_key]
+
+
+def _is_sub_spindle_jaw(jaw: dict) -> bool:
+    spindle_side = str(jaw.get('spindle_side') or '').strip().lower()
+    return ('sub' in spindle_side or 'vasta' in spindle_side or 'ala' in spindle_side)
 
 
 class JawCatalogDelegate(CatalogDelegate):
@@ -112,6 +115,8 @@ class JawCatalogDelegate(CatalogDelegate):
         icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2, ICON_SLOT_W, ICON_SIZE)
         icon = jaw_icon_for_row(jaw)
         pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE)) if not icon.isNull() else QPixmap()
+        if not pixmap.isNull() and _is_sub_spindle_jaw(jaw):
+            pixmap = pixmap.transformed(QTransform().scale(-1, 1))
         if not pixmap.isNull():
             px = icon_rect.x() + (ICON_SLOT_W - pixmap.width()) // 2
             py = icon_rect.y() + (ICON_SIZE - pixmap.height()) // 2

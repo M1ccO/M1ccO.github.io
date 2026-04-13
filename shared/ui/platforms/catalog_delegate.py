@@ -22,6 +22,7 @@ from typing import Callable
 from PySide6.QtCore import QModelIndex, QRect, QSize, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import QAbstractItemDelegate, QStyle, QStyleOptionViewItem
+from shared.ui.platforms.catalog_page_base import CATALOG_ROLE_DATA
 
 __all__ = [
     "CatalogDelegate",
@@ -206,7 +207,11 @@ class CatalogDelegate(QAbstractItemDelegate):
         Returns:
             dict: Item data; empty dict if not found.
         """
-        data = index.data(Qt.UserRole + 1)
+        data = index.data(CATALOG_ROLE_DATA)
+        if not isinstance(data, dict):
+            # Compatibility fallback for legacy delegates/models that used
+            # Qt.UserRole + 1 as their dict payload role.
+            data = index.data(Qt.UserRole + 1)
         return data if isinstance(data, dict) else {}
 
     def _get_background_color(self, option: QStyleOptionViewItem) -> QColor:

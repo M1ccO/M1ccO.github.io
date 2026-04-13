@@ -778,3 +778,8 @@ class DetailPanelBuilder:
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+
+
+def populate_detail_panel(page, tool: dict | None) -> None:
+    """Compatibility wrapper used by HomePage.populate_details."""
+    DetailPanelBuilder(page).populate_details(tool)

@@ -43,11 +43,13 @@ from config import (
 from data.database import Database
 from data.jaw_database import JawDatabase
 from services.jaw_service import JawService
+from services.fixture_service import FixtureService
 from shared.services.localization_service import LocalizationService
 from services.tool_service import ToolService
 from shared.services.ui_preferences_service import UiPreferencesService
 from shared.ui.helpers.editor_helpers import style_panel_action_button
 from ui.export_page import ExportPage
+from ui.fixtures_page import FixturesPage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
@@ -184,6 +186,7 @@ class MainWindow(QMainWindow):
         self._selector_request_id = ''
         self._selector_head = ''
         self._selector_spindle = ''
+        self.fixture_service = FixtureService()
         self._selector_initial_assignments: list[dict] = []
         self._selector_initial_assignment_buckets: dict[str, list[dict]] = {}
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
@@ -392,7 +395,7 @@ class MainWindow(QMainWindow):
         self.nav_buttons = []
         self.nav_button_group = QButtonGroup(self)
         self.nav_button_group.setExclusive(True)
-        self._nav_button_count = 5
+        self._nav_button_count = 6
         for index in range(self._nav_button_count):
             btn = QToolButton()
             btn.setObjectName('sideNavButton')
@@ -507,6 +510,7 @@ class MainWindow(QMainWindow):
             view_mode='inserts',
             translate=self._t,
         )
+        self.fixtures_page = FixturesPage(self.fixture_service, translate=self._t)
         self.export_page = ExportPage(
             tool_service,
             export_service,
@@ -524,6 +528,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.assemblies_page)
         self.stack.addWidget(self.holders_page)
         self.stack.addWidget(self.inserts_page)
+        self.stack.addWidget(self.fixtures_page)
         self.stack.addWidget(self.export_page)
         self.stack.addWidget(self.jaws_page)
         self.stack.addWidget(self.jaws_export_page)
@@ -611,6 +616,8 @@ class MainWindow(QMainWindow):
             page.current_tool_id = None
             page.refresh_list()
             page.populate_details(None)
+        self.fixtures_page.refresh_list()
+        self.fixtures_page.populate_details(None)
         self.jaws_page.current_jaw_id = None
         self.jaws_page.refresh_list()
         self.jaws_page.populate_details(None)
@@ -681,6 +688,7 @@ class MainWindow(QMainWindow):
             (self._t("tool_library.nav.assemblies", "Assemblies"), NAV_ITEM_TO_ICON['ASSEMBLIES'], False, lambda: self._open_tool_page('assemblies')),
             (self._t("tool_library.nav.holders", "Holders"), NAV_ITEM_TO_ICON['HOLDERS'], False, lambda: self._open_tool_page('holders')),
             (self._t("tool_library.nav.inserts", "Inserts"), NAV_ITEM_TO_ICON['INSERTS'], False, lambda: self._open_tool_page('inserts')),
+            (self._t("tool_library.nav.fixtures", "Fixtures"), NAV_ITEM_TO_ICON['FIXTURES'], False, lambda: self._open_tool_page('fixtures')),
             (self._t("tool_library.nav.export", "Export"), NAV_ITEM_TO_ICON['EXPORT'], False, lambda: self._open_tool_page('export')),
         ]
 
@@ -690,6 +698,7 @@ class MainWindow(QMainWindow):
             'assemblies': self.assemblies_page,
             'holders': self.holders_page,
             'inserts': self.inserts_page,
+            'fixtures': self.fixtures_page,
             'export': self.export_page,
         }
         page = page_map.get(page_key, self.home_page)
@@ -855,6 +864,8 @@ class MainWindow(QMainWindow):
             self.inserts_page.set_page_title(self._t("tool_library.nav.inserts", "Inserts"))
             if hasattr(self.inserts_page, "apply_localization"):
                 self.inserts_page.apply_localization(self._t)
+        if hasattr(self, "fixtures_page") and hasattr(self.fixtures_page, "apply_localization"):
+            self.fixtures_page.apply_localization(self._t)
         if hasattr(self, "jaws_page") and hasattr(self.jaws_page, "apply_localization"):
             self.jaws_page.apply_localization(self._t)
 

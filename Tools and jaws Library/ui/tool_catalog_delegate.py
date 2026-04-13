@@ -31,6 +31,12 @@ from PySide6.QtWidgets import (
     QStyledItemDelegate,
     QStyleOptionViewItem,
 )
+from shared.ui.platforms.catalog_page_base import (
+    CATALOG_ROLE_DATA,
+    CATALOG_ROLE_ICON,
+    CATALOG_ROLE_ID,
+    CATALOG_ROLE_UID,
+)
 
 from config import (
     DEFAULT_TOOL_ICON,
@@ -41,10 +47,12 @@ from config import (
 )
 
 # ── Data roles stored in the model ──────────────────────────────────────
-ROLE_TOOL_ID = Qt.UserRole
-ROLE_TOOL_DATA = Qt.UserRole + 1
-ROLE_TOOL_ICON = Qt.UserRole + 2
-ROLE_TOOL_UID = Qt.UserRole + 3
+# Keep roles aligned with CatalogPageBase so delegates and pages agree on
+# payload types when model rows are built by shared platform code.
+ROLE_TOOL_ID = CATALOG_ROLE_ID
+ROLE_TOOL_UID = CATALOG_ROLE_UID
+ROLE_TOOL_DATA = CATALOG_ROLE_DATA
+ROLE_TOOL_ICON = CATALOG_ROLE_ICON
 
 # ── Layout constants ────────────────────────────────────────────────────
 ROW_HEIGHT = 74
@@ -327,6 +335,7 @@ class ToolCatalogDelegate(QStyledItemDelegate):
         # ── icon ────────────────────────────────────────────────────────
         icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2 + ICON_VISUAL_OFFSET_Y,
                           ICON_SLOT_W, ICON_SIZE)
+        pm = None
         if icon is not None:
             pm = self._cached_pixmap(
                 icon,

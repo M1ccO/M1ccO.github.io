@@ -215,9 +215,9 @@ JAW_LIBRARY_DB_PATH = _first_existing_path(
 
 NAV_ITEMS = ["SETUPS", "DRAWINGS", "LOGBOOK"]
 
-# Keep cross-app launch explicit during active development. This avoids risky
-# background/preload behavior while the standalone packaging paths are still in flux.
-ENABLE_TOOL_LIBRARY_PRELOAD = True
+# Keep Setup Manager startup responsive by default. Tool Library is launched on
+# demand and selector IPC now retries robustly while it warms up.
+ENABLE_TOOL_LIBRARY_PRELOAD = False
 
 JAW_TYPES = ["Soft jaws", "Hard jaws", "Spiked jaws", "Special jaws"]
 SPINDLE_SIDES = ["SP1", "SP2", "Both"]

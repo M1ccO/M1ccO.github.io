@@ -270,19 +270,28 @@ class MainWindow(QMainWindow):
 
     def _send_to_tool_library(self, payload: dict) -> bool:
         """Send an IPC message to a running Tool Library instance. Returns True on success."""
-        sock = QLocalSocket()
-        sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
-        if not sock.waitForConnected(300):
-            return False
-        try:
-            sock.write(json.dumps(payload).encode("utf-8"))
-            sock.flush()
-            sock.waitForBytesWritten(300)
-        except Exception:
-            return False
-        finally:
-            sock.disconnectFromServer()
-        return True
+        for _ in range(3):
+            sock = QLocalSocket()
+            sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
+            if not sock.waitForConnected(900):
+                try:
+                    sock.disconnectFromServer()
+                except Exception:
+                    pass
+                continue
+            try:
+                sock.write(json.dumps(payload).encode("utf-8"))
+                sock.flush()
+                if sock.waitForBytesWritten(900):
+                    return True
+            except Exception:
+                pass
+            finally:
+                try:
+                    sock.disconnectFromServer()
+                except Exception:
+                    pass
+        return False
 
     def _launch_tool_library(self, extra_args: list = None) -> bool:
         """Start the Tool Library process. Returns True on success."""
@@ -477,7 +486,7 @@ class MainWindow(QMainWindow):
             ),
         )
 
-    def _send_request_with_retry(self, payload: dict, attempts: int = 12, delay_ms: int = 200):
+    def _send_request_with_retry(self, payload: dict, attempts: int = 36, delay_ms: int = 300):
         """Retry IPC shortly after launching Tool Library so module/filter payload is applied."""
         if self._send_to_tool_library(payload):
             return

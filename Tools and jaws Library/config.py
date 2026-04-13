@@ -143,6 +143,7 @@ NAV_ITEM_TO_ICON = {
     'ASSEMBLIES': 'assemblies_icon.svg',
     'HOLDERS': 'holders_icon.svg',
     'INSERTS': 'inserts_icon.svg',
+    'FIXTURES': 'library.svg',
     'EXPORT': 'import_export.svg',
 }
 
