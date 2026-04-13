@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from machine_profiles import NTX_MACHINE_PROFILE
+from machine_profiles import NTX_MACHINE_PROFILE, load_profile
 from ui.work_editor_support import (
     WorkEditorJawSelectorPanel,
     WorkEditorOrderedToolList,
@@ -96,11 +96,13 @@ from ui.work_editor_support import (
     set_zero_xy_visibility,
 )
 from config import (
+    SHARED_UI_PREFERENCES_PATH,
     TOOL_LIBRARY_EXE_CANDIDATES,
     TOOL_LIBRARY_MAIN_PATH,
     TOOL_LIBRARY_PROJECT_DIR,
     TOOL_LIBRARY_SERVER_NAME,
 )
+from shared.services.ui_preferences_service import UiPreferencesService
 from ui.work_editor_support.dialog_lifecycle import (
     apply_secondary_button_theme,
     finalize_ui,
@@ -154,7 +156,12 @@ class WorkEditorDialog(QDialog):
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
         self._drawings_enabled = drawings_enabled
-        self.machine_profile = NTX_MACHINE_PROFILE
+        try:
+            prefs_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True)
+            profile_key = prefs_service.get_machine_profile_key()
+            self.machine_profile = load_profile(profile_key)
+        except Exception:
+            self.machine_profile = NTX_MACHINE_PROFILE
         self._payload_adapter = WorkEditorPayloadAdapter(self.machine_profile)
         self._zero_axes = tuple(self.machine_profile.zero_axes)
         self._head_profiles = {head.key: head for head in self.machine_profile.heads}

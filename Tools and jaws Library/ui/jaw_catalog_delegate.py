@@ -174,7 +174,8 @@ class JawCatalogDelegate(CatalogDelegate):
             )
             x_pos += column_width + COL_SPACING
 
-        self._paint_badges(painter, text_rect, jaw, option)
+        # Jaw type badge is intentionally shown only in detail panel.
+        # Keep row cards text-only for parity with expected JAWS list view.
 
     def _columns(self, jaw: dict, stage: str) -> list[tuple[str, str, str, int]]:
         dash = '-'

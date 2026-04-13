@@ -12,61 +12,85 @@ Signals:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QModelIndex, QEvent, Signal
-from PySide6.QtGui import QIcon, QDesktopServices, QFontMetrics, QStandardItemModel, QStandardItem
+from PySide6.QtCore import Qt, QUrl, QModelIndex
+from PySide6.QtGui import QIcon, QDesktopServices
 # import QtSvg for SVG support
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractItemDelegate,
-    QAbstractItemView,
-    QComboBox,
-    QDialog,
-    QFileDialog,
     QFrame,
-    QHBoxLayout,
-    QLabel,
-    QLineEdit,
-    QListView,
     QMessageBox,
-    QPushButton,
-    QScrollArea,
-    QSizePolicy,
-    QSplitter,
-    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from config import (
-    ALL_TOOL_TYPES,
-    TOOL_TYPE_TO_ICON,
-    TOOL_ICONS_DIR,
-)
 from shared.ui.platforms.catalog_page_base import CatalogPageBase
 from ui.tool_catalog_delegate import (
     ToolCatalogDelegate,
     ROLE_TOOL_ID,
-    ROLE_TOOL_DATA,
-    ROLE_TOOL_ICON,
     ROLE_TOOL_UID,
     tool_icon_for_type,
 )
-from ui.tool_editor_dialog import AddEditToolDialog
+from ui.home_page_support.page_builders import (
+    build_tool_page_layout,
+    build_catalog_list_card as _build_catalog_list_card_impl,
+    build_detail_container as _build_detail_container_impl,
+    build_bottom_bars as _build_bottom_bars_impl,
+)
+from ui.home_page_support.topbar_builder import (
+    build_tool_filter_toolbar,
+    clear_filters as _clear_filters_impl,
+    rebuild_filter_row as _rebuild_filter_row_impl,
+    toggle_search as _toggle_search_impl,
+)
+from ui.home_page_support.crud_actions import (
+    add_tool as _add_tool_impl,
+    copy_tool as _copy_tool_impl,
+    delete_tool as _delete_tool_impl,
+    edit_tool as _edit_tool_impl,
+)
+from ui.home_page_support.topbar_filter_state import (
+    bind_external_head_filter as _bind_external_head_filter_impl,
+    selected_head_filter as _selected_head_filter_impl,
+    set_head_filter_value as _set_head_filter_value_impl,
+)
+from ui.home_page_support.detail_visibility import (
+    hide_tool_details,
+    show_tool_details,
+    toggle_tool_details,
+)
+from ui.home_page_support.selection_helpers import (
+    get_selected_tool as _get_selected_tool_impl,
+    restore_selection_by_uid as _restore_selection_by_uid_impl,
+    selected_tool_uids as _selected_tool_uids_impl,
+)
+from ui.home_page_support.event_filter import handle_home_page_event
+from ui.home_page_support.retranslate_page import (
+    apply_home_page_localization,
+    build_tool_type_filter_items as _build_tool_type_filter_items_impl,
+    localized_tool_type as _localized_tool_type_impl,
+    tool_id_display_value as _tool_id_display_value_impl,
+)
 from ui.home_page_support.detached_preview import (
     close_detached_preview,
     sync_detached_preview as _sync_detached_preview_impl,
     toggle_preview_window,
+    warmup_preview_engine as _warmup_preview_engine_impl,
 )
-from ui.selector_state_helpers import (
-    default_selector_splitter_sizes,
-    normalize_selector_bucket,
-    normalize_selector_mode,
-    selector_assignments_for_target,
-    selector_bucket_map,
+from ui.home_page_support.selector_context import (
+    normalize_selector_tool as _normalize_selector_tool_impl,
+    selector_tool_key as _selector_tool_key_impl,
+    selector_target_key as _selector_target_key_impl,
+    selector_current_target_key as _selector_current_target_key_impl,
+    tool_matches_selector_spindle as _tool_matches_selector_spindle_impl,
+    selected_tools_for_setup_assignment as _selected_tools_for_setup_assignment_impl,
+    selector_assignment_buckets_for_setup_assignment as _selector_assignment_buckets_impl,
+    selector_current_target_for_setup_assignment as _selector_current_target_impl,
+    set_selector_context as _set_selector_context_impl,
+    selector_assigned_tools_for_setup_assignment as _selector_assigned_tools_impl,
 )
 
 if TYPE_CHECKING:
@@ -110,6 +134,7 @@ class HomePage(CatalogPageBase):
         parent: QWidget | None = None,
         page_title: str = 'Tool Library',
         view_mode: str = 'home',
+        machine_profile=None,
         translate=None,
     ) -> None:
         """
@@ -139,6 +164,7 @@ class HomePage(CatalogPageBase):
         # Store tool-specific UI parameters
         self.page_title = str(page_title or 'Tool Library')
         self.view_mode = (view_mode or 'home').lower()
+        self.machine_profile = machine_profile
 
         # Initialize parent with translation function
         translate_fn = translate or (lambda k, d=None, **_: d or '')
@@ -230,280 +256,29 @@ class HomePage(CatalogPageBase):
         return self.tool_service
 
     def _build_ui(self) -> None:
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(10)
-
-        self.search_input = QLineEdit()
-        self.search_input.textChanged.connect(self.refresh_list)
-
-        self.filter_pane = self.build_filter_pane()
-        root.addWidget(self.filter_pane)
-
-        self.splitter = QSplitter(Qt.Horizontal)
-        self.splitter.setHandleWidth(1)
-        self.splitter.setChildrenCollapsible(False)
-        self.splitter.addWidget(self._build_catalog_list_card())
-        self.splitter.addWidget(self._build_detail_container())
-        root.addWidget(self.splitter, 1)
-
-        self._build_bottom_bars(root)
-
-        self.detail_container.hide()
-        self.detail_header_container.hide()
-        self.splitter.setSizes([1, 0])
+        build_tool_page_layout(self)
 
     def _build_catalog_list_card(self) -> QFrame:
-        list_card = QFrame()
-        list_card.setProperty('catalogShell', True)
-        list_layout = QVBoxLayout(list_card)
-        list_layout.setContentsMargins(0, 0, 0, 0)
-        list_layout.setSpacing(10)
-
-        self.list_view = QListView()
-        self.tool_list = self.list_view
-        self.list_view.setObjectName('toolCatalog')
-        self.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
-        self.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.list_view.setSelectionMode(QListView.ExtendedSelection)
-        self.list_view.setDragEnabled(True)
-        self.list_view.setMouseTracking(True)
-        self.list_view.setStyleSheet(
-            'QListView#toolCatalog { border: none; outline: none; padding: 8px; }'
-            ' QListView#toolCatalog::item { background: transparent; border: none; }'
-        )
-        self.list_view.setSpacing(4)
-        self.list_view.setUniformItemSizes(True)
-
-        self.list_view.setItemDelegate(self.create_delegate())
-        self.list_view.clicked.connect(self._on_list_item_clicked)
-        self.list_view.doubleClicked.connect(self.on_item_double_clicked)
-        self.list_view.installEventFilter(self)
-        self.list_view.viewport().installEventFilter(self)
-
-        list_layout.addWidget(self.list_view, 1)
-        return list_card
+        return _build_catalog_list_card_impl(self)
 
     def _build_detail_container(self) -> QWidget:
-        self.detail_container = QWidget()
-        self.detail_container.setMinimumWidth(280)
-        detail_layout = QVBoxLayout(self.detail_container)
-        detail_layout.setContentsMargins(0, 0, 0, 0)
-        detail_layout.setSpacing(0)
-
-        self.detail_card = QFrame()
-        self.detail_card.setProperty('card', True)
-        detail_card_layout = QVBoxLayout(self.detail_card)
-        detail_card_layout.setContentsMargins(0, 0, 0, 0)
-        detail_card_layout.setSpacing(0)
-
-        self.detail_scroll = QScrollArea()
-        self.detail_scroll.setObjectName('detailScrollArea')
-        self.detail_scroll.setWidgetResizable(True)
-        self.detail_scroll.setFrameShape(QFrame.NoFrame)
-        self.detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-        self.detail_panel = QWidget()
-        self.detail_panel.setObjectName('detailPanel')
-        self.detail_layout = QVBoxLayout(self.detail_panel)
-        self.detail_layout.setContentsMargins(0, 0, 0, 0)
-        self.detail_layout.setSpacing(10)
-        self.detail_scroll.setWidget(self.detail_panel)
-
-        detail_card_layout.addWidget(self.detail_scroll, 1)
-        detail_layout.addWidget(self.detail_card, 1)
-
-        self.populate_details(None)
-        return self.detail_container
+        return _build_detail_container_impl(self)
 
     def _build_bottom_bars(self, root: QVBoxLayout) -> None:
-        self.button_bar = QFrame()
-        self.button_bar.setProperty('bottomBar', True)
-        actions = QHBoxLayout(self.button_bar)
-        actions.setContentsMargins(10, 8, 10, 8)
-        actions.setSpacing(8)
-
-        self.edit_btn = QPushButton(self._t('tool_library.action.edit_tool', 'EDIT TOOL'))
-        self.delete_btn = QPushButton(self._t('tool_library.action.delete_tool', 'DELETE TOOL'))
-        self.add_btn = QPushButton(self._t('tool_library.action.add_tool', 'ADD TOOL'))
-        self.copy_btn = QPushButton(self._t('tool_library.action.copy_tool', 'COPY TOOL'))
-        for btn in (self.edit_btn, self.delete_btn, self.add_btn, self.copy_btn):
-            btn.setProperty('panelActionButton', True)
-        self.delete_btn.setProperty('dangerAction', True)
-        self.add_btn.setProperty('primaryAction', True)
-
-        self.edit_btn.clicked.connect(self.edit_tool)
-        self.delete_btn.clicked.connect(self.delete_tool)
-        self.add_btn.clicked.connect(self.add_tool)
-        self.copy_btn.clicked.connect(self.copy_tool)
-
-        self.module_switch_label = QLabel(self._t('tool_library.module.switch_to', 'Switch to'))
-        self.module_switch_label.setProperty('pageSubtitle', True)
-        self.module_toggle_btn = QPushButton(self._t('tool_library.module.jaws', 'JAWS'))
-        self.module_toggle_btn.setProperty('panelActionButton', True)
-        self.module_toggle_btn.setFixedHeight(28)
-        self.module_toggle_btn.clicked.connect(
-            lambda: self._module_switch_callback() if callable(self._module_switch_callback) else None
-        )
-
-        actions.addWidget(self.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        actions.addWidget(self.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        actions.addStretch(1)
-
-        self.selection_count_label = QLabel('')
-        self.selection_count_label.setProperty('detailHint', True)
-        self.selection_count_label.setStyleSheet('background: transparent; border: none;')
-        self.selection_count_label.hide()
-
-        actions.addWidget(self.selection_count_label, 0, Qt.AlignBottom)
-        actions.addWidget(self.add_btn)
-        actions.addWidget(self.edit_btn)
-        actions.addWidget(self.delete_btn)
-        actions.addWidget(self.copy_btn)
-        root.addWidget(self.button_bar)
-
-        self.selector_bottom_bar = QFrame()
-        self.selector_bottom_bar.setProperty('bottomBar', True)
-        self.selector_bottom_bar.setVisible(False)
-        root.addWidget(self.selector_bottom_bar)
+        _build_bottom_bars_impl(self, root)
 
     def build_filter_pane(self) -> QWidget:
-        """
-        Build tool-specific filter UI pane containing type filter.
-
-        Called by CatalogPageBase._build_ui() during initialization.
-        Must return a QWidget with get_filters() method.
-
-        Returns:
-            QFrame with type filter dropdown and get_filters() method attached.
-        """
-        frame = QFrame()
-        frame.setObjectName('filterFrame')
-        frame.setProperty('card', True)
-
-        self.filter_layout = QHBoxLayout(frame)
-        self.filter_layout.setContentsMargins(56, 6, 0, 6)
-        self.filter_layout.setSpacing(4)
-
-        self.toolbar_title_label = QLabel(self.page_title)
-        self.toolbar_title_label.setProperty('pageTitle', True)
-        self.toolbar_title_label.setStyleSheet('padding-left: 0px; padding-right: 20px;')
-
-        self.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
-        self.close_icon = QIcon(str(TOOL_ICONS_DIR / 'close_icon.svg'))
-
-        self.search_toggle = QToolButton()
-        self.search_toggle.setIcon(self.search_icon)
-        self.search_toggle.setIconSize(QSize(28, 28))
-        self.search_toggle.setCheckable(True)
-        self.search_toggle.setAutoRaise(True)
-        self.search_toggle.setProperty('topBarIconButton', True)
-        self.search_toggle.setFixedSize(36, 36)
-        self.search_toggle.clicked.connect(self._toggle_search)
-
-        self.search_input.setPlaceholderText(
-            self._t(
-                'tool_library.search.placeholder',
-                'Search tool ID, name, dimensions, holder, insert, notes...',
-            )
-        )
-        self.search_input.setVisible(False)
-
-        self.toggle_details_btn = QToolButton()
-        self.toggle_details_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / 'tooltip.svg')))
-        self.toggle_details_btn.setIconSize(QSize(28, 28))
-        self.toggle_details_btn.setAutoRaise(True)
-        self.toggle_details_btn.setProperty('topBarIconButton', True)
-        self.toggle_details_btn.setProperty('secondaryAction', True)
-        self.toggle_details_btn.setFixedSize(36, 36)
-        self.toggle_details_btn.clicked.connect(self.toggle_details)
-
-        self.detail_header_container = QWidget()
-        detail_top = QHBoxLayout(self.detail_header_container)
-        detail_top.setContentsMargins(0, 0, 0, 0)
-        detail_top.setSpacing(6)
-
-        self.detail_section_label = QLabel(self._t('tool_library.section.tool_details', 'Tool details'))
-        self.detail_section_label.setProperty('detailSectionTitle', True)
-        self.detail_section_label.setStyleSheet('padding: 0 2px 0 0; font-size: 18px;')
-        detail_top.addWidget(self.detail_section_label)
-        detail_top.addStretch(1)
-
-        self.detail_close_btn = QToolButton()
-        self.detail_close_btn.setIcon(self.close_icon)
-        self.detail_close_btn.setIconSize(QSize(20, 20))
-        self.detail_close_btn.setAutoRaise(True)
-        self.detail_close_btn.setProperty('topBarIconButton', True)
-        self.detail_close_btn.setFixedSize(32, 32)
-        self.detail_close_btn.clicked.connect(self.hide_details)
-        detail_top.addWidget(self.detail_close_btn)
-
-        self.filter_icon = QToolButton()
-        self.filter_icon.setIcon(QIcon(str(TOOL_ICONS_DIR / 'filter_arrow_right.svg')))
-        self.filter_icon.setIconSize(QSize(28, 28))
-        self.filter_icon.setAutoRaise(True)
-        self.filter_icon.setProperty('topBarIconButton', True)
-        self.filter_icon.setFixedSize(36, 36)
-        self.filter_icon.clicked.connect(self._clear_filters)
-
-        self.type_filter = QComboBox()
-        self.type_filter.setObjectName('topTypeFilter')
-        self.type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-        self.type_filter.setMinimumWidth(140)
-        self._build_tool_type_filter_items()
-        self.type_filter.currentIndexChanged.connect(self._on_filter_changed)
-
-        self.preview_window_btn = QToolButton()
-        self.preview_window_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / '3d_icon.svg')))
-        self.preview_window_btn.setIconSize(QSize(28, 28))
-        self.preview_window_btn.setCheckable(True)
-        self.preview_window_btn.setAutoRaise(True)
-        self.preview_window_btn.setProperty('topBarIconButton', True)
-        self.preview_window_btn.setToolTip(self._t('tool_library.preview.toggle', 'Toggle detached 3D preview'))
-        self.preview_window_btn.setFixedSize(36, 36)
-        self.preview_window_btn.clicked.connect(self.toggle_preview_window)
-
-        self._rebuild_filter_row()
-
-        # Attach get_filters() method to frame
-        frame.get_filters = lambda: {
-            'tool_head': self._selected_head_filter(),
-            'tool_type': self.type_filter.currentData() or 'All',
-        }
-
-        return frame
+        """Build tool-specific filter toolbar. Delegated to topbar_builder module."""
+        return build_tool_filter_toolbar(self)
 
     def _rebuild_filter_row(self) -> None:
-        while self.filter_layout.count():
-            item = self.filter_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
-                widget.setParent(None)
-
-        self.filter_layout.addWidget(self.search_toggle)
-        self.filter_layout.addWidget(self.toggle_details_btn)
-        if self.search_input.isVisible():
-            self.filter_layout.addWidget(self.search_input, 1)
-        self.filter_layout.addWidget(self.filter_icon)
-        self.filter_layout.addWidget(self.type_filter)
-        self.filter_layout.addWidget(self.preview_window_btn)
-        self.filter_layout.addStretch(1)
-        self.filter_layout.addWidget(self.detail_header_container)
+        _rebuild_filter_row_impl(self)
 
     def _toggle_search(self) -> None:
-        show = self.search_toggle.isChecked()
-        self.search_input.setVisible(show)
-        self.search_toggle.setIcon(self.close_icon if show else self.search_icon)
-        if not show:
-            self.search_input.clear()
-            self.refresh_list()
-        self._rebuild_filter_row()
-        if show:
-            QTimer.singleShot(0, self.search_input.setFocus)
+        _toggle_search_impl(self)
 
     def _clear_filters(self) -> None:
-        if hasattr(self, 'type_filter') and self.type_filter.count():
-            self.type_filter.setCurrentIndex(0)
+        _clear_filters_impl(self)
 
     def _on_filter_changed(self, _index: int) -> None:
         self.refresh_list()
@@ -695,56 +470,15 @@ class HomePage(CatalogPageBase):
 
     def show_details(self) -> None:
         """Show detail panel."""
-        if not hasattr(self, 'splitter'):
-            return
-        if not self._details_hidden:
-            return
-        self._details_hidden = False
-        if not self._last_splitter_sizes:
-            self._last_splitter_sizes = default_selector_splitter_sizes(
-                self.splitter.width()
-            )
-        self.splitter.setSizes(self._last_splitter_sizes)
-        self.detail_container.show()
-        self.detail_header_container.show()
-        self._update_row_type_visibility(False)
+        show_tool_details(self)
 
     def hide_details(self) -> None:
         """Hide detail panel."""
-        if not hasattr(self, 'splitter'):
-            return
-        if self._details_hidden:
-            return
-        self._details_hidden = True
-        self._last_splitter_sizes = self.splitter.sizes()
-        self.splitter.setSizes([1, 0])
-        self.detail_container.hide()
-        self.detail_header_container.hide()
-        self._update_row_type_visibility(True)
+        hide_tool_details(self)
 
     def toggle_details(self) -> None:
         """Toggle detail panel visibility."""
-        if self._details_hidden:
-            if not self.current_tool_id:
-                QMessageBox.information(
-                    self,
-                    self._t('tool_library.message.show_details', 'Show details'),
-                    self._t(
-                        'tool_library.message.select_tool_first',
-                        'Select a tool first.',
-                    ),
-                )
-                return
-            tool = self._get_selected_tool()
-            self.populate_details(tool)
-            self.show_details()
-        else:
-            self.hide_details()
-
-    def _update_row_type_visibility(self, show: bool) -> None:
-        """Update list row type visibility when detail panel opens/closes."""
-        if hasattr(self, 'tool_list'):
-            self.tool_list.viewport().update()
+        toggle_tool_details(self)
 
     # ─────────────────────────────────────────────────────────────────────
     # Tool CRUD Operations
@@ -752,104 +486,19 @@ class HomePage(CatalogPageBase):
 
     def add_tool(self) -> None:
         """Open AddEditToolDialog in 'add' mode."""
-        dlg = AddEditToolDialog(
-            parent=self,
-            tool=None,
-            tool_service=self.tool_service,
-            translate=self._t,
-        )
-        if dlg.exec() == QDialog.Accepted:
-            self.refresh_list()
+        _add_tool_impl(self)
 
     def edit_tool(self) -> None:
         """Open AddEditToolDialog in 'edit' mode for selected tool."""
-        tool = self._get_selected_tool()
-        if not tool:
-            QMessageBox.information(
-                self,
-                self._t('tool_library.message.edit_tool', 'Edit tool'),
-                self._t(
-                    'tool_library.message.select_tool_first',
-                    'Select a tool first.',
-                ),
-            )
-            return
-
-        uid = tool.get('uid')
-        dlg = AddEditToolDialog(
-            parent=self,
-            tool=tool,
-            tool_service=self.tool_service,
-            translate=self._t,
-        )
-        if dlg.exec() == QDialog.Accepted:
-            self.refresh_list()
-            # Re-select by UID if available
-            if uid:
-                self._restore_selection_by_uid(uid)
+        _edit_tool_impl(self)
 
     def delete_tool(self) -> None:
         """Delete selected tool(s) with confirmation."""
-        uids = self._selected_tool_uids()
-        if not uids:
-            QMessageBox.information(
-                self,
-                self._t('tool_library.message.delete_tool', 'Delete tool'),
-                self._t(
-                    'tool_library.message.select_tool_first',
-                    'Select a tool first.',
-                ),
-            )
-            return
-
-        count = len(uids)
-        reply = QMessageBox.question(
-            self,
-            self._t('tool_library.message.confirm_delete', 'Confirm Delete'),
-            self._t(
-                'tool_library.message.delete_count',
-                'Delete {count} tool(s)?',
-                count=count,
-            ),
-        )
-
-        if reply != QMessageBox.Yes:
-            return
-
-        # Delete each tool (triggers item_deleted signal via apply_batch_action)
-        for uid in uids:
-            tool = self.tool_service.get_tool_by_uid(uid)
-            if tool:
-                tool_id = tool.get('id', '')
-                self.tool_service.delete_tool(tool_id)
-                self.item_deleted.emit(tool_id)
-
-        self.refresh_list()
+        _delete_tool_impl(self)
 
     def copy_tool(self) -> None:
-        """Copy selected tool as new tool."""
-        tool = self._get_selected_tool()
-        if not tool:
-            QMessageBox.information(
-                self,
-                self._t('tool_library.message.copy_tool', 'Copy tool'),
-                self._t(
-                    'tool_library.message.select_tool_first',
-                    'Select a tool first.',
-                ),
-            )
-            return
-
-        tool_copy = dict(tool)
-        tool_copy['id'] = ''  # Clear ID for new tool
-        dlg = AddEditToolDialog(
-            parent=self,
-            tool=tool_copy,
-            tool_service=self.tool_service,
-            translate=self._t,
-        )
-        if dlg.exec() == QDialog.Accepted:
-            self.refresh_list()
+        """Copy selected tool as a new tool."""
+        _copy_tool_impl(self)
 
     # ─────────────────────────────────────────────────────────────────────
     # Batch Operations & Helpers
@@ -857,125 +506,41 @@ class HomePage(CatalogPageBase):
 
     def _get_selected_tool(self) -> dict | None:
         """Return currently selected tool dict or None."""
-        if not self.current_tool_id:
-            return None
-        return self.tool_service.get_tool(self.current_tool_id)
+        return _get_selected_tool_impl(self)
 
     def _selected_tool_uids(self) -> list[int]:
-        """Return list of UIDs for currently selected tools."""
-        if not self.list_view.selectionModel():
-            return []
-        uids = []
-        for idx in self.list_view.selectionModel().selectedIndexes():
-            uid = idx.data(ROLE_TOOL_UID)
-            if uid:
-                uids.append(uid)
-        return uids
+        """Return list of UIDs for all currently selected tools."""
+        return _selected_tool_uids_impl(self)
 
     def _restore_selection_by_uid(self, uid: int) -> None:
-        """Find and select tool by UID."""
-        if not self._item_model:
-            return
-        for row in range(self._item_model.rowCount()):
-            idx = self._item_model.index(row, 0)
-            if idx.data(ROLE_TOOL_UID) == uid:
-                self.list_view.setCurrentIndex(idx)
-                self.list_view.scrollTo(idx)
-                break
+        """Find and re-select tool by UID after list refresh."""
+        _restore_selection_by_uid_impl(self, uid)
 
     def _selected_head_filter(self) -> str:
         """Return active head filter value."""
-        if self._external_head_filter:
-            try:
-                external_value = self._external_head_filter.currentData()
-            except Exception:
-                external_value = None
-            if external_value is not None:
-                return str(external_value).strip() or 'HEAD1/2'
-        return self._head_filter_value
+        return _selected_head_filter_impl(self)
 
     def _normalize_selector_tool(self, item: dict | None) -> dict | None:
-        if not isinstance(item, dict):
-            return None
-
-        tool_id = str(item.get('tool_id') or item.get('id') or '').strip()
-        uid_value = item.get('uid')
-        try:
-            uid = int(uid_value)
-        except Exception:
-            uid = 0
-
-        if not tool_id and uid <= 0:
-            return None
-
-        head = str(item.get('tool_head') or item.get('head') or self._selector_head or 'HEAD1').strip().upper()
-        if head not in {'HEAD1', 'HEAD2'}:
-            head = 'HEAD1'
-
-        spindle = str(item.get('spindle') or item.get('spindle_orientation') or self._selector_spindle or 'main').strip().lower()
-        if spindle not in {'main', 'sub'}:
-            spindle = 'main'
-
-        normalized = dict(item)
-        normalized['tool_id'] = tool_id
-        normalized['id'] = tool_id
-        normalized['uid'] = uid
-        normalized['tool_head'] = head
-        normalized['spindle'] = spindle
-        normalized['spindle_orientation'] = spindle
-        return normalized
+        return _normalize_selector_tool_impl(self, item)
 
     @staticmethod
     def _selector_tool_key(item: dict | None) -> str:
-        if not isinstance(item, dict):
-            return ''
-        tool_id = str(item.get('tool_id') or item.get('id') or '').strip()
-        uid = str(item.get('uid') or '').strip()
-        head = str(item.get('tool_head') or item.get('head') or '').strip().upper()
-        spindle = str(item.get('spindle') or item.get('spindle_orientation') or '').strip().lower()
-        if tool_id:
-            return f'{head}:{spindle}:{tool_id}'
-        if uid:
-            return f'{head}:{spindle}:uid:{uid}'
-        return ''
+        return _selector_tool_key_impl(item)
 
     @staticmethod
     def _selector_target_key(head: str, spindle: str) -> str:
-        normalized_head = str(head or 'HEAD1').strip().upper()
-        if normalized_head not in {'HEAD1', 'HEAD2'}:
-            normalized_head = 'HEAD1'
-        normalized_spindle = str(spindle or 'main').strip().lower()
-        if normalized_spindle not in {'main', 'sub'}:
-            normalized_spindle = 'main'
-        return f'{normalized_head}:{normalized_spindle}'
+        return _selector_target_key_impl(head, spindle)
 
     def _selector_current_target_key(self) -> str:
-        return self._selector_target_key(self._selector_head, self._selector_spindle)
+        return _selector_current_target_key_impl(self)
 
     def bind_external_head_filter(self, head_filter_widget) -> None:
         """Bind shared rail head-filter control from MainWindow."""
-        self._external_head_filter = head_filter_widget
+        _bind_external_head_filter_impl(self, head_filter_widget)
 
     def set_head_filter_value(self, value: str, refresh: bool = True) -> None:
         """Set active head filter value and optionally refresh list."""
-        normalized = str(value or 'HEAD1/2').strip().upper()
-        if normalized not in {'HEAD1/2', 'HEAD1', 'HEAD2'}:
-            normalized = 'HEAD1/2'
-
-        self._head_filter_value = normalized
-
-        if self._external_head_filter is not None:
-            setter = getattr(self._external_head_filter, 'setCurrentData', None)
-            if callable(setter):
-                try:
-                    setter(normalized, emit_signal=False)
-                except TypeError:
-                    setter(normalized)
-                except Exception:
-                    pass
-
-        if refresh:
-            self.refresh_list()
+        _set_head_filter_value_impl(self, value, refresh=refresh)
 
     def _view_match(self, tool: dict) -> bool:
         """Check if tool matches current view mode."""
@@ -992,44 +557,16 @@ class HomePage(CatalogPageBase):
 
     def _tool_matches_selector_spindle(self, tool: dict) -> bool:
         """Check if tool compatible with selector spindle constraint."""
-        if not self._selector_active:
-            return True
-
-        spindle = str(
-            tool.get('spindle_orientation')
-            or tool.get('spindle')
-            or tool.get('spindle_side')
-            or ''
-        ).strip().lower()
-        if not spindle:
-            return True
-        if self._selector_spindle == 'main':
-            return spindle in {'main', 'both', 'all'}
-        if self._selector_spindle == 'sub':
-            return spindle in {'sub', 'both', 'all'}
-        return True
+        return _tool_matches_selector_spindle_impl(self, tool)
 
     def selected_tools_for_setup_assignment(self) -> list[dict]:
-        selected_items = self.get_selected_items()
-        payload: list[dict] = []
-        for item in selected_items:
-            normalized = self._normalize_selector_tool(item)
-            if normalized is None:
-                continue
-            payload.append(normalized)
-        return payload
+        return _selected_tools_for_setup_assignment_impl(self)
 
     def selector_assignment_buckets_for_setup_assignment(self) -> dict[str, list[dict]]:
-        return {
-            key: [dict(item) for item in items if isinstance(item, dict)]
-            for key, items in self._selector_assignments_by_target.items()
-        }
+        return _selector_assignment_buckets_impl(self)
 
     def selector_current_target_for_setup_assignment(self) -> dict:
-        return {
-            'head': self._selector_head,
-            'spindle': self._selector_spindle,
-        }
+        return _selector_current_target_impl(self)
 
     # ─────────────────────────────────────────────────────────────────────
     # Preview Management
@@ -1045,26 +582,7 @@ class HomePage(CatalogPageBase):
 
     def _warmup_preview_engine(self) -> None:
         """Pre-create a hidden preview widget for first detail-open."""
-        from shared.ui.stl_preview import StlPreviewWidget
-
-        if StlPreviewWidget is None:
-            return
-
-        self._inline_preview_warmup = StlPreviewWidget(parent=self)
-        self._inline_preview_warmup.set_control_hint_text(
-            self._t(
-                'tool_editor.hint.rotate_pan_zoom',
-                'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
-            )
-        )
-        self._inline_preview_warmup.hide()
-
-        def _drop_warmup():
-            if self._inline_preview_warmup is not None:
-                self._inline_preview_warmup.deleteLater()
-                self._inline_preview_warmup = None
-
-        QTimer.singleShot(10000, _drop_warmup)
+        _warmup_preview_engine_impl(self)
 
     # ─────────────────────────────────────────────────────────────────────
     # Selector Context (Setup Manager Integration)
@@ -1090,63 +608,11 @@ class HomePage(CatalogPageBase):
             initial_assignments: Initial tool list
             initial_assignment_buckets: Persisted tool buckets by head/spindle
         """
-        self._selector_active = bool(active)
-        self._selector_head = str(head or 'HEAD1').strip().upper()
-        if self._selector_head not in {'HEAD1', 'HEAD2'}:
-            self._selector_head = 'HEAD1'
-
-        self._selector_spindle = str(spindle or 'main').strip().lower()
-        if self._selector_spindle not in {'main', 'sub'}:
-            self._selector_spindle = 'main'
-
-        self._selector_assigned_tools = normalize_selector_bucket(
-            initial_assignments,
-            self._normalize_selector_tool,
-            self._selector_tool_key,
-        )
-
-        self._selector_assignments_by_target = selector_bucket_map(
-            initial_assignment_buckets,
-            self._normalize_selector_tool,
-            self._selector_tool_key,
-            self._selector_target_key,
-        )
-
-        target_key = self._selector_current_target_key()
-        existing = selector_assignments_for_target(
-            self._selector_assignments_by_target,
-            target_key,
-        )
-        if existing:
-            self._selector_assigned_tools = existing
-
-        self._selector_assignments_by_target[target_key] = [
-            dict(item)
-            for item in self._selector_assigned_tools
-            if isinstance(item, dict)
-        ]
-
-        if hasattr(self, 'selector_bottom_bar') and hasattr(self, 'button_bar'):
-            self.selector_bottom_bar.setVisible(self._selector_active)
-            self.button_bar.setVisible(not self._selector_active)
-
-        self.refresh_list()
+        _set_selector_context_impl(self, active, head, spindle, initial_assignments, initial_assignment_buckets)
 
     def selector_assigned_tools_for_setup_assignment(self) -> list[dict]:
         """Return persisted tools with head/spindle metadata for setup assignment."""
-        target_key = self._selector_current_target_key()
-        if self._selector_active:
-            self._selector_assignments_by_target[target_key] = [
-                dict(item)
-                for item in self._selector_assigned_tools
-                if isinstance(item, dict)
-            ]
-
-        persisted = selector_assignments_for_target(
-            self._selector_assignments_by_target,
-            target_key,
-        )
-        return persisted if persisted else self.selected_tools_for_setup_assignment()
+        return _selector_assigned_tools_impl(self)
 
     def set_module_switch_handler(self, callback) -> None:
         """Set external callback for module switch button."""
@@ -1204,45 +670,16 @@ class HomePage(CatalogPageBase):
         self.refresh_list()
 
     def eventFilter(self, obj, event):
-        event_type = event.type() if event is not None else None
-        if event_type == QEvent.MouseButtonDblClick and hasattr(self, 'list_view'):
-            if obj in {self.list_view, self.list_view.viewport()}:
-                pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-                index = self.list_view.indexAt(pos)
-                if index.isValid():
-                    self.on_item_double_clicked(index)
-                    return True
-        if event_type in {QEvent.Resize, QEvent.Show, QEvent.LayoutRequest}:
-            if hasattr(obj, 'property') and bool(obj.property('elideGroupTitle')):
-                self._refresh_elided_group_title(obj)
+        if handle_home_page_event(self, obj, event):
+            return True
         return super().eventFilter(obj, event)
-
-    def _refresh_elided_group_title(self, group_widget) -> None:
-        if group_widget is None or not hasattr(group_widget, 'property'):
-            return
-        full_title = str(group_widget.property('fullGroupTitle') or group_widget.title() or '').strip()
-        if not full_title:
-            return
-        width = max(36, int(group_widget.width()) - 18)
-        metrics = QFontMetrics(group_widget.font())
-        group_widget.setTitle(metrics.elidedText(full_title, Qt.ElideRight, width))
 
     @staticmethod
     def _tool_id_display_value(value: str) -> str:
-        raw = str(value or '').strip()
-        if not raw:
-            return ''
-        body = raw[1:] if raw.lower().startswith('t') else raw
-        digits = ''.join(ch for ch in body if ch.isdigit())
-        if digits:
-            return f'T{digits}'
-        return raw
+        return _tool_id_display_value_impl(value)
 
     def _localized_tool_type(self, tool_type: str) -> str:
-        key = str(tool_type or '').strip()
-        if not key:
-            return '-'
-        return self._t(f'tool_library.type.{key.lower().replace(" ", "_")}', key)
+        return _localized_tool_type_impl(self, tool_type)
 
     @staticmethod
     def _is_turning_drill_tool_type(tool_type: str) -> bool:
@@ -1274,60 +711,8 @@ class HomePage(CatalogPageBase):
             )
 
     def apply_localization(self, translate=None) -> None:
-        if translate is not None:
-            self._translate = translate
-
-        current_tool_type = self.type_filter.currentData() if hasattr(self, 'type_filter') else 'All'
-        if hasattr(self, 'type_filter'):
-            self.type_filter.blockSignals(True)
-            self.type_filter.clear()
-            self._build_tool_type_filter_items()
-            for idx in range(self.type_filter.count()):
-                if self.type_filter.itemData(idx) == current_tool_type:
-                    self.type_filter.setCurrentIndex(idx)
-                    break
-            self.type_filter.blockSignals(False)
-
-        if hasattr(self, 'search_input'):
-            self.search_input.setPlaceholderText(
-                self._t(
-                    'tool_library.search.placeholder',
-                    'Search tool ID, name, dimensions, holder, insert, notes...',
-                )
-            )
-
-        if hasattr(self, 'toolbar_title_label'):
-            self.toolbar_title_label.setText(self.page_title)
-        if hasattr(self, 'detail_section_label'):
-            self.detail_section_label.setText(
-                self._t('tool_library.section.tool_details', 'Tool details')
-            )
-        if hasattr(self, 'preview_window_btn'):
-            self.preview_window_btn.setToolTip(
-                self._t('tool_library.preview.toggle', 'Toggle detached 3D preview')
-            )
-        if hasattr(self, 'edit_btn'):
-            self.edit_btn.setText(self._t('tool_library.action.edit_tool', 'EDIT TOOL'))
-        if hasattr(self, 'delete_btn'):
-            self.delete_btn.setText(self._t('tool_library.action.delete_tool', 'DELETE TOOL'))
-        if hasattr(self, 'add_btn'):
-            self.add_btn.setText(self._t('tool_library.action.add_tool', 'ADD TOOL'))
-        if hasattr(self, 'copy_btn'):
-            self.copy_btn.setText(self._t('tool_library.action.copy_tool', 'COPY TOOL'))
-        if hasattr(self, 'module_switch_label'):
-            self.module_switch_label.setText(self._t('tool_library.module.switch_to', 'Switch to'))
-        self._rebuild_filter_row()
-
-        self.refresh_list()
+        apply_home_page_localization(self, translate)
 
     def _build_tool_type_filter_items(self) -> None:
         """Build tool type filter dropdown items."""
-        self.type_filter.addItem(
-            self._t('tool_library.filter.all', 'All'),
-            'All',
-        )
-        for tool_type in ALL_TOOL_TYPES:
-            self.type_filter.addItem(
-                self._localized_tool_type(tool_type),
-                tool_type,
-            )
+        _build_tool_type_filter_items_impl(self)

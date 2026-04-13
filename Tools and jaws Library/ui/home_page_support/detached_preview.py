@@ -284,3 +284,27 @@ def toggle_preview_window(page):
         return
 
     close_detached_preview(page)
+
+
+def warmup_preview_engine(page) -> None:
+    """Pre-create a hidden preview widget to reduce first detail-open latency."""
+    from PySide6.QtCore import QTimer
+
+    if StlPreviewWidget is None:
+        return
+
+    page._inline_preview_warmup = StlPreviewWidget(parent=page)
+    page._inline_preview_warmup.set_control_hint_text(
+        page._t(
+            'tool_editor.hint.rotate_pan_zoom',
+            'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+        )
+    )
+    page._inline_preview_warmup.hide()
+
+    def _drop_warmup():
+        if page._inline_preview_warmup is not None:
+            page._inline_preview_warmup.deleteLater()
+            page._inline_preview_warmup = None
+
+    QTimer.singleShot(10000, _drop_warmup)

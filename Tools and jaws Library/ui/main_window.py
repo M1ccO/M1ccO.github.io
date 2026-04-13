@@ -43,13 +43,10 @@ from config import (
 from data.database import Database
 from data.jaw_database import JawDatabase
 from services.jaw_service import JawService
-from services.fixture_service import FixtureService
 from shared.services.localization_service import LocalizationService
 from services.tool_service import ToolService
 from shared.services.ui_preferences_service import UiPreferencesService
-from shared.ui.helpers.editor_helpers import style_panel_action_button
 from ui.export_page import ExportPage
-from ui.fixtures_page import FixturesPage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
@@ -160,6 +157,7 @@ class MainWindow(QMainWindow):
             include_setup_db_path=False,
         )
         self.ui_preferences = self.ui_preferences_service.load()
+        self.machine_profile = self._resolve_machine_profile(self.ui_preferences.get('machine_profile_key'))
         self.localization = LocalizationService(I18N_DIR)
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         if hasattr(self.export_service, "set_translator"):
@@ -186,7 +184,6 @@ class MainWindow(QMainWindow):
         self._selector_request_id = ''
         self._selector_head = ''
         self._selector_spindle = ''
-        self.fixture_service = FixtureService()
         self._selector_initial_assignments: list[dict] = []
         self._selector_initial_assignment_buckets: dict[str, list[dict]] = {}
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
@@ -197,6 +194,32 @@ class MainWindow(QMainWindow):
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
+
+    @staticmethod
+    def _resolve_machine_profile(profile_key: str | None) -> dict:
+        """Resolve profile key into a lightweight profile mapping for this app."""
+        _normalized = str(profile_key or '').strip().lower()
+        # Current runtime supports one profile; keep mapping extensible.
+        return {
+            'key': 'ntx_2sp_2h',
+            'heads': [
+                {'key': 'HEAD1', 'label_key': 'tool_library.head_filter.head1', 'label_default': 'HEAD1'},
+                {'key': 'HEAD2', 'label_key': 'tool_library.head_filter.head2', 'label_default': 'HEAD2'},
+            ],
+            'spindles': [
+                {'key': 'main', 'label_key': 'jaw_library.filter.main_spindle', 'label_default': 'Main spindle'},
+                {'key': 'sub', 'label_key': 'jaw_library.filter.sub_spindle', 'label_default': 'Sub spindle'},
+            ],
+        }
+
+    def _profile_head_keys(self) -> list[str]:
+        heads = self.machine_profile.get('heads') if isinstance(self.machine_profile, dict) else []
+        keys: list[str] = []
+        for head in heads or []:
+            key = str((head or {}).get('key') or '').strip().upper()
+            if key and key not in keys:
+                keys.append(key)
+        return keys or ['HEAD1', 'HEAD2']
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -425,7 +448,9 @@ class MainWindow(QMainWindow):
         combo_policy.setRetainSizeWhenHidden(True)
         self.tool_head_filter_combo.setSizePolicy(combo_policy)
         self.tool_head_filter_combo.setToolTip(self._t('tool_library.head_filter.toggle_tip', 'Left click toggles HEAD1 and HEAD2. Right click shows both heads.'))
-        style_panel_action_button(self.tool_head_filter_combo)
+        # Keep shared panel button visuals but without drop shadow for parity.
+        self.tool_head_filter_combo.setProperty('panelActionButton', True)
+        self.tool_head_filter_combo.setGraphicsEffect(None)
         self._rebuild_head_filter_combo_items()
         self.tool_head_filter_combo.currentIndexChanged.connect(self._on_global_tool_head_changed)
         toggle_layout.addSpacing(10)
@@ -483,15 +508,22 @@ class MainWindow(QMainWindow):
             settings_service,
             page_title=self._t("tool_library.rail_title.tools", "Tool Library"),
             view_mode='home',
+            machine_profile=self.machine_profile,
             translate=self._t,
         )
-        self.jaws_page = JawPage(jaw_service, show_sidebar=False, translate=self._t)
+        self.jaws_page = JawPage(
+            jaw_service,
+            show_sidebar=False,
+            machine_profile=self.machine_profile,
+            translate=self._t,
+        )
         self.assemblies_page = HomePage(
             tool_service,
             export_service,
             settings_service,
             page_title=self._t("tool_library.nav.assemblies", "Assemblies"),
             view_mode='assemblies',
+            machine_profile=self.machine_profile,
             translate=self._t,
         )
         self.holders_page = HomePage(
@@ -500,6 +532,7 @@ class MainWindow(QMainWindow):
             settings_service,
             page_title=self._t("tool_library.nav.holders", "Holders"),
             view_mode='holders',
+            machine_profile=self.machine_profile,
             translate=self._t,
         )
         self.inserts_page = HomePage(
@@ -508,9 +541,9 @@ class MainWindow(QMainWindow):
             settings_service,
             page_title=self._t("tool_library.nav.inserts", "Inserts"),
             view_mode='inserts',
+            machine_profile=self.machine_profile,
             translate=self._t,
         )
-        self.fixtures_page = FixturesPage(self.fixture_service, translate=self._t)
         self.export_page = ExportPage(
             tool_service,
             export_service,
@@ -528,7 +561,6 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.assemblies_page)
         self.stack.addWidget(self.holders_page)
         self.stack.addWidget(self.inserts_page)
-        self.stack.addWidget(self.fixtures_page)
         self.stack.addWidget(self.export_page)
         self.stack.addWidget(self.jaws_page)
         self.stack.addWidget(self.jaws_export_page)
@@ -616,8 +648,6 @@ class MainWindow(QMainWindow):
             page.current_tool_id = None
             page.refresh_list()
             page.populate_details(None)
-        self.fixtures_page.refresh_list()
-        self.fixtures_page.populate_details(None)
         self.jaws_page.current_jaw_id = None
         self.jaws_page.refresh_list()
         self.jaws_page.populate_details(None)
@@ -688,7 +718,6 @@ class MainWindow(QMainWindow):
             (self._t("tool_library.nav.assemblies", "Assemblies"), NAV_ITEM_TO_ICON['ASSEMBLIES'], False, lambda: self._open_tool_page('assemblies')),
             (self._t("tool_library.nav.holders", "Holders"), NAV_ITEM_TO_ICON['HOLDERS'], False, lambda: self._open_tool_page('holders')),
             (self._t("tool_library.nav.inserts", "Inserts"), NAV_ITEM_TO_ICON['INSERTS'], False, lambda: self._open_tool_page('inserts')),
-            (self._t("tool_library.nav.fixtures", "Fixtures"), NAV_ITEM_TO_ICON['FIXTURES'], False, lambda: self._open_tool_page('fixtures')),
             (self._t("tool_library.nav.export", "Export"), NAV_ITEM_TO_ICON['EXPORT'], False, lambda: self._open_tool_page('export')),
         ]
 
@@ -698,7 +727,6 @@ class MainWindow(QMainWindow):
             'assemblies': self.assemblies_page,
             'holders': self.holders_page,
             'inserts': self.inserts_page,
-            'fixtures': self.fixtures_page,
             'export': self.export_page,
         }
         page = page_map.get(page_key, self.home_page)
@@ -759,16 +787,32 @@ class MainWindow(QMainWindow):
         self._apply_module_mode('tools')
 
     def _rebuild_head_filter_combo_items(self):
-        current_data = str(self.tool_head_filter_combo.currentData() or 'HEAD1').strip().upper()
-        if current_data not in {'HEAD1/2', 'HEAD1', 'HEAD2'}:
-            current_data = 'HEAD1'
+        head_keys = self._profile_head_keys()
+        default_value = head_keys[0]
+        allow_combined = len(head_keys) > 1
+        current_data = str(self.tool_head_filter_combo.currentData() or default_value).strip().upper()
+        valid_values = set(head_keys)
+        if allow_combined:
+            valid_values.add('HEAD1/2')
+        if current_data not in valid_values:
+            current_data = 'HEAD1/2' if allow_combined else default_value
+
+        items = []
+        if allow_combined:
+            items.append((self._t('tool_library.head_filter.all', 'HEAD1/2'), 'HEAD1/2'))
+        for head in (self.machine_profile.get('heads') or []):
+            head_key = str((head or {}).get('key') or '').strip().upper()
+            if not head_key:
+                continue
+            label_key = str((head or {}).get('label_key') or '').strip()
+            label_default = str((head or {}).get('label_default') or head_key)
+            label = self._t(label_key, label_default) if label_key else label_default
+            items.append((label, head_key))
+        if not items:
+            items = [(default_value, default_value)]
 
         self.tool_head_filter_combo.blockSignals(True)
-        self.tool_head_filter_combo.set_options([
-            (self._t('tool_library.head_filter.all', 'HEAD1/2'), 'HEAD1/2'),
-            (self._t('tool_library.head_filter.head1', 'HEAD1'), 'HEAD1'),
-            (self._t('tool_library.head_filter.head2', 'HEAD2'), 'HEAD2'),
-        ])
+        self.tool_head_filter_combo.set_options(items)
         self.tool_head_filter_combo.setCurrentData(current_data, emit_signal=False)
         self.tool_head_filter_combo.blockSignals(False)
 
@@ -782,12 +826,20 @@ class MainWindow(QMainWindow):
         self._refresh_nav_button_icons()
 
     def _on_global_tool_head_changed(self, _index: int):
-        head_value = str(self.tool_head_filter_combo.currentData() or 'HEAD1').strip().upper()
+        head_keys = self._profile_head_keys()
+        default_value = head_keys[0]
+        allow_combined = len(head_keys) > 1
+        head_value = str(self.tool_head_filter_combo.currentData() or default_value).strip().upper()
+        allowed_values = set(head_keys)
+        if allow_combined:
+            allowed_values.add('HEAD1/2')
+        if head_value not in allowed_values:
+            head_value = 'HEAD1/2' if allow_combined else default_value
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
             page.set_head_filter_value(head_value, refresh=False)
             page.refresh_list()
         # Keep selector HEAD in sync with the dropdown
-        if self._selector_mode == 'tools' and head_value in ('HEAD1', 'HEAD2'):
+        if self._selector_mode == 'tools' and head_value in head_keys:
             self._selector_head = head_value
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
                 if hasattr(page, 'update_selector_head'):
@@ -824,6 +876,9 @@ class MainWindow(QMainWindow):
         if latest == self.ui_preferences:
             return
         self.ui_preferences = latest
+        self.machine_profile = self._resolve_machine_profile(self.ui_preferences.get('machine_profile_key'))
+        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
+            page.machine_profile = self.machine_profile
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._apply_style()
         self._refresh_localized_labels()
@@ -864,8 +919,6 @@ class MainWindow(QMainWindow):
             self.inserts_page.set_page_title(self._t("tool_library.nav.inserts", "Inserts"))
             if hasattr(self.inserts_page, "apply_localization"):
                 self.inserts_page.apply_localization(self._t)
-        if hasattr(self, "fixtures_page") and hasattr(self.fixtures_page, "apply_localization"):
-            self.fixtures_page.apply_localization(self._t)
         if hasattr(self, "jaws_page") and hasattr(self.jaws_page, "apply_localization"):
             self.jaws_page.apply_localization(self._t)
 

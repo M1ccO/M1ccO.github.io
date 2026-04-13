@@ -23,6 +23,7 @@ def _base_defaults() -> dict:
         "language": "en",
         "font_family": "Segoe UI",
         "color_theme": "classic",
+        "machine_profile_key": "ntx_2sp_2h",
         "tools_models_root": str(_DEFAULT_TOOLS_ROOT),
         "jaws_models_root": str(_DEFAULT_JAWS_ROOT),
         "enable_assembly_transform": False,
@@ -57,6 +58,13 @@ class UiPreferencesService:
         if theme not in SUPPORTED_THEMES:
             theme = self.default_preferences["color_theme"]
         data["color_theme"] = theme
+
+        machine_profile_key = str(
+            data.get("machine_profile_key") or self.default_preferences["machine_profile_key"]
+        ).strip().lower()
+        if not machine_profile_key:
+            machine_profile_key = self.default_preferences["machine_profile_key"]
+        data["machine_profile_key"] = machine_profile_key
 
         tools_root = str(data.get("tools_models_root") or self.default_preferences["tools_models_root"]).strip()
         jaws_root = str(data.get("jaws_models_root") or self.default_preferences["jaws_models_root"]).strip()
@@ -98,3 +106,14 @@ class UiPreferencesService:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
         return normalized
+
+    def get_machine_profile_key(self) -> str:
+        """Return persisted machine profile key with default fallback."""
+        prefs = self.load()
+        return str(prefs.get("machine_profile_key") or self.default_preferences["machine_profile_key"]).strip().lower()
+
+    def set_machine_profile_key(self, key: str) -> dict:
+        """Persist machine profile key while keeping other preferences unchanged."""
+        prefs = self.load()
+        prefs["machine_profile_key"] = str(key or self.default_preferences["machine_profile_key"]).strip().lower()
+        return self.save(prefs)

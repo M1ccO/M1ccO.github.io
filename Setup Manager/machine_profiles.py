@@ -107,3 +107,21 @@ NTX_MACHINE_PROFILE = MachineProfile(
     default_zero_xy_visible=False,
     default_tools_spindle="main",
 )
+
+
+# Phase 10 foundation: profile selection is now key-based and runtime-loadable.
+# Keep NTX_MACHINE_PROFILE as the canonical object and backwards-compatible alias.
+DEFAULT_PROFILE_KEY = "ntx_2sp_2h"
+
+PROFILE_REGISTRY: dict[str, MachineProfile] = {
+    DEFAULT_PROFILE_KEY: NTX_MACHINE_PROFILE,
+    NTX_MACHINE_PROFILE.key: NTX_MACHINE_PROFILE,
+}
+
+
+def load_profile(profile_key: str | None) -> MachineProfile:
+    """Return a machine profile by key, falling back to default for unknown keys."""
+    normalized = str(profile_key or "").strip().lower()
+    if normalized and normalized in PROFILE_REGISTRY:
+        return PROFILE_REGISTRY[normalized]
+    return PROFILE_REGISTRY[DEFAULT_PROFILE_KEY]

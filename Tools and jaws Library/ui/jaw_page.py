@@ -63,11 +63,13 @@ class JawPage(CatalogPageBase):
         jaw_service,
         parent=None,
         show_sidebar: bool = True,
+        machine_profile=None,
         translate: Callable[[str, str | None], str] | None = None,
     ):
         self.jaw_service = jaw_service
         self.show_sidebar = bool(show_sidebar)
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self.machine_profile = machine_profile
 
         self.current_jaw_id: str | None = None
         self.current_view_mode = 'all'

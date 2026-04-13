@@ -7,7 +7,7 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QComboBox, QFrame, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QWidget
 
 from config import TOOL_ICONS_DIR
-from ui.widgets.common import add_shadow, apply_shared_dropdown_style
+from ui.widgets.common import apply_shared_dropdown_style
 
 
 def populate_jaw_type_filter(page) -> None:
@@ -24,12 +24,37 @@ def populate_jaw_type_filter(page) -> None:
 
 def populate_spindle_filter(page) -> None:
     current = page.spindle_filter.currentData() if page.spindle_filter.count() else 'all'
+    profile = getattr(page, 'machine_profile', None)
+    profile_spindles = []
+    if isinstance(profile, dict):
+        profile_spindles = profile.get('spindles') or []
+    elif profile is not None:
+        profile_spindles = getattr(profile, 'spindles', ()) or ()
+
+    spindle_keys: list[str] = []
+    for spindle in profile_spindles:
+        if isinstance(spindle, dict):
+            key = str(spindle.get('key') or '').strip().lower()
+        else:
+            key = str(getattr(spindle, 'key', '') or '').strip().lower()
+        if key and key not in spindle_keys:
+            spindle_keys.append(key)
+    if not spindle_keys:
+        spindle_keys = ['main', 'sub']
+
     page.spindle_filter.blockSignals(True)
     page.spindle_filter.clear()
     page.spindle_filter.addItem(page._t('jaw_library.filter.spindle_all', 'All spindles'), 'all')
-    page.spindle_filter.addItem(page._t('jaw_library.filter.main_spindle', 'Main spindle'), 'main')
-    page.spindle_filter.addItem(page._t('jaw_library.filter.sub_spindle', 'Sub spindle'), 'sub')
-    _set_combo_value(page.spindle_filter, current if current in {'all', 'main', 'sub'} else 'all')
+    for spindle_key in spindle_keys:
+        if spindle_key == 'main':
+            label = page._t('jaw_library.filter.main_spindle', 'Main spindle')
+        elif spindle_key == 'sub':
+            label = page._t('jaw_library.filter.sub_spindle', 'Sub spindle')
+        else:
+            label = spindle_key.upper()
+        page.spindle_filter.addItem(label, spindle_key)
+    allowed = {'all', *spindle_keys}
+    _set_combo_value(page.spindle_filter, current if current in allowed else 'all')
     page.spindle_filter.blockSignals(False)
 
 
@@ -104,8 +129,8 @@ def build_filter_toolbar(page) -> QFrame:
     page.jaw_type_filter.setObjectName('topTypeFilter')
     page.jaw_type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
     page.jaw_type_filter.setMinimumWidth(80)
+    page.jaw_type_filter.setProperty('dropdownSizeProfile', 'compact')
     page.jaw_type_filter.currentIndexChanged.connect(page._on_filter_changed)
-    add_shadow(page.jaw_type_filter)
     apply_shared_dropdown_style(page.jaw_type_filter)
     page.jaw_type_filter.installEventFilter(page)
     page.jaw_type_filter.view().installEventFilter(page)
@@ -114,8 +139,8 @@ def build_filter_toolbar(page) -> QFrame:
     page.spindle_filter.setObjectName('topSpindleFilter')
     page.spindle_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
     page.spindle_filter.setMinimumWidth(120)
+    page.spindle_filter.setProperty('dropdownSizeProfile', 'compact')
     page.spindle_filter.currentIndexChanged.connect(page._on_filter_changed)
-    add_shadow(page.spindle_filter)
     apply_shared_dropdown_style(page.spindle_filter)
     page.spindle_filter.installEventFilter(page)
     page.spindle_filter.view().installEventFilter(page)

@@ -36,26 +36,6 @@
         "_compute_size",
         "_paint_item_content"
       ]
-    },
-    {
-      "file": "ui/fixtures_page.py",
-      "class": "FixturesPage",
-      "base": "CatalogPageBase",
-      "required_methods": [
-        "create_delegate",
-        "get_item_service",
-        "build_filter_pane",
-        "apply_filters"
-      ]
-    },
-    {
-      "file": "ui/fixtures_page.py",
-      "class": "FixtureCatalogDelegate",
-      "base": "CatalogDelegate",
-      "required_methods": [
-        "_compute_size",
-        "_paint_item_content"
-      ]
     }
   ]
 }

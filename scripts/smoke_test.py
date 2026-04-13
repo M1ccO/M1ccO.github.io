@@ -13,9 +13,6 @@ COMPILE_TARGETS = [
     ROOT / "Setup Manager" / "ui" / "main_window.py",
     ROOT / "Tools and jaws Library" / "main.py",
     ROOT / "Tools and jaws Library" / "ui" / "main_window.py",
-    ROOT / "Tools and jaws Library" / "ui" / "fixtures_page.py",
-    ROOT / "Tools and jaws Library" / "services" / "fixture_service.py",
-    ROOT / "Tools and jaws Library" / "services" / "fixtures_export_spec.py",
     ROOT / "shared" / "services" / "localization_service.py",
     ROOT / "shared" / "services" / "ui_preferences_service.py",
     ROOT / "shared" / "ui" / "stl_preview.py",
@@ -52,7 +49,7 @@ def main() -> int:
         )
         run_import_smoke(
             ROOT / "Tools and jaws Library",
-            "from ui.main_window import MainWindow; from ui.jaw_page import JawPage; from ui.fixtures_page import FixturesPage; from services.fixture_service import FixtureService; from services.fixtures_export_spec import create_fixtures_export_spec; from shared.ui.stl_preview import StlPreviewWidget; print('tools-smoke-ok')",
+            "from ui.main_window import MainWindow; from ui.jaw_page import JawPage; from shared.ui.stl_preview import StlPreviewWidget; print('tools-smoke-ok')",
         )
     except Exception as exc:
         print(f"smoke-test: FAILED\n{exc}")

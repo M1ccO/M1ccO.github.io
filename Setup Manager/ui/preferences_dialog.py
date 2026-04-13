@@ -112,6 +112,19 @@ class PreferencesDialog(PreferencesDialogBase):
         apply_tool_library_combo_style(self.theme_combo)
         card_layout.addWidget(self._row(self._t("preferences.color_theme", "Color Theme"), self.theme_combo))
 
+        self.machine_profile_combo = QComboBox()
+        self.machine_profile_combo.addItem(
+            self._t("preferences.machine_profile.ntx_2sp_2h", "NTX 2SP + 2H"),
+            "ntx_2sp_2h",
+        )
+        apply_tool_library_combo_style(self.machine_profile_combo)
+        card_layout.addWidget(
+            self._row(
+                self._t("preferences.machine_profile", "Machine Profile"),
+                self.machine_profile_combo,
+            )
+        )
+
         self.assembly_transform_cb = QCheckBox(self._t("preferences.enable_assembly_transform", "Enable assembly transform editing (3D Models tab)"))
         self.assembly_transform_cb.setStyleSheet("QCheckBox { background: transparent; }")
         card_layout.addWidget(self.assembly_transform_cb)
@@ -251,6 +264,7 @@ class PreferencesDialog(PreferencesDialogBase):
         return {
             "language": self.language_combo.currentData() or "en",
             "color_theme": self.theme_combo.currentData() or "classic",
+            "machine_profile_key": self.machine_profile_combo.currentData() or "ntx_2sp_2h",
             "tools_models_root": self.tools_models_root.text().strip(),
             "jaws_models_root": self.jaws_models_root.text().strip(),
             "setup_db_path": self.setup_db_path_edit.text().strip(),
@@ -261,6 +275,7 @@ class PreferencesDialog(PreferencesDialogBase):
     def _load_current_values(self):
         self._set_combo_by_data(self.language_combo, self._current.get("language", "en"))
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
+        self._set_combo_by_data(self.machine_profile_combo, self._current.get("machine_profile_key", "ntx_2sp_2h"))
         self.tools_models_root.setText(str(self._current.get("tools_models_root", "")))
         self.jaws_models_root.setText(str(self._current.get("jaws_models_root", "")))
         self.setup_db_path_edit.setText(str(self._current.get("setup_db_path", "")))
