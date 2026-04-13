@@ -14,12 +14,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import Qt, QUrl, QModelIndex
-from PySide6.QtGui import QIcon, QDesktopServices
+from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtGui import QIcon
 # import QtSvg for SVG support
 import PySide6.QtSvg  # noqa: F401
 from PySide6.QtWidgets import (
-    QApplication,
     QAbstractItemDelegate,
     QFrame,
     QMessageBox,
@@ -75,10 +74,18 @@ from ui.home_page_support.retranslate_page import (
     tool_id_display_value as _tool_id_display_value_impl,
 )
 from ui.home_page_support.detached_preview import (
-    close_detached_preview,
     sync_detached_preview as _sync_detached_preview_impl,
     toggle_preview_window,
     warmup_preview_engine as _warmup_preview_engine_impl,
+)
+from ui.home_page_support.selection_signal_handlers import (
+    connect_selection_model as _connect_selection_model_impl,
+    on_current_item_changed as _on_current_item_changed_impl,
+    on_item_deleted_internal as _on_item_deleted_internal_impl,
+    on_item_double_clicked as _on_item_double_clicked_impl,
+    on_item_selected_internal as _on_item_selected_internal_impl,
+    on_multi_selection_changed as _on_multi_selection_changed_impl,
+    update_selection_count_label as _update_selection_count_label_impl,
 )
 from ui.home_page_support.selector_context import (
     normalize_selector_tool as _normalize_selector_tool_impl,
@@ -92,6 +99,20 @@ from ui.home_page_support.selector_context import (
     set_selector_context as _set_selector_context_impl,
     selector_assigned_tools_for_setup_assignment as _selector_assigned_tools_impl,
 )
+from ui.home_page_support.filter_coordinator import (
+    apply_filters as _apply_filters_impl,
+    view_match as _view_match_impl,
+)
+from ui.home_page_support.runtime_actions import (
+    refresh_catalog as _refresh_catalog_impl,
+    refresh_list as _refresh_list_impl,
+    select_tool_by_id as _select_tool_by_id_impl,
+    set_active_database_name as _set_active_database_name_impl,
+    set_master_filter as _set_master_filter_impl,
+    set_module_switch_target as _set_module_switch_target_impl,
+    set_page_title as _set_page_title_impl,
+)
+from ui.home_page_support.link_actions import part_clicked as _part_clicked_impl
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -299,47 +320,7 @@ class HomePage(CatalogPageBase):
         Returns:
             list[dict] of tools matching all filters.
         """
-        search_text = filters.get('search', '').strip()
-        tool_type = filters.get('tool_type', 'All')
-        tool_head = filters.get('tool_head', self._selected_head_filter())
-
-        # Query service
-        tools = self.tool_service.list_tools(
-            search_text=search_text,
-            tool_type=tool_type,
-            tool_head=tool_head,
-        )
-
-        # Apply selector spindle constraint (if selector active)
-        if self._selector_active:
-            tools = [
-                tool for tool in tools
-                if self._tool_matches_selector_spindle(tool)
-            ]
-
-        # Apply master filter (Setup Manager context)
-        if self._master_filter_active:
-            tools = [
-                tool for tool in tools
-                if str(tool.get('id', '')).strip() in self._master_filter_ids
-            ]
-
-        # Apply view mode filter
-        tools = [tool for tool in tools if self._view_match(tool)]
-
-        # Build catalog payload expected by CatalogPageBase + delegate roles.
-        catalog_items: list[dict] = []
-        for tool in tools:
-            item = dict(tool)
-            item['id'] = str(item.get('id', '')).strip()
-            try:
-                item['uid'] = int(item.get('uid', 0) or 0)
-            except Exception:
-                item['uid'] = 0
-            item['icon'] = tool_icon_for_type(str(item.get('tool_type', '') or ''))
-            catalog_items.append(item)
-
-        return catalog_items
+        return _apply_filters_impl(self, filters)
 
     # ─────────────────────────────────────────────────────────────────────
     # Signal & Selection Handling (Tool-Specific)
@@ -355,20 +336,7 @@ class HomePage(CatalogPageBase):
             item_id: Tool ID
             uid: Tool UID for persistence
         """
-        self.current_tool_id = item_id
-        self.current_tool_uid = uid
-
-        # Update detail panel if visible
-        if not self._details_hidden:
-            tool = self.tool_service.get_tool_by_uid(uid) if uid else None
-            if tool is None and item_id:
-                tool = self.tool_service.get_tool(item_id)
-            self.populate_details(tool)
-
-        # Update detached preview if open
-        preview_btn = getattr(self, 'preview_window_btn', None)
-        if preview_btn and preview_btn.isChecked():
-            self._sync_detached_preview(show_errors=False)
+        _on_item_selected_internal_impl(self, item_id, uid)
 
     def _on_item_deleted_internal(self, item_id: str) -> None:
         """
@@ -379,75 +347,22 @@ class HomePage(CatalogPageBase):
         Args:
             item_id: Tool ID that was deleted
         """
-        # Clear selection if deleted tool was current
-        if self.current_tool_id == item_id:
-            self.current_tool_id = None
-            self.current_tool_uid = None
-            self.populate_details(None)
-
-        # Close detached preview if open
-        preview_btn = getattr(self, 'preview_window_btn', None)
-        if preview_btn and preview_btn.isChecked():
-            close_detached_preview(self)
+        _on_item_deleted_internal_impl(self, item_id)
 
     def _connect_selection_model(self) -> None:
-        selection_model = self.list_view.selectionModel()
-        if (
-            selection_model is None
-            or getattr(self, '_selection_model_connected', None) is selection_model
-        ):
-            return
-        selection_model.currentChanged.connect(self.on_current_item_changed)
-        selection_model.selectionChanged.connect(self._on_multi_selection_changed)
-        self._selection_model_connected = selection_model
+        _connect_selection_model_impl(self)
 
     def _on_multi_selection_changed(self, _selected, _deselected) -> None:
-        self._update_selection_count_label()
+        _on_multi_selection_changed_impl(self, _selected, _deselected)
 
     def _update_selection_count_label(self) -> None:
-        count = len(self._selected_tool_uids())
-        if count > 1 and hasattr(self, 'selection_count_label'):
-            self.selection_count_label.setText(
-                self._t('tool_library.selection.count', '{count} selected', count=count)
-            )
-            self.selection_count_label.show()
-            return
-        if hasattr(self, 'selection_count_label'):
-            self.selection_count_label.hide()
+        _update_selection_count_label_impl(self)
 
     def on_current_item_changed(self, current: QModelIndex, previous: QModelIndex) -> None:
-        _ = previous
-        if not current.isValid():
-            self.current_tool_id = None
-            self.current_tool_uid = None
-            return
-
-        tool_id = str(current.data(ROLE_TOOL_ID) or '').strip()
-        uid = current.data(ROLE_TOOL_UID)
-        self.current_tool_id = tool_id or None
-        self.current_tool_uid = int(uid or 0) or None
-
-        if not self._details_hidden:
-            self.populate_details(self._get_selected_tool())
+        _on_current_item_changed_impl(self, current, previous)
 
     def on_item_double_clicked(self, index: QModelIndex) -> None:
-        if not index.isValid():
-            return
-
-        self.current_tool_id = str(index.data(ROLE_TOOL_ID) or '').strip() or None
-        uid = index.data(ROLE_TOOL_UID)
-        self.current_tool_uid = int(uid or 0) or None
-
-        if QApplication.keyboardModifiers() & Qt.ControlModifier:
-            self.edit_tool()
-            return
-
-        if self._details_hidden:
-            self.populate_details(self._get_selected_tool())
-            self.show_details()
-            return
-
-        self.hide_details()
+        _on_item_double_clicked_impl(self, index)
 
     # ─────────────────────────────────────────────────────────────────────
     # Detail Panel Display
@@ -544,16 +459,7 @@ class HomePage(CatalogPageBase):
 
     def _view_match(self, tool: dict) -> bool:
         """Check if tool matches current view mode."""
-        mode = (self.view_mode or 'home').strip().lower()
-        if mode in {'home', 'tools'}:
-            return True
-        if mode == 'holders':
-            return bool(str(tool.get('holder_code', '')).strip())
-        if mode == 'inserts':
-            return bool(str(tool.get('cutting_code', '')).strip())
-        if mode == 'assemblies':
-            return bool(tool.get('component_items') or tool.get('support_parts') or tool.get('stl_path'))
-        return True
+        return _view_match_impl(self, tool)
 
     def _tool_matches_selector_spindle(self, tool: dict) -> bool:
         """Check if tool compatible with selector spindle constraint."""
@@ -620,54 +526,29 @@ class HomePage(CatalogPageBase):
 
     def set_page_title(self, title: str) -> None:
         """Update page title label."""
-        self.page_title = str(title or '')
-        if hasattr(self, 'toolbar_title_label'):
-            self.toolbar_title_label.setText(self.page_title)
+        _set_page_title_impl(self, title)
 
     def set_active_database_name(self, db_name: str) -> None:
         """Store active database display name for status/tooltips."""
-        self._active_db_name = str(db_name or '').strip()
+        _set_active_database_name_impl(self, db_name)
 
     def set_module_switch_target(self, target: str) -> None:
         """Update module switch button target."""
-        target_text = (target or '').strip().upper() or 'JAWS'
-        display = (
-            self._t('tool_library.module.tools', 'TOOLS')
-            if target_text == 'TOOLS'
-            else self._t('tool_library.module.jaws', 'JAWS')
-        )
-        if hasattr(self, 'module_toggle_btn'):
-            self.module_toggle_btn.setText(display)
-            self.module_toggle_btn.setToolTip(
-                self._t(
-                    'tool_library.module.switch_to_target',
-                    'Switch to {target} module',
-                    target=display,
-                )
-            )
+        _set_module_switch_target_impl(self, target)
 
     def set_master_filter(self, tool_ids, active: bool) -> None:
         """Set external master filter (Setup Manager context)."""
-        self._master_filter_ids = {
-            str(t).strip() for t in (tool_ids or []) if str(t).strip()
-        }
-        self._master_filter_active = bool(active) and bool(self._master_filter_ids)
-        self.refresh_list()
+        _set_master_filter_impl(self, tool_ids, active)
 
     def refresh_list(self) -> None:
         """Refresh catalog list (synonym for refresh_catalog)."""
-        self.refresh_catalog()
+        _refresh_list_impl(self)
 
     def refresh_catalog(self) -> None:
-        super().refresh_catalog()
-        self._connect_selection_model()
+        _refresh_catalog_impl(self)
 
     def select_tool_by_id(self, tool_id: str) -> None:
-        self.current_tool_id = str(tool_id or '').strip() or None
-        self.current_tool_uid = None
-        self._current_item_id = self.current_tool_id
-        self._current_item_uid = None
-        self.refresh_list()
+        _select_tool_by_id_impl(self, tool_id)
 
     def eventFilter(self, obj, event):
         if handle_home_page_event(self, obj, event):
@@ -692,23 +573,7 @@ class HomePage(CatalogPageBase):
         return load_preview_content(viewer, stl_path, label=label)
 
     def part_clicked(self, part: dict) -> None:
-        if not isinstance(part, dict):
-            return
-        link = str(part.get('link') or '').strip()
-        name = str(part.get('name') or part.get('label') or self._t('tool_library.field.part', 'Part')).strip()
-        if not link:
-            QMessageBox.information(
-                self,
-                self._t('tool_library.part.missing_link_title', 'Link missing'),
-                self._t('tool_library.part.no_link', 'No link set for: {name}', name=name),
-            )
-            return
-        if not QDesktopServices.openUrl(QUrl(link)):
-            QMessageBox.warning(
-                self,
-                self._t('tool_library.part.open_failed_title', 'Open failed'),
-                self._t('tool_library.part.open_failed', 'Could not open link: {link}', link=link),
-            )
+        _part_clicked_impl(self, part)
 
     def apply_localization(self, translate=None) -> None:
         apply_home_page_localization(self, translate)
