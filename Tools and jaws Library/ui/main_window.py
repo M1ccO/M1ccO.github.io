@@ -998,13 +998,14 @@ class MainWindow(QMainWindow):
                 'Could not locate a launchable Setup Manager instance.',
             )
 
-    def _clear_selector_session(self):
+    def _clear_selector_session(self, show: bool = True):
         self._set_selector_session_state(empty_selector_session_state())
         self._update_selector_action_button()
         self._apply_selector_context_to_pages()
         # Remove stay-on-top hint so the window behaves normally
         self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
-        self.show()
+        if show:
+            self.show()
 
     def _set_selector_session_state(self, state: dict) -> None:
         self._selector_mode = str(state.get('mode') or '').strip().lower()
@@ -1195,20 +1196,23 @@ class MainWindow(QMainWindow):
 
         selector_state = selector_session_from_payload(payload)
         selector_mode = str(selector_state.get('mode') or '')
+        should_show = bool(payload.get('show', True))
         if selector_state.get('active'):
             self._set_selector_session_state(selector_state)
             self._update_selector_action_button()
             self._apply_selector_context_to_pages()
             # Bring window on top of Work Editor
             self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-            self.show()
-            self.raise_()
-            self.activateWindow()
+            if should_show:
+                self.show()
+                self.raise_()
+                self.activateWindow()
         else:
-            self._clear_selector_session()
+            self._clear_selector_session(show=should_show)
             # Remove stay-on-top when exiting selector mode
             self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
-            self.show()
+            if should_show:
+                self.show()
 
         # Switch module if requested.
         module = selector_mode if selector_mode in ('tools', 'jaws') else str(payload.get('module', '')).strip()

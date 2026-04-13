@@ -30,6 +30,7 @@ from PySide6.QtWidgets import (
 
 from config import (
     APP_TITLE,
+    ENABLE_TOOL_LIBRARY_PRELOAD,
     NAV_ITEMS,
     STYLE_PATH,
     SHARED_UI_PREFERENCES_PATH,
@@ -92,6 +93,8 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._apply_style()
         QApplication.instance().installEventFilter(self)
+        if ENABLE_TOOL_LIBRARY_PRELOAD:
+            QTimer.singleShot(2000, self._preload_tool_library_background)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
@@ -299,6 +302,10 @@ class MainWindow(QMainWindow):
 
         if TOOL_LIBRARY_MAIN_PATH.exists() and not getattr(sys, "frozen", False):
             candidates = []
+            # Prefer pythonw.exe on Windows: no console window flash when launching hidden.
+            pythonw = Path(sys.executable).parent / "pythonw.exe"
+            if pythonw.exists():
+                candidates.append(str(pythonw))
             candidates.append(str(Path(sys.executable)))
             py_cmd = shutil.which("python")
             if py_cmd:
@@ -319,6 +326,12 @@ class MainWindow(QMainWindow):
                 if QProcess.startDetached(str(exe_path), args, str(exe_path.parent)):
                     return True
         return False
+
+    def _preload_tool_library_background(self):
+        """Launch Tool Library hidden in background so selectors open instantly."""
+        if self._send_to_tool_library({"show": False}):
+            return  # already running
+        self._launch_tool_library(["--hidden"])
 
     def _fade_out_and(self, callback):
         _shared_fade_out_and(self, callback)

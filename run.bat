@@ -3,6 +3,7 @@ setlocal
 set "ROOT=%~dp0"
 set "VENV_DIR=%ROOT%.venv"
 set "PY=%VENV_DIR%\Scripts\python.exe"
+set "PYW=%VENV_DIR%\Scripts\pythonw.exe"
 set "APP=%ROOT%Setup Manager\main.py"
 set "REQ=%ROOT%Setup Manager\requirements.txt"
 
@@ -26,7 +27,16 @@ if not "%ERRORLEVEL%"=="0" (
 	exit /b 1
 )
 
-"%PY%" "%APP%" %*
+REM Use pythonw for silent launch, or python if pythonw not available
+if exist "%PYW%" (
+	REM pythonw.exe is designed to run without console window - launch directly
+	"%PYW%" "%APP%" %*
+) else (
+	REM Fallback: launch python with minimized window
+	start "" /min "%PY%" "%APP%" %*
+)
+set "EC=%ERRORLEVEL%"
+exit /b %EC%
 set "EC=%ERRORLEVEL%"
 if not "%EC%"=="0" pause
 exit /b %EC%

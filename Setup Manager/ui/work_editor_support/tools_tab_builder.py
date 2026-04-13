@@ -37,7 +37,7 @@ def build_tools_tab_ui(
     toolbar = QHBoxLayout()
     toolbar.setContentsMargins(0, 0, 0, 0)
     toolbar.setSpacing(8)
-    toolbar.addWidget(section_label_factory(dialog._t("work_editor.tools.head_view", "Head View")))
+    toolbar.addWidget(section_label_factory(dialog._t("work_editor.tools.head_view", "View")))
 
     dialog.tools_head_switch = QPushButton()
     dialog.tools_head_switch.setProperty("panelActionButton", True)

@@ -195,14 +195,8 @@ def main():
 
     if not _known_args.hidden:
         win.show()
-    else:
-        # Pre-create the native window off-screen so the first real open does not
-        # pay the one-time window creation / first-paint cost.
-        win.setAttribute(Qt.WA_DontShowOnScreen, True)
-        win.show()
-        app.processEvents()
-        win.hide()
-        win.setAttribute(Qt.WA_DontShowOnScreen, False)
+    # Hidden mode: window stays hidden until an IPC show request arrives.
+    # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
     server = QLocalServer(app)
     if not server.listen(TOOL_LIBRARY_SERVER_NAME):

@@ -36,10 +36,8 @@ def _is_runnable_python(candidate: Path) -> bool:
 
 def _project_venv_python() -> Path | None:
     scripts_dir = Path(__file__).resolve().parent.parent / ".venv" / "Scripts"
-    current_name = Path(sys.executable).name.lower()
-    candidates = ["python.exe", "pythonw.exe"]
-    if "pythonw" in current_name:
-        candidates = ["pythonw.exe", "python.exe"]
+    # GUI app: always prefer pythonw to avoid any console-window flash.
+    candidates = ["pythonw.exe", "python.exe"]
     for name in candidates:
         candidate = scripts_dir / name
         if candidate.exists() and _is_runnable_python(candidate):
@@ -73,7 +71,13 @@ def _maybe_relaunch_with_project_venv() -> None:
     env["SETUP_MANAGER_VENV_RELAUNCHED"] = "1"
     env["NTX_SETUP_MANAGER_VENV_RELAUNCHED"] = "1"
     args = [str(target_resolved), str(Path(__file__).resolve())] + sys.argv[1:]
-    subprocess.Popen(args, cwd=str(Path(__file__).resolve().parent), env=env)
+    popen_kwargs = {
+        "cwd": str(Path(__file__).resolve().parent),
+        "env": env,
+    }
+    if os.name == "nt":
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    subprocess.Popen(args, **popen_kwargs)
     raise SystemExit(0)
 
 
@@ -382,12 +386,19 @@ def main():
 
     server.newConnection.connect(process_show_requests)
 
+    # Ensure window is created and visible
     win.show()
+    win.setWindowState(Qt.WindowState.WindowActive)
     if launch_geometry:
         QTimer.singleShot(0, lambda text=launch_geometry: apply_frame_geometry_string(win, text))
         QTimer.singleShot(120, lambda text=launch_geometry: apply_frame_geometry_string(win, text))
-    win.raise_()
-    win.activateWindow()
+    
+    # Force window to foreground
+    QTimer.singleShot(100, lambda: (
+        win.raise_(),
+        win.activateWindow(),
+        app.processEvents()
+    ))
 
     splash.close()
 

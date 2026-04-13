@@ -28,9 +28,9 @@ if not "%ERRORLEVEL%"=="0" (
 )
 
 if exist "%PYW%" (
-	start "" "%PYW%" "%APP%"
+	"%PYW%" "%APP%"
 ) else (
-	start "" "%PY%" "%APP%"
+	"%PY%" "%APP%"
 )
 exit /b 0
 

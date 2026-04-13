@@ -225,6 +225,19 @@ class PrintService:
                 sections.append({"title": title, "tools": tools})
         return sections
 
+    def _tool_lists_for_head(self, assignments):
+        """Return (main_tools, sub_tools) for a head's tool assignments."""
+        main_tools, sub_tools = [], []
+        for assignment in assignments or []:
+            tool = self._tool_entry_data(assignment)
+            if not tool:
+                continue
+            if tool.get("spindle") == "sub":
+                sub_tools.append(tool)
+            else:
+                main_tools.append(tool)
+        return main_tools, sub_tools
+
     def _jaw_details(self, jaw_id):
         jaw_id = self._to_text(jaw_id)
         if not jaw_id or self.reference_service is None:
@@ -245,28 +258,6 @@ class PrintService:
         jaw_id = self._to_text(jaw_id)
         if not jaw_id:
             return self._t("setup_page.field.not_specified", "Not specified")
-
-        service = self.reference_service
-        if service is None:
-            return jaw_id
-
-        try:
-            full = service.get_full_jaw(jaw_id)
-        except Exception:
-            full = None
-        if isinstance(full, dict):
-            jaw_type = self._to_text(full.get("jaw_type"))
-            clamp = self._to_text(full.get("clamping_diameter_text"))
-            detail = " ".join(part for part in [jaw_type, clamp] if part).strip()
-            return f"{jaw_id} - {detail}" if detail else jaw_id
-
-        try:
-            ref = service.get_jaw_ref(jaw_id)
-        except Exception:
-            ref = None
-        if isinstance(ref, dict):
-            desc = self._to_text(ref.get("description"))
-            return f"{jaw_id} - {desc}" if desc else jaw_id
         return jaw_id
 
     @staticmethod
@@ -642,7 +633,7 @@ class PrintService:
         for card_top, tool in plan["placements"]:
             self._draw_tool_card(canvas, x + 6, card_top, width - 12, tool, show_pot=show_pot)
 
-    def _layout_tool_columns(
+    def _layout_head_groups(
         self,
         canvas,
         left_x,
@@ -650,28 +641,22 @@ class PrintService:
         start_y,
         col_w,
         min_bottom,
-        left_sections,
-        right_sections,
-        left_state=(0, 0),
-        right_state=(0, 0),
+        head_groups,
+        resume_state=(0, 0, 0),
         *,
         render=False,
         show_tools_heading=False,
         show_pot=False,
     ):
-        section_titles = [
-            ("SP1", "SP1"),
-            ("SP2", "SP2"),
-        ]
-        current_y = start_y
-        left_section_index, left_tool_index = left_state
-        right_section_index, right_tool_index = right_state
+        """Layout tools grouped by head: main spindle on left, sub spindle on right.
+        HEAD1 is rendered first, then HEAD2 below.
 
-        if render and show_tools_heading:
-            canvas.setFont("Helvetica-Bold", 13)
-            canvas.setFillColorRGB(0.12, 0.23, 0.35)
-            canvas.drawString(left_x, current_y, "Tools")
-            current_y -= 18
+        head_groups: list of {"label": str, "main": [tool, ...], "sub": [tool, ...]}
+        resume_state: (head_idx, main_idx, sub_idx) — resume point for pagination
+        Returns new resume_state after filling the available area.
+        """
+        current_y = start_y
+        head_idx, main_idx, sub_idx = resume_state
 
         if render:
             divider_x = left_x + col_w + ((right_x - (left_x + col_w)) / 2)
@@ -679,87 +664,81 @@ class PrintService:
             canvas.setLineWidth(0.9)
             canvas.line(divider_x, current_y + 4, divider_x, min_bottom)
 
-        global_section_index = min(left_section_index, right_section_index)
+        while head_idx < len(head_groups):
+            group = head_groups[head_idx]
+            main_tools = group.get("main") or []
+            sub_tools = group.get("sub") or []
+            group_label = group.get("label", f"HEAD{head_idx + 1}")
 
-        while global_section_index < len(section_titles):
-            left_tools = left_sections[global_section_index].get("tools") if global_section_index < len(left_sections) else []
-            right_tools = right_sections[global_section_index].get("tools") if global_section_index < len(right_sections) else []
-            current_left_index = left_tool_index if left_section_index == global_section_index else 0
-            current_right_index = right_tool_index if right_section_index == global_section_index else 0
+            is_group_start = (main_idx == 0 and sub_idx == 0)
 
-            if current_left_index >= len(left_tools) and current_right_index >= len(right_tools):
-                global_section_index += 1
-                left_section_index = max(left_section_index, global_section_index)
-                right_section_index = max(right_section_index, global_section_index)
-                left_tool_index = 0
-                right_tool_index = 0
+            main_has_remaining = main_idx < len(main_tools)
+            sub_has_remaining = sub_idx < len(sub_tools)
+
+            if not main_has_remaining and not sub_has_remaining:
+                head_idx += 1
+                main_idx = 0
+                sub_idx = 0
                 continue
 
-            left_plan = self._plan_tool_section(left_tools, current_left_index, current_y, col_w, min_bottom)
-            right_plan = self._plan_tool_section(right_tools, current_right_index, current_y, col_w, min_bottom)
+            if is_group_start:
+                if current_y - 18 < min_bottom + self._TOOL_CARD_HEIGHT:
+                    break
+                if render:
+                    tools_heading = self._t("print.setup_card.tools_heading", "Tools")
+                    canvas.setFont("Helvetica-Bold", 12)
+                    canvas.setFillColorRGB(0.12, 0.23, 0.35)
+                    canvas.drawString(left_x, current_y, f"{tools_heading} - {group_label}")
+                current_y -= 18
 
-            left_has_remaining = current_left_index < len(left_tools)
-            right_has_remaining = current_right_index < len(right_tools)
-            if (left_has_remaining and not left_plan["placements"]) or (right_has_remaining and not right_plan["placements"]):
+            left_plan = self._plan_tool_section(main_tools, main_idx, current_y, col_w, min_bottom)
+            right_plan = self._plan_tool_section(sub_tools, sub_idx, current_y, col_w, min_bottom)
+
+            main_spindle = self._t("print.setup_card.spindle.main", "Main")
+            sub_spindle = self._t("print.setup_card.spindle.sub", "Sub")
+            main_label = main_spindle
+            sub_label = sub_spindle
+
+            if (main_has_remaining and not left_plan["placements"]) or \
+               (sub_has_remaining and not right_plan["placements"]):
                 break
 
-            left_label = f"HEAD1 - {section_titles[global_section_index][0]}"
-            right_label = f"HEAD2 - {section_titles[global_section_index][1]}"
             if render:
-                if left_has_remaining:
-                    self._draw_tool_section(canvas, left_x, current_y, col_w, left_label, left_plan, show_pot=show_pot)
-                if right_has_remaining:
-                    self._draw_tool_section(canvas, right_x, current_y, col_w, right_label, right_plan, show_pot=show_pot)
+                if main_has_remaining:
+                    self._draw_tool_section(canvas, left_x, current_y, col_w, main_label, left_plan, show_pot=show_pot)
+                if sub_has_remaining:
+                    self._draw_tool_section(canvas, right_x, current_y, col_w, sub_label, right_plan, show_pot=show_pot)
 
             consumed = [current_y]
-            if left_has_remaining:
+            if main_has_remaining:
                 consumed.append(left_plan["consumed_bottom"])
-            if right_has_remaining:
+            if sub_has_remaining:
                 consumed.append(right_plan["consumed_bottom"])
             row_bottom = min(consumed)
 
-            left_finished = current_left_index >= len(left_tools) or left_plan["next_index"] >= len(left_tools)
-            right_finished = current_right_index >= len(right_tools) or right_plan["next_index"] >= len(right_tools)
+            main_done = not main_has_remaining or left_plan["next_index"] >= len(main_tools)
+            sub_done = not sub_has_remaining or right_plan["next_index"] >= len(sub_tools)
 
-            if left_has_remaining:
-                if left_finished:
-                    left_section_index = global_section_index + 1
-                    left_tool_index = 0
-                else:
-                    left_section_index = global_section_index
-                    left_tool_index = left_plan["next_index"]
-            else:
-                left_section_index = max(left_section_index, global_section_index + 1)
-                left_tool_index = 0
+            if main_has_remaining:
+                main_idx = left_plan["next_index"]
+            if sub_has_remaining:
+                sub_idx = right_plan["next_index"]
 
-            if right_has_remaining:
-                if right_finished:
-                    right_section_index = global_section_index + 1
-                    right_tool_index = 0
-                else:
-                    right_section_index = global_section_index
-                    right_tool_index = right_plan["next_index"]
-            else:
-                right_section_index = max(right_section_index, global_section_index + 1)
-                right_tool_index = 0
-
-            if left_finished and right_finished:
-                current_y = row_bottom - 28
-                next_section_exists = (
-                    left_section_index < len(section_titles)
-                    or right_section_index < len(section_titles)
-                )
-                if render and next_section_exists:
-                    separator_y = current_y + 16
+            if main_done and sub_done:
+                head_idx += 1
+                main_idx = 0
+                sub_idx = 0
+                current_y = row_bottom - 24
+                if render and head_idx < len(head_groups):
+                    separator_y = row_bottom - 10
                     canvas.setStrokeColorRGB(0.80, 0.85, 0.91)
                     canvas.setLineWidth(0.8)
                     canvas.line(left_x, separator_y, left_x + col_w, separator_y)
                     canvas.line(right_x, separator_y, right_x + col_w, separator_y)
-                global_section_index += 1
             else:
                 break
 
-        return (left_section_index, left_tool_index), (right_section_index, right_tool_index)
+        return (head_idx, main_idx, sub_idx)
 
     def _draw_tools_page_header(self, canvas, page_w, margin, top_y, work_id, drawing_id, description):
         canvas.setFont("Helvetica-Bold", 20)
@@ -873,7 +852,7 @@ class PrintService:
             left_x,
             left_y,
             col_w,
-            "HEAD1",
+            self._t("print.setup_card.section.head1", "HEAD1"),
             head1_lines,
             body_font=12.0,
             body_font_name="Helvetica",
@@ -885,7 +864,7 @@ class PrintService:
             right_x,
             right_y,
             col_w,
-            "HEAD2",
+            self._t("print.setup_card.section.head2", "HEAD2"),
             head2_lines,
             body_font=12.0,
             body_font_name="Helvetica",
@@ -982,8 +961,21 @@ class PrintService:
         if robot_info:
             top_y = self._draw_box(pdf, margin, top_y, content_w, self._t("print.setup_card.section.robot_notes", "Robot notes"), [robot_info], body_font=12.0)
 
-        head1_sections = self._tool_sections_for_head(work.get("head1_tool_assignments") or [])
-        head2_sections = self._tool_sections_for_head(work.get("head2_tool_assignments") or [])
+        head1_main, head1_sub = self._tool_lists_for_head(work.get("head1_tool_assignments") or [])
+        head2_main, head2_sub = self._tool_lists_for_head(work.get("head2_tool_assignments") or [])
+        head_groups = []
+        if head1_main or head1_sub:
+            head_groups.append({
+                "label": self._t("print.setup_card.section.head1", "HEAD1"),
+                "main": head1_main,
+                "sub": head1_sub,
+            })
+        if head2_main or head2_sub:
+            head_groups.append({
+                "label": self._t("print.setup_card.section.head2", "HEAD2"),
+                "main": head2_main,
+                "sub": head2_sub,
+            })
         min_bottom = margin + 18
         show_pot = bool(work.get("print_pots"))
 
@@ -991,45 +983,45 @@ class PrintService:
         blank_tool_page_start = self._tools_page_start_y(page_h, margin)
 
         # Decide whether tools fit on page 1, on a dedicated page 2, or need multi-page spillover.
-        sim_left_1, sim_right_1 = self._layout_tool_columns(
+        sim_state_1 = self._layout_head_groups(
             None, left_x, right_x, page1_tool_start, col_w, min_bottom,
-            head1_sections, head2_sections, (0, 0), (0, 0), render=False, show_tools_heading=True, show_pot=show_pot,
+            head_groups, (0, 0, 0), render=False, show_tools_heading=True, show_pot=show_pot,
         )
 
-        if sim_left_1[0] >= len(head1_sections) and sim_right_1[0] >= len(head2_sections):
-            self._layout_tool_columns(
+        if sim_state_1[0] >= len(head_groups):
+            self._layout_head_groups(
                 pdf, left_x, right_x, page1_tool_start, col_w, min_bottom,
-                head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=True, show_pot=show_pot,
+                head_groups, (0, 0, 0), render=True, show_tools_heading=True, show_pot=show_pot,
             )
             pdf.save()
             return output_path
 
-        sim_left_2, sim_right_2 = self._layout_tool_columns(
+        sim_state_2 = self._layout_head_groups(
             None, left_x, right_x, blank_tool_page_start, col_w, min_bottom,
-            head1_sections, head2_sections, (0, 0), (0, 0), render=False, show_tools_heading=False, show_pot=show_pot,
+            head_groups, (0, 0, 0), render=False, show_tools_heading=False, show_pot=show_pot,
         )
 
-        if sim_left_2[0] >= len(head1_sections) and sim_right_2[0] >= len(head2_sections):
+        if sim_state_2[0] >= len(head_groups):
             pdf.showPage()
             tool_page_start = self._draw_tools_page_header(pdf, page_w, margin, page_h - margin, work_id, drawing_id, description)
-            self._layout_tool_columns(
+            self._layout_head_groups(
                 pdf, left_x, right_x, tool_page_start, col_w, min_bottom,
-                head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=False, show_pot=show_pot,
+                head_groups, (0, 0, 0), render=True, show_tools_heading=False, show_pot=show_pot,
             )
             pdf.save()
             return output_path
 
-        next_left, next_right = self._layout_tool_columns(
+        state = self._layout_head_groups(
             pdf, left_x, right_x, page1_tool_start, col_w, min_bottom,
-            head1_sections, head2_sections, (0, 0), (0, 0), render=True, show_tools_heading=True, show_pot=show_pot,
+            head_groups, (0, 0, 0), render=True, show_tools_heading=True, show_pot=show_pot,
         )
 
-        while next_left[0] < len(head1_sections) or next_right[0] < len(head2_sections):
+        while state[0] < len(head_groups):
             pdf.showPage()
             tool_page_start = self._draw_tools_page_header(pdf, page_w, margin, page_h - margin, work_id, drawing_id, description)
-            next_left, next_right = self._layout_tool_columns(
+            state = self._layout_head_groups(
                 pdf, left_x, right_x, tool_page_start, col_w, min_bottom,
-                head1_sections, head2_sections, next_left, next_right, render=True, show_tools_heading=False, show_pot=show_pot,
+                head_groups, state, render=True, show_tools_heading=False, show_pot=show_pot,
             )
 
         pdf.save()
