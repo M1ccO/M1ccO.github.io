@@ -217,7 +217,7 @@ NAV_ITEMS = ["SETUPS", "DRAWINGS", "LOGBOOK"]
 
 # Keep cross-app launch explicit during active development. This avoids risky
 # background/preload behavior while the standalone packaging paths are still in flux.
-ENABLE_TOOL_LIBRARY_PRELOAD = False
+ENABLE_TOOL_LIBRARY_PRELOAD = True
 
 JAW_TYPES = ["Soft jaws", "Hard jaws", "Spiked jaws", "Special jaws"]
 SPINDLE_SIDES = ["SP1", "SP2", "Both"]

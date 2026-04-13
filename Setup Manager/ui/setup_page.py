@@ -72,6 +72,7 @@ except ModuleNotFoundError:
     )
 
 from ui.icon_helpers import toolbar_icon_with_svg_render_fallback as _toolbar_icon_with_svg_render_fallback
+from shared.data.backup_helpers import create_db_backup, prune_backups
 
 
 class SetupPage(QWidget):
@@ -578,6 +579,10 @@ class SetupPage(QWidget):
 
     def _emit_library_launch_context(self, work=None):
         self.libraryLaunchContextChanged.emit(build_library_launch_context_payload(work))
+
+    def _create_db_backup(self, tag: str):
+        backup_path = create_db_backup(Path(self.work_service.db.path), tag)
+        return backup_path
 
     def _refresh_details(self):
         if not self.current_work_id:

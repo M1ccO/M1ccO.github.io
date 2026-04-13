@@ -175,12 +175,15 @@ def main():
     settings_service = SettingsService(SETTINGS_PATH)
 
     step(7, 'Warming up 3D preview...')
-    try:
-        from shared.ui.stl_preview import StlPreviewWidget
-        app._preview_warmup_widget = StlPreviewWidget()
-        app._preview_warmup_widget.hide()
-    except Exception:
+    if _known_args.hidden:
         app._preview_warmup_widget = None
+    else:
+        try:
+            from shared.ui.stl_preview import StlPreviewWidget
+            app._preview_warmup_widget = StlPreviewWidget()
+            app._preview_warmup_widget.hide()
+        except Exception:
+            app._preview_warmup_widget = None
 
     step(8, 'Opening main window...')
 

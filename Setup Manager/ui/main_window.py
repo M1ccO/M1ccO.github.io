@@ -30,7 +30,6 @@ from PySide6.QtWidgets import (
 
 from config import (
     APP_TITLE,
-    ENABLE_TOOL_LIBRARY_PRELOAD,
     NAV_ITEMS,
     STYLE_PATH,
     SHARED_UI_PREFERENCES_PATH,
@@ -93,8 +92,7 @@ class MainWindow(QMainWindow):
         self._build_ui()
         self._apply_style()
         QApplication.instance().installEventFilter(self)
-        if ENABLE_TOOL_LIBRARY_PRELOAD:
-            QTimer.singleShot(2000, self._preload_tool_library_background)
+        QTimer.singleShot(2000, self._preload_tool_library_background)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)

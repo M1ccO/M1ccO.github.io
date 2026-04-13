@@ -335,7 +335,6 @@ class SelectorSessionBridge(QObject):
 
     def _launch_tool_library(self, extra_args: list[str] | None = None) -> bool:
         args = list(extra_args or [])
-        hidden_launch = "--hidden" in args
 
         def _is_safe_exe_target(exe_path: Path) -> bool:
             try:
@@ -352,13 +351,12 @@ class SelectorSessionBridge(QObject):
             pythonw = Path(sys.executable).parent / "pythonw.exe"
             candidates = [str(pythonw)] if pythonw.exists() else []
             candidates.append(str(Path(sys.executable)))
-            if not hidden_launch:
-                python_cmd = shutil.which("python")
-                if python_cmd:
-                    candidates.append(python_cmd)
-                py_launcher = shutil.which("py")
-                if py_launcher:
-                    candidates.append(py_launcher)
+            python_cmd = shutil.which("python")
+            if python_cmd:
+                candidates.append(python_cmd)
+            py_launcher = shutil.which("py")
+            if py_launcher:
+                candidates.append(py_launcher)
 
             for candidate in candidates:
                 cmd_args = [str(self._tool_library_main_path)] + args
