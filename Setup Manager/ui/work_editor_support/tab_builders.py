@@ -56,6 +56,15 @@ def _setup_jaw_selectors(
     dialog._jaw_selectors["main"] = dialog.main_jaw_selector
     dialog._jaw_selectors["sub"] = dialog.sub_jaw_selector
     dialog.sub_jaw_selector.setVisible("sub" in dialog._spindle_profiles)
+    
+    # Connect jaw drop signals to allow drag-and-drop from Tools library jaw cards
+    dialog.main_jaw_selector.jawDropped.connect(
+        lambda jaw: dialog._on_jaw_dropped_in_selector_panel(jaw, spindle_key="main")
+    )
+    dialog.sub_jaw_selector.jawDropped.connect(
+        lambda jaw: dialog._on_jaw_dropped_in_selector_panel(jaw, spindle_key="sub")
+    )
+    
     dialog._apply_machine_profile_to_jaw_selectors()
 
 

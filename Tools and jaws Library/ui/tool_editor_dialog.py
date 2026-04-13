@@ -492,6 +492,33 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
                 }
             )
 
+    # Backward-compatible hooks used by ToolEditorPayloadAdapter.
+    def _add_spare_part_row(self, part: dict | None = None):
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.add_spare_part_row(part or {})
+            return
+        payload = part or {}
+        self.spare_parts_table.add_row_dict(
+            {
+                'name': (payload.get('name') or '').strip(),
+                'code': (payload.get('code') or '').strip(),
+                'link': (payload.get('link') or '').strip(),
+                'linked_component': '',
+                'group': (payload.get('group') or '').strip(),
+            }
+        )
+
+    def _refresh_spare_component_dropdowns(self):
+        if self._spare_parts_coordinator:
+            self._spare_parts_coordinator.schedule_refresh()
+
+    def _get_spare_component_key(self, row: int) -> str:
+        if self._spare_parts_coordinator:
+            return self._spare_parts_coordinator.get_component_key(row)
+        return str(
+            self.spare_parts_table.cell_user_data(row, 'linked_component', Qt.UserRole, '') or ''
+        ).strip()
+
     def _component_dropdown_values(self):
         return component_dropdown_values(self.parts_table.row_dicts())
 

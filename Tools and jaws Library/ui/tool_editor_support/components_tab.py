@@ -95,8 +95,8 @@ def build_components_tab(dialog, root_tabs) -> QWidget:
     p_btns.setContentsMargins(2, 6, 2, 2)
     p_btns.setSpacing(8)
 
-    dialog.add_part_btn = QPushButton()
-    dialog.remove_part_btn = QPushButton()
+    dialog.add_part_btn = QPushButton(parts_btn_bar)
+    dialog.remove_part_btn = QPushButton(parts_btn_bar)
     style_icon_action_button(
         dialog.add_part_btn,
         TOOL_ICONS_DIR / "Plus_icon.svg",
@@ -109,8 +109,8 @@ def build_components_tab(dialog, root_tabs) -> QWidget:
         danger=True,
     )
 
-    dialog.part_up_btn = QPushButton()
-    dialog.part_down_btn = QPushButton()
+    dialog.part_up_btn = QPushButton(parts_btn_bar)
+    dialog.part_down_btn = QPushButton(parts_btn_bar)
     style_move_arrow_button(
         dialog.part_up_btn,
         _t(dialog, "work_editor.tools.move_up", "\u25b2"),
@@ -126,21 +126,22 @@ def build_components_tab(dialog, root_tabs) -> QWidget:
         "menu_open.svg",
         _t(dialog, "tool_editor.tooltip.pick_additional_part", "Pick additional part from existing tools"),
     )
-    dialog.group_btn = QPushButton()
+    dialog.group_btn = QPushButton(parts_btn_bar)
     style_icon_action_button(
         dialog.group_btn,
         TOOL_ICONS_DIR / "assemblies_icon.svg",
         _t(dialog, "tool_editor.action.group_parts", "Group selected parts"),
     )
-    dialog.group_btn.setVisible(True)
+    # Keep visibility managed by the layout/dialog state; avoid showing a
+    # parentless top-level button during construction.
 
-    dialog.group_name_edit = QLineEdit()
+    dialog.group_name_edit = QLineEdit(parts_btn_bar)
     dialog.group_name_edit.setPlaceholderText(_t(dialog, "tool_editor.placeholder.group_name", "Group name..."))
     dialog.group_name_edit.setVisible(False)
     dialog.group_name_edit.setMinimumHeight(34)
     dialog.group_name_edit.setMaximumWidth(160)
 
-    dialog.group_hint_label = QLabel(_t(dialog, "tool_editor.hint.press_enter_to_add", "Press Enter to add"))
+    dialog.group_hint_label = QLabel(_t(dialog, "tool_editor.hint.press_enter_to_add", "Press Enter to add"), parts_btn_bar)
     dialog.group_hint_label.setVisible(False)
     dialog.group_hint_label.setStyleSheet(
         "background: transparent; font-size: 12px; color: #7a8a9a; font-style: italic;"
@@ -148,6 +149,7 @@ def build_components_tab(dialog, root_tabs) -> QWidget:
 
     dialog.group_select_hint_label = QLabel(
         _t(dialog, "tool_editor.hint.select_multiple", "Select part(s) to make a group")
+        , parts_btn_bar
     )
     dialog.group_select_hint_label.setStyleSheet(
         "background: transparent; font-size: 12px; color: #9aabb8; font-style: italic;"
@@ -162,7 +164,7 @@ def build_components_tab(dialog, root_tabs) -> QWidget:
     dialog.group_btn.clicked.connect(dialog._toggle_group)
     dialog.group_name_edit.installEventFilter(dialog)
     dialog.parts_table.itemSelectionChanged.connect(dialog._update_group_button_visibility)
-    dialog.parts_table.itemChanged.connect(dialog._schedule_spare_component_refresh)
+    dialog.parts_table.itemChanged.connect(dialog._refresh_measurement_part_dropdowns)
 
     p_btns.addWidget(dialog.add_part_btn)
     p_btns.addWidget(dialog.remove_part_btn)
@@ -236,8 +238,8 @@ def build_spare_parts_tab(dialog, root_tabs) -> QWidget:
     s_btns.setContentsMargins(2, 6, 2, 2)
     s_btns.setSpacing(8)
 
-    dialog.add_spare_btn = QPushButton()
-    dialog.remove_spare_btn = QPushButton()
+    dialog.add_spare_btn = QPushButton(spare_btn_bar)
+    dialog.remove_spare_btn = QPushButton(spare_btn_bar)
     style_icon_action_button(
         dialog.add_spare_btn,
         TOOL_ICONS_DIR / "Plus_icon.svg",
@@ -250,8 +252,8 @@ def build_spare_parts_tab(dialog, root_tabs) -> QWidget:
         danger=True,
     )
 
-    dialog.spare_up_btn = QPushButton()
-    dialog.spare_down_btn = QPushButton()
+    dialog.spare_up_btn = QPushButton(spare_btn_bar)
+    dialog.spare_down_btn = QPushButton(spare_btn_bar)
     style_move_arrow_button(
         dialog.spare_up_btn,
         _t(dialog, "work_editor.tools.move_up", "\u25b2"),
@@ -267,7 +269,7 @@ def build_spare_parts_tab(dialog, root_tabs) -> QWidget:
         "menu_open.svg",
         _t(dialog, "tool_editor.tooltip.pick_additional_part", "Pick additional part from existing tools"),
     )
-    dialog.link_spare_btn = QPushButton()
+    dialog.link_spare_btn = QPushButton(spare_btn_bar)
     style_icon_action_button(
         dialog.link_spare_btn,
         TOOL_ICONS_DIR / "assemblies_icon.svg",
@@ -280,13 +282,42 @@ def build_spare_parts_tab(dialog, root_tabs) -> QWidget:
             "tool_editor.hint.link_spares_from_table",
             "Link part(s) to components by selecting them in the table",
         )
+        , spare_btn_bar
     )
     dialog.spare_link_hint_label.setStyleSheet(
         "background: transparent; font-size: 12px; color: #9aabb8; font-style: italic;"
     )
 
-    dialog.add_spare_btn.clicked.connect(dialog._add_spare_part_row)
-    dialog.remove_spare_btn.clicked.connect(dialog.spare_parts_table.remove_selected_row)
+    def _add_spare_row():
+        if dialog._spare_parts_coordinator:
+            dialog._spare_parts_coordinator.add_spare_part_row(
+                {
+                    'name': '',
+                    'code': '',
+                    'link': '',
+                    'component_key': '',
+                    'group': '',
+                }
+            )
+            dialog._spare_parts_coordinator.schedule_refresh()
+            return
+        dialog.spare_parts_table.add_row_dict(
+            {
+                'name': '',
+                'code': '',
+                'link': '',
+                'linked_component': '',
+                'group': '',
+            }
+        )
+
+    def _remove_spare_rows():
+        dialog.spare_parts_table.remove_selected_row()
+        if dialog._spare_parts_coordinator:
+            dialog._spare_parts_coordinator.schedule_refresh()
+
+    dialog.add_spare_btn.clicked.connect(_add_spare_row)
+    dialog.remove_spare_btn.clicked.connect(_remove_spare_rows)
     dialog.spare_up_btn.clicked.connect(lambda: dialog.spare_parts_table.move_selected_row(-1))
     dialog.spare_down_btn.clicked.connect(lambda: dialog.spare_parts_table.move_selected_row(1))
     dialog.pick_spare_btn.clicked.connect(dialog._pick_spare_part)

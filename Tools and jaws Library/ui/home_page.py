@@ -59,10 +59,12 @@ from ui.home_page_support import (
     on_selector_toggle_clicked,
     prompt_text as _prompt_text_fn,
     remove_selector_assignment,
+    sync_detached_preview,
     selector_target_key as _selector_target_key_fn,
     selector_tool_key as _selector_tool_key_fn,
     sync_selector_assignment_order,
     sync_selector_card_selection_states,
+    toggle_preview_window,
     update_selector_assignment_buttons,
     SelectorAssignmentRowWidget as _SelectorAssignmentRowWidget,
     SelectorToolRemoveDropButton as _SelectorToolRemoveDropButton,
@@ -2245,6 +2247,23 @@ class HomePage(QWidget):
             )
             return
         if len(selected_uids) > 1:
+            # In extended-selection mode users can easily leave extra rows selected
+            # while intending to edit only the current row. Default to current-row
+            # edit unless multi-edit was explicitly requested via modifiers.
+            modifiers = QApplication.keyboardModifiers()
+            explicit_multi = bool(modifiers & (Qt.ControlModifier | Qt.ShiftModifier))
+            if not explicit_multi:
+                current_index = self.tool_list.currentIndex()
+                current_uid = current_index.data(ROLE_TOOL_UID) if current_index.isValid() else None
+                try:
+                    current_uid_int = int(current_uid) if current_uid is not None else None
+                except Exception:
+                    current_uid_int = None
+                if current_uid_int in selected_uids:
+                    tool = self.tool_service.get_tool_by_uid(current_uid_int)
+                    if tool:
+                        self._open_tool_editor(tool=tool)
+                        return
             mode = ask_multi_edit_mode(self, len(selected_uids), self._t)
             if mode == 'batch':
                 self._batch_edit_tools(selected_uids)

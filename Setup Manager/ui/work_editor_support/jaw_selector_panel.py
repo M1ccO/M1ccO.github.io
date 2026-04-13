@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtCore import QMimeData, QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QLabel, QLineEdit, QSizePolicy, QVBoxLayout, QWidget
 
 from config import ICONS_DIR, TOOL_ICONS_DIR, TOOL_LIBRARY_TOOL_ICONS_DIR
+
+# Standard MIME type for jaw selector assignments from Tools library
+SELECTOR_JAW_MIME = "application/x-tool-library-jaw-assignment"
 
 try:
     from shared.ui.helpers.editor_helpers import create_titled_section
@@ -32,6 +36,7 @@ class WorkEditorJawSelectorPanel(QWidget):
     """Compact single-jaw panel used by the work editor spindles tab."""
 
     selectionChanged = Signal(str)
+    jawDropped = Signal(dict)  # Emitted when a jaw is dropped; carries the jaw dict
 
     def __init__(
         self,
@@ -53,6 +58,9 @@ class WorkEditorJawSelectorPanel(QWidget):
         self._stop_screws_value = ""
         self._is_stop_screws_mode = False
         self._assignment_card: MiniAssignmentCard | None = None
+
+        # Enable drop acceptance for drag-and-drop from Tools library jaw cards
+        self.setAcceptDrops(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -236,3 +244,44 @@ class WorkEditorJawSelectorPanel(QWidget):
         if not self._is_spiked_jaw(self._selected_jaw()):
             return ""
         return self._stop_screws_value
+
+    def dragEnterEvent(self, event):
+        """Accept drag events that carry jaw selector MIME data."""
+        if event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dragMoveEvent(self, event):
+        """Accept drag movement over valid drop targets."""
+        if event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+            event.acceptProposedAction()
+            return
+        event.ignore()
+
+    def dropEvent(self, event):
+        """Handle drop event; extract jaw and emit jawDropped signal."""
+        if not event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+            event.ignore()
+            return
+
+        # Decode the jaw payload from MIME data
+        try:
+            raw = bytes(event.mimeData().data(SELECTOR_JAW_MIME)).decode("utf-8").strip()
+            if not raw:
+                event.ignore()
+                return
+            payload = json.loads(raw)
+            if not isinstance(payload, list) or not payload:
+                event.ignore()
+                return
+            # Extract first jaw from payload
+            first_jaw = payload[0] if isinstance(payload[0], dict) else None
+            if not first_jaw:
+                event.ignore()
+                return
+            # Emit signal with the jaw dict
+            self.jawDropped.emit(dict(first_jaw))
+            event.acceptProposedAction()
+        except Exception:
+            event.ignore()

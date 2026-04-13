@@ -329,6 +329,28 @@ class WorkEditorDialog(QDialog):
     def _apply_jaw_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
         return apply_jaw_selector_result(self, request, selected_items)
 
+    def _on_jaw_dropped_in_selector_panel(self, jaw: dict, spindle_key: str = "main") -> None:
+        """Handle jaw dropped onto a selector panel from Tools library.
+        
+        Args:
+            jaw: The jaw dict from the drop event
+            spindle_key: The spindle key ("main" or "sub") this panel corresponds to
+        """
+        if not isinstance(jaw, dict):
+            return
+        # Get the selector for this spindle
+        selector = self._jaw_selectors.get(spindle_key)
+        if selector is None:
+            return
+        # Extract jaw ID
+        jaw_id = str(jaw.get("jaw_id") or jaw.get("id") or "").strip()
+        if not jaw_id:
+            return
+        # Update the cache with the new jaw reference
+        self._merge_jaw_refs([jaw])
+        # Set  the value on the selector panel
+        selector.set_value(jaw_id)
+
     def _dialog_title(self) -> str:
         if self._group_edit_mode:
             if self._group_count > 1:
