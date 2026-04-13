@@ -10,8 +10,25 @@ from __future__ import annotations
 from PySide6.QtCore import QEvent
 from PySide6.QtGui import QFontMetrics
 from PySide6.QtCore import Qt
+from shiboken6 import isValid
 
 __all__ = ["handle_home_page_event", "refresh_elided_group_title"]
+
+
+def _alive(widget) -> bool:
+    """Return True when a Qt widget still has a valid C++ backing object."""
+    return widget is not None and isValid(widget)
+
+
+def _safe_viewport(widget):
+    """Return viewport if widget is valid; otherwise None."""
+    if not _alive(widget):
+        return None
+    try:
+        viewport = widget.viewport()
+    except RuntimeError:
+        return None
+    return viewport if _alive(viewport) else None
 
 
 def handle_home_page_event(page, obj, event) -> bool:
@@ -24,10 +41,12 @@ def handle_home_page_event(page, obj, event) -> bool:
     event_type = event.type() if event is not None else None
 
     # Double-click on list → open details
-    if event_type == QEvent.MouseButtonDblClick and hasattr(page, 'list_view'):
-        if obj in {page.list_view, page.list_view.viewport()}:
+    list_view = getattr(page, 'list_view', None)
+    list_view_viewport = _safe_viewport(list_view)
+    if event_type == QEvent.MouseButtonDblClick and _alive(list_view):
+        if obj in {list_view, list_view_viewport}:
             pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-            index = page.list_view.indexAt(pos)
+            index = list_view.indexAt(pos)
             if index.isValid():
                 page.on_item_double_clicked(index)
                 return True

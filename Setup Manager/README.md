@@ -2,6 +2,14 @@
 
 Operational app for CNC setup execution data.
 
+## Current Status (April 2026)
+- Cross-app shared runtime preferences are active via `shared_ui_preferences.json`.
+- Setup Manager continues to treat Tool Library master data as read-only.
+- Ongoing Tool Library support-layer modularization planning is documented in:
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_GOALS.md`
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_RULES.md`
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_STATUS.md`
+
 ## Scope
 - Owns: setup works + production logbook.
 - Reads (read-only): tool/jaw master data from sibling `Tools and jaws Library`.

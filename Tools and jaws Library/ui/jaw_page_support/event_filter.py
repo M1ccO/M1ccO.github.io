@@ -8,6 +8,7 @@ jaw_page.py, keeping that file focused on orchestration logic.
 from __future__ import annotations
 
 from PySide6.QtCore import QEvent
+from shiboken6 import isValid
 
 from ui.jaw_page_support.selector_actions import (
     selector_drag_payload_jaw_ids,
@@ -15,6 +16,22 @@ from ui.jaw_page_support.selector_actions import (
 )
 
 __all__ = ["handle_jaw_page_event"]
+
+
+def _alive(widget) -> bool:
+    """Return True when a Qt widget still has a valid C++ backing object."""
+    return widget is not None and isValid(widget)
+
+
+def _safe_viewport(widget):
+    """Return viewport if widget is valid; otherwise None."""
+    if not _alive(widget):
+        return None
+    try:
+        viewport = widget.viewport()
+    except RuntimeError:
+        return None
+    return viewport if _alive(viewport) else None
 
 
 def handle_jaw_page_event(page, obj, event) -> bool:
@@ -25,21 +42,24 @@ def handle_jaw_page_event(page, obj, event) -> bool:
     through to super().eventFilter() when this returns False.
     """
     # Suppress combo popup flicker during search-toggle rebuild
+    jaw_type_filter = getattr(page, 'jaw_type_filter', None)
+    spindle_filter = getattr(page, 'spindle_filter', None)
     combo_widgets = {
-        getattr(page, 'jaw_type_filter', None),
-        getattr(page, 'jaw_type_filter', None) and page.jaw_type_filter.view(),
-        getattr(page, 'spindle_filter', None),
-        getattr(page, 'spindle_filter', None) and page.spindle_filter.view(),
+        jaw_type_filter if _alive(jaw_type_filter) else None,
+        jaw_type_filter.view() if _alive(jaw_type_filter) else None,
+        spindle_filter if _alive(spindle_filter) else None,
+        spindle_filter.view() if _alive(spindle_filter) else None,
     }
     if obj in combo_widgets:
         if getattr(page, '_suppress_combo', False) and event.type() in (QEvent.Show, QEvent.ShowToParent):
             return True
 
     # Drag-and-drop into selector zone
+    selector_scroll = getattr(page, 'selector_scroll', None)
     selector_drag_targets = {
         getattr(page, 'selector_card', None),
         getattr(page, 'selector_panel', None),
-        getattr(page, 'selector_scroll', None) and page.selector_scroll.viewport(),
+        _safe_viewport(selector_scroll),
     }
     if (
         page._selector_active
@@ -67,7 +87,7 @@ def handle_jaw_page_event(page, obj, event) -> bool:
         getattr(page, 'selector_bottom_bar', None),
         getattr(page, 'filter_pane', None),
         getattr(page, 'detail_header_container', None),
-        getattr(page, 'selector_scroll', None) and page.selector_scroll.viewport(),
+        _safe_viewport(selector_scroll),
     }
     if (
         page._selector_active
@@ -97,7 +117,8 @@ def handle_jaw_page_event(page, obj, event) -> bool:
 
     # Click on empty list area clears item selection
     jaw_list = getattr(page, 'jaw_list', None)
-    if jaw_list is not None and obj in (jaw_list, jaw_list.viewport()):
+    jaw_list_viewport = _safe_viewport(jaw_list)
+    if _alive(jaw_list) and obj in (jaw_list, jaw_list_viewport):
         if event.type() == QEvent.MouseButtonPress and not jaw_list.indexAt(event.pos()).isValid():
             page._clear_selection()
 

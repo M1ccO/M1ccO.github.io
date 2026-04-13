@@ -35,13 +35,13 @@ Read this file first, then use the linked contract/manifests/checklists before e
   - Class: HomePage (CatalogPageBase subclass)
   - Domain: TOOLS
   - Contract: docs/TOOLS_MODULE_CONTRACT.md
-  - Rules: TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md (B-002/B-002b boundaries)
+  - Rules: PHASE11_SHARED_SUPPORT_RULES.md (B-002/B-002b boundaries)
 
 - Tools and jaws Library/ui/jaw_page.py
   - Class: JawPage (CatalogPageBase subclass)
   - Domain: JAWS
   - Contract: docs/JAWS_MODULE_CONTRACT.md
-  - Rules: TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md (B-001/B-001b boundaries)
+  - Rules: PHASE11_SHARED_SUPPORT_RULES.md (B-001/B-001b boundaries)
 
 - Tools and jaws Library/ui/jaw_catalog_delegate.py
   - Class: JawCatalogDelegate (CatalogDelegate subclass)

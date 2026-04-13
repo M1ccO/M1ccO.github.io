@@ -8,6 +8,11 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from shared.ui.helpers.selection_common import (
+    connect_selection_model_once,
+    on_multi_selection_changed_refresh_label,
+    update_selection_count_label as update_multi_selection_count_label,
+)
 from ui.home_page_support.detached_preview import close_detached_preview
 from ui.tool_catalog_delegate import ROLE_TOOL_ID, ROLE_TOOL_UID
 
@@ -52,33 +57,25 @@ def on_item_deleted_internal(page, item_id: str) -> None:
 
 def connect_selection_model(page) -> None:
     """Connect list selection model signals once per model instance."""
-    selection_model = page.list_view.selectionModel()
-    if (
-        selection_model is None
-        or getattr(page, '_selection_model_connected', None) is selection_model
-    ):
-        return
-    selection_model.currentChanged.connect(page.on_current_item_changed)
-    selection_model.selectionChanged.connect(page._on_multi_selection_changed)
-    page._selection_model_connected = selection_model
+    connect_selection_model_once(
+        page,
+        current_changed_handler=page.on_current_item_changed,
+        selection_changed_handler=page._on_multi_selection_changed,
+    )
 
 
 def on_multi_selection_changed(page, _selected, _deselected) -> None:
     """Update selected-count label when multi-selection changes."""
-    page._update_selection_count_label()
+    on_multi_selection_changed_refresh_label(page, _selected, _deselected)
 
 
 def update_selection_count_label(page) -> None:
     """Render selected-count label for multi-selection state."""
-    count = len(page._selected_tool_uids())
-    if count > 1 and hasattr(page, 'selection_count_label'):
-        page.selection_count_label.setText(
-            page._t('tool_library.selection.count', '{count} selected', count=count)
-        )
-        page.selection_count_label.show()
-        return
-    if hasattr(page, 'selection_count_label'):
-        page.selection_count_label.hide()
+    update_multi_selection_count_label(
+        page,
+        count=len(page._selected_tool_uids()),
+        translation_key='tool_library.selection.count',
+    )
 
 
 def on_current_item_changed(page, current, previous) -> None:

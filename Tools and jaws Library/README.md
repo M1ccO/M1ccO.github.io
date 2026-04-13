@@ -6,6 +6,20 @@ When used beside Setup Manager, Tool Library also acts as the master-data side o
 
 ---
 
+## Current Architecture Status (April 2026)
+
+- TOOLS and JAWS pages are fully migrated to shared platform bases.
+- Current page sizes are near parity:
+  - `ui/home_page.py`: ~583 lines
+  - `ui/jaw_page.py`: ~524 lines
+- Phase 11 shared support modularization is complete (Slices 1-5). Tracking docs:
+  - `PHASE11_SHARED_SUPPORT_GOALS.md`
+  - `PHASE11_SHARED_SUPPORT_RULES.md`
+  - `PHASE11_SHARED_SUPPORT_STATUS.md`
+- Machine profile preference wiring is active through shared runtime preferences (`shared_ui_preferences.json`).
+
+---
+
 ## What This Software Does
 
 Tools and jaws Library gives you two separate, fully integrated modules in a single desktop window:

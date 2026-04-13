@@ -396,6 +396,6 @@ python scripts/import_path_checker.py
 
 ## References
 
-- [TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md](TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md) — Constraints for modifications
-- [TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md](TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md) — Phase tracking
+- [PHASE11_SHARED_SUPPORT_RULES.md](../PHASE11_SHARED_SUPPORT_RULES.md) — Constraints for modifications
+- [PHASE11_SHARED_SUPPORT_STATUS.md](../PHASE11_SHARED_SUPPORT_STATUS.md) — Phase tracking
 - [AGENTS.md](../../AGENTS.md) — Canonical import rules

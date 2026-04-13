@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from PySide6.QtCore import Qt, QModelIndex
+from PySide6.QtCore import Qt, QModelIndex, QTimer
 from PySide6.QtGui import QIcon
 # import QtSvg for SVG support
 import PySide6.QtSvg  # noqa: F401
@@ -230,6 +230,9 @@ class HomePage(CatalogPageBase):
         self._selector_assigned_tools: list[dict] = []
         self._selector_assignments_by_target: dict[str, list[dict]] = {}
         self._selector_saved_details_hidden = True
+        self._initial_load_done = False
+        self._initial_load_scheduled = False
+        self._deferred_refresh_needed = False
 
         # Connect base class signals to tool-specific handlers
         self.item_selected.connect(self._on_item_selected_internal)
@@ -238,9 +241,33 @@ class HomePage(CatalogPageBase):
         self.tool_list = self.list_view
         self._connect_selection_model()
 
-        # Post-UI initialization
-        self._warmup_preview_engine()
-        self.refresh_list()
+        # Post-UI initialization is deferred until first show to avoid blocking
+        # startup while four HomePage instances are being constructed.
+
+    def _schedule_initial_load(self) -> None:
+        """Schedule first visible catalog load once per page instance."""
+        if self._initial_load_done or self._initial_load_scheduled:
+            return
+        self._initial_load_scheduled = True
+        QTimer.singleShot(0, self._perform_initial_load)
+
+    def _perform_initial_load(self) -> None:
+        """Perform first catalog load after the page becomes visible."""
+        self._initial_load_scheduled = False
+        if self._initial_load_done or not self.isVisible():
+            return
+        self._initial_load_done = True
+        self._deferred_refresh_needed = False
+        self.refresh_catalog()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._initial_load_done:
+            self._schedule_initial_load()
+            return
+        if self._deferred_refresh_needed:
+            self._deferred_refresh_needed = False
+            QTimer.singleShot(0, self.refresh_catalog)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         """Shorthand for translation function."""
@@ -542,9 +569,17 @@ class HomePage(CatalogPageBase):
 
     def refresh_list(self) -> None:
         """Refresh catalog list (synonym for refresh_catalog)."""
+        if not self._initial_load_done and not self.isVisible():
+            self._deferred_refresh_needed = True
+            return
         _refresh_list_impl(self)
 
     def refresh_catalog(self) -> None:
+        if not self._initial_load_done and not self.isVisible():
+            self._deferred_refresh_needed = True
+            return
+        self._initial_load_done = True
+        self._deferred_refresh_needed = False
         _refresh_catalog_impl(self)
 
     def select_tool_by_id(self, tool_id: str) -> None:

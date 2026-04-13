@@ -12,16 +12,22 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QPushButton,
-    QScrollArea,
     QSizePolicy,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from config import TOOL_ICONS_DIR
+from shared.ui.helpers.page_scaffold_common import (
+    apply_catalog_list_view_defaults,
+    build_catalog_list_shell,
+    build_catalog_splitter,
+    build_detail_container_shell,
+    build_page_root,
+    build_search_input,
+    install_catalog_list_event_filters,
+)
 from ui.jaw_page_support.catalog_list_widgets import JawCatalogListView
 from ui.jaw_page_support.bottom_bars_builder import build_bottom_bars
 from ui.jaw_page_support.selector_actions import update_selector_remove_button
@@ -48,12 +54,9 @@ def build_jaw_page_layout(page) -> None:
     detail container, selector card, bottom bars.  Called from
     JawPage._build_ui() so that the page file stays thin.
     """
-    root = QVBoxLayout(page)
-    root.setContentsMargins(0, 0, 0, 0)
-    root.setSpacing(10)
+    root = build_page_root(page)
 
-    page.search_input = QLineEdit()
-    page.search_input.textChanged.connect(page.refresh_list)
+    page.search_input = build_search_input(page)
     page.filter_pane = build_filter_toolbar(page)
     root.addWidget(page.filter_pane)
 
@@ -83,11 +86,10 @@ def build_jaw_page_layout(page) -> None:
         side_layout.addStretch(1)
         content.addWidget(page.sidebar, 0)
 
-    page.splitter = QSplitter(Qt.Horizontal)
-    page.splitter.setHandleWidth(1)
-    page.splitter.setChildrenCollapsible(False)
-    page.splitter.addWidget(_build_catalog_list_card(page))
-    page.splitter.addWidget(_build_detail_container(page))
+    page.splitter = build_catalog_splitter(_build_catalog_list_card(page), _build_detail_container(page))
+    page.detail_container.hide()
+    page.detail_header_container.hide()
+    page.splitter.setSizes([1, 0])
     content.addWidget(page.splitter, 1)
     root.addLayout(content, 1)
 
@@ -104,29 +106,11 @@ def build_jaw_page_layout(page) -> None:
 
 def _build_catalog_list_card(page) -> QFrame:
     """Build the catalog list card (list view + model wiring)."""
-    from PySide6.QtWidgets import QListView
-    from ui.jaw_catalog_delegate import ROLE_JAW_ID
-
-    list_card = QFrame()
-    list_card.setProperty('catalogShell', True)
-    list_layout = QVBoxLayout(list_card)
-    list_layout.setContentsMargins(0, 0, 0, 0)
-    list_layout.setSpacing(10)
+    list_card, list_layout = build_catalog_list_shell()
 
     page.list_view = JawCatalogListView()
     page.jaw_list = page.list_view
-    page.list_view.setObjectName('toolCatalog')
-    page.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
-    page.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-    page.list_view.setSelectionMode(QListView.ExtendedSelection)
-    page.list_view.setDragEnabled(True)
-    page.list_view.setMouseTracking(True)
-    page.list_view.setStyleSheet(
-        'QListView#toolCatalog { border: none; outline: none; padding: 8px; }'
-        ' QListView#toolCatalog::item { background: transparent; border: none; }'
-    )
-    page.list_view.setSpacing(4)
-    page.list_view.setUniformItemSizes(True)
+    apply_catalog_list_view_defaults(page.list_view)
 
     page._item_model = page._item_model or page._create_model()
     page._jaw_model = page._item_model
@@ -135,8 +119,7 @@ def _build_catalog_list_card(page) -> QFrame:
     page.list_view.setItemDelegate(page._jaw_delegate)
     page.list_view.clicked.connect(page._on_catalog_clicked)
     page.list_view.doubleClicked.connect(page.on_item_double_clicked)
-    page.list_view.installEventFilter(page)
-    page.list_view.viewport().installEventFilter(page)
+    install_catalog_list_event_filters(page.list_view, page)
     page._connect_selection_model()
 
     list_layout.addWidget(page.list_view, 1)
@@ -145,40 +128,18 @@ def _build_catalog_list_card(page) -> QFrame:
 
 def _build_detail_container(page) -> QWidget:
     """Build the detail container (scrollable detail panel + selector card)."""
-    page.detail_container = QWidget()
-    page.detail_container.setMinimumWidth(280)
-    detail_layout = QVBoxLayout(page.detail_container)
+    (
+        page.detail_container,
+        detail_layout,
+        page.detail_card,
+        page.detail_scroll,
+        page.detail_panel,
+        page.detail_layout,
+    ) = build_detail_container_shell()
     page._detail_container_layout = detail_layout
-    detail_layout.setContentsMargins(0, 0, 0, 0)
-    detail_layout.setSpacing(0)
-
-    page.detail_card = QFrame()
-    page.detail_card.setProperty('card', True)
-    detail_card_layout = QVBoxLayout(page.detail_card)
-    detail_card_layout.setContentsMargins(0, 0, 0, 0)
-    detail_card_layout.setSpacing(0)
-
-    page.detail_scroll = QScrollArea()
-    page.detail_scroll.setObjectName('detailScrollArea')
-    page.detail_scroll.setWidgetResizable(True)
-    page.detail_scroll.setFrameShape(QFrame.NoFrame)
-    page.detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-    page.detail_panel = QWidget()
-    page.detail_panel.setObjectName('detailPanel')
-    page.detail_layout = QVBoxLayout(page.detail_panel)
-    page.detail_layout.setContentsMargins(0, 0, 0, 0)
-    page.detail_layout.setSpacing(10)
-    page.detail_scroll.setWidget(page.detail_panel)
-
-    detail_card_layout.addWidget(page.detail_scroll, 1)
-    detail_layout.addWidget(page.detail_card, 1)
     detail_layout.addWidget(_build_selector_card(page), 1)
 
     page.populate_details(None)
-    page.detail_container.hide()
-    page.detail_header_container.hide()
-    page.splitter.setSizes([1, 0])
     return page.detail_container
 
 

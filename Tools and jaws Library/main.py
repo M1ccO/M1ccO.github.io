@@ -174,16 +174,8 @@ def main():
     step(6, 'Loading settings...')
     settings_service = SettingsService(SETTINGS_PATH)
 
-    step(7, 'Warming up 3D preview...')
-    if _known_args.hidden:
-        app._preview_warmup_widget = None
-    else:
-        try:
-            from shared.ui.stl_preview import StlPreviewWidget
-            app._preview_warmup_widget = StlPreviewWidget()
-            app._preview_warmup_widget.hide()
-        except Exception:
-            app._preview_warmup_widget = None
+    step(7, 'Preparing 3D preview...')
+    app._preview_warmup_widget = None
 
     step(8, 'Opening main window...')
 
@@ -196,8 +188,21 @@ def main():
 
     win = MainWindow(tool_service, jaw_service, export_service, settings_service, launch_master_filter=launch_master_filter)
 
+    def warm_preview_after_startup():
+        if _known_args.hidden or getattr(app, '_preview_warmup_widget', None) is not None:
+            return
+        try:
+            from shared.ui.stl_preview import StlPreviewWidget
+
+            app._preview_warmup_widget = StlPreviewWidget()
+            app._preview_warmup_widget.hide()
+            QTimer.singleShot(1500, app._preview_warmup_widget.deleteLater)
+        except Exception:
+            app._preview_warmup_widget = None
+
     if not _known_args.hidden:
         win.show()
+        QTimer.singleShot(250, warm_preview_after_startup)
     # Hidden mode: window stays hidden until an IPC show request arrives.
     # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
@@ -292,8 +297,6 @@ def main():
         # Default to tools module when opened with a tool master filter.
         QTimer.singleShot(100, lambda: win._apply_module_mode("tools"))
 
-    if getattr(app, '_preview_warmup_widget', None) is not None:
-        QTimer.singleShot(1500, app._preview_warmup_widget.deleteLater)
     sys.exit(app.exec())
 
 

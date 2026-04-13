@@ -4,9 +4,9 @@ This guide defines the deterministic path for making safe changes in this reposi
 
 ## 1. Mandatory Read Order
 
-1. TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md
-2. TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md
-3. TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md
+1. PHASE11_SHARED_SUPPORT_GOALS.md
+2. PHASE11_SHARED_SUPPORT_RULES.md
+3. PHASE11_SHARED_SUPPORT_STATUS.md
 4. docs/module-index.md
 5. docs/module-public-api-manifests.json
 6. docs/module-change-checklists.json
@@ -27,7 +27,7 @@ If a requested change conflicts with these files, follow RULES and STATUS over l
    - python scripts/module_extension_checker.py
    - python scripts/module_boundary_checker.py
    - python scripts/run_quality_gate.py
-6. Update status tracker proof lines in TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md when phase deliverables are completed.
+6. Update status tracker proof lines in PHASE11_SHARED_SUPPORT_STATUS.md when phase deliverables are completed.
 
 ## 3. Boundary Rules You Must Not Violate
 

@@ -6,12 +6,21 @@ import json
 from typing import Any, Callable
 
 from PySide6.QtCore import QModelIndex, Qt, Signal, QTimer
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QWidget
 
 import ui.jaw_page_support.crud_actions as _crud
 import ui.jaw_page_support.detail_visibility as _detail_vis
 import ui.jaw_page_support.retranslate_page as _retranslate
 import ui.jaw_page_support.selection_helpers as _sel
+from ui.jaw_page_support.selection_signal_handlers import (
+    connect_selection_model as _connect_selection_model_impl,
+    on_current_item_changed as _on_current_item_changed_impl,
+    on_item_deleted_internal as _on_item_deleted_internal_impl,
+    on_item_double_clicked as _on_item_double_clicked_impl,
+    on_item_selected_internal as _on_item_selected_internal_impl,
+    on_multi_selection_changed as _on_multi_selection_changed_impl,
+    update_selection_count_label as _update_selection_count_label_impl,
+)
 from shared.ui.platforms.catalog_page_base import CatalogPageBase
 from shared.ui.stl_preview import StlPreviewWidget
 from ui.jaw_catalog_delegate import JawCatalogDelegate, ROLE_JAW_ID
@@ -88,6 +97,9 @@ class JawPage(CatalogPageBase):
         self._selector_selected_slots: set[str] = set()
         self._selector_saved_details_hidden = True
         self._selector_slot_controller = SelectorSlotController(self)
+        self._initial_load_done = False
+        self._initial_load_scheduled = False
+        self._deferred_refresh_needed = False
 
         self._detail_preview_widget = None
         self._detail_preview_model_key = None
@@ -102,7 +114,31 @@ class JawPage(CatalogPageBase):
 
         self.item_selected.connect(self._on_item_selected_internal)
         self.item_deleted.connect(self._on_item_deleted_internal)
-        self.refresh_list()
+
+    def _schedule_initial_load(self) -> None:
+        """Schedule first visible catalog load once per page instance."""
+        if self._initial_load_done or self._initial_load_scheduled:
+            return
+        self._initial_load_scheduled = True
+        QTimer.singleShot(0, self._perform_initial_load)
+
+    def _perform_initial_load(self) -> None:
+        """Perform first catalog load after the page becomes visible."""
+        self._initial_load_scheduled = False
+        if self._initial_load_done or not self.isVisible():
+            return
+        self._initial_load_done = True
+        self._deferred_refresh_needed = False
+        self.refresh_catalog()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._initial_load_done:
+            self._schedule_initial_load()
+            return
+        if self._deferred_refresh_needed:
+            self._deferred_refresh_needed = False
+            QTimer.singleShot(0, self.refresh_catalog)
 
     # ------------------------------------------------------------------
     # CatalogPageBase contract
@@ -159,12 +195,7 @@ class JawPage(CatalogPageBase):
         return QStandardItemModel(self)
 
     def _connect_selection_model(self) -> None:
-        selection_model = self.list_view.selectionModel()
-        if selection_model is None or getattr(self, '_selection_model_connected', None) is selection_model:
-            return
-        selection_model.currentChanged.connect(self.on_current_item_changed)
-        selection_model.selectionChanged.connect(self._on_multi_selection_changed)
-        self._selection_model_connected = selection_model
+        _connect_selection_model_impl(self)
 
     def _catalog_item_dict(self, jaw: dict) -> dict:
         jaw_id = str(jaw.get('jaw_id') or '').strip()
@@ -230,62 +261,22 @@ class JawPage(CatalogPageBase):
         self.item_selected.emit(item_id, 0)
 
     def _on_item_selected_internal(self, jaw_id: str, _uid: int) -> None:
-        self.current_jaw_id = str(jaw_id or '').strip() or None
-        self._update_selection_count_label()
-        if not self._details_hidden:
-            self.populate_details(self._get_selected_jaw())
-        self._sync_detached_preview(show_errors=False)
-        if self.current_jaw_id:
-            self.jaw_selected.emit(self.current_jaw_id)
+        _on_item_selected_internal_impl(self, jaw_id, _uid)
 
     def _on_item_deleted_internal(self, jaw_id: str) -> None:
-        if self.current_jaw_id == jaw_id:
-            self.current_jaw_id = None
-            self._current_item_id = None
-            self.populate_details(None)
-        self._sync_detached_preview(show_errors=False)
-        self.jaw_deleted.emit(jaw_id)
+        _on_item_deleted_internal_impl(self, jaw_id)
 
     def on_current_item_changed(self, current: QModelIndex, previous: QModelIndex):
-        _ = previous
-        if not current.isValid():
-            self.current_jaw_id = None
-            self._current_item_id = None
-            self._update_selection_count_label()
-            self.populate_details(None)
-            self._sync_detached_preview(show_errors=False)
-            return
-        self.current_jaw_id = self._catalog_item_id(current)
-        self._current_item_id = self.current_jaw_id
-        self._update_selection_count_label()
-        if not self._details_hidden:
-            self.populate_details(self._get_selected_jaw())
-        self._sync_detached_preview(show_errors=False)
+        _on_current_item_changed_impl(self, current, previous)
 
     def on_item_double_clicked(self, index: QModelIndex):
-        self.current_jaw_id = self._catalog_item_id(index)
-        self._current_item_id = self.current_jaw_id
-        if QApplication.keyboardModifiers() & Qt.ControlModifier:
-            self.edit_jaw()
-            return
-        if self._details_hidden:
-            self.populate_details(self._get_selected_jaw())
-            self.show_details()
-            return
-        self.hide_details()
+        _on_item_double_clicked_impl(self, index)
 
     def _on_multi_selection_changed(self, _selected, _deselected) -> None:
-        self._update_selection_count_label()
+        _on_multi_selection_changed_impl(self, _selected, _deselected)
 
     def _update_selection_count_label(self) -> None:
-        count = len(self._selected_jaw_ids())
-        if count > 1:
-            self.selection_count_label.setText(
-                self._t('jaw_library.selection.count', '{count} selected', count=count)
-            )
-            self.selection_count_label.show()
-            return
-        self.selection_count_label.hide()
+        _update_selection_count_label_impl(self)
 
     # ------------------------------------------------------------------
     # Filter / view controls
@@ -503,6 +494,12 @@ class JawPage(CatalogPageBase):
     # ------------------------------------------------------------------
 
     def refresh_catalog(self) -> None:
+        if not self._initial_load_done and not self.isVisible():
+            self._deferred_refresh_needed = True
+            return
+        self._initial_load_done = True
+        self._deferred_refresh_needed = False
+
         filter_state = self.filter_pane.get_filters() if hasattr(self.filter_pane, 'get_filters') else {}
         items = self.apply_filters({'search': self.search_input.text().strip(), **filter_state})
 
@@ -528,6 +525,9 @@ class JawPage(CatalogPageBase):
         self._sync_detached_preview(show_errors=False)
 
     def refresh_list(self) -> None:
+        if not self._initial_load_done and not self.isVisible():
+            self._deferred_refresh_needed = True
+            return
         self.refresh_catalog()
 
     def select_jaw_by_id(self, jaw_id: str) -> None:

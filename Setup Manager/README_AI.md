@@ -1,5 +1,14 @@
 # Setup Manager — AI Quick Spec
 
+## Current Status (April 2026)
+- Setup Manager remains owner of setup/logbook domains.
+- Tool/Jaw data access remains read-only from sibling Tool Library DBs.
+- Shared runtime preferences path (`shared_ui_preferences.json`) is active for cross-app UI settings (including machine profile key).
+- Tool Library support-layer convergence planning is tracked in:
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_GOALS.md`
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_RULES.md`
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_STATUS.md`
+
 ## Product Contract
 - App role: operational setup + run-history manager.
 - Tool/Jaw authoring is out-of-scope (belongs to sibling Tool Library).

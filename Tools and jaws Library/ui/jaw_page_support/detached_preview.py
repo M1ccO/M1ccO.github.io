@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -16,6 +15,14 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
+from shared.ui.helpers.detached_preview_common import (
+    apply_detached_preview_default_bounds as _apply_detached_preview_default_bounds,
+    bind_escape_close_shortcut,
+    close_detached_preview as _close_detached_preview,
+    set_preview_button_checked as _set_preview_button_checked,
+    toggle_preview_window as _toggle_preview_window,
+    update_measurement_toggle_icon,
+)
 from shared.ui.stl_preview import StlPreviewWidget
 from ui.jaw_page_support.preview_rules import (
     apply_jaw_preview_transform,
@@ -28,11 +35,7 @@ from ui.jaw_page_support.preview_rules import (
 
 
 def set_preview_button_checked(page, checked: bool) -> None:
-    if not hasattr(page, 'preview_window_btn'):
-        return
-    page.preview_window_btn.blockSignals(True)
-    page.preview_window_btn.setChecked(checked)
-    page.preview_window_btn.blockSignals(False)
+    _set_preview_button_checked(page, checked)
 
 
 def load_preview_content(page, viewer: StlPreviewWidget, jaw: dict, *, label: str | None = None) -> bool:
@@ -60,9 +63,7 @@ def ensure_detached_preview_dialog(page) -> None:
     dialog.setWindowTitle(page._t('tool_library.preview.window_title', '3D Preview'))
     dialog.resize(620, 820)
     dialog.finished.connect(page._on_detached_preview_closed)
-    page._close_preview_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), dialog)
-    page._close_preview_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
-    page._close_preview_shortcut.activated.connect(dialog.close)
+    bind_escape_close_shortcut(page, dialog)
 
     layout = QVBoxLayout(dialog)
     layout.setContentsMargins(8, 8, 8, 8)
@@ -108,32 +109,19 @@ def ensure_detached_preview_dialog(page) -> None:
 
 
 def apply_detached_preview_default_bounds(page) -> None:
-    if page._detached_preview_dialog is None:
-        return
-    host_window = page.window()
-    if host_window is None:
-        return
-    host_frame = host_window.frameGeometry()
-    if host_frame.width() <= 0 or host_frame.height() <= 0:
-        return
-    width = min(max(520, int(host_frame.width() * 0.37)), 700)
-    max_height = max(420, host_frame.height() - 30)
-    height = min(max(600, int(host_frame.height() * 0.86)), max_height)
-    x = host_frame.right() - width + 1
-    y = max(host_frame.top() + 30, host_frame.bottom() - height + 1)
-    page._detached_preview_dialog.setGeometry(x, y, width, height)
+    _apply_detached_preview_default_bounds(page)
 
 
 def update_detached_measurement_toggle_icon(page, enabled: bool) -> None:
-    if page._measurement_toggle_btn is None:
-        return
-    icon_name = 'comment_disable.svg' if enabled else 'comment.svg'
-    page._measurement_toggle_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
-    page._measurement_toggle_btn.setToolTip(
-        page._t(
-            'tool_library.preview.measurements_hide' if enabled else 'tool_library.preview.measurements_show',
-            'Piilota mittaukset' if enabled else 'N\xe4yt\xe4 mittaukset',
-        )
+    update_measurement_toggle_icon(
+        page,
+        bool(enabled),
+        icons_dir=TOOL_ICONS_DIR,
+        translate=page._t,
+        hide_key='tool_library.preview.measurements_hide',
+        show_key='tool_library.preview.measurements_show',
+        hide_default='Piilota mittaukset',
+        show_default='Nayta mittaukset',
     )
 
 
@@ -162,10 +150,7 @@ def on_detached_preview_closed(page, _result) -> None:
 
 
 def close_detached_preview(page) -> None:
-    if page._detached_preview_dialog is not None:
-        page._detached_preview_dialog.close()
-    else:
-        set_preview_button_checked(page, False)
+    _close_detached_preview(page)
 
 
 def sync_detached_preview(page, show_errors: bool = False) -> bool:
@@ -222,11 +207,11 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
 
 
 def toggle_preview_window(page) -> None:
-    if page.preview_window_btn.isChecked():
-        if not sync_detached_preview(page, show_errors=True):
-            set_preview_button_checked(page, False)
-        return
-    close_detached_preview(page)
+    _toggle_preview_window(
+        page,
+        sync_callback=lambda show_errors: sync_detached_preview(page, show_errors=show_errors),
+        close_callback=lambda: close_detached_preview(page),
+    )
 
 
 __all__ = [

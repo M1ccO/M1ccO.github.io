@@ -66,10 +66,9 @@ This repository is optimized for deterministic AI-assisted coding. Always prefer
 - Adapter design reference: `shared/ui/platform_glue/ADAPTERS_DESIGN_REFERENCE.md`
 - Shim retirement policy: `docs/shim-retirement-policy.md`
 - Work Editor refactor progress/status: `Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md`
-- Tool Editor refactor log: `Tools and jaws Library/TOOL_EDITOR_REFACTOR.md`
-- Modular overhaul goals: `Tools and jaws Library/TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md`
-- Modular overhaul rules: `Tools and jaws Library/TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md`
-- Modular overhaul status: `Tools and jaws Library/TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md`
+- Shared support goals: `Tools and jaws Library/PHASE11_SHARED_SUPPORT_GOALS.md`
+- Shared support rules: `Tools and jaws Library/PHASE11_SHARED_SUPPORT_RULES.md`
+- Shared support status: `Tools and jaws Library/PHASE11_SHARED_SUPPORT_STATUS.md`
 
 ## Modular Platform Overhaul — STATUS (as of April 13, 2026)
 
@@ -89,10 +88,10 @@ All 10 phases COMPLETE. The Tools and Jaws Library has been fully migrated to th
 | 9 | Future Domain Template | 🟢 COMPLETE — Fixtures example domain verified |
 
 **Post-overhaul file layout (Tools and jaws Library)**:
-- `ui/home_page.py` — thin orchestrator (~700L), inherits `CatalogPageBase`
-- `ui/jaw_page.py` — thin orchestrator (~558L), inherits `CatalogPageBase`
-- `ui/home_page_support/` — active: `detail_panel_builder.py`, `detail_fields_builder.py`, `detail_layout_rules.py`, `detached_preview.py`
-- `ui/jaw_page_support/` — 9 modules: `topbar_builder.py`, `detail_panel_builder.py`, `bottom_bars_builder.py`, `preview_rules.py`, `page_builders.py`, `event_filter.py`, `crud_actions.py`, `retranslate_page.py`, `detail_visibility.py`, `selection_helpers.py`
+- `ui/home_page.py` — thin orchestrator (~583L), inherits `CatalogPageBase`
+- `ui/jaw_page.py` — thin orchestrator (~524L), inherits `CatalogPageBase`
+- `ui/home_page_support/` — 17 active modules including detail builders, filter/runtime/link coordinators, page builders, selector context, topbar builder, detached preview, and selection handlers
+- `ui/jaw_page_support/` — 18 active modules including topbar builder, detail/bottom-bar builders, selector modules, page builders, detached preview, selection helpers, and selection signal handlers
 - `ui/tool_editor_support/` — `component_picker_dialog.py`, `spare_parts_table_coordinator.py`, `component_linking_dialog.py`, `measurement_rules.py`, `transform_rules.py`
 - `data/migrations/` — package with `tools_migrations.py` + `jaws_migrations.py` (backward-compatible)
 **Adding a new domain**: Use `shared.ui.platforms.*` as the base (CatalogPageBase, EditorDialogBase, CatalogDelegate, ExportSpecification). Target ~1,000 lines total (model + service + page + editor + export spec + migrations).
@@ -106,10 +105,6 @@ All 10 phases COMPLETE. The Tools and Jaws Library has been fully migrated to th
 ## Ongoing Refactor Tracking
 - For behavior-preserving reduction of `Setup Manager/ui/work_editor_dialog.py`, follow:
   - `Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md`
-- For `Tools and jaws Library/ui/tool_editor_dialog.py` modularization (April 2026), see:
-  - `Tools and jaws Library/TOOL_EDITOR_REFACTOR.md`
-  - ~428 lines extracted into three `tool_editor_support/` modules:
-    - `component_picker_dialog.py` — searchable component picker dialog
-    - `spare_parts_table_coordinator.py` — spare parts table + debounced refresh
-    - `component_linking_dialog.py` — spare-to-component linking dialog
+- For support-layer convergence tracking (Phase 11), see:
+  - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_STATUS.md`
 - Keep refactor passes small and responsibility-scoped.

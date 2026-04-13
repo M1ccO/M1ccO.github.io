@@ -11,13 +11,20 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListView,
     QPushButton,
-    QScrollArea,
-    QSplitter,
     QVBoxLayout,
     QWidget,
+)
+
+from shared.ui.helpers.page_scaffold_common import (
+    apply_catalog_list_view_defaults,
+    build_catalog_list_shell,
+    build_catalog_splitter,
+    build_detail_container_shell,
+    build_page_root,
+    build_search_input,
+    install_catalog_list_event_filters,
 )
 
 __all__ = [
@@ -30,21 +37,14 @@ __all__ = [
 
 def build_tool_page_layout(page) -> None:
     """Build the full HomePage layout; called from HomePage._build_ui()."""
-    root = QVBoxLayout(page)
-    root.setContentsMargins(0, 0, 0, 0)
-    root.setSpacing(10)
+    root = build_page_root(page)
 
-    page.search_input = QLineEdit()
-    page.search_input.textChanged.connect(page.refresh_list)
+    page.search_input = build_search_input(page)
 
     page.filter_pane = page.build_filter_pane()
     root.addWidget(page.filter_pane)
 
-    page.splitter = QSplitter(Qt.Horizontal)
-    page.splitter.setHandleWidth(1)
-    page.splitter.setChildrenCollapsible(False)
-    page.splitter.addWidget(build_catalog_list_card(page))
-    page.splitter.addWidget(build_detail_container(page))
+    page.splitter = build_catalog_splitter(build_catalog_list_card(page), build_detail_container(page))
     root.addWidget(page.splitter, 1)
 
     build_bottom_bars(page, root)
@@ -56,32 +56,16 @@ def build_tool_page_layout(page) -> None:
 
 def build_catalog_list_card(page) -> QFrame:
     """Build and return the catalog list card widget."""
-    list_card = QFrame()
-    list_card.setProperty('catalogShell', True)
-    list_layout = QVBoxLayout(list_card)
-    list_layout.setContentsMargins(0, 0, 0, 0)
-    list_layout.setSpacing(10)
+    list_card, list_layout = build_catalog_list_shell()
 
     page.list_view = QListView()
     page.tool_list = page.list_view
-    page.list_view.setObjectName('toolCatalog')
-    page.list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
-    page.list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-    page.list_view.setSelectionMode(QListView.ExtendedSelection)
-    page.list_view.setDragEnabled(True)
-    page.list_view.setMouseTracking(True)
-    page.list_view.setStyleSheet(
-        'QListView#toolCatalog { border: none; outline: none; padding: 8px; }'
-        ' QListView#toolCatalog::item { background: transparent; border: none; }'
-    )
-    page.list_view.setSpacing(4)
-    page.list_view.setUniformItemSizes(True)
+    apply_catalog_list_view_defaults(page.list_view)
 
     page.list_view.setItemDelegate(page.create_delegate())
     page.list_view.clicked.connect(page._on_list_item_clicked)
     page.list_view.doubleClicked.connect(page.on_item_double_clicked)
-    page.list_view.installEventFilter(page)
-    page.list_view.viewport().installEventFilter(page)
+    install_catalog_list_event_filters(page.list_view, page)
 
     list_layout.addWidget(page.list_view, 1)
     return list_card
@@ -89,33 +73,14 @@ def build_catalog_list_card(page) -> QFrame:
 
 def build_detail_container(page) -> QWidget:
     """Build and return the detail panel container widget."""
-    page.detail_container = QWidget()
-    page.detail_container.setMinimumWidth(280)
-    detail_layout = QVBoxLayout(page.detail_container)
-    detail_layout.setContentsMargins(0, 0, 0, 0)
-    detail_layout.setSpacing(0)
-
-    page.detail_card = QFrame()
-    page.detail_card.setProperty('card', True)
-    detail_card_layout = QVBoxLayout(page.detail_card)
-    detail_card_layout.setContentsMargins(0, 0, 0, 0)
-    detail_card_layout.setSpacing(0)
-
-    page.detail_scroll = QScrollArea()
-    page.detail_scroll.setObjectName('detailScrollArea')
-    page.detail_scroll.setWidgetResizable(True)
-    page.detail_scroll.setFrameShape(QFrame.NoFrame)
-    page.detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-
-    page.detail_panel = QWidget()
-    page.detail_panel.setObjectName('detailPanel')
-    page.detail_layout = QVBoxLayout(page.detail_panel)
-    page.detail_layout.setContentsMargins(0, 0, 0, 0)
-    page.detail_layout.setSpacing(10)
-    page.detail_scroll.setWidget(page.detail_panel)
-
-    detail_card_layout.addWidget(page.detail_scroll, 1)
-    detail_layout.addWidget(page.detail_card, 1)
+    (
+        page.detail_container,
+        detail_layout,
+        page.detail_card,
+        page.detail_scroll,
+        page.detail_panel,
+        page.detail_layout,
+    ) = build_detail_container_shell()
 
     page.populate_details(None)
     return page.detail_container

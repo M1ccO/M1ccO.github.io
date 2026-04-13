@@ -4,6 +4,21 @@ This document is the authoritative technical reference for AI agents and develop
 
 ---
 
+## Current Status (April 2026)
+
+- Platform overhaul phases 0-9 are complete.
+- `ui/home_page.py` and `ui/jaw_page.py` are both thin orchestrators built on `CatalogPageBase`.
+- Current line counts:
+  - `ui/home_page.py`: ~583 lines
+  - `ui/jaw_page.py`: ~524 lines
+- Phase 11 shared support modularization is complete (Slices 1-5). Tracking docs:
+  - `PHASE11_SHARED_SUPPORT_GOALS.md`
+  - `PHASE11_SHARED_SUPPORT_RULES.md`
+  - `PHASE11_SHARED_SUPPORT_STATUS.md`
+- Fixtures is not currently active in runtime navigation; any reintroduction should follow the platform/domain template and extension-point allowlist process.
+
+---
+
 ## System Overview
 
 Tools and jaws Library is a PySide6 desktop application for managing CNC tooling data. It has two independent modules — **TOOLS** and **JAWS** — each with its own database table, service layer, UI page, editor dialog, and export page. Both modules share the same 3D STL preview system.
@@ -338,7 +353,7 @@ Add/Edit dialog for tool records. Four tabs: **General**, **Components**, **Spar
 - 3D Models tab also includes a transform row below the preview (mode toggle, fine toggle, XYZ values, reset)
 - Transform snapshots are synchronized from the preview before save to avoid stale zero-value saves
 
-**Modular structure (April 2026 refactor):** The dialog has been reduced to a thin coordinator (~970 lines). Tab construction and several self-contained responsibilities were extracted into `tool_editor_support/` modules. See `TOOL_EDITOR_REFACTOR.md` for the full log.
+**Modular structure (April 2026 refactor):** The dialog has been reduced to a thin coordinator (~970 lines). Tab construction and several self-contained responsibilities were extracted into `tool_editor_support/` modules.
 
 Key support modules:
 
