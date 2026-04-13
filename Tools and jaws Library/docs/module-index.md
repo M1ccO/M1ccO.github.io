@@ -47,10 +47,9 @@ Read this file first, then use the linked contract/manifests/checklists before e
   - Class: JawCatalogDelegate (CatalogDelegate subclass)
   - Domain: JAWS
 
-- Tools and jaws Library/ui/tool_catalog_delegate_v2.py
-  - Class: ToolCatalogDelegate (CatalogDelegate subclass)
+- Tools and jaws Library/ui/tool_catalog_delegate.py
+  - Class: ToolCatalogDelegate (QStyledItemDelegate subclass)
   - Domain: TOOLS
-  - Note: Candidate canonical delegate extension point in parallel path.
 
 ## Data Entrypoints
 

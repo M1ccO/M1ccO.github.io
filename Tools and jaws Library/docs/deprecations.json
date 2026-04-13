@@ -117,10 +117,10 @@
     {
       "id": "DEP-006",
       "title": "ui/home_page.py — _legacy_component_candidates()",
-      "status": "ACTIVE",
+      "status": "RETIRED",
       "type": "legacy_function",
-      "file": "ui/home_page.py",
-      "line_approx": 1684,
+      "file": "ui/home_page_support/detail_panel_builder.py",
+      "line_approx": 558,
       "description": "Builds backward-compatible component rows from tool data predating the component_items field. Used in detail panel rendering when old tool format encountered.",
       "what_replaces_it": "Direct use of component_items field",
       "removal_preconditions": [
@@ -130,7 +130,9 @@
       "removal_risk": "MEDIUM",
       "target_removal_phase": "Phase 4 (TOOLS Migration)",
       "target_removal_date": "2026-06-15",
-      "added_date": "2025-10-01"
+      "added_date": "2025-10-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Removed compatibility fallback branch from detail_panel_builder; component rendering now relies on normalized component_items only."
     },
 
     {
@@ -156,7 +158,7 @@
     {
       "id": "DEP-008",
       "title": "config.py — legacy runtime directory migration",
-      "status": "ACTIVE",
+      "status": "RETIRED",
       "type": "legacy_function",
       "file": "config.py",
       "line_approx": 54,
@@ -169,13 +171,15 @@
       "removal_risk": "LOW",
       "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
       "target_removal_date": "2026-08-15",
-      "added_date": "2024-11-01"
+      "added_date": "2024-11-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Removed the frozen-runtime fallback copy from 'NTX Shared Runtime' and kept 'Shared Runtime' as the only runtime directory."
     },
 
     {
       "id": "DEP-009",
       "title": "ui/main_window.py — legacy modules directory fallback",
-      "status": "ACTIVE",
+      "status": "RETIRED",
       "type": "legacy_function",
       "file": "ui/main_window.py",
       "line_approx": 1240,
@@ -185,7 +189,9 @@
       "removal_risk": "LOW",
       "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
       "target_removal_date": "2026-08-15",
-      "added_date": "2025-03-01"
+      "added_date": "2025-03-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Removed stylesheet fallback path and kept styles/modules as the single source of truth."
     },
 
     {
@@ -206,7 +212,7 @@
     {
       "id": "DEP-011",
       "title": "ui/jaw_export_page.py — _JawToolServiceAdapter (INTENTIONAL ADAPTER)",
-      "status": "INTENTIONAL_ADAPTER",
+      "status": "RETIRED",
       "type": "adapter_pattern",
       "file": "ui/jaw_export_page.py",
       "line_approx": 108,
@@ -220,13 +226,15 @@
       "removal_risk": "LOW",
       "target_removal_phase": "Phase 7 (Export/Import Consolidation)",
       "target_removal_date": "2026-07-30",
-      "added_date": "2026-02-01"
+      "added_date": "2026-02-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "JawExportPage now uses JawService directly for list/save operations; adapter class removed."
     },
 
     {
       "id": "DEP-012",
       "title": "ui/jaw_export_page.py — _JawExportServiceAdapter (INTENTIONAL ADAPTER)",
-      "status": "INTENTIONAL_ADAPTER",
+      "status": "RETIRED",
       "type": "adapter_pattern",
       "file": "ui/jaw_export_page.py",
       "line_approx": 128,
@@ -236,7 +244,9 @@
       "removal_risk": "LOW",
       "target_removal_phase": "Phase 7 (Export/Import Consolidation)",
       "target_removal_date": "2026-07-30",
-      "added_date": "2026-02-01"
+      "added_date": "2026-02-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Renamed adapter to JawExportService and switched JawExportPage to direct jaw-service export/import flows."
     },
 
     {
@@ -261,10 +271,10 @@
   "summary": {
     "total_items": 13,
     "by_status": {
-      "ACTIVE": 8,
-      "INTENTIONAL_ADAPTER": 2,
+      "ACTIVE": 5,
+      "INTENTIONAL_ADAPTER": 0,
       "PENDING_REMOVAL": 0,
-      "RETIRED": 3
+      "RETIRED": 8
     },
     "by_target_phase": {
       "Phase 4": ["DEP-006", "DEP-013"],

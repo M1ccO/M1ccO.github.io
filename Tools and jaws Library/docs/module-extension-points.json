@@ -36,15 +36,6 @@
         "_compute_size",
         "_paint_item_content"
       ]
-    },
-    {
-      "file": "ui/tool_catalog_delegate_v2.py",
-      "class": "ToolCatalogDelegate",
-      "base": "CatalogDelegate",
-      "required_methods": [
-        "_compute_size",
-        "_paint_item_content"
-      ]
     }
   ]
 }

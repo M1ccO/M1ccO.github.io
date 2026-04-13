@@ -555,73 +555,6 @@ class DetailPanelBuilder:
             return f"{role}:{code}"
         return f"{role}:idx:{fallback_idx}"
 
-    def _legacy_component_candidates(self, tool: dict) -> list[dict]:
-        """Build compatibility rows when tool data predates `component_items`."""
-        raw_cutting_name = tool.get("cutting_type", "")
-        cutting_name = (
-            self.page._localized_cutting_type(raw_cutting_name)
-            if raw_cutting_name
-            else self.page._t(
-                "tool_library.field.cutting_part",
-                "Cutting part",
-            )
-        )
-        candidates = [
-            {
-                "role": "holder",
-                "label": self.page._t("tool_library.field.holder", "Holder"),
-                "code": tool.get("holder_code", ""),
-                "link": (tool.get("holder_link", "") or "").strip(),
-                "group": "",
-                "component_key": (
-                    "holder:" + (tool.get("holder_code", "") or "").strip()
-                ),
-                "order": 0,
-            },
-            {
-                "role": "holder",
-                "label": self.page._t(
-                    "tool_library.field.add_element", "Add. Element"
-                ),
-                "code": tool.get("holder_add_element", ""),
-                "link": (tool.get("holder_add_element_link", "") or "").strip(),
-                "group": "",
-                "component_key": (
-                    "holder:" + (tool.get("holder_add_element", "") or "").strip()
-                ),
-                "order": 1,
-            },
-            {
-                "role": "cutting",
-                "label": cutting_name,
-                "code": tool.get("cutting_code", ""),
-                "link": (tool.get("cutting_link", "") or "").strip(),
-                "group": "",
-                "component_key": (
-                    "cutting:" + (tool.get("cutting_code", "") or "").strip()
-                ),
-                "order": 2,
-            },
-            {
-                "role": "cutting",
-                "label": self.page._t(
-                    "tool_library.field.add_cutting",
-                    "Add. {cutting_type}",
-                    cutting_type=cutting_name,
-                ),
-                "code": tool.get("cutting_add_element", ""),
-                "link": (
-                    tool.get("cutting_add_element_link", "") or ""
-                ).strip(),
-                "group": "",
-                "component_key": (
-                    "cutting:" + (tool.get("cutting_add_element", "") or "").strip()
-                ),
-                "order": 3,
-            },
-        ]
-        return [item for item in candidates if (item.get("code") or "").strip()]
-
     def _normalized_component_items(self, tool: dict) -> list[dict]:
         """Normalize component items from tool dict."""
         component_items = tool.get("component_items", [])
@@ -657,9 +590,6 @@ class DetailPanelBuilder:
                         "order": order,
                     }
                 )
-
-        if not normalized:
-            normalized.extend(self._legacy_component_candidates(tool))
 
         normalized.sort(key=lambda entry: int(entry.get("order", 0)))
         return normalized

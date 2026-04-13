@@ -47,16 +47,7 @@ def _resolve_runtime_dir() -> Path:
         return SOURCE_DIR.parent / '.runtime'
 
     runtime_dir = local_appdata / 'Shared Runtime'
-    legacy_runtime_dir = local_appdata / 'NTX Shared Runtime'
     runtime_dir.mkdir(parents=True, exist_ok=True)
-
-    legacy_prefs = legacy_runtime_dir / 'shared_ui_preferences.json'
-    current_prefs = runtime_dir / 'shared_ui_preferences.json'
-    if legacy_prefs.exists() and not current_prefs.exists():
-        try:
-            shutil.copy2(legacy_prefs, current_prefs)
-        except Exception:
-            pass
 
     return runtime_dir
 

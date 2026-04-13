@@ -29,7 +29,6 @@ from PySide6.QtWidgets import (
 )
 from config import (
     APP_TITLE,
-    STYLE_PATH,
     APP_DIR,
     SOURCE_DIR,
     SHARED_UI_PREFERENCES_PATH,
@@ -1236,10 +1235,6 @@ class MainWindow(QMainWindow):
             parts = [_resolve_asset_urls(p.read_text(encoding='utf-8')) for p in sorted(modules_dir.glob('*.qss'))]
             if parts:
                 base_style = '\n\n'.join(parts)
-
-        # Fallback for legacy deployments where the modules directory is absent.
-        if not base_style and STYLE_PATH.exists():
-            base_style = _resolve_asset_urls(STYLE_PATH.read_text(encoding='utf-8'))
 
         self.setStyleSheet(base_style + "\n\n" + self._build_ui_preference_overrides())
 

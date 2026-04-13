@@ -105,27 +105,7 @@ class JawImportMappingDialog(ImportMappingDialog):
         self.accept()
 
 
-class _JawToolServiceAdapter:
-    def __init__(self, jaw_service: JawService):
-        self.jaw_service = jaw_service
-
-    @property
-    def db(self):
-        return self.jaw_service.db
-
-    def list_tools(self):
-        # ExportPage expects list_tools(); map to jaws list API.
-        rows = self.jaw_service.list_jaws('', 'all', 'All')
-        # Keep row coloring support from ExportService by mirroring jaw_type into tool_type.
-        for row in rows:
-            row['tool_type'] = row.get('jaw_type', '')
-        return rows
-
-    def save_tool(self, jaw: dict):
-        self.jaw_service.save_jaw(jaw)
-
-
-class _JawExportServiceAdapter(ExportService):
+class JawExportService(ExportService):
     GENERAL_FIELDS = [
         ('jaw_id', 'Jaw ID'),
         ('jaw_type', 'Jaw type'),
@@ -343,11 +323,10 @@ class _JawExportServiceAdapter(ExportService):
 class JawExportPage(ExportPage):
     def __init__(self, jaw_service, on_jaw_data_changed=None, on_jaw_database_switched=None, parent=None, translate=None):
         self.jaw_service = jaw_service
-        self._jaw_tool_adapter = _JawToolServiceAdapter(jaw_service)
-        self._jaw_export_adapter = _JawExportServiceAdapter()
+        self._jaw_export_service = JawExportService()
         super().__init__(
-            tool_service=self._jaw_tool_adapter,
-            export_service=self._jaw_export_adapter,
+            tool_service=jaw_service,
+            export_service=self._jaw_export_service,
             on_data_changed=on_jaw_data_changed,
             on_database_switched=on_jaw_database_switched,
             parent=parent,
@@ -356,10 +335,33 @@ class JawExportPage(ExportPage):
 
     def set_jaw_service(self, jaw_service: JawService):
         self.jaw_service = jaw_service
-        self._jaw_tool_adapter.jaw_service = jaw_service
+        self.tool_service = jaw_service
 
     def _export_filename_prefix(self) -> str:
         return 'jaws-library-export'
+
+    def export_excel(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            self._t('jaw_library.export.title', 'Export to Excel'),
+            str(self._default_export_path()),
+            self._t('jaw_library.export.filter_excel', 'Excel (*.xlsx)'),
+        )
+        if not path:
+            return
+        try:
+            self.export_service.export_tools(path, self.jaw_service.list_jaws('', 'all', 'All'))
+            QMessageBox.information(
+                self,
+                self._t('jaw_library.export.done_title', 'Export'),
+                self._t('jaw_library.export.done_body', 'Exported to\n{path}', path=path),
+            )
+        except Exception as exc:
+            QMessageBox.critical(
+                self,
+                self._t('jaw_library.export.failed_title', 'Export failed'),
+                str(exc),
+            )
 
     def import_excel(self):
         path, _ = QFileDialog.getOpenFileName(self, self._t('jaw_library.import.title', 'Import from Excel'), '', self._t('jaw_library.import.filter_excel', 'Excel (*.xlsx *.xlsm)'))
@@ -420,10 +422,10 @@ class JawExportPage(ExportPage):
                     backup_path = self._create_database_backup()
                     QMessageBox.information(self, 'Backup created', f'Backup saved to:\n{backup_path}')
 
-                with self.tool_service.db.conn:
-                    self.tool_service.db.conn.execute('DELETE FROM jaws')
+                with self.jaw_service.db.conn:
+                    self.jaw_service.db.conn.execute('DELETE FROM jaws')
                     for jaw in jaws:
-                        self.tool_service.save_tool(jaw)
+                        self.jaw_service.save_jaw(jaw)
                 if callable(self.on_data_changed):
                     self.on_data_changed()
                 QMessageBox.information(self, 'Import', f'Imported {len(jaws)} jaws into current database.')

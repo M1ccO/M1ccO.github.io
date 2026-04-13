@@ -640,20 +640,23 @@ Phase 7 complete when:
   - Updated `docs/deprecations.json` entries DEP-001/DEP-002 to `RETIRED`
   - Post-change quality gate rerun passed (`python scripts/run_quality_gate.py` → OK)
 
-- [ ] **Adapters retired** (after parity proof)
-  - Remove temporary bridging code that allowed old pages to call new platform layer
-  - Verify all call sites migrated to direct use
+- [x] **Adapters retired** (after parity proof)
+  - Retired `ui/jaw_export_page.py::_JawToolServiceAdapter`
+  - Retired `ui/jaw_export_page.py::_JawExportServiceAdapter` (replaced by `JawExportService`)
+  - `JawExportPage` now uses `JawService` directly for list/save flows (no ToolService bridge adapter)
 
-- [ ] **Duplicate support modules deleted**
-  - home_page_support/ vs platforms/ conflicts resolved
-  - jaw_page_support/ vs platforms/ conflicts resolved
-  - Remaining code clearly domain-specific or retired explicitly
+- [x] **Duplicate support modules deleted**
+  - Retired unused `ui/home_page_support/*` duplicate modules and stale refactor docs (kept only active modules: `detached_preview.py`, `detail_panel_builder.py`, `detail_fields_builder.py`, `detail_layout_rules.py`)
+  - Retired stale duplicate artifacts: `ui/tool_catalog_delegate_v2.py`, `ui/home_page.py.backup`
+  - Cross-app duplicate signature baseline reduced from 8 → 5 (`scripts/duplicate_baseline.json` updated)
 
-- [ ] **Legacy code paths deleted** (with call-site audit)
-  - Verify no remaining code calls old patterns before removal
+- [x] **Legacy code paths deleted** (with call-site audit)
+  - Removed low-risk legacy fallbacks: `config.py` runtime-dir migration copy path, `ui/main_window.py` stylesheet fallback
+  - Retired tool detail-panel compatibility fallback path in `ui/home_page_support/detail_panel_builder.py` (old `_legacy_component_candidates` branch)
+  - Completed call-site audit for retired adapters/support modules; remaining ACTIVE deprecations are tracked compatibility paths (DEP-003/004/005/007/010)
 
-- [ ] **Deprecation registry updated**
-  - Mark retired code as RETIRED with removal date proof
+- [x] **Deprecation registry updated**
+  - Updated `docs/deprecations.json`: DEP-008, DEP-009, DEP-011, DEP-012 marked `RETIRED` with `retired_date` + proof notes
 
 ### Acceptance Criteria
 

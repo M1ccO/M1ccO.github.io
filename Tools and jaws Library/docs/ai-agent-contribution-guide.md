@@ -62,7 +62,7 @@ If you add a new extension class:
 ## 5. Common Tasks and Correct Entrypoints
 
 - Add tool/jaw catalog filtering: edit ui/home_page.py or ui/jaw_page.py via CatalogPageBase overrides.
-- Adjust catalog rendering: edit ui/jaw_catalog_delegate.py or ui/tool_catalog_delegate_v2.py.
+- Adjust catalog rendering: edit ui/jaw_catalog_delegate.py or ui/tool_catalog_delegate.py.
 - Add migration step: edit data/migrations/tools_migrations.py or data/migrations/jaws_migrations.py; keep router exports stable.
 - Change shared catalog behavior: edit shared/ui/platforms/catalog_page_base.py, then validate all extension subclasses.
 

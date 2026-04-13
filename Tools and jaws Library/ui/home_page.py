@@ -39,16 +39,9 @@ from ui.tool_catalog_delegate import (
     ROLE_TOOL_UID,
 )
 from ui.tool_editor_dialog import AddEditToolDialog
-from ui.home_page_support import (
-    apply_tool_detail_layout_rules,
-    ensure_detached_preview_dialog,
-    toggle_preview_window,
+from ui.home_page_support.detached_preview import (
     close_detached_preview,
-    on_selector_cancel,
-    on_selector_done,
-    SelectorAssignmentRowWidget,
-    ToolAssignmentListWidget,
-    ToolCatalogListView,
+    toggle_preview_window,
 )
 from ui.selector_state_helpers import (
     default_selector_splitter_sizes,
