@@ -1,0 +1,64 @@
+{
+  "phase": 0,
+  "date": "2026-04-13",
+  "tests": {
+    "1.1.add_tool": {
+      "status": "PASS",
+      "notes": "DB insert, UID generation works"
+    },
+    "1.2.edit_tool": {
+      "status": "PASS",
+      "notes": "Fields update, UID stable"
+    },
+    "1.3.copy_tool": {
+      "status": "PASS",
+      "notes": "Unique ID, full field clone"
+    },
+    "1.4.delete_tool": {
+      "status": "PASS",
+      "notes": "Complete removal from DB and UI"
+    },
+    "2.1.add_jaw": {
+      "status": "PASS",
+      "notes": "DB creation, UI visibility"
+    },
+    "2.2.edit_jaw_preview": {
+      "status": "PASS",
+      "notes": "Field updates, transform persistence"
+    },
+    "2.3.delete_jaw": {
+      "status": "PASS",
+      "notes": "Clean removal"
+    },
+    "3.1.excel_export": {
+      "status": "PASS",
+      "notes": "XLSX generation, data integrity"
+    },
+    "3.2.excel_import": {
+      "status": "PASS",
+      "notes": "Column mapping, conflict detection"
+    },
+    "3.3.db_switching": {
+      "status": "PASS",
+      "notes": "Alternate DB loads, no data leakage"
+    },
+    "4.1.stl_preview": {
+      "status": "PASS",
+      "notes": "3D model loading, gizmo sync"
+    },
+    "4.2.jaw_preview_plane": {
+      "status": "PASS",
+      "notes": "Rotation/position exact restore"
+    },
+    "4.3.ipc_handoff": {
+      "status": "PASS",
+      "notes": "Context passing, edits sync back"
+    }
+  },
+  "summary": {
+    "total": 13,
+    "passed": 13,
+    "failed": 0,
+    "blocked": 0
+  }
+}

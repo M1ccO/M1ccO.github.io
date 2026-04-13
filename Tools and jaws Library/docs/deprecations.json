@@ -1,0 +1,276 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated": "2026-04-13",
+    "scope": "Tools and jaws Library app",
+    "purpose": "Tracks all deprecated code, legacy compatibility shims, and planned removals. AI agents consult this to understand what NOT to use and what is safe to remove.",
+    "status_values": {
+      "ACTIVE": "Legacy code still in use; do not remove yet.",
+      "INTENTIONAL_ADAPTER": "Not legacy; current architecture. Planned removal in indicated phase.",
+      "PENDING_REMOVAL": "Can be removed; waiting for indicated preconditions.",
+      "RETIRED": "Already removed; kept as historical record."
+    }
+  },
+  "items": [
+
+    {
+      "id": "DEP-001",
+      "title": "models/tool.py — shim forwarding to shared.models.tool",
+      "status": "RETIRED",
+      "type": "import_shim",
+      "file": "models/tool.py",
+      "description": "Entire file is a re-export shim: 'from shared.models.tool import Tool, AdditionalPart, GeometryProfile'. Exists for callers that import from models.tool instead of shared.models.tool.",
+      "what_replaces_it": "Import directly from shared.models.tool",
+      "removal_preconditions": [
+        "All callers inside Tools and jaws Library migrated to 'from shared.models.tool import ...'",
+        "import_path_checker.py passes with zero violations",
+        "smoke_test.py passes"
+      ],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2025-09-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Removed shim file after confirming no in-repo imports remain."
+    },
+
+    {
+      "id": "DEP-002",
+      "title": "models/jaw.py — shim forwarding to shared.models.jaw",
+      "status": "RETIRED",
+      "type": "import_shim",
+      "file": "models/jaw.py",
+      "description": "Entire file is a re-export shim: 'from shared.models.jaw import Jaw'. Exists for callers that import from models.jaw instead of shared.models.jaw.",
+      "what_replaces_it": "Import directly from shared.models.jaw",
+      "removal_preconditions": [
+        "All callers inside Tools and jaws Library migrated to 'from shared.models.jaw import ...'",
+        "import_path_checker.py passes with zero violations",
+        "smoke_test.py passes"
+      ],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2025-09-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Removed shim file after confirming no in-repo imports remain."
+    },
+
+    {
+      "id": "DEP-003",
+      "title": "services/tool_service.py — _component_items_from_legacy()",
+      "status": "ACTIVE",
+      "type": "legacy_function",
+      "file": "services/tool_service.py",
+      "line_approx": 280,
+      "description": "Internal function converts old component storage format (shim_code, screw_code, assembly_parts fields) into the new component_items JSON array. Required for opening databases created before the schema migration in early 2026.",
+      "what_replaces_it": "Direct use of component_items field (post-migration schema)",
+      "removal_preconditions": [
+        "All databases upgraded (migration applied at startup via data/migrations.py)",
+        "No known databases exist predating the component_items schema (verify via DB audit)",
+        "Schema stabilized (Phase 6)"
+      ],
+      "removal_risk": "MEDIUM",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2025-10-01"
+    },
+
+    {
+      "id": "DEP-004",
+      "title": "services/tool_service.py — _legacy_fields_from_component_items()",
+      "status": "ACTIVE",
+      "type": "legacy_function",
+      "file": "services/tool_service.py",
+      "line_approx": 331,
+      "description": "Reverse of DEP-003: rebuilds old field format from new component_items for backward-compatible export. Used by export to ensure files opened in older app versions remain valid.",
+      "what_replaces_it": "Direct export from component_items field (post-schema-transition)",
+      "removal_preconditions": [
+        "All users migrated to app version that reads component_items natively",
+        "Old export format no longer required by any customer workflow",
+        "Phase 7 export refactor complete (ExportSpecification replaces hardcoded field mapping)"
+      ],
+      "removal_risk": "MEDIUM",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2025-10-01"
+    },
+
+    {
+      "id": "DEP-005",
+      "title": "data/migrations.py — legacy table migration (tools_new rename)",
+      "status": "ACTIVE",
+      "type": "dead_code_path",
+      "file": "data/migrations.py",
+      "line_approx": 350,
+      "description": "Checks for old table name 'tools_new' and renames to 'tools'. Only triggers once on first open of pre-2025 databases. After running, the check is a no-op with a tiny SQL overhead.",
+      "what_replaces_it": "Not needed once all installations have been migrated",
+      "removal_preconditions": [
+        "All known installations have opened the database at least once with current version",
+        "Minimum support window for pre-2025 databases has passed"
+      ],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2025-01-01"
+    },
+
+    {
+      "id": "DEP-006",
+      "title": "ui/home_page.py — _legacy_component_candidates()",
+      "status": "ACTIVE",
+      "type": "legacy_function",
+      "file": "ui/home_page.py",
+      "line_approx": 1684,
+      "description": "Builds backward-compatible component rows from tool data predating the component_items field. Used in detail panel rendering when old tool format encountered.",
+      "what_replaces_it": "Direct use of component_items field",
+      "removal_preconditions": [
+        "DEP-003 and DEP-004 removed (schema fully migrated)",
+        "Phase 4 TOOLS migration complete (home_page.py restructured)"
+      ],
+      "removal_risk": "MEDIUM",
+      "target_removal_phase": "Phase 4 (TOOLS Migration)",
+      "target_removal_date": "2026-06-15",
+      "added_date": "2025-10-01"
+    },
+
+    {
+      "id": "DEP-007",
+      "title": "services/export_service.py — legacy field mapping (GENERAL_FIELDS vs EXPORT_BASE_FIELDS)",
+      "status": "ACTIVE",
+      "type": "legacy_function",
+      "file": "services/export_service.py",
+      "line_approx": 845,
+      "description": "Two parallel field-list definitions exist: GENERAL_FIELDS (old) and EXPORT_BASE_FIELDS (new). Import logic checks which list to use based on Excel column headers found in file. Allows opening Excel files created by older app versions.",
+      "what_replaces_it": "Unified ExportSpecification (Phase 7 platform layer)",
+      "removal_preconditions": [
+        "Phase 7 export consolidation complete",
+        "ExportSpecification replaces hardcoded field mapping",
+        "Old Excel files can be re-exported with new format by users"
+      ],
+      "removal_risk": "MEDIUM",
+      "target_removal_phase": "Phase 7 (Export/Import Consolidation)",
+      "target_removal_date": "2026-07-30",
+      "added_date": "2025-06-01"
+    },
+
+    {
+      "id": "DEP-008",
+      "title": "config.py — legacy runtime directory migration",
+      "status": "ACTIVE",
+      "type": "legacy_function",
+      "file": "config.py",
+      "line_approx": 54,
+      "description": "Checks for old 'NTX Shared Runtime' directory and migrates settings/DB paths to new location. One-time migration; no-op after first run on new path.",
+      "what_replaces_it": "Standard config paths (no migration needed)",
+      "removal_preconditions": [
+        "Support window for installations using 'NTX Shared Runtime' path has passed",
+        "All users have run at least one version with current path scheme"
+      ],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2024-11-01"
+    },
+
+    {
+      "id": "DEP-009",
+      "title": "ui/main_window.py — legacy modules directory fallback",
+      "status": "ACTIVE",
+      "type": "legacy_function",
+      "file": "ui/main_window.py",
+      "line_approx": 1240,
+      "description": "Falls back to old shared module directory if new shared/ path not found. Allows running with old shared module layout. No-op in installations with correct layout.",
+      "what_replaces_it": "Standard shared/ import paths",
+      "removal_preconditions": ["All installations confirmed using current shared/ layout"],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 8 (Legacy Coupling Retirement)",
+      "target_removal_date": "2026-08-15",
+      "added_date": "2025-03-01"
+    },
+
+    {
+      "id": "DEP-010",
+      "title": "TOOL_EDITOR_REFACTOR.md — deprecated documentation file",
+      "status": "ACTIVE",
+      "type": "deprecated_doc",
+      "file": "TOOL_EDITOR_REFACTOR.md",
+      "description": "Historical record of April 2026 tool editor extraction. The file is marked deprecated; superseded by TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md, RULES.md, STATUS.md.",
+      "what_replaces_it": "TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md + RULES.md + STATUS.md",
+      "removal_preconditions": ["No tool references it; it is retained for historical context only"],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 9 (Maintenance)",
+      "target_removal_date": "2026-09-01",
+      "added_date": "2026-04-01"
+    },
+
+    {
+      "id": "DEP-011",
+      "title": "ui/jaw_export_page.py — _JawToolServiceAdapter (INTENTIONAL ADAPTER)",
+      "status": "INTENTIONAL_ADAPTER",
+      "type": "adapter_pattern",
+      "file": "ui/jaw_export_page.py",
+      "line_approx": 108,
+      "description": "Wraps JawService to present a ToolService-compatible interface so ExportPage (which expects ToolService) can drive jaw data export. NOT legacy — this is current architecture to avoid duplicating export page.",
+      "what_replaces_it": "ExportSpecification pattern (Phase 7 platform layer)",
+      "removal_preconditions": [
+        "Phase 7 ExportSpecification implemented",
+        "ExportPage refactored to use ExportSpecification instead of ToolService interface",
+        "JawsExportSpec created conforming to ExportSpecification"
+      ],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 7 (Export/Import Consolidation)",
+      "target_removal_date": "2026-07-30",
+      "added_date": "2026-02-01"
+    },
+
+    {
+      "id": "DEP-012",
+      "title": "ui/jaw_export_page.py — _JawExportServiceAdapter (INTENTIONAL ADAPTER)",
+      "status": "INTENTIONAL_ADAPTER",
+      "type": "adapter_pattern",
+      "file": "ui/jaw_export_page.py",
+      "line_approx": 128,
+      "description": "Subclasses ExportService, remaps field names (jaw_id → tool_id, etc.) for jaw export. NOT legacy — intentional domain bridging within Phase 1 architecture.",
+      "what_replaces_it": "JawsExportSpec inheriting ExportSpecification (Phase 7)",
+      "removal_preconditions": ["Same as DEP-011"],
+      "removal_risk": "LOW",
+      "target_removal_phase": "Phase 7 (Export/Import Consolidation)",
+      "target_removal_date": "2026-07-30",
+      "added_date": "2026-02-01"
+    },
+
+    {
+      "id": "DEP-013",
+      "title": "ui/tool_editor_support/payload_adapter.py — ToolEditorPayloadAdapter (INTENTIONAL ADAPTER)",
+      "status": "RETIRED",
+      "type": "adapter_pattern",
+      "file": "ui/tool_editor_support/payload_adapter.py",
+      "line_approx": 10,
+      "description": "Manages tool payload serialization contract between dialog and service layer. Decouples dialog evolution from backend payload shape. NOT legacy — mirrors work_editor_support/model.py WorkEditorPayloadAdapter pattern.",
+      "what_replaces_it": "ui/tool_editor_support/payload_codec.py::ToolEditorPayloadCodec",
+      "removal_preconditions": ["Codec module in place and all callsites migrated"],
+      "removal_risk": "MEDIUM",
+      "target_removal_phase": "Phase 4 (TOOLS Migration)",
+      "target_removal_date": "2026-06-15",
+      "added_date": "2026-04-01",
+      "retired_date": "2026-04-13",
+      "retired_notes": "Replaced adapter class with payload codec module and migrated tool editor call sites."
+    }
+
+  ],
+  "summary": {
+    "total_items": 13,
+    "by_status": {
+      "ACTIVE": 8,
+      "INTENTIONAL_ADAPTER": 2,
+      "PENDING_REMOVAL": 0,
+      "RETIRED": 3
+    },
+    "by_target_phase": {
+      "Phase 4": ["DEP-006", "DEP-013"],
+      "Phase 7": ["DEP-007", "DEP-011", "DEP-012"],
+      "Phase 8": ["DEP-001", "DEP-002", "DEP-003", "DEP-004", "DEP-005", "DEP-008", "DEP-009"],
+      "Phase 9": ["DEP-010"]
+    }
+  }
+}

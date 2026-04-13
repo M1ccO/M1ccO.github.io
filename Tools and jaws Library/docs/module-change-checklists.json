@@ -1,0 +1,64 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated": "2026-04-13",
+    "phase": "Phase 7",
+    "purpose": "Per-module deterministic validation checklist for AI and human contributors."
+  },
+  "checklists": [
+    {
+      "module": "ui.home_page",
+      "path": "Tools and jaws Library/ui/home_page.py",
+      "required_checks": [
+        "Keep class HomePage as CatalogPageBase subclass",
+        "Do not import from ui.jaw_page_support",
+        "Preserve signal behavior for item_selected and item_deleted",
+        "Run python scripts/module_extension_checker.py",
+        "Run python scripts/run_quality_gate.py"
+      ]
+    },
+    {
+      "module": "ui.jaw_page",
+      "path": "Tools and jaws Library/ui/jaw_page.py",
+      "required_checks": [
+        "Keep class JawPage as CatalogPageBase subclass",
+        "Do not import from ui.home_page_support",
+        "Preserve signal behavior for jaw_selected and jaw_deleted",
+        "Run python scripts/module_extension_checker.py",
+        "Run python scripts/run_quality_gate.py"
+      ]
+    },
+    {
+      "module": "ui.jaw_catalog_delegate",
+      "path": "Tools and jaws Library/ui/jaw_catalog_delegate.py",
+      "required_checks": [
+        "Keep class JawCatalogDelegate as CatalogDelegate subclass",
+        "Preserve _compute_size and _paint_item_content overrides",
+        "Preserve role mapping to CATALOG_ROLE_* constants",
+        "Run python scripts/module_extension_checker.py"
+      ]
+    },
+    {
+      "module": "shared.ui.platforms",
+      "path": "shared/ui/platforms/__init__.py",
+      "required_checks": [
+        "Keep __all__ in sync with exported platform classes",
+        "Do not introduce app-specific imports from Tools and jaws Library",
+        "Update docs/module-extension-points.json when extension rules change",
+        "Run python scripts/import_path_checker.py",
+        "Run python scripts/module_extension_checker.py"
+      ]
+    },
+    {
+      "module": "data.migrations",
+      "path": "Tools and jaws Library/data/migrations/__init__.py",
+      "required_checks": [
+        "Keep old public API names exported for compatibility",
+        "Allow additive-only schema migrations in tools_migrations and jaws_migrations",
+        "Validate both create_or_migrate_schema and migrate_jaws_schema call paths",
+        "Run python scripts/smoke_test.py",
+        "Run python scripts/run_quality_gate.py"
+      ]
+    }
+  ]
+}

@@ -9,7 +9,7 @@ from .components import (
     normalized_support_parts,
     spare_parts_from_rows,
 )
-from .payload_adapter import ToolEditorPayloadAdapter
+from .payload_codec import ToolEditorPayloadCodec
 from .spare_parts_table_coordinator import SparePartsTableCoordinator
 from .detail_layout_rules import ToolTypeLayoutUpdate, build_tool_type_layout_update
 from .measurement_rules import (
@@ -38,7 +38,7 @@ __all__ = [
     "normalize_xyz_text",
     "parse_measurement_overlays",
     "SparePartsTableCoordinator",
-    "ToolEditorPayloadAdapter",
+    "ToolEditorPayloadCodec",
     "ToolTypeLayoutUpdate",
     "ToolTypeFieldState",
     "build_tool_type_layout_update",

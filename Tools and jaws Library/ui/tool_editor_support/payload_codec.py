@@ -7,8 +7,8 @@ from .components import component_items_from_rows, normalized_component_items, n
 from .tool_type_rules import build_tool_type_field_state
 
 
-class ToolEditorPayloadAdapter:
-    """Bridge the dialog widgets and the persisted tool payload shape."""
+class ToolEditorPayloadCodec:
+    """Encode/decode bridge between dialog widgets and persisted tool payload shape."""
 
     def __init__(
         self,

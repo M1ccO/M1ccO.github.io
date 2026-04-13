@@ -1,50 +1,37 @@
-"""
-Custom QStyledItemDelegate for painting jaw catalog rows.
-
-Mirrors the tool catalog delegate architecture:
-- no embedded row widgets
-- deterministic painting with QPainter
-- responsive column visibility by available width
-"""
+﻿"""Jaw catalog delegate implemented on the platform CatalogDelegate."""
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import QModelIndex, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QImage, QPainter, QPen, QPixmap, QTransform
-from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem
+from PySide6.QtCore import QRect, QSize, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QStyle, QStyleOptionViewItem
 
 from config import TOOL_ICONS_DIR
+from shared.ui.platforms.catalog_delegate import CatalogDelegate
+from shared.ui.platforms.catalog_page_base import (
+    CATALOG_ROLE_DATA,
+    CATALOG_ROLE_ICON,
+    CATALOG_ROLE_ID,
+)
 
-ROLE_JAW_ID = Qt.UserRole
-ROLE_JAW_DATA = Qt.UserRole + 1
-ROLE_JAW_ICON = Qt.UserRole + 2
+__all__ = ['JawCatalogDelegate', 'ROLE_JAW_DATA', 'ROLE_JAW_ICON', 'ROLE_JAW_ID', 'jaw_icon_for_row']
 
-ROW_HEIGHT = 74
+ROLE_JAW_ID = CATALOG_ROLE_ID
+ROLE_JAW_DATA = CATALOG_ROLE_DATA
+ROLE_JAW_ICON = CATALOG_ROLE_ICON
+
 ICON_SIZE = 48
 ICON_SLOT_W = 52
-CARD_RADIUS = 8
-CARD_MARGIN_H = 6
-CARD_MARGIN_V = 2
-CARD_PADDING_H = 10
-CARD_PADDING_V = 1
 COL_SPACING = 10
-HEADER_VALUE_GAP = 0
-BORDER_INSET = 3
-WRAPPED_LINE_STEP_FACTOR = 0.82
-
 BP_FULL = 620
 BP_REDUCED = 390
 BP_NAME_ONLY = 180
 
-CLR_CARD_BG = QColor("#ffffff")
-CLR_CARD_HOVER = QColor("#f7fbff")
-CLR_CARD_BORDER = QColor("#3e4a56")
-CLR_CARD_SELECTED_BORDER = QColor("#42a5f5")
-CLR_HEADER_TEXT = QColor("#2b3136")
-CLR_VALUE_TEXT = QColor("#171a1d")
+CLR_HEADER_TEXT = QColor('#2b3136')
+CLR_VALUE_TEXT = QColor('#171a1d')
+
 _ICON_OBJECT_CACHE: dict[str, QIcon] = {}
 
 
@@ -55,200 +42,95 @@ def _header_font() -> QFont:
     return font
 
 
-def _value_font(pt: float) -> QFont:
+def _value_font(point_size: float) -> QFont:
     font = QFont()
-    font.setPointSizeF(pt)
+    font.setPointSizeF(point_size)
     font.setWeight(QFont.DemiBold)
     return font
 
 
-def _normalized(value: str) -> str:
-    return (value or "").strip().lower()
-
-
-def _is_sub_spindle(spindle_side: str) -> bool:
-    normalized = _normalized(spindle_side)
-    return ("sub" in normalized) or ("vasta" in normalized) or ("ala" in normalized)
-
-
-def _jaw_icon_filename(jaw_type: str) -> str:
-    _ = jaw_type
-    # Use the dedicated jaw icon; sub spindle uses jaw_sub, main uses jaw_main.
-    return "jaw_main.png"
-
-
 def jaw_icon_for_row(jaw: dict) -> QIcon:
-    spindle_side = str(jaw.get("spindle_side") or "").strip().lower()
-    is_sub = "sub" in spindle_side or "vasta" in spindle_side or "ala" in spindle_side
-    # Use the spindle-specific chuck icon (already transparent, already mirrored).
-    filename = "jaw_sub.png" if is_sub else "jaw_main.png"
+    spindle_side = str(jaw.get('spindle_side') or '').strip().lower()
+    filename = 'jaw_sub.png' if ('sub' in spindle_side or 'vasta' in spindle_side or 'ala' in spindle_side) else 'jaw_main.png'
     path = TOOL_ICONS_DIR / filename
     if not path.exists():
-        path = TOOL_ICONS_DIR / _jaw_icon_filename(jaw.get("jaw_type", ""))
-    if not path.exists():
-        fallback = TOOL_ICONS_DIR / "jaw_icon.png"
+        fallback = TOOL_ICONS_DIR / 'jaw_icon.png'
         path = fallback if fallback.exists() else path
     if not path.exists():
         return QIcon()
     cache_key = str(path).lower()
-    cached = _ICON_OBJECT_CACHE.get(cache_key)
-    if cached is not None:
-        return cached
-    icon = QIcon(str(path))
-    _ICON_OBJECT_CACHE[cache_key] = icon
-    return icon
+    if cache_key not in _ICON_OBJECT_CACHE:
+        _ICON_OBJECT_CACHE[cache_key] = QIcon(str(path))
+    return _ICON_OBJECT_CACHE[cache_key]
 
 
-def _clean_icon_image(path: Path, target_size: QSize | None = None, threshold: int = 232) -> QImage:
-    image = QImage(str(path))
-    if image.isNull():
-        return image
-    image = image.convertToFormat(QImage.Format_ARGB32)
-    if target_size is not None and not target_size.isEmpty():
-        image = image.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-    for y in range(image.height()):
-        for x in range(image.width()):
-            color = QColor(image.pixel(x, y))
-            # Remove near-white matte backgrounds while keeping icon details.
-            hsv = color.toHsv()
-            near_white_rgb = color.red() >= threshold and color.green() >= threshold and color.blue() >= threshold
-            near_white_hsv = hsv.value() >= 232 and hsv.saturation() <= 26
-            if color.alpha() > 0 and (near_white_rgb or near_white_hsv):
-                color.setAlpha(0)
-                image.setPixelColor(x, y, color)
-    return image
-
-
-class JawCatalogDelegate(QStyledItemDelegate):
-    """Paint each jaw row as a rounded card with responsive text columns."""
-
+class JawCatalogDelegate(CatalogDelegate):
     def __init__(self, parent=None, translate: Callable | None = None):
         super().__init__(parent)
-        self._translate = translate or (lambda _key, default=None, **_kwargs: default or "")
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
         self._header_font = _header_font()
         self._value_font_full = _value_font(13.4)
         self._value_font_narrow = _value_font(12.4)
         self._value_font_tight = _value_font(11.4)
-        self._value_font_tiny = _value_font(10.4)
-        self._icon_cache: dict[tuple[str, str], QPixmap] = {}
 
-    def set_translate(self, translate: Callable):
+    def set_translate(self, translate: Callable) -> None:
         self._translate = translate
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
 
-    def _description_line_count(self, metrics: QFontMetrics, text: str, width: int, stage: str) -> int:
-        raw = (text or "").strip()
-        if not raw or stage == "icon-only" or width < 16:
-            return 1
-        breakable = " " in raw or "-" in raw or "/" in raw
-        if stage == "name-only" and breakable:
-            return 2
-        if metrics.horizontalAdvance(raw) <= width:
-            return 1
-        if not breakable:
-            return 1
-        return 2
-
-    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+    def _compute_size(self, option: QStyleOptionViewItem, item_dict: dict) -> QSize:
         width = option.rect.width() if option.rect.width() > 0 else 600
-        return QSize(width, ROW_HEIGHT + CARD_MARGIN_V * 2)
+        return QSize(width, self.ROW_HEIGHT + self.CARD_MARGIN_V * 2)
 
-    def _columns(self, jaw: dict) -> list[tuple[str, str, str, int]]:
-        dash = "-"
-        jaw_type = self._t(
-            f"jaw_library.jaw_type.{(jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
-            jaw.get("jaw_type", ""),
-        )
-        return [
-            ("jaw_id", self._t("jaw_library.row.jaw_id", "Jaw ID"), jaw.get("jaw_id", "") or dash, 180),
-            ("jaw_type", self._t("jaw_library.row.jaw_type", "Jaw type"), jaw_type or dash, 210),
-            (
-                "diameter",
-                self._t("jaw_library.row.clamping_diameter_multiline", "Clamping\ndiameter"),
-                jaw.get("clamping_diameter_text", "") or dash,
-                190,
-            ),
-            (
-                "length",
-                self._t("jaw_library.row.clamping_length_multiline", "Clamping\nlength"),
-                jaw.get("clamping_length", "") or dash,
-                180,
-            ),
-        ]
-
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        painter.save()
-        painter.setRenderHint(QPainter.Antialiasing, True)
-
-        jaw: dict = index.data(ROLE_JAW_DATA) or {}
-        icon: QIcon | None = index.data(ROLE_JAW_ICON)
-        jaw_type = jaw.get("jaw_type", "")
-        spindle_side = jaw.get("spindle_side", "")
-
+    def _paint_item_content(self, painter: QPainter, option: QStyleOptionViewItem, item_dict: dict) -> None:
         full = option.rect
         card = QRect(
-            full.x() + CARD_MARGIN_H,
-            full.y() + CARD_MARGIN_V,
-            full.width() - CARD_MARGIN_H * 2,
-            ROW_HEIGHT,
+            full.x() + self.CARD_MARGIN_H,
+            full.y() + self.CARD_MARGIN_V,
+            full.width() - self.CARD_MARGIN_H * 2,
+            self.ROW_HEIGHT,
         )
-        card_width = card.width()
-
-        if card_width >= BP_FULL:
-            stage = "full"
-        elif card_width >= BP_REDUCED:
-            stage = "reduced"
-        elif card_width >= BP_NAME_ONLY:
-            stage = "name-only"
-        else:
-            stage = "icon-only"
-
-        hovered = bool(option.state & QStyle.State_MouseOver)
-        selected = bool(option.state & QStyle.State_Selected)
-
-        bg = CLR_CARD_HOVER if hovered and not selected else CLR_CARD_BG
-        border_color = CLR_CARD_SELECTED_BORDER if selected else CLR_CARD_BORDER
-        border_width = 3 if selected else 1
-
-        painter.setPen(QPen(border_color, border_width))
-        painter.setBrush(bg)
-        painter.drawRoundedRect(card, CARD_RADIUS, CARD_RADIUS)
-
         content = card.adjusted(
-            CARD_PADDING_H + BORDER_INSET,
-            CARD_PADDING_V + BORDER_INSET,
-            -(CARD_PADDING_H + BORDER_INSET),
-            -(CARD_PADDING_V + BORDER_INSET),
+            self.CARD_PADDING_H + self.BORDER_INSET,
+            self.CARD_PADDING_V + self.BORDER_INSET,
+            -(self.CARD_PADDING_H + self.BORDER_INSET),
+            -(self.CARD_PADDING_V + self.BORDER_INSET),
         )
+
+        jaw = item_dict.get('_raw', item_dict)
+        card_width = card.width()
+        if card_width >= BP_FULL:
+            stage = 'full'
+        elif card_width >= BP_REDUCED:
+            stage = 'reduced'
+        elif card_width >= BP_NAME_ONLY:
+            stage = 'name-only'
+        else:
+            stage = 'icon-only'
 
         icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2, ICON_SLOT_W, ICON_SIZE)
-        if icon is not None:
-            pixmap = self._cached_pixmap(icon, jaw_type, spindle_side)
-            if pixmap and not pixmap.isNull():
-                px = icon_rect.x() + (ICON_SLOT_W - pixmap.width()) // 2
-                py = icon_rect.y() + (ICON_SIZE - pixmap.height()) // 2
-                painter.drawPixmap(px, py, pixmap)
+        icon = jaw_icon_for_row(jaw)
+        pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE)) if not icon.isNull() else QPixmap()
+        if not pixmap.isNull():
+            px = icon_rect.x() + (ICON_SLOT_W - pixmap.width()) // 2
+            py = icon_rect.y() + (ICON_SIZE - pixmap.height()) // 2
+            painter.drawPixmap(px, py, pixmap)
 
-        if stage == "icon-only":
-            painter.restore()
+        if stage == 'icon-only':
             return
 
-        all_cols = self._columns(jaw)
-        if stage == "name-only":
-            cols = [c for c in all_cols if c[0] == "jaw_id"]
-        elif stage == "reduced":
-            cols = [c for c in all_cols if c[0] in ("jaw_id", "jaw_type")]
-        else:
-            cols = all_cols
+        text_rect = QRect(
+            icon_rect.right() + COL_SPACING,
+            content.y(),
+            max(40, content.right() - (icon_rect.right() + COL_SPACING)),
+            content.height(),
+        )
+        columns = self._columns(jaw, stage)
 
-        if stage == "name-only":
-            if card_width < 300:
-                value_font = self._value_font_tight
-            else:
-                value_font = self._value_font_narrow
-        elif stage == "reduced":
+        if stage == 'name-only':
+            value_font = self._value_font_narrow if card_width >= 300 else self._value_font_tight
+        elif stage == 'reduced':
             value_font = self._value_font_full
         elif card_width < 500:
             value_font = self._value_font_tight
@@ -257,157 +139,83 @@ class JawCatalogDelegate(QStyledItemDelegate):
         else:
             value_font = self._value_font_full
 
-        header_font = self._header_font
-        header_metrics = QFontMetrics(header_font)
+        header_metrics = QFontMetrics(self._header_font)
         value_metrics = QFontMetrics(value_font)
+        total_weight = sum(weight for _key, _header, _value, weight in columns) or 1
+        x_pos = text_rect.x()
 
-        text_left = content.x() + ICON_SLOT_W + COL_SPACING
-        gap_budget = COL_SPACING * max(0, len(cols) - 1)
-        text_width = content.width() - ICON_SLOT_W - COL_SPACING - gap_budget
-        if text_width < 10:
-            painter.restore()
-            return
-
-        total_weight = sum(col[3] for col in cols) or 1
-        col_rects: list[tuple[str, str, str, QRect]] = []
-        x = text_left
-        for idx, (key, header, value, weight) in enumerate(cols):
-            if idx == len(cols) - 1:
-                width = text_left + text_width - x
+        for index, (_key, header, value, weight) in enumerate(columns):
+            remaining = text_rect.right() - x_pos
+            if index == len(columns) - 1:
+                column_width = remaining
             else:
-                width = int(text_width * weight / total_weight)
-            col_rects.append((key, header, str(value), QRect(x, content.y(), width, content.height())))
-            x += width + (COL_SPACING if idx < len(cols) - 1 else 0)
+                column_width = max(80, int(text_rect.width() * (weight / total_weight)))
+            column_rect = QRect(x_pos, text_rect.y(), column_width, text_rect.height())
 
-        single_header_h = header_metrics.height()
-        value_line_h = value_metrics.height()
-
-        for key, header, value, rect in col_rects:
-            if rect.width() < 8:
-                continue
-            text_rect = rect.adjusted(1, 0, -3, 0)
-            if text_rect.width() < 8:
-                continue
-
-            header_lines = header.split("\n") if "\n" in header else [header]
-            header_h = single_header_h * len(header_lines)
-            line_count = (
-                self._description_line_count(value_metrics, value, text_rect.width(), stage)
-                if key == "jaw_type" else 1
+            painter.setFont(self._header_font)
+            painter.setPen(QPen(CLR_HEADER_TEXT))
+            painter.drawText(
+                QRect(column_rect.x(), column_rect.y() + 6, column_rect.width(), 18),
+                Qt.AlignLeft | Qt.AlignTop,
+                self._elide(header_metrics, header, column_rect.width()),
             )
-            wrapped = line_count == 2 and key == "jaw_type"
-            header_value_gap = -2 if key in ("diameter", "length") else (-2 if wrapped else 0)
-            effective_value_h = int(round(value_line_h * WRAPPED_LINE_STEP_FACTOR)) if wrapped else value_line_h
-            value_h = value_line_h + effective_value_h if wrapped else value_line_h * line_count
-            block_h = header_h + header_value_gap + value_h
-            vertical_bias = 3 if wrapped else (2 if key in ("diameter", "length") else (1 if len(header_lines) > 1 else 0))
-            y_offset = max(0, (text_rect.height() - block_h) // 2 - vertical_bias)
 
-            painter.setFont(header_font)
-            painter.setPen(CLR_HEADER_TEXT)
-            if len(header_lines) > 1:
-                for line_index, line_text in enumerate(header_lines):
-                    line_rect = QRect(text_rect.x(), text_rect.y() + y_offset + single_header_h * line_index, text_rect.width(), single_header_h)
-                    elided_line = header_metrics.elidedText(line_text.strip(), Qt.ElideRight, text_rect.width())
-                    painter.drawText(line_rect, Qt.AlignHCenter | Qt.AlignBottom, elided_line)
-            else:
-                header_rect = QRect(text_rect.x(), text_rect.y() + y_offset, text_rect.width(), header_h)
-                elided_header = header_metrics.elidedText(header_lines[0], Qt.ElideRight, text_rect.width())
-                painter.drawText(header_rect, Qt.AlignHCenter | Qt.AlignBottom, elided_header)
-
-            value_rect = QRect(
-                text_rect.x(),
-                text_rect.y() + y_offset + header_h + header_value_gap,
-                text_rect.width(),
-                text_rect.height() - y_offset - header_h - header_value_gap,
-            )
             painter.setFont(value_font)
-            painter.setPen(CLR_VALUE_TEXT)
+            painter.setPen(QPen(CLR_VALUE_TEXT))
+            painter.drawText(
+                QRect(column_rect.x(), column_rect.y() + 26, column_rect.width(), 28),
+                Qt.AlignLeft | Qt.AlignVCenter,
+                self._elide(value_metrics, value, column_rect.width()),
+            )
+            x_pos += column_width + COL_SPACING
 
-            if key == "jaw_type":
-                self._paint_description(painter, value, value_rect, stage)
-            else:
-                elided = value_metrics.elidedText(value, Qt.ElideRight, value_rect.width())
-                painter.drawText(value_rect, Qt.AlignHCenter | Qt.AlignTop, elided)
+        self._paint_badges(painter, text_rect, jaw, option)
 
-        painter.restore()
-
-    def _paint_description(self, painter: QPainter, text: str, rect: QRect, stage: str):
-        metrics = QFontMetrics(painter.font())
-        raw = (text or "").strip()
-        if not raw:
-            return
-        width = rect.width()
-        two_lines = self._description_line_count(metrics, raw, width, stage) == 2
-        line_h = metrics.height()
-        line_step = max(1, int(round(line_h * WRAPPED_LINE_STEP_FACTOR))) if two_lines else line_h
-
-        if not two_lines or metrics.horizontalAdvance(raw) <= width:
-            elided = metrics.elidedText(raw, Qt.ElideRight, width)
-            painter.drawText(rect, Qt.AlignHCenter | Qt.AlignTop, elided)
-            return
-
-        tokens = raw.split()
-        first_tokens: list[str] = []
-        rest = tokens[:]
-        while rest:
-            candidate = " ".join(first_tokens + [rest[0]])
-            if not first_tokens or metrics.horizontalAdvance(candidate) <= width:
-                first_tokens.append(rest.pop(0))
-            else:
-                break
-
-        line1 = " ".join(first_tokens)
-        if not rest:
-            painter.drawText(rect, Qt.AlignHCenter | Qt.AlignTop, metrics.elidedText(line1, Qt.ElideRight, width))
-            return
-
-        painter.drawText(
-            QRect(rect.x(), rect.y(), width, line_h),
-            Qt.AlignHCenter | Qt.AlignTop,
-            metrics.elidedText(line1, Qt.ElideRight, width),
+    def _columns(self, jaw: dict, stage: str) -> list[tuple[str, str, str, int]]:
+        dash = '-'
+        jaw_type = self._t(
+            f"jaw_library.jaw_type.{(jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
+            jaw.get('jaw_type', ''),
         )
-        line2 = metrics.elidedText(" ".join(rest), Qt.ElideRight, width)
-        painter.drawText(QRect(rect.x(), rect.y() + line_step, width, line_h), Qt.AlignHCenter | Qt.AlignTop, line2)
+        spindle = self._t(
+            f"jaw_library.spindle_side.{(jaw.get('spindle_side') or '').strip().lower().replace(' ', '_')}",
+            jaw.get('spindle_side', ''),
+        )
+        all_columns = [
+            ('jaw_id', self._t('jaw_library.row.jaw_id', 'Jaw ID'), str(jaw.get('jaw_id') or dash), 180),
+            ('jaw_type', self._t('jaw_library.row.jaw_type', 'Jaw type'), jaw_type or dash, 190),
+            ('spindle', self._t('jaw_library.row.spindle', 'Spindle'), spindle or dash, 170),
+            (
+                'diameter',
+                self._t('jaw_library.row.clamping_diameter_multiline', 'Clamping diameter'),
+                str(jaw.get('clamping_diameter_text') or dash),
+                170,
+            ),
+        ]
+        if stage == 'name-only':
+            return [all_columns[0]]
+        if stage == 'reduced':
+            return all_columns[:2]
+        return all_columns
 
-    def _cached_pixmap(self, icon: QIcon, jaw_type: str, spindle_side: str) -> QPixmap | None:
-        file_name = _jaw_icon_filename(jaw_type)
-        is_sub = _is_sub_spindle(spindle_side)
-        key = (file_name, "sub" if is_sub else "main")
-        if key not in self._icon_cache:
-            # For sub spindle prefer the pre-mirrored jaw_sub.png;
-            # fall back to runtime-mirrored jaw_main (or any other file).
-            if is_sub:
-                sub_path = TOOL_ICONS_DIR / "jaw_sub.png"
-                path = sub_path if sub_path.exists() else TOOL_ICONS_DIR / file_name
-            else:
-                path = TOOL_ICONS_DIR / file_name
+    def _paint_badges(self, painter: QPainter, text_rect: QRect, jaw: dict, option: QStyleOptionViewItem) -> None:
+        badge_text = self._t(
+            f"jaw_library.jaw_type.{(jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
+            jaw.get('jaw_type', ''),
+        )
+        if not badge_text:
+            return
+        badge_rect = QRect(text_rect.right() - 120, text_rect.y() + 6, 110, 22)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor('#dfeef9') if not (option.state & QStyle.State_Selected) else QColor('#c5e0f4'))
+        painter.drawRoundedRect(badge_rect, 11, 11)
 
-            if not path.exists():
-                fallback = TOOL_ICONS_DIR / "jaw_icon.png"
-                path = fallback if fallback.exists() else path
+        badge_font = QFont(self._header_font)
+        badge_font.setPointSizeF(8.5)
+        painter.setFont(badge_font)
+        painter.setPen(QPen(QColor('#204864')))
+        painter.drawText(badge_rect, Qt.AlignCenter, badge_text)
 
-            pixmap = QPixmap()
-            if path.exists():
-                # Chuck images are already transparent — load directly, no cleaning needed.
-                if path.stem.startswith("jaw_"):
-                    raw = QPixmap(str(path))
-                    if not raw.isNull():
-                        pixmap = raw.scaled(
-                            QSize(ICON_SIZE, ICON_SIZE),
-                            Qt.KeepAspectRatio,
-                            Qt.SmoothTransformation,
-                        )
-                else:
-                    img = _clean_icon_image(path, QSize(ICON_SIZE, ICON_SIZE))
-                    if not img.isNull() and is_sub and path.stem != "jaw_sub":
-                        img = img.transformed(QTransform().scale(-1, 1))
-                    if not img.isNull():
-                        pixmap = QPixmap.fromImage(img)
-
-            if pixmap.isNull():
-                pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE))
-                if not pixmap.isNull() and is_sub:
-                    pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
-            self._icon_cache[key] = pixmap
-        return self._icon_cache.get(key)
+    @staticmethod
+    def _elide(metrics: QFontMetrics, text: str, width: int) -> str:
+        return metrics.elidedText(str(text or ''), Qt.ElideRight, max(10, width - 4))

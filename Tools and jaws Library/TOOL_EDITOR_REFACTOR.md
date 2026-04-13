@@ -1,53 +1,47 @@
-# Tool Editor Dialog — Refactoring Log
+# ⚠️ DEPRECATED: This file has been superseded
 
-## Overview
+**Date**: April 13, 2026  
+**Replacement**: See three new documents that govern the Tools and Jaws Library refactoring program:
 
-`ui/tool_editor_dialog.py` was refactored across April 2026 to reduce it from a monolithic ~1,400-line file into a thin coordinator that delegates to purpose-built support modules. All extractions were behavior-preserving — no logic was changed, no API surfaces broken.
+1. **[TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md](TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md)** — Vision and high-level goals for the entire platform overhaul. Read this first to understand WHY the architecture is changing.
 
-Support modules live in `ui/tool_editor_support/` (already the established home for this dialog's helpers).
+2. **[TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md](TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md)** — Rules and constraints for AI agents and contributors. Read this to understand WHAT you can and cannot do during refactoring.
 
----
-
-## What Changed
-
-### Lines removed from `tool_editor_dialog.py`
-
-| Extraction | Lines removed | Destination |
-|---|---|---|
-| `ComponentPickerDialog` class + all methods | ~290 | `component_picker_dialog.py` |
-| `_get_spare_component_key`, `_set_spare_component_key`, `_schedule_spare_component_refresh`, `_refresh_spare_component_dropdowns`, `_add_spare_part_row` | ~60 | `spare_parts_table_coordinator.py` |
-| Inline dialog block in `_link_spares_to_selected_component` | ~78 | `component_linking_dialog.py` |
-| **Total** | **~428** | |
-
-Net result: the dialog went from ~1,400 lines to ~970 lines.
+3. **[TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md](TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md)** — Current phase status and tracking. Read this to understand WHERE we are now and WHAT phase comes next.
 
 ---
 
-## New Modules
+## Why This File Was Replaced
 
-### `ui/tool_editor_support/component_picker_dialog.py`
+The old TOOL_EDITOR_REFACTOR.md documented a **single isolated extraction** (tool editor modularization in April 2026). That work is now complete and frozen.
 
-**Class:** `ComponentPickerDialog(QDialog)`
+The three new files above document the **entire program**: a 9-phase overhaul to transform Tools and Jaws Library from duplicated, monolithic domains into a reusable **module platform**.
 
-A self-contained, searchable dialog for browsing and selecting tool components from existing tool records.
+**Scope Change:**
+- OLD: Document one dialog's extraction history
+- NEW: Govern 9 phases of work, 3-4 months timeline, AI-agent-friendly handoff
 
-**Responsibilities:**
-- Receives a list of component entry dicts (kind, name, code, link) from the caller.
-- Renders them in a `QTreeWidget` with search filtering.
-- Manages column widths via ratio-based sizing relative to dialog width.
-- Returns `selected_entry() -> dict | None` on `QDialog.Accepted`.
+---
 
-**Constructor signature:**
-```python
-ComponentPickerDialog(
-    title: str,
-    entries: list[dict],
-    parent=None,
-    translate: Callable[[str, str | None], str] | None = None,
-)
-```
+## What Happened in April 2026 (Tool Editor Extraction)
 
-**Call site (in `tool_editor_dialog.py`):**
+For historical reference only: `ui/tool_editor_dialog.py` was reduced from ~1,400L to ~970L by extracting:
+- `ComponentPickerDialog` (~290L) → `component_picker_dialog.py`
+- Spare parts coordination (~60L) → `spare_parts_table_coordinator.py`
+- Component linking dialog (~78L) → `component_linking_dialog.py`
+
+This extraction is **complete and stable**. It serves as a proof-of-concept for the larger modular platform refactoring described in the three new documents.
+
+---
+
+## How to Proceed
+
+1. **Read the new documents** in order: GOALS → RULES → STATUS
+2. **Check current phase** in TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md
+3. **Understand constraints** in TOOLS_JAWS_MODULAR_OVERHAUL_RULES.md
+4. **Contribute according to rules** for your assigned phase
+
+Do not reference this deprecated file; it is kept only for historical context.**
 ```python
 dlg = ComponentPickerDialog(title, entries, self, translate=self._t)
 if dlg.exec() != QDialog.Accepted:

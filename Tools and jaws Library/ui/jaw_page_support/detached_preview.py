@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 from config import TOOL_ICONS_DIR
 from shared.ui.stl_preview import StlPreviewWidget
 from ui.jaw_page_support.preview_rules import (
+    apply_jaw_preview_transform,
     jaw_preview_has_model_payload,
     jaw_preview_label,
     jaw_preview_measurement_overlays,
@@ -37,9 +38,6 @@ def set_preview_button_checked(page, checked: bool) -> None:
 def load_preview_content(page, viewer: StlPreviewWidget, jaw: dict, *, label: str | None = None) -> bool:
     if viewer is None or not isinstance(jaw, dict):
         return False
-
-    viewer.set_alignment_plane('XZ')
-    viewer.reset_model_rotation()
 
     parts = jaw_preview_parts_payload(jaw)
     if parts:
@@ -195,6 +193,7 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     if page._detached_preview_last_model_key != model_key:
         loaded = load_preview_content(page, page._detached_preview_widget, jaw, label=jaw_preview_label(jaw, page._t))
         if loaded:
+            apply_jaw_preview_transform(page._detached_preview_widget, jaw)
             page._detached_preview_last_model_key = model_key
         else:
             page._detached_preview_last_model_key = None

@@ -1,4 +1,66 @@
-﻿"""
+# Complete HomePage Refactoring Design: 2,223L → ~400L
+
+**Phase**: 4 (TOOLS Migration, Pilot)  
+**Date**: April 13, 2026  
+**Target**: New HomePage class implementation (~400-450L) inheriting from CatalogPageBase  
+**Status**: Design document for implementation  
+**Constraint**: Zero behavior change, all parity tests must pass, backward-compatible  
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [New HomePage Implementation (Complete)](#new-homepage-implementation-complete)
+3. [Line Mapping: Old → New](#line-mapping-old--new)
+4. [What Stays in home_page.py](#what-stays-in-home_pagepy)
+5. [What Moves to home_page_support/](#what-moves-to-home_page_support)
+6. [Integration Points & Signal Wiring](#integration-points--signal-wiring)
+7. [Implementation Checklist](#implementation-checklist)
+
+---
+
+## Overview
+
+### Goals
+
+1. Reduce HomePage from **2,223L to ~400L** by inheriting from CatalogPageBase
+2. Preserve **all tool-specific behavior** (selector, preview, batch operations)
+3. Extract **~200L of detail panel rendering** to support modules
+4. Enable **parity-preserving migration** for JawPage in Phase 5
+5. Consolidate **72-85% duplicate patterns** to shared base class
+
+### Architecture
+
+```
+CatalogPageBase (shared/ui/platforms/catalog_page_base.py)
+      ↓
+      └─ HomePage(CatalogPageBase)
+            ├─ __init__() [initialize services, tool state]
+            ├─ create_delegate() [return ToolCatalogDelegate]
+            ├─ get_item_service() [return tool_service]
+            ├─ build_filter_pane() [return type filter + head filter]
+            ├─ apply_filters(filters) [query service + constraints]
+            ├─ Signal emissions: item_selected, item_deleted
+            ├─ Tool-specific: selector, preview, batch operations
+            └─ Detail panel display (signal-driven from base)
+```
+
+### Key Design Decisions
+
+1. **Selector state orthogonal to platform**: Selector logic remains in HomePage, independent of CatalogPageBase
+2. **Detail panel signal-driven**: Detail panel shown/hidden by external listeners on `item_selected` signal
+3. **No AddEditToolDialog migration**: Dialog remains as-is (future Phase 5+ refactor)
+4. **Signal-based coupling**: External modules listen to `item_selected`/`item_deleted` rather than calling HomePage methods
+
+---
+
+## New HomePage Implementation (Complete)
+
+### Complete Source Code (~420 lines)
+
+```python
+"""
 HomePage — Tool catalog browsing page (Phase 4 refactored).
 
 Inherits from CatalogPageBase (Phase 3 platform abstraction) for shared
@@ -46,6 +108,8 @@ from ui.home_page_support import (
     close_detached_preview,
     on_selector_cancel,
     on_selector_done,
+    set_selector_context as _set_selector_context_impl,
+    selector_assigned_tools_for_setup_assignment as _selector_assigned_tools_impl,
     SelectorAssignmentRowWidget,
     ToolAssignmentListWidget,
     ToolCatalogListView,
@@ -189,7 +253,7 @@ class HomePage(CatalogPageBase):
     # CatalogPageBase Abstract Method Implementations
     # ─────────────────────────────────────────────────────────────────────
 
-    def create_delegate(self) -> QAbstractItemView:
+    def create_delegate(self) -> QAbstractItemDelegate:
         """
         Create domain-specific delegate for tool catalog item rendering.
 
@@ -645,13 +709,18 @@ class HomePage(CatalogPageBase):
             initial_assignments: Initial tool list
             initial_assignment_buckets: Persisted tool buckets by head/spindle
         """
-        # TODO: Implement selector context setup (Phase 5+)
-        pass
+        _set_selector_context_impl(
+            self,
+            active=active,
+            head=head,
+            spindle=spindle,
+            initial_assignments=initial_assignments,
+            initial_assignment_buckets=initial_assignment_buckets,
+        )
 
     def selector_assigned_tools_for_setup_assignment(self) -> list[dict]:
         """Return persisted tools with head/spindle metadata for setup assignment."""
-        # TODO: Implement selector assignment retrieval (Phase 5+)
-        return []
+        return _selector_assigned_tools_impl(self)
 
     def set_module_switch_handler(self, callback) -> None:
         """Set external callback for module switch button."""
@@ -693,8 +762,552 @@ class HomePage(CatalogPageBase):
         """Refresh catalog list (synonym for refresh_catalog)."""
         self.refresh_catalog()
 
-    def _build_tool_type_filter_items(self) -> None:
-        """Build tool type filter dropdown items."""
-        self.type_filter.addItem('All', 'All')
-        for tool_type in ALL_TOOL_TYPES:
-            self.type_filter.addItem(tool_type, tool_type)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# END OF HomePage CLASS (~420 lines)
+# ─────────────────────────────────────────────────────────────────────────────
+```
+
+---
+
+## Line Mapping: Old → New
+
+### Current HomePage Structure (2,223 lines)
+
+```
+Lines 1-90:       Imports + HomePage class header                [~90L]
+Lines 91-135:     __init__ constructor + service initialization  [~45L]
+Lines 136-180:    Helper methods (_t, _strip_tool_id, etc.)      [~45L]
+Lines 181-770:    _build_ui() [massive: filter row, toolbar,     [~590L]
+                             list, detail panel, selector card]
+Lines 771-850:    _build_selector_card()                          [~80L]
+Lines 851-950:    _build_bottom_bars()                            [~100L]
+Lines 951-1050:   Catalog refresh _on_current_changed, etc.       [~100L]
+Lines 1051-1200:  Filter UI (_rebuild_filter_row, _on_type_       [~150L]
+                  changed, etc.)
+Lines 1201-1350:  Detail panel _build_placeholder_details()       [~150L]
+Lines 1351-1550:  populate_details()                              [~200L] ← EXTRACT
+Lines 1551-1700:  _build_components_panel()                       [~150L] ← EXTRACT
+Lines 1701-1850:  _build_detail_field()                           [~150L] ← EXTRACT
+Lines 1851-1950:  Detail helpers (_add_two_box_row, etc.)         [~100L] ← EXTRACT
+Lines 1951-2050:  Tool CRUD (add_tool, edit_tool, delete_tool)    [~100L]
+Lines 2051-2150:  Selector methods (set_selector_context, etc.)   [~100L]
+Lines 2151-2223:  Preview + batch ops + remaining methods         [~73L]
+────────────────────────────────────────────────────────────────────────────
+TOTAL                                                              [2,223L]
+```
+
+### New HomePage Structure (~420 lines)
+
+```
+Lines 1-50:       Imports + module docstring                      [~50L]
+Lines 51-80:      __all__ + CatalogPageBase inheritance header    [~30L]
+Lines 81-220:     __init__ constructor + service initialization   [~140L]
+                  (includes signal connections + warmup)
+Lines 221-250:    Helper methods (_t)                             [~30L]
+Lines 251-300:    create_delegate() abstract method impl.         [~20L]
+Lines 301-320:    get_item_service() abstract method impl.        [~20L]
+Lines 321-370:    build_filter_pane() abstract method impl.       [~50L]
+Lines 371-420:    apply_filters() abstract method impl.           [~50L]
+Lines 421-450:    _on_item_selected_internal() signal handler     [~30L]
+Lines 451-470:    _on_item_deleted_internal() signal handler      [~20L]
+Lines 471-500:    populate_details() + show/hide/toggle_details() [~30L]
+Lines 501-550:    add_tool() / edit_tool() / delete_tool() /      [~50L]
+                  copy_tool()
+Lines 551-600:    Batch helpers (_get_selected_tool, etc.)        [~50L]
+Lines 601-650:    Preview management methods                      [~50L]
+                  (toggle_preview_window, _sync, _warmup)
+Lines 651-700:    Selector context methods                        [~50L]
+                  (set_selector_context, etc.)
+Lines 701-710:    Module switch + master filter + refresh_list()  [~10L]
+────────────────────────────────────────────────────────────────────────────
+TOTAL (estimated)                                                  [~420L]
+```
+
+### Line Extraction Map
+
+| Old Lines | Content | New Location | Status |
+|-----------|---------|--------------|--------|
+| 1200-1350 | _build_placeholder_details() | home_page_support/detail_panel_builder.py | → EXTRACT |
+| 1351-1550 | populate_details() + related | home_page_support/detail_panel_builder.py | → EXTRACT |
+| 1551-1700 | _build_components_panel() | home_page_support/components_panel_builder.py | → EXTRACT |
+| 1701-1850 | _build_detail_field() | home_page_support/detail_fields_builder.py | → EXTRACT |
+| 1851-1950 | Detail field helpers | home_page_support/detail_fields_builder.py | → EXTRACT |
+| 181-770 | _build_ui() [partially] | CatalogPageBase._build_ui() | → DELEGATE |
+| 771-850 | _build_selector_card() | already in home_page_support | → STAY (call via helper) |
+| 851-950 | _build_bottom_bars() | already in home_page_support | → STAY (call via helper) |
+
+### Lines Removed (moved to base class or extracted)
+
+```
+Lines to REMOVE from HomePage:
+  • ~200L of _build_ui() (list view, search input, filter pane setup)
+    → CatalogPageBase handles this
+  • ~200L of populate_details() + detail panel builders
+    → move to home_page_support/detail_panel_builder.py
+  • ~150L of _build_components_panel()
+    → move to home_page_support/components_panel_builder.py
+  • ~150L of _build_detail_field() + helpers
+    → move to home_page_support/detail_fields_builder.py
+  ────────────────────
+  TOTAL REMOVED: ~700L
+
+Lines to KEEP in HomePage:
+  • __init__ + service initialization (~140L)
+  • 4 abstract method implementations (~140L)
+  • Signal emission + handlers (~50L)
+  • Tool CRUD operations (add/edit/delete/copy) (~50L)
+  • Batch helpers (~50L)
+  • Preview management (~50L)
+  • Selector context (~50L)
+  • Toggle_details / show_details / hide_details (~30L)
+  • Module switch + attribute helpers (~30L)
+  ────────────────────
+  TOTAL KEPT: ~420L
+
+REDUCTION: 2,223L → ~420L (82% less monolithic)
+```
+
+---
+
+## What Stays in home_page.py
+
+### Categories of Retained Code
+
+#### 1. Initialization & Service Management (~140L)
+
+```python
+def __init__(self, tool_service, export_service, settings_service, ...):
+    # • Store services
+    # • Call super().__init__() (triggers CatalogPageBase._build_ui)
+    # • Initialize tool-specific state (selector, preview, master filter)
+    # • Connect signals
+    # • Call refresh_list()
+```
+
+**Rationale**: Services are domain-specific; must remain at HomePage init layer.
+
+#### 2. Abstract Method Implementations (~140L)
+
+```python
+def create_delegate(self) -> QAbstractItemDelegate:
+def get_item_service(self) -> Any:
+def build_filter_pane(self) -> QWidget:
+def apply_filters(self, filters: dict) -> list[dict]:
+```
+
+**Rationale**: Contract-required overrides; define HomePage's specific platform integration.
+
+#### 3. Signal Handling (~50L)
+
+```python
+def _on_item_selected_internal(self, item_id: str, uid: int):
+def _on_item_deleted_internal(self, item_id: str):
+```
+
+**Rationale**: Tool-specific side effects on selection change + deletion.
+
+#### 4. Detail Panel Toggle (~30L)
+
+```python
+def populate_details(tool: dict | None):  [delegates to support module]
+def show_details():
+def hide_details():
+def toggle_details():
+```
+
+**Rationale**: Display orchestration (what's shown where); stays in HomePage but delegates rendering to support.
+
+#### 5. Tool CRUD Operations (~50L)
+
+```python
+def add_tool():
+def edit_tool():
+def delete_tool():
+def copy_tool():
+```
+
+**Rationale**: Tool-specific operations; remain as public API entry points.
+
+#### 6. Batch & Selection Helpers (~50L)
+
+```python
+def _get_selected_tool():
+def _selected_tool_uids():
+def _restore_selection_by_uid():
+def _selected_head_filter():
+def _view_match(tool):
+def _tool_matches_selector_spindle(tool):
+```
+
+**Rationale**: Tool-specific query logic; used by CRUD + filters.
+
+#### 7. Preview Management (~50L)
+
+```python
+def toggle_preview_window():
+def _sync_detached_preview(show_errors):
+def _warmup_preview_engine():
+```
+
+**Rationale**: Preview orchestration; delegates implementation to support modules but orchestrates state.
+
+#### 8. Selector Context (~50L)
+
+```python
+def set_selector_context(active, head, spindle, ...):
+def selector_assigned_tools_for_setup_assignment():
+def set_module_switch_handler(callback):
+def set_page_title(title):
+def set_module_switch_target(target):
+def set_master_filter(tool_ids, active):
+```
+
+**Rationale**: Setup Manager integration API; external callers depend on these methods.
+
+#### 9. Helper Methods (~30L)
+
+```python
+def _t(key, default, **kwargs):
+def refresh_list():  [synonym for refresh_catalog()]
+```
+
+**Rationale**: Utility methods used throughout.
+
+---
+
+## What Moves to home_page_support/
+
+### 1. Detail Panel Rendering → **detail_panel_builder.py** (NEW)
+
+**Lines to Extract**: ~200L
+
+```python
+# NEW: home_page_support/detail_panel_builder.py
+
+def populate_detail_panel(home_page, tool):
+    """Populate detail layout with tool data or placeholder."""
+    # Replaces current HomePage.populate_details()
+
+def _build_placeholder_details():
+    """Build placeholder card shown when no tool selected."""
+
+def _build_components_panel(tool, support_parts):
+    """Build expandable component section."""
+
+def _build_preview_panel(stl_path):
+    """Build inline STL preview embed."""
+
+def _build_detail_field(label, value, multiline=False):
+    """Build single detail field row."""
+
+def _add_two_box_row(layout, label1, value1, label2, value2):
+    """Add two-column field row."""
+
+# ... other component rendering helpers ...
+```
+
+**Why**: Detail panel rendering is tool-specific but disconnected from dialog logic. Extracted for:
+- Clarity (180+ lines of complex UI building)
+- Reusability (future JawPage may share pattern)
+- Testability (independent module for detail rendering logic)
+
+---
+
+### 2. Components Panel Rendering → **components_panel_builder.py**
+
+**Lines to Extract**: ~150L (already partially separated)
+
+```python
+# Expands: home_page_support/components_panel_builder.py
+
+def build_component_browser(home_page, components):
+    """Build component list with spare parts."""
+
+def build_component_card(component):
+    """Render single component card."""
+
+def build_spare_parts_list(spare_parts):
+    """Render spare parts sub-section."""
+```
+
+**Status**: Already partially extracted; expand with detail panel extraction.
+
+---
+
+### 3. Detail Field Layout Rules → **detail_layout_rules.py**
+
+**Current Status**: Partially extracted.
+
+```python
+# Expands: home_page_support/detail_layout_rules.py
+
+def apply_tool_detail_layout_rules(tool, layout):
+    """Apply layout rules based on tool type."""
+    # Rules for milling, turning, etc.
+```
+
+**Why**: Layout depends on tool_type field values; keep modular for future filtering/display rules.
+
+---
+
+### 4. Selector Integration → **home_page_support/selector_*.py**
+
+**Current Status**: Already extracted (14 modules).
+
+```
+home_page_support/selector_card_builder.py
+home_page_support/selector_actions.py
+home_page_support/selector_assignment_state.py
+home_page_support/selector_model.py
+```
+
+**No additional extraction needed**; already separated.
+
+---
+
+### 5. Preview Management → **detached_preview.py**
+
+**Current Status**: Already extracted.
+
+```
+home_page_support/detached_preview.py
+```
+
+**Reference from HomePage** (new implementation):
+```python
+def _sync_detached_preview(self, show_errors: bool = True):
+    """Sync detached preview with current tool."""
+    if not self._detached_preview_dialog:
+        return
+    # Delegate to support module
+    from ui.home_page_support.detached_preview import load_preview_content
+    load_preview_content(self, stl_path)
+```
+
+---
+
+### Summary: home_page_support/ Post-Refactoring
+
+```
+home_page_support/
+├── __init__.py  [re-export all support modules]
+├── detail_panel_builder.py            [NEW, ~200L extracted]
+├── components_panel_builder.py        [expand ~50L]
+├── detail_fields_builder.py          [expand ~50L]
+├── detail_layout_rules.py
+├── batch_actions.py
+├── bottom_bars_builder.py
+├── catalog_list_widgets.py
+├── detached_preview.py
+├── dialog_helpers.py
+├── preview_panel_builder.py
+├── selector_actions.py
+├── selector_assignment_state.py
+├── selector_card_builder.py
+├── selector_model.py
+├── topbar_builder.py
+└── __pycache__/
+```
+
+**Total support modules**: 16 (was 14, +2 new)  
+**Total support lines**: ~1000L (extracted + new)
+
+---
+
+## Integration Points & Signal Wiring
+
+### Signal Flow Diagram
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ HomePage (refactored, ~420L)                                    │
+└────────────────────────────────────────────────────────────────┘
+                          ↓
+        CatalogPageBase._build_ui()  [shared]
+        ├─ Creates search_input
+        ├─ Creates list_view
+        ├─ Creates model
+        ├─ Calls create_delegate() → ToolCatalogDelegate
+        ├─ Calls build_filter_pane() → type filter + head filter
+        └─ Connects list_view.clicked → _on_list_item_clicked()
+                          ↓
+        CatalogPageBase._on_list_item_clicked()
+        ├─ Updates _current_item_id, _current_item_uid
+        └─ EMITS: item_selected(item_id, uid)
+                          ↓
+        HomePage._on_item_selected_internal()
+        ├─ Stores tool_id, uid in instance
+        ├─ Calls populate_details(tool)  [delegates to support]
+        └─ Syncs detached preview if open
+                          ↓
+        home_page_support.detail_panel_builder.populate_detail_panel()
+        └─ Renders tool data in detail panel
+                          ↓
+        ┌─ Detail buttons clicked (Edit, Delete, Copy, etc.)
+        │
+        ├─ Edit: opens AddEditToolDialog → refresh_list()
+        ├─ Delete: confirms → deletes → EMITS item_deleted(id)
+        └─ Copy: opens AddEditToolDialog with template → refresh_list()
+```
+
+### External Signal Listeners
+
+Other modules may connect to HomePage signals:
+
+```python
+# In main_window.py or app initialization
+
+home_page = HomePage(tool_service, export_service, settings_service)
+
+# Listen for selection changes
+home_page.item_selected.connect(on_tool_selected)
+
+# Listen for deletions (e.g., update Setup Manager assignments)
+home_page.item_deleted.connect(on_tool_deleted)
+
+def on_tool_selected(tool_id: str, uid: int):
+    # Update preview, detail panel externally
+    print(f"Tool selected: {tool_id} (uid={uid})")
+    # May trigger external updates like:
+    #  - refresh_preview_panel()
+    #  - update_setup_assignments()
+
+def on_tool_deleted(tool_id: str):
+    # Clean up references
+    print(f"Tool deleted: {tool_id}")
+    # May trigger external cleanup like:
+    #  - remove_from_setup_assignments(tool_id)
+    #  - clear_detail_view()
+```
+
+### Integration Checklist
+
+- [x] CatalogPageBase inherited (2,223L → ~420L reduction)
+- [x] 4 abstract methods implemented (create_delegate, get_item_service, build_filter_pane, apply_filters)
+- [x] Signal emission wired (item_selected, item_deleted)
+- [x] Internal handlers for signal side effects (_on_item_selected_internal, _on_item_deleted_internal)
+- [x] Detail panel delegated to support modules (populate_details)
+- [x] Tool CRUD operations retained as public API
+- [x] Selector state preserved orthogonal to base class
+- [x] Preview management delegated to support modules
+- [x] Batch helpers retained for selection tracking
+
+---
+
+## Implementation Checklist
+
+### Phase 4: HomePageRefactoring Implementation
+
+**Pass 1: Class Structure** (2-4 hours)
+
+- [ ] Update HomePage class declaration to inherit from CatalogPageBase
+- [ ] Move imports to top (CatalogPageBase from shared/ui/platforms/...)
+- [ ] Update __init__() to call super().__init__()
+- [ ] Implement 4 abstract methods (create_delegate, get_item_service, build_filter_pane, apply_filters)
+- [ ] Remove custom _build_ui() catalog logic (delegated to base)
+- [ ] Test: Verify no import errors
+
+**Pass 2: Signal Emission** (2-3 hours)
+
+- [ ] Add _on_item_selected_internal() handler to __init__ signal connection
+- [ ] Add _on_item_deleted_internal() handler to __init__ signal connection
+- [ ] Update populate_details() to be called from _on_item_selected_internal()
+- [ ] Update _sync_detached_preview() to be called from _on_item_selected_internal()
+- [ ] Wire delete_tool() to emit item_deleted signal
+- [ ] Test: Manual signal verification (connect external listeners, verify firing)
+
+**Pass 3: Detail Panel Delegation** (3-5 hours)
+
+- [ ] Create home_page_support/detail_panel_builder.py
+  - [ ] Move populate_details() content
+  - [ ] Move _build_placeholder_details()
+  - [ ] Move _build_components_panel()
+  - [ ] Move _build_detail_field()
+  - [ ] Move component helpers
+- [ ] Update HomePage.populate_details() to delegate
+- [ ] Update home_page_support/__init__.py re-exports
+- [ ] Test: Verify detail panel still renders; parity tests pass
+
+**Pass 4: Selector Isolation** (1-2 hours)
+
+- [ ] Verify _selector_* state variables remain in HomePage
+- [ ] Verify apply_filters() respects _selector_active flag
+- [ ] Verify _tool_matches_selector_spindle() still works
+- [ ] Test: Selector mode activate/deactivate; parity tests pass
+
+**Pass 5: Preview Preservation** (1-2 hours)
+
+- [ ] Verify toggle_preview_window() calls support module
+- [ ] Verify _sync_detached_preview() implementation
+- [ ] Verify _warmup_preview_engine() still works
+- [ ] Test: Detached + inline preview; parity tests pass
+
+**Pass 6: Testing & Parity** (4-6 hours)
+
+- [ ] Run smoke_test.py: both apps start
+- [ ] Run import_path_checker.py: no violations
+- [ ] Run duplicate_detector.py: home_page.py < 500L
+- [ ] Execute parity test suite: 13/13 PASS
+- [ ] Manual verification of 13 test groups
+- [ ] Verify DB integrity (no schema changes)
+
+**Pass 7: Code Review & Finalization** (1-2 hours)
+
+- [ ] Code review approval
+- [ ] Update AGENTS.md if canonical paths changed
+- [ ] Update README_AI.md with new structure
+- [ ] Commit with message: "Phase 4: Migrate HomePage to CatalogPageBase"
+- [ ] Update TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md (Phase 4 to COMPLETE)
+
+**TOTAL**: 14-24 hours (2-3 day sprint)
+
+---
+
+## Parity Test Verification
+
+After implementation, run:
+
+```bash
+# Smoke tests
+python scripts/smoke_test.py
+# Expected: 2/2 apps start
+
+# Import quality gate
+python scripts/import_path_checker.py
+# Expected: exit code 0, no violations
+
+# File size verification
+python scripts/duplicate_detector.py
+# Expected: home_page.py < 500L, duplication reduced
+
+# Parity test suite
+python tests/run_parity_tests.py --phase 4
+# Expected: 13/13 PASS
+
+# Optional: baseline comparison
+python tests/run_parity_tests.py --phase 4 --compare-baseline
+# Expected: ✅ PARITY VERIFIED
+```
+
+---
+
+## Success Criteria Summary
+
+| Gate | Metric | Target | Status |
+|------|--------|--------|--------|
+| 1 | HomePage lines | ~400 ± 50 | ✅ Implement |
+| 2 | Duplicated patterns | 0% (in base class) | ✅ Delegated |
+| 3 | Parity tests | 13/13 PASS | ✅ Required |
+| 4 | Import violations | 0 | ✅ Required |
+| 5 | Smoke tests | 2/2 apps start | ✅ Required |
+
+**Phase 4 Complete When All 5 Gates Passed** ✅
+
+---
+
+**End of Complete HomePage Refactoring Design**
+
+For detailed platform layer info: [PHASE_4_MIGRATION_DESIGN.md](PHASE_4_MIGRATION_DESIGN.md)  
+For CatalogPageBase contract: [shared/ui/platforms/catalog_page_base.py](shared/ui/platforms/catalog_page_base.py)  
+For current HomePage: [home_page.py](home_page.py)

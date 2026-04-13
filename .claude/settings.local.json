@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l \"c:/Users/pz9079/NTX Setup Manager/Tools and jaws Library/ui/jaw_page_support/\"*.py)",
+      "Bash(python -m py_compile ui/jaw_page.py)",
+      "Bash(python -m py_compile ui/jaw_page_support/page_builders.py)",
+      "Bash(python -m py_compile ui/jaw_page_support/event_filter.py)",
+      "Bash(python -m py_compile ui/jaw_page_support/__init__.py)",
+      "Bash(python scripts/run_quality_gate.py)",
+      "Bash(python scripts/import_path_checker.py)",
+      "Bash(python scripts/duplicate_detector.py)",
+      "Bash(python -c ':*)"
+    ]
+  }
+}

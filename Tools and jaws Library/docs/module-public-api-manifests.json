@@ -1,0 +1,133 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated": "2026-04-13",
+    "phase": "Phase 7",
+    "purpose": "Machine-parseable public API manifests for refactored platform and domain modules."
+  },
+  "modules": [
+    {
+      "module": "shared.ui.platforms",
+      "path": "shared/ui/platforms/__init__.py",
+      "exports": [
+        "CatalogPageBase",
+        "CATALOG_ROLE_ID",
+        "CATALOG_ROLE_UID",
+        "CATALOG_ROLE_DATA",
+        "CATALOG_ROLE_ICON",
+        "EditorDialogBase",
+        "CatalogDelegate",
+        "SelectorState",
+        "ExportSpecification",
+        "ColumnDefinition",
+        "ColumnGrouping"
+      ],
+      "contract_ref": "Tools and jaws Library/docs/PLATFORM_LAYER_FORWARD_SPEC.md",
+      "lifecycle": [
+        "Import base abstractions from shared.ui.platforms",
+        "Subclass in domain module and override abstract methods",
+        "Connect signals and refresh catalog"
+      ],
+      "prohibited_imports": [
+        "Tools and jaws Library/ui/home_page_support",
+        "Tools and jaws Library/ui/jaw_page_support"
+      ],
+      "quality_checks": [
+        "import-path-checker",
+        "module-boundary-checker",
+        "module-extension-checker"
+      ]
+    },
+    {
+      "module": "ui.home_page",
+      "path": "Tools and jaws Library/ui/home_page.py",
+      "exports": [
+        "HomePage"
+      ],
+      "contract_ref": "Tools and jaws Library/docs/TOOLS_MODULE_CONTRACT.md",
+      "lifecycle": [
+        "Instantiate with ToolService, ExportService, SettingsService",
+        "CatalogPageBase builds UI via overrides",
+        "User selection emits item_selected and item_deleted"
+      ],
+      "prohibited_imports": [
+        "ui.jaw_page_support",
+        "services.jaw_service"
+      ],
+      "quality_checks": [
+        "module-boundary-checker:B-002b",
+        "module-extension-checker"
+      ]
+    },
+    {
+      "module": "ui.jaw_page",
+      "path": "Tools and jaws Library/ui/jaw_page.py",
+      "exports": [
+        "JawPage"
+      ],
+      "contract_ref": "Tools and jaws Library/docs/JAWS_MODULE_CONTRACT.md",
+      "lifecycle": [
+        "Instantiate with JawService",
+        "CatalogPageBase builds UI via overrides",
+        "User selection emits jaw_selected and jaw_deleted"
+      ],
+      "prohibited_imports": [
+        "ui.home_page_support",
+        "services.tool_service"
+      ],
+      "quality_checks": [
+        "module-boundary-checker:B-001b",
+        "module-extension-checker"
+      ]
+    },
+    {
+      "module": "ui.jaw_catalog_delegate",
+      "path": "Tools and jaws Library/ui/jaw_catalog_delegate.py",
+      "exports": [
+        "JawCatalogDelegate",
+        "ROLE_JAW_DATA",
+        "ROLE_JAW_ICON",
+        "ROLE_JAW_ID",
+        "jaw_icon_for_row"
+      ],
+      "contract_ref": "Tools and jaws Library/docs/PLATFORM_LAYER_FORWARD_SPEC.md",
+      "lifecycle": [
+        "Construct delegate with optional translator",
+        "QListView invokes paint and sizeHint",
+        "Domain content rendered through _paint_item_content"
+      ],
+      "prohibited_imports": [
+        "ui.tool_catalog_delegate",
+        "ui.home_page_support"
+      ],
+      "quality_checks": [
+        "module-extension-checker"
+      ]
+    },
+    {
+      "module": "data.migrations",
+      "path": "Tools and jaws Library/data/migrations/__init__.py",
+      "exports": [
+        "create_or_migrate_jaws_schema",
+        "create_or_migrate_schema",
+        "create_or_migrate_tools_schema",
+        "json_loads",
+        "migrate_jaws_schema",
+        "table_columns"
+      ],
+      "contract_ref": "Tools and jaws Library/TOOLS_JAWS_MODULAR_OVERHAUL_STATUS.md",
+      "lifecycle": [
+        "Caller invokes combined or domain-specific migration entrypoint",
+        "Tools migrations apply additive schema updates",
+        "Jaws migrations apply additive schema updates"
+      ],
+      "prohibited_imports": [
+        "Setup Manager/**"
+      ],
+      "quality_checks": [
+        "smoke-test",
+        "regression-tests"
+      ]
+    }
+  ]
+}

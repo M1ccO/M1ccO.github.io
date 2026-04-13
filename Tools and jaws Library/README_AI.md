@@ -350,7 +350,7 @@ Key support modules:
 | `general_tab.py` | `build_general_tab` | General tab widget construction |
 | `components_tab.py` | `build_components_tab`, `build_spare_parts_tab` | Components + Spare Parts tab construction |
 | `models_tab.py` | `build_models_tab` | 3D Models tab construction |
-| `payload_adapter.py` | `ToolEditorPayloadAdapter` | Load/collect tool data to/from dialog widgets |
+| `payload_codec.py` | `ToolEditorPayloadCodec` | Load/collect tool data to/from dialog widgets |
 | `tool_type_rules.py` | field-state helpers | Determines which fields are visible per tool type |
 | `detail_layout_rules.py` | `build_tool_type_layout_update` | Computes layout transitions for tool type changes |
 | `measurement_rules.py` | normalize helpers | Normalizes XYZ/float/distance-space text values |

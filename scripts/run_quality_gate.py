@@ -9,6 +9,8 @@ PY = ROOT / ".venv" / "Scripts" / "python.exe"
 
 TASKS = [
     ("import-path-checker", [str(PY), str(ROOT / "scripts" / "import_path_checker.py")]),
+    ("module-boundary-checker", [str(PY), str(ROOT / "scripts" / "module_boundary_checker.py")]),
+    ("module-extension-checker", [str(PY), str(ROOT / "scripts" / "module_extension_checker.py")]),
     ("smoke-test", [str(PY), str(ROOT / "scripts" / "smoke_test.py")]),
     ("duplicate-detector", [str(PY), str(ROOT / "scripts" / "duplicate_detector.py")]),
     (

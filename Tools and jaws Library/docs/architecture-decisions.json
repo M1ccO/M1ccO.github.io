@@ -1,0 +1,173 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "generated": "2026-04-13",
+    "scope": "Tools and jaws Library app + shared workspace",
+    "purpose": "Architecture Decision Records (ADRs). Each decision explains WHY a pattern exists so AI agents don't accidentally undo it.",
+    "format": "Each ADR has: id, title, status, date, context, decision, rationale, consequences, enforcement, references"
+  },
+  "decisions": [
+
+    {
+      "id": "ADR-001",
+      "title": "Use canonical shared/ modules for cross-app code",
+      "status": "ACCEPTED",
+      "date": "2026-01-15",
+      "context": "Both Setup Manager and Tools and jaws Library share model types (Tool, Jaw), services (localization, UI preferences), and UI components (StlPreviewWidget, PreferencesDialogBase, EditorHelpers). Without a canonical home, code gets duplicated, forks silently, and agents copy paste rather than reuse.",
+      "decision": "All cross-app reusable code lives in shared/ under canonical paths. The canonical paths are declared in AGENTS.md and enforced by scripts/import_path_checker.py. No app may define its own version of a shared component.",
+      "rationale": [
+        "Deterministic AI coding: agents know exactly where each shared component lives without guessing.",
+        "Cross-app consistency: localization, preferences, STL preview behave identically in both apps.",
+        "Single update point: fixing a shared bug fixes both apps automatically.",
+        "Import governance: canonical paths are machine-checkable; violations fail the quality gate."
+      ],
+      "consequences": {
+        "positive": [
+          "Zero duplication of shared components",
+          "AI agents can reference canonical paths confidently",
+          "Quality gate catches regressions automatically"
+        ],
+        "negative": [
+          "Shared module changes affect both apps simultaneously (requires cross-app testing)",
+          "Shared module must remain backward-compatible until both apps update"
+        ]
+      },
+      "enforcement": "scripts/import_path_checker.py — 7 legacy path denial patterns + 2 cross-app denial patterns. Quality gate exit 1 on violation.",
+      "references": ["AGENTS.md", "scripts/import_path_checker.py", "shared/__init__.py"]
+    },
+
+    {
+      "id": "ADR-002",
+      "title": "Separate databases per domain (tools.db + jaws.db + works.db)",
+      "status": "ACCEPTED",
+      "date": "2026-01-15",
+      "context": "Tool data, jaw data, and work/setup data have independent lifecycles and evolution vectors. Tools and jaws are master catalog data authored in the Tool Library. Works are created in Setup Manager and reference tools/jaws by ID. Each domain has its own schema, migrations, and access patterns.",
+      "decision": "Three separate SQLite databases, one per domain: tool_library.db (tools), jaws_library.db (jaws), setup_manager.db (works). Each app owns its DB files. Setup Manager reads jaw/tool references by ID only; it never directly queries the Tool Library DB schema.",
+      "rationale": [
+        "Domain independence: each DB can evolve schema independently without cross-app migration coordination.",
+        "Read-only boundary: Setup Manager cannot corrupt Tool Library master data; one-directional dependency by ID only.",
+        "IPC handoff preservation: apps exchange data via QLocalSocket (explicit message protocol), not shared file I/O.",
+        "Deployment flexibility: Tool Library DB can be moved, backed up, or replaced without touching Setup Manager DB.",
+        "Per README_AI.md: 'Do not add tool/jaw master schema to Setup Manager DB. Do not write into Tool Library DB files. Keep work rows ID-reference based.'"
+      ],
+      "consequences": {
+        "positive": [
+          "Independent schema evolution per domain",
+          "Accidental cross-domain corruption impossible at the storage layer",
+          "Clear ownership: Tool Library = tool/jaw master data owner"
+        ],
+        "negative": [
+          "Join queries across domains require IPC or in-memory merge (no SQL JOIN across DBs)",
+          "Sync integrity managed at application level, not DB constraints"
+        ]
+      },
+      "enforcement": "Architectural rule; enforced by code review and module boundary checker (Phase 2+). No current automated check catches schema-adjacent coupling (identified gap in quality gate).",
+      "references": ["Setup Manager/README_AI.md", "shared/data/base_database.py", "data/database.py", "data/jaw_database.py"]
+    },
+
+    {
+      "id": "ADR-003",
+      "title": "Support module extraction pattern for large UI files",
+      "status": "ACCEPTED",
+      "date": "2026-04-01",
+      "context": "Both home_page.py (2,223L) and work_editor_dialog.py (originally ~590L) became unmaintainable as single files. Logic for selector state, batch actions, component display, and detail panels was interleaved, making AI-assisted edits error-prone.",
+      "decision": "Extract distinct responsibilities from large UI files into focused support modules in co-located _support/ directories. Each extracted module has a single responsibility. The parent file imports and orchestrates. Extraction is tracked in status docs (WORK_EDITOR_REFACTOR_STATUS.md, TOOL_EDITOR_REFACTOR.md).",
+      "rationale": [
+        "Testability: focused support modules are easily unit tested; large UI classes are not.",
+        "AI-agent clarity: behavior is extracted into named modules; agents find selector logic in selector_state.py, not buried in line 1200 of home_page.py.",
+        "Safe iteration: each extraction is independently verifiable; parity tests gate each step.",
+        "Proven pattern: work_editor_dialog.py reduced 19%; tool_editor_dialog.py reduced 30% via April 2026 extraction."
+      ],
+      "consequences": {
+        "positive": [
+          "Monolith size reduction measurable against Phase 0 baseline",
+          "Each support module has clear single-responsibility boundary",
+          "Enables Phase 3 platform base class extraction (support modules show shared patterns)"
+        ],
+        "negative": [
+          "More files to navigate (15 files in home_page_support/)",
+          "Import chains grow (home_page.py imports from 15 support modules)"
+        ]
+      },
+      "enforcement": "Architectural guidance. Phase 3-5 will formalize by extracting remaining duplicated patterns into CatalogPageBase and EditorDialogBase (see PLATFORM_LAYER_FORWARD_SPEC.md).",
+      "references": ["Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md", "Tools and jaws Library/TOOL_EDITOR_REFACTOR.md", "TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md"]
+    },
+
+    {
+      "id": "ADR-004",
+      "title": "Cross-app imports prohibited; IPC is the only inter-app communication channel",
+      "status": "ACCEPTED",
+      "date": "2026-01-15",
+      "context": "Setup Manager and Tools Library are separate applications that need to exchange data (when user selects a tool in Setup Manager, it should open Tool Library at that tool). Naive approach would be direct imports across app boundaries.",
+      "decision": "Direct cross-app imports are categorically forbidden. Apps communicate exclusively through QLocalSocket/QLocalServer IPC (explicit message protocol). Shared code lives in shared/ only, not in one app accessed by the other.",
+      "rationale": [
+        "Domain independence: each app can be deployed, versioned, or restarted independently.",
+        "Prevents circular dependencies: mutual imports between apps create unresolvable circular dependency chains.",
+        "IPC contract stability: message format version-controlled separately from implementation details.",
+        "AI determinism: agents don't need to reverse-engineer which app 'owns' a piece of code — cross-app dependencies don't exist."
+      ],
+      "consequences": {
+        "positive": [
+          "Apps can be developed and tested independently",
+          "IPC protocol is explicit, version-able, and introspectable",
+          "Zero cross-app import violations in current codebase"
+        ],
+        "negative": [
+          "Data sharing requires serialization/deserialization over IPC",
+          "Debugging requires understanding both the sender and receiver IPC message format"
+        ]
+      },
+      "enforcement": "scripts/import_path_checker.py — 2 cross-app denial patterns: 'from Setup Manager.' and 'from Tools and jaws Library.' Quality gate exit 1 on violation.",
+      "references": ["AGENTS.md", "scripts/import_path_checker.py", "main.py (IPC server)"]
+    },
+
+    {
+      "id": "ADR-005",
+      "title": "TOOLS and JAWS domains are intentionally separate within same app",
+      "status": "ACCEPTED",
+      "date": "2026-04-13",
+      "context": "The Tools and jaws Library app has two major domains: TOOLS (cutting tools, 70-80% of content lines) and JAWS (spindle chucks, 20-30%). These domains share similar browse/edit/export patterns but have independent data schemas, different UI concerns (jaw preview planes, spindle-side filtering), and different evolution trajectories.",
+      "decision": "TOOLS and JAWS are separate module domains within the same app. They do NOT import from each other. Shared browse/edit patterns will be unified via a platform base class in Phase 3 (see PLATFORM_LAYER_FORWARD_SPEC.md). Until then, duplication is acknowledged technical debt tracked in TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md.",
+      "rationale": [
+        "Different data shapes: Tool has geometry_x/z, b_axis_angle, insert codes; Jaw has clamping_diameter, spindle_side, preview_plane.",
+        "Different UI behaviors: Jaw UI has preview plane selector (XZ/XY/YZ) and spindle-side locking; Tool UI has component linking and geometry profiles.",
+        "Independent evolution: tool schema can add new geometry fields without touching jaw schema.",
+        "Phase 3 strategy: unify duplicated BEHAVIOR (catalog browsing, batch actions) without merging DATA — the platform base class pattern."
+      ],
+      "consequences": {
+        "positive": [
+          "Independent domain development and testing",
+          "No risk of tool-jaw data coupling bugs",
+          "Each domain tested independently; regressions localized"
+        ],
+        "negative": [
+          "72-80% code duplication between home_page.py and jaw_page.py (acknowledged, tracked in Phase 0 baseline)",
+          "Bug fixes sometimes required in both domains (until Phase 3-5 unification)"
+        ]
+      },
+      "enforcement": "Per module-registry.json: home_page_support/ must not import jaw_page_support/ and vice versa. Phase 2 module_boundary_checker.py enforces intra-app domain separation.",
+      "references": ["TOOLS_JAWS_MODULAR_OVERHAUL_GOALS.md", "PLATFORM_LAYER_FORWARD_SPEC.md", "docs/TOOLS_MODULE_CONTRACT.md", "docs/JAWS_MODULE_CONTRACT.md"]
+    },
+
+    {
+      "id": "ADR-006",
+      "title": "Adapter pattern for intra-app service interface reuse",
+      "status": "ACCEPTED",
+      "date": "2026-04-13",
+      "context": "The export page logic was built for tools first. When JAW export was added, the export page expected a ToolService interface. Rather than duplicate the entire export page, an adapter bridges JawService to the ToolService interface.",
+      "decision": "Use private adapter classes (_JawToolServiceAdapter, _JawExportServiceAdapter) inside jaw_export_page.py to bridge service APIs. Adapters are internal, not exported. This is intentional architecture, NOT legacy code.",
+      "rationale": [
+        "Avoids duplicating 900 lines of export_page.py for jaw domain.",
+        "Phase 7 will replace these adapters with ExportSpecification pattern (domain-neutral export layer).",
+        "Adapters documented in deprecations.json as INTENTIONAL_ADAPTER with target removal phase."
+      ],
+      "consequences": {
+        "positive": ["No export page duplication", "Jaws get full export functionality with minimal code"],
+        "negative": ["Indirect call chain; debugging requires understanding adapter bridge", "Must be removed in Phase 7 and replaced with proper ExportSpecification"]
+      },
+      "enforcement": "Documented. Adapters targeted for Phase 7 removal. module_boundary_checker.py will warn if new adapters appear outside jaw_export_page.py.",
+      "references": ["ui/jaw_export_page.py", "PLATFORM_LAYER_FORWARD_SPEC.md (ExportSpecification)", "docs/deprecations.json"]
+    }
+
+  ]
+}

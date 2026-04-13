@@ -1,13 +1,42 @@
+"""TOOLS domain schema migrations.
+
+Owns: tools table creation, all tools column additions, all data-repair
+migrations for the tools domain.  Called by the migrations package router.
+
+Extracted from data/migrations.py (Phase 6: Data/Migration Segmentation).
+"""
+
+from __future__ import annotations
+
 import json
 import sqlite3
 
+__all__ = [
+    "create_or_migrate_tools_schema",
+    "json_loads",
+    "migrate_component_items",
+    "migrate_cutting_type",
+    "migrate_default_pot",
+    "migrate_note_fields",
+    "migrate_old_part_fields",
+    "migrate_tool_head_defaults",
+    "migrate_tools_uid_schema",
+    "table_columns",
+]
 
-def table_columns(conn: sqlite3.Connection, table_name: str):
+
+# ---------------------------------------------------------------------------
+# Shared low-level helpers
+# ---------------------------------------------------------------------------
+
+def table_columns(conn: sqlite3.Connection, table_name: str) -> set[str]:
+    """Return the set of column names for *table_name*."""
     rows = conn.execute(f"PRAGMA table_info({table_name})").fetchall()
     return {row[1] for row in rows}
 
 
-def json_loads(raw):
+def json_loads(raw) -> list:
+    """Safely parse a JSON list; return [] on any failure."""
     if isinstance(raw, list):
         return raw
     if not raw:
@@ -18,7 +47,12 @@ def json_loads(raw):
         return []
 
 
-def create_or_migrate_schema(conn: sqlite3.Connection):
+# ---------------------------------------------------------------------------
+# Main entry point
+# ---------------------------------------------------------------------------
+
+def create_or_migrate_tools_schema(conn: sqlite3.Connection) -> None:
+    """Create or upgrade the *tools* table to the current schema."""
     with conn:
         conn.execute(
             """
@@ -53,6 +87,7 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
             )
             """
         )
+
     cols = table_columns(conn, 'tools')
     additions = {
         'tool_head': "TEXT DEFAULT 'HEAD1'",
@@ -81,7 +116,6 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
         'support_parts': "TEXT DEFAULT '[]'",
         'component_items': "TEXT DEFAULT '[]'",
         'measurement_overlays': "TEXT DEFAULT '[]'",
-        # new column for storing path to an STL file used for 3‑D preview
         'stl_path': "TEXT DEFAULT ''",
     }
     with conn:
@@ -98,17 +132,20 @@ def create_or_migrate_schema(conn: sqlite3.Connection):
     migrate_tools_uid_schema(conn)
     migrate_default_pot(conn)
     migrate_component_items(conn)
-    migrate_jaws_schema(conn)
 
 
-def migrate_default_pot(conn: sqlite3.Connection):
+# ---------------------------------------------------------------------------
+# Individual migration steps
+# ---------------------------------------------------------------------------
+
+def migrate_default_pot(conn: sqlite3.Connection) -> None:
     cols = table_columns(conn, 'tools')
     if 'default_pot' not in cols:
         with conn:
             conn.execute("ALTER TABLE tools ADD COLUMN default_pot TEXT DEFAULT ''")
 
 
-def migrate_tools_uid_schema(conn: sqlite3.Connection):
+def migrate_tools_uid_schema(conn: sqlite3.Connection) -> None:
     cols = table_columns(conn, 'tools')
     if 'uid' in cols:
         with conn:
@@ -159,18 +196,22 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
         insert_sql = (
             """
             INSERT INTO tools_new (
-                id, tool_head, spindle_orientation, tool_type, description, geom_x, geom_z, b_axis_angle, radius,
-                nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
-                cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
-                notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                geometry_profiles, support_parts, component_items, measurement_overlays, stl_path
+                id, tool_head, spindle_orientation, tool_type, description,
+                geom_x, geom_z, b_axis_angle, radius, nose_corner_radius,
+                holder_code, holder_link, holder_add_element, holder_add_element_link,
+                cutting_type, cutting_code, cutting_link, cutting_add_element,
+                cutting_add_element_link, notes, drill_nose_angle, mill_cutting_edges,
+                spare_parts, geometry_profiles, support_parts, component_items,
+                measurement_overlays, stl_path
             )
             SELECT
-                id, tool_head, {spindle_orientation}, tool_type, description, geom_x, geom_z, {b_axis_angle}, radius,
-                nose_corner_radius, holder_code, holder_link, holder_add_element, holder_add_element_link,
-                cutting_type, cutting_code, cutting_link, cutting_add_element, cutting_add_element_link,
-                notes, drill_nose_angle, mill_cutting_edges, spare_parts,
-                geometry_profiles, support_parts, component_items, {measurement_overlays}, stl_path
+                id, tool_head, {spindle_orientation}, tool_type, description,
+                geom_x, geom_z, {b_axis_angle}, radius, nose_corner_radius,
+                holder_code, holder_link, holder_add_element, holder_add_element_link,
+                cutting_type, cutting_code, cutting_link, cutting_add_element,
+                cutting_add_element_link, notes, drill_nose_angle, mill_cutting_edges,
+                spare_parts, geometry_profiles, support_parts, component_items,
+                {measurement_overlays}, stl_path
             FROM tools
             """
         ).format(
@@ -184,7 +225,7 @@ def migrate_tools_uid_schema(conn: sqlite3.Connection):
         conn.execute('CREATE INDEX IF NOT EXISTS idx_tools_id ON tools(id)')
 
 
-def migrate_tool_head_defaults(conn: sqlite3.Connection):
+def migrate_tool_head_defaults(conn: sqlite3.Connection) -> None:
     cols = table_columns(conn, 'tools')
     if 'tool_head' not in cols:
         return
@@ -198,55 +239,7 @@ def migrate_tool_head_defaults(conn: sqlite3.Connection):
         )
 
 
-def migrate_jaws_schema(conn: sqlite3.Connection):
-    with conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS jaws (
-                jaw_id TEXT PRIMARY KEY,
-                jaw_type TEXT NOT NULL,
-                spindle_side TEXT NOT NULL,
-                clamping_diameter_text TEXT DEFAULT '',
-                clamping_length TEXT DEFAULT '',
-                used_in_work TEXT DEFAULT '',
-                turning_washer TEXT DEFAULT '',
-                last_modified TEXT DEFAULT '',
-                notes TEXT DEFAULT '',
-                stl_path TEXT DEFAULT ''
-            )
-            """
-        )
-
-    cols = table_columns(conn, 'jaws')
-    additions = {
-        'jaw_type': "TEXT NOT NULL DEFAULT 'Soft jaws'",
-        'spindle_side': "TEXT NOT NULL DEFAULT 'Main spindle'",
-        'clamping_diameter_text': "TEXT DEFAULT ''",
-        'clamping_length': "TEXT DEFAULT ''",
-        'used_in_work': "TEXT DEFAULT ''",
-        'turning_washer': "TEXT DEFAULT ''",
-        'last_modified': "TEXT DEFAULT ''",
-        'notes': "TEXT DEFAULT ''",
-        'stl_path': "TEXT DEFAULT ''",
-        'preview_plane': "TEXT DEFAULT 'XZ'",
-        'preview_rot_x': "INTEGER DEFAULT 0",
-        'preview_rot_y': "INTEGER DEFAULT 0",
-        'preview_rot_z': "INTEGER DEFAULT 0",
-        # Mirror tool 3D payload shape so jaw editor can reuse the same
-        # models/measurements workflow while remaining schema-compatible.
-        'measurement_overlays': "TEXT DEFAULT '[]'",
-        'preview_selected_part': "INTEGER DEFAULT -1",
-        'preview_selected_parts': "TEXT DEFAULT '[]'",
-        'preview_transform_mode': "TEXT DEFAULT 'translate'",
-        'preview_fine_transform': "INTEGER DEFAULT 0",
-    }
-    with conn:
-        for name, ddl in additions.items():
-            if name not in cols:
-                conn.execute(f'ALTER TABLE jaws ADD COLUMN {name} {ddl}')
-
-
-def migrate_note_fields(conn: sqlite3.Connection):
+def migrate_note_fields(conn: sqlite3.Connection) -> None:
     cols = table_columns(conn, 'tools')
     if 'notes' not in cols or 'spare_parts' not in cols:
         return
@@ -260,7 +253,7 @@ def migrate_note_fields(conn: sqlite3.Connection):
                 conn.execute('UPDATE tools SET notes = ? WHERE id = ?', (spare, tool_id))
 
 
-def migrate_cutting_type(conn: sqlite3.Connection):
+def migrate_cutting_type(conn: sqlite3.Connection) -> None:
     cols = table_columns(conn, 'tools')
     if 'cutting_type' not in cols:
         return
@@ -280,7 +273,7 @@ def migrate_cutting_type(conn: sqlite3.Connection):
             conn.execute('UPDATE tools SET cutting_type = ? WHERE id = ?', (inferred, tool_id))
 
 
-def _legacy_component_items_from_row(row):
+def _legacy_component_items_from_row(row) -> list:
     keys = row.keys() if hasattr(row, 'keys') else []
     components = []
 
@@ -335,7 +328,7 @@ def _legacy_component_items_from_row(row):
     return components
 
 
-def migrate_component_items(conn: sqlite3.Connection):
+def migrate_component_items(conn: sqlite3.Connection) -> None:
     cols = table_columns(conn, 'tools')
     if 'component_items' not in cols:
         return
@@ -361,7 +354,7 @@ def migrate_component_items(conn: sqlite3.Connection):
                 )
 
 
-def migrate_old_part_fields(conn: sqlite3.Connection):
+def migrate_old_part_fields(conn: sqlite3.Connection) -> None:
     rows = conn.execute('SELECT * FROM tools').fetchall()
     with conn:
         for row in rows:
@@ -384,4 +377,7 @@ def migrate_old_part_fields(conn: sqlite3.Connection):
                     continue
                 if not any(p['name'].lower() == name.lower() and p['code'] == code for p in parts):
                     parts.append({'name': name, 'code': code})
-            conn.execute('UPDATE tools SET support_parts = ? WHERE id = ?', (json.dumps(parts, ensure_ascii=False), row['id']))
+            conn.execute(
+                'UPDATE tools SET support_parts = ? WHERE id = ?',
+                (json.dumps(parts, ensure_ascii=False), row['id']),
+            )

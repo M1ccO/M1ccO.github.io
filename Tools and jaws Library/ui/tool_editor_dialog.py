@@ -24,7 +24,7 @@ from ui.tool_editor_support.components_tab import build_components_tab, build_sp
 from ui.tool_editor_support.general_tab import build_general_tab
 from ui.tool_editor_support.models_tab import build_models_tab
 from ui.tool_editor_support import (
-    ToolEditorPayloadAdapter,
+    ToolEditorPayloadCodec,
     build_tool_type_field_state,
     component_display_for_key,
     component_dropdown_values,
@@ -79,7 +79,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._turning_drill_geometry_mode = False
         self._spindle_orientation_mode = 'main'
         self._spare_parts_coordinator = None  # Initialized after _build_ui()
-        self._payload_adapter = ToolEditorPayloadAdapter(
+        self._payload_codec = ToolEditorPayloadCodec(
             translate=self._t,
             localized_cutting_type=self._localized_cutting_type,
             tool_id_editor_value=self._tool_id_editor_value,
@@ -492,7 +492,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
                 }
             )
 
-    # Backward-compatible hooks used by ToolEditorPayloadAdapter.
+    # Backward-compatible hooks used by ToolEditorPayloadCodec.
     def _add_spare_part_row(self, part: dict | None = None):
         if self._spare_parts_coordinator:
             self._spare_parts_coordinator.add_spare_part_row(part or {})
@@ -975,11 +975,11 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     def _load_tool(self):
         if not self.tool:
             return
-        self._payload_adapter.load_into_dialog(self, self.tool)
+        self._payload_codec.load_into_dialog(self, self.tool)
         QTimer.singleShot(0, self._update_notes_editor_height)
         if self._assembly_transform_enabled:
             QTimer.singleShot(0, lambda: self._request_preview_transform_snapshot(refresh_selection=True))
 
     def get_tool_data(self):
-        return self._payload_adapter.collect_from_dialog(self)
+        return self._payload_codec.collect_from_dialog(self)
 
