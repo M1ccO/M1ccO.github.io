@@ -437,10 +437,14 @@ class DetailPanelBuilder:
         dlay.setContentsMargins(6, 6, 6, 6)
         dlay.setSpacing(0)
 
-        viewer = (
-            StlPreviewWidget() if StlPreviewWidget is not None else None
-        )
+        viewer = getattr(self.page, '_detail_preview_widget', None)
+        if viewer is None and StlPreviewWidget is not None:
+            viewer = StlPreviewWidget()
+            self.page._detail_preview_widget = viewer
+
         if viewer is not None:
+            if viewer.parent() is not diagram:
+                viewer.setParent(diagram)
             viewer.setStyleSheet("background: transparent; border: none;")
             viewer.set_control_hint_text(
                 self.page._t(
@@ -449,11 +453,17 @@ class DetailPanelBuilder:
                 )
             )
 
-        loaded = (
-            self.page._load_preview_content(viewer, stl_path, label="Detail Preview")
-            if viewer is not None
-            else False
-        )
+        loaded = False
+        if viewer is not None and stl_path:
+            current_key = str(stl_path)
+            if self.page._detail_preview_model_key != current_key:
+                loaded = self.page._load_preview_content(viewer, stl_path, label="Detail Preview")
+                self.page._detail_preview_model_key = current_key if loaded else None
+            else:
+                loaded = True
+        else:
+            self.page._detail_preview_model_key = None
+
         if viewer is not None:
             viewer.setMinimumHeight(260)
             viewer.set_measurement_overlays([])
@@ -463,6 +473,9 @@ class DetailPanelBuilder:
             dlay.addWidget(viewer, 1)
             viewer.show()
         else:
+            if viewer is not None:
+                viewer.clear()
+                viewer.hide()
             txt = QLabel(
                 self.page._t(
                     "tool_library.preview.invalid_data",
@@ -773,6 +786,11 @@ class DetailPanelBuilder:
 
     def _clear_details(self) -> None:
         """Clear all widgets from detail_layout."""
+        cached_viewer = getattr(self.page, '_detail_preview_widget', None)
+        if cached_viewer is not None:
+            cached_viewer.hide()
+            cached_viewer.setParent(None)
+
         while self.page.detail_layout.count():
             item = self.page.detail_layout.takeAt(0)
             widget = item.widget()

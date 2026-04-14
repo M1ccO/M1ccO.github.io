@@ -35,6 +35,7 @@ from shared.ui.helpers.topbar_common import (
     build_search_toggle,
     rebuild_filter_row,
 )
+from ui.widgets.common import apply_shared_dropdown_style
 from ui.home_page_support.catalog_list_widgets import ToolCatalogListView
 from ui.home_page_support.selector_widgets import (
     ToolAssignmentListWidget,
@@ -83,6 +84,7 @@ class ToolSelectorLayoutMixin:
         for tool_type in ALL_TOOL_TYPES:
             self.type_filter.addItem(tool_type, tool_type)
         self.type_filter.currentIndexChanged.connect(self._refresh_catalog)
+        apply_shared_dropdown_style(self.type_filter)
 
         # Preview toggle: hidden by default — no detached window in selector yet
         self.preview_window_btn = build_preview_toggle(

@@ -11,7 +11,8 @@
       "Bash(python scripts/duplicate_detector.py)",
       "Bash(python -c ':*)",
       "Bash(grep -n \"selector.*button\\\\|Tool.*Selector\\\\|Jaw.*Selector\\\\|tool_selector_btn\\\\|jaw_selector_btn\" /c/Users/pz9079/\"NTX Setup Manager\"/\"Setup Manager\"/ui/work_editor_support/*.py)",
-      "Bash(grep -n \"spindle_side\\\\|_selector_spindle\\\\|apply_filters\" /c/Users/pz9079/\"NTX Setup Manager\"/\"Tools and jaws Library\"/ui/jaw_page_support/*.py)"
+      "Bash(grep -n \"spindle_side\\\\|_selector_spindle\\\\|apply_filters\" /c/Users/pz9079/\"NTX Setup Manager\"/\"Tools and jaws Library\"/ui/jaw_page_support/*.py)",
+      "Bash(\"C:/Users/pz9079/NTX Setup Manager/.venv/Scripts/python.exe\" -m unittest tests.test_priority1_targeted)"
     ]
   }
 }

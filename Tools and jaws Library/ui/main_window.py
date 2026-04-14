@@ -1,6 +1,9 @@
 ﻿import json
+import logging
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 from PySide6.QtCore import (
     QEvent,
@@ -52,6 +55,7 @@ from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
 from ui.main_window_support import empty_selector_session_state, selector_session_from_payload
 from ui.selectors import JawSelectorDialog, ToolSelectorDialog
+from ui.tool_catalog_delegate import apply_delegate_theme
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from shared.ui.main_window_helpers import (
     THEME_PALETTES,
@@ -924,6 +928,18 @@ class MainWindow(QMainWindow):
         palette = get_active_theme_palette(self.ui_preferences)
         return (
             "/* Runtime UI preference overrides */\n"
+            # Structural backgrounds — explicit named/attributed containers only.
+            # Intentionally avoids the broad "QWidget" selector because QPushButton,
+            # QComboBox and QToolButton are all QWidget subclasses and would inherit
+            # the flat window_bg, overriding their own gradient rules at equal spec.
+            "QMainWindow,\n"
+            "QWidget#appRoot,\n"
+            "QFrame#navFrame,\n"
+            "QFrame#filterFrame,\n"
+            "QFrame[bottomBar=\"true\"] {\n"
+            f"    background-color: {palette['window_bg']};\n"
+            "}\n"
+            # catalog list / surface
             "QFrame[catalogShell=\"true\"],\n"
             "QListView#toolCatalog,\n"
             "QListView#toolCatalog::viewport,\n"
@@ -931,8 +947,61 @@ class MainWindow(QMainWindow):
             "QListWidget#toolCatalog::viewport {\n"
             f"    background-color: {palette['surface_bg']};\n"
             "}\n"
-            "QFrame[detailField=\"true\"] {\n"
-            f"    background-color: {palette['detail_box_bg']};\n"
+            # detail panel host — scroll area, panel widget, and hero header
+            # all get info_box_bg; individual QFrame[detailField] value boxes
+            # stay white via static QSS.
+            "QScrollArea#detailScrollArea,\n"
+            "QWidget#detailPanel,\n"
+            "QFrame[detailHeader=\"true\"] {\n"
+            f"    background-color: {palette['info_box_bg']};\n"
+            "}\n"
+            # input field focus ring
+            "QLineEdit:focus,\n"
+            "QTextEdit:focus {\n"
+            f"    border: 1px solid {palette['accent']};\n"
+            "}\n"
+            # catalog card selection border (QFrame-based cards)
+            "QFrame[toolListCard=\"true\"][selected=\"true\"],\n"
+            "QFrame[toolListCard=\"true\"][selected=\"true\"]:hover {\n"
+            f"    border: 3px solid {palette['accent']};\n"
+            "}\n"
+            # nav rail icon buttons (QToolButton#sideNavButton)
+            # :checked  → accent gradient  (same family as primary buttons)
+            # :hover    → icon_hover_bg    (lighter tint, distinct from button hover)
+            # :checked:hover → shift gradient one step darker
+            "QToolButton#sideNavButton:hover {\n"
+            f"    background-color: {palette['icon_hover_bg']};\n"
+            f"    border-color: {palette['accent_light']};\n"
+            "}\n"
+            "QToolButton#sideNavButton:checked {\n"
+            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
+            f"    border: 1px solid {palette['accent_pressed']};\n"
+            "}\n"
+            "QToolButton#sideNavButton:checked:hover {\n"
+            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
+            "}\n"
+            # top-bar icon buttons (filter, 3D toggle, etc.)
+            "QToolButton[topBarIconButton=\"true\"]:hover {\n"
+            f"    background-color: {palette['icon_hover_bg']};\n"
+            "}\n"
+            "QToolButton[topBarIconButton=\"true\"]:pressed {\n"
+            f"    background-color: {palette['accent_light']};\n"
+            "}\n"
+            # primary call-to-action buttons — gradient from palette
+            # top stop: accent_light (bright highlight), bottom stop: accent
+            "QPushButton[primaryAction=\"true\"],\n"
+            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"] {\n"
+            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
+            "    color: #ffffff;\n"
+            f"    border: 1px solid {palette['accent_pressed']};\n"
+            "}\n"
+            "QPushButton[primaryAction=\"true\"]:hover,\n"
+            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:hover {\n"
+            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
+            "}\n"
+            "QPushButton[primaryAction=\"true\"]:pressed,\n"
+            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:pressed {\n"
+            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_hover']}, stop:1 {palette['accent_pressed']});\n"
             "}\n"
         )
 
@@ -1098,6 +1167,7 @@ class MainWindow(QMainWindow):
         self._closing_selector_dialogs = False
 
     def _open_selector_dialog_for_session(self, should_show: bool) -> None:
+        logger.debug("selector: opening %r dialog — head=%r spindle=%r show=%r", self._selector_mode, self._selector_head, self._selector_spindle, should_show)
         self._close_selector_dialogs()
 
         if self._selector_mode == 'tools':
@@ -1222,6 +1292,7 @@ class MainWindow(QMainWindow):
             if not socket.waitForBytesWritten(300):
                 raise RuntimeError('Selection payload was not written to the callback socket.')
         except Exception:
+            logger.exception("selector: failed to send result payload to callback server %r", self._selector_callback_server)
             QMessageBox.warning(
                 self,
                 self._t('tool_library.selector.callback_failed.title', 'Selection callback unavailable'),
@@ -1328,5 +1399,12 @@ class MainWindow(QMainWindow):
             if parts:
                 base_style = '\n\n'.join(parts)
 
+        palette = get_active_theme_palette(self.ui_preferences)
+        apply_delegate_theme(palette['info_box_bg'], palette['accent'])
         self.setStyleSheet(base_style + "\n\n" + self._build_ui_preference_overrides())
+        # Delegate-painted list views don't get repainted by setStyleSheet alone —
+        # force a viewport repaint so the new CLR_CARD_SELECTED_BORDER takes effect.
+        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
+            if hasattr(page, 'list_view') and page.list_view is not None:
+                page.list_view.viewport().update()
 

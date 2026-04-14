@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 import sys
@@ -7,6 +8,9 @@ APP_TITLE = 'Tools and jaws Library'
 
 SOURCE_DIR = Path(__file__).resolve().parent
 IS_FROZEN = getattr(sys, 'frozen', False)
+
+# DEV_MODE is True when running from source; False in a PyInstaller frozen build.
+DEV_MODE = not IS_FROZEN
 APP_DIR = Path(getattr(sys, '_MEIPASS', SOURCE_DIR))
 STYLE_PATH = APP_DIR / 'styles' / 'library_style.qss'
 PREVIEW_DIR = APP_DIR / 'preview'
@@ -27,6 +31,27 @@ else:
     EXPORT_DEFAULT_PATH = SOURCE_DIR / 'tool_library_export.xlsx'
 
 DB_DIR.mkdir(parents=True, exist_ok=True)
+
+# --- Logging -----------------------------------------------------------------
+def _configure_logging() -> None:
+    log_level = logging.DEBUG if DEV_MODE else logging.WARNING
+    handlers: list[logging.Handler] = [logging.StreamHandler()]
+    try:
+        log_path = USER_DATA_DIR / 'app.log'
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        handlers.append(logging.FileHandler(log_path, encoding='utf-8'))
+    except OSError:
+        pass
+    logging.basicConfig(
+        level=log_level,
+        format='%(asctime)s %(name)s %(levelname)s %(message)s',
+        handlers=handlers,
+        force=True,
+    )
+
+_configure_logging()
+# -----------------------------------------------------------------------------
+
 PROJECTS_DIR = SOURCE_DIR.parent
 _projects_dir = str(PROJECTS_DIR)
 if _projects_dir not in sys.path:

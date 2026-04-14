@@ -273,7 +273,7 @@ class MainWindow(QMainWindow):
         for _ in range(3):
             sock = QLocalSocket()
             sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
-            if not sock.waitForConnected(900):
+            if not sock.waitForConnected(1500):
                 try:
                     sock.disconnectFromServer()
                 except Exception:
@@ -282,7 +282,7 @@ class MainWindow(QMainWindow):
             try:
                 sock.write(json.dumps(payload).encode("utf-8"))
                 sock.flush()
-                if sock.waitForBytesWritten(900):
+                if sock.waitForBytesWritten(1500):
                     return True
             except Exception:
                 pass
@@ -377,11 +377,14 @@ class MainWindow(QMainWindow):
         # Fallback: launch a new Tool Library process.
         args = ["--geometry", f"{x},{y},{width},{height}"]
         if self._launch_tool_library(args):
-            self._send_request_with_retry(payload)
             def _finish_launch():
                 self.hide()
                 self.setWindowOpacity(1.0)
-            self._fade_out_and(_finish_launch)
+
+            self._send_request_with_retry(
+                payload,
+                on_success=lambda: self._fade_out_and(_finish_launch),
+            )
             return
 
         QMessageBox.warning(
@@ -470,11 +473,14 @@ class MainWindow(QMainWindow):
             "--master-filter-active", "1",
         ]
         if self._launch_tool_library(args):
-            self._send_request_with_retry(payload)
             def _finish_launch():
                 self.hide()
                 self.setWindowOpacity(1.0)
-            self._fade_out_and(_finish_launch)
+
+            self._send_request_with_retry(
+                payload,
+                on_success=lambda: self._fade_out_and(_finish_launch),
+            )
             return
 
         QMessageBox.warning(
@@ -486,13 +492,33 @@ class MainWindow(QMainWindow):
             ),
         )
 
-    def _send_request_with_retry(self, payload: dict, attempts: int = 36, delay_ms: int = 300):
+    def _send_request_with_retry(
+        self,
+        payload: dict,
+        attempts: int = 36,
+        delay_ms: int = 300,
+        on_success=None,
+        on_failed=None,
+    ):
         """Retry IPC shortly after launching Tool Library so module/filter payload is applied."""
         if self._send_to_tool_library(payload):
+            if callable(on_success):
+                on_success()
             return
         if attempts <= 1:
+            if callable(on_failed):
+                on_failed()
             return
-        QTimer.singleShot(delay_ms, lambda: self._send_request_with_retry(payload, attempts - 1, delay_ms))
+        QTimer.singleShot(
+            delay_ms,
+            lambda: self._send_request_with_retry(
+                payload,
+                attempts - 1,
+                delay_ms,
+                on_success=on_success,
+                on_failed=on_failed,
+            ),
+        )
 
     def _set_launch_button_variant(self, button: QPushButton, primary: bool):
         button.setProperty("primaryAction", bool(primary))
@@ -900,6 +926,15 @@ class MainWindow(QMainWindow):
         return (
             "/* Runtime UI preference overrides */\n"
             f"* {{ font-family: '{font_family}'; }}\n"
+            # window background
+            "QMainWindow,\n"
+            "QWidget#appRoot,\n"
+            "QFrame[navRail=\"true\"],\n"
+            "QFrame[bottomBar=\"true\"],\n"
+            "QFrame[topBarContainer=\"true\"] {\n"
+            f"    background-color: {palette['window_bg']};\n"
+            "}\n"
+            # catalog / surface
             "QFrame#setupWorkShell,\n"
             "QListView#toolCatalog,\n"
             "QListView#toolCatalog::viewport,\n"
@@ -913,9 +948,65 @@ class MainWindow(QMainWindow):
             "QListWidget#drawingList::viewport {\n"
             f"    background-color: {palette['surface_bg']};\n"
             "}\n"
+            # info boxes / detail fields
             "QFrame[detailField=\"true\"],\n"
             "QFrame[detailField=\"true\"][detailHeroField=\"true\"] {\n"
-            f"    background-color: {palette['detail_box_bg']};\n"
+            f"    background-color: {palette['info_box_bg']};\n"
+            "}\n"
+            # input field focus ring
+            "QLineEdit:focus,\n"
+            "QTextEdit:focus {\n"
+            f"    border: 1px solid {palette['accent']};\n"
+            "}\n"
+            # card selection borders
+            "QFrame[toolListCard=\"true\"][selected=\"true\"],\n"
+            "QFrame[toolListCard=\"true\"][selected=\"true\"]:hover,\n"
+            "QFrame[workCard=\"true\"][selected=\"true\"],\n"
+            "QFrame[workCard=\"true\"][selected=\"true\"]:hover {\n"
+            f"    border: 2px solid {palette['accent']};\n"
+            "}\n"
+            # miniAssignmentCard static rule uses QDialog[workEditorDialog] ancestor (spec 0,3,2)
+            # so this runtime rule must match that specificity to win at equal spec + last-defined
+            "QDialog[workEditorDialog=\"true\"] QFrame[miniAssignmentCard=\"true\"][selected=\"true\"],\n"
+            "QDialog[workEditorDialog=\"true\"] QFrame[miniAssignmentCard=\"true\"][selected=\"true\"]:hover {\n"
+            f"    border: 2px solid {palette['accent']};\n"
+            "}\n"
+            "QFrame[selectorDropTarget=\"true\"][activeDropTarget=\"true\"] {\n"
+            f"    border: 2px solid {palette['accent']};\n"
+            "}\n"
+            # icon-only buttons — lighter hover tint, distinct from full button hover
+            "QToolButton[topBarIconButton=\"true\"]:hover {\n"
+            f"    background-color: {palette['icon_hover_bg']};\n"
+            "}\n"
+            "QToolButton[topBarIconButton=\"true\"]:pressed {\n"
+            f"    background-color: {palette['accent_light']};\n"
+            "}\n"
+            # primary action buttons — themed gradient (spec 1: plain buttons)
+            "QPushButton {\n"
+            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
+            "}\n"
+            "QPushButton:hover {\n"
+            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
+            "}\n"
+            "QPushButton:pressed {\n"
+            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_hover']}, stop:1 {palette['accent_pressed']});\n"
+            "}\n"
+            # spec-21 overrides for hardcoded gradients in static QSS that the
+            # spec-1 QPushButton rule above cannot reach:
+            #   [navButton][active]                — active nav rail item
+            #   [panelActionButton][primaryAction] — compact primary panel button
+            "QPushButton[navButton=\"true\"][active=\"true\"],\n"
+            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"] {\n"
+            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
+            f"    border: 1px solid {palette['accent_pressed']};\n"
+            "}\n"
+            "QPushButton[navButton=\"true\"][active=\"true\"]:hover,\n"
+            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:hover {\n"
+            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
+            "}\n"
+            "QPushButton[navButton=\"true\"][active=\"true\"]:pressed,\n"
+            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:pressed {\n"
+            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_hover']}, stop:1 {palette['accent_pressed']});\n"
             "}\n"
         )
 

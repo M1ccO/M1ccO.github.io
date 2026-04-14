@@ -85,6 +85,27 @@ CLR_VALUE_TEXT = QColor('#171a1d')
 CLR_LIST_BG = QColor(205, 212, 238, 247)  # rgba(205,212,238,0.97)
 
 
+def apply_delegate_theme(info_box_bg: str, accent: str | None = None) -> None:
+    """Update card colors to match the active theme palette.
+
+    Called from MainWindow._apply_style() whenever the theme changes.
+    *info_box_bg* is a CSS color string (hex or rgba) for the card background.
+    *accent* is an optional CSS color string for the selection border.
+    """
+    global CLR_CARD_BG, CLR_CARD_HOVER, CLR_CARD_SELECTED_BORDER
+    bg = QColor(info_box_bg)
+    if not bg.isValid():
+        return
+    CLR_CARD_BG = bg
+    # hover: slightly lighter than the card background
+    h, s, l, a = bg.getHslF()
+    CLR_CARD_HOVER = QColor.fromHslF(h, max(0.0, s - 0.05), min(1.0, l + 0.04), a)
+    if accent is not None:
+        sel = QColor(accent)
+        if sel.isValid():
+            CLR_CARD_SELECTED_BORDER = sel
+
+
 # ── Fonts (built once, reused) ──────────────────────────────────────────
 def _header_font() -> QFont:
     f = QFont()

@@ -178,7 +178,12 @@ def build_jaw_preview_card(page, jaw: dict) -> QWidget:
     diagram_layout.setContentsMargins(6, 6, 6, 6)
     diagram_layout.setSpacing(0)
 
-    viewer = StlPreviewWidget()
+    viewer = page._detail_preview_widget
+    if viewer is None:
+        viewer = StlPreviewWidget()
+        page._detail_preview_widget = viewer
+    if viewer.parent() is not diagram:
+        viewer.setParent(diagram)
     viewer.setStyleSheet('background: transparent; border: none;')
     viewer.set_control_hint_text(
         page._t(
@@ -187,16 +192,26 @@ def build_jaw_preview_card(page, jaw: dict) -> QWidget:
         )
     )
 
-    loaded = page._load_preview_content(viewer, jaw, label=jaw_preview_label(jaw, page._t))
+    model_key = page._preview_model_key(jaw)
+    if page._detail_preview_model_key != model_key:
+        loaded = page._load_preview_content(viewer, jaw, label=jaw_preview_label(jaw, page._t))
+        if loaded:
+            page._detail_preview_model_key = model_key
+        else:
+            page._detail_preview_model_key = None
+    else:
+        loaded = True
+
     if loaded:
         apply_jaw_preview_transform(viewer, jaw)
         overlays = jaw_preview_measurement_overlays(jaw)
         viewer.set_measurement_overlays(overlays)
         viewer.set_measurements_visible(bool(overlays))
         diagram_layout.addWidget(viewer, 1)
-        page._detail_preview_widget = viewer
-        page._detail_preview_model_key = page._preview_model_key(jaw)
+        viewer.show()
     else:
+        viewer.clear()
+        viewer.hide()
         stl_path = jaw_preview_stl_path(jaw)
         placeholder = QLabel(
             page._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
@@ -209,16 +224,15 @@ def build_jaw_preview_card(page, jaw: dict) -> QWidget:
         diagram_layout.addStretch(1)
         diagram_layout.addWidget(placeholder)
         diagram_layout.addStretch(1)
-        page._detail_preview_widget = None
-        page._detail_preview_model_key = None
 
     preview_layout.addWidget(diagram, 1)
     return preview_card
 
 
 def _clear_details(page) -> None:
-    page._detail_preview_widget = None
-    page._detail_preview_model_key = None
+    if page._detail_preview_widget is not None:
+        page._detail_preview_widget.hide()
+        page._detail_preview_widget.setParent(None)
     while page.detail_layout.count():
         item = page.detail_layout.takeAt(0)
         widget = item.widget()

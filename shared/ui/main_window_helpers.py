@@ -28,12 +28,25 @@ from PySide6.QtWidgets import (
 
 THEME_PALETTES: dict[str, dict[str, str]] = {
     "classic": {
-        "surface_bg": "rgba(205, 212, 238, 0.97)",
-        "detail_box_bg": "rgba(232, 240, 250, 0.98)",
+        "window_bg":      "#eceff2",
+        "surface_bg":     "rgba(205, 212, 238, 0.97)",
+        "info_box_bg":    "rgba(232, 240, 250, 0.98)",
+        "accent_light":   "#54c5ff",
+        "accent":         "#1e88e5",
+        "accent_hover":   "#1976d2",
+        "accent_pressed": "#1565c0",
+        # Icon-button hover — subtle tint, intentionally lighter than button hover
+        "icon_hover_bg":  "rgba(30, 136, 229, 0.15)",
     },
     "graphite": {
-        "surface_bg": "rgba(168, 179, 198, 0.98)",
-        "detail_box_bg": "rgba(207, 217, 233, 0.98)",
+        "window_bg":      "#d8dce2",
+        "surface_bg":     "rgba(168, 179, 198, 0.98)",
+        "info_box_bg":    "rgba(207, 217, 233, 0.98)",
+        "accent_light":   "#42a5f5",
+        "accent":         "#1976d2",
+        "accent_hover":   "#1565c0",
+        "accent_pressed": "#0d47a1",
+        "icon_hover_bg":  "rgba(25, 118, 210, 0.15)",
     },
 }
 
@@ -71,7 +84,6 @@ def fade_out_and(window, callback, *, pre_callback=None):
     if getattr(window, '_fade_anim', None) is not None:
         window._fade_anim.stop()
     window._fade_anim = None
-    window.setWindowOpacity(1.0)
     if pre_callback is not None:
         pre_callback()
     callback()

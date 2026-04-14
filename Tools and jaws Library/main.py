@@ -36,12 +36,12 @@ def _build_launch_payload(args) -> dict:
 def _send_to_existing_instance(server_name: str, payload: dict) -> bool:
     socket = QLocalSocket()
     socket.connectToServer(server_name)
-    if not socket.waitForConnected(250):
+    if not socket.waitForConnected(350):
         return False
     try:
         socket.write(json.dumps(payload).encode('utf-8'))
         socket.flush()
-        socket.waitForBytesWritten(250)
+        socket.waitForBytesWritten(900)
     finally:
         socket.disconnectFromServer()
     return True
@@ -245,26 +245,32 @@ def main():
             if selector_active_request:
                 return
 
-            win.setWindowOpacity(1.0)
-            if win.isMinimized():
-                win.showNormal()
-            if not win.isVisible():
-                win.show()
-            if geometry_text:
-                _apply_frame_geometry_string(win, geometry_text)
-                QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
-                QTimer.singleShot(120, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
-            win.raise_()
-            win.activateWindow()
-            # Belt-and-suspenders: use Win32 API for reliable foreground activation.
-            try:
-                import ctypes
-                hwnd = int(win.winId())
-                ctypes.windll.user32.SetForegroundWindow(hwnd)
-            except Exception:
-                pass
-            if not was_visible:
-                win.fade_in()
+            # Defer top-level visibility changes out of the socket callback so
+            # selector/session transitions settle before foreground activation.
+            def _show_main_window() -> None:
+                win.setWindowOpacity(1.0)
+                app.processEvents()
+                if win.isMinimized():
+                    win.showNormal()
+                if not win.isVisible():
+                    win.show()
+                if geometry_text:
+                    _apply_frame_geometry_string(win, geometry_text)
+                    QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
+                    QTimer.singleShot(120, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
+                win.raise_()
+                win.activateWindow()
+                # Belt-and-suspenders: use Win32 API for reliable foreground activation.
+                try:
+                    import ctypes
+                    hwnd = int(win.winId())
+                    ctypes.windll.user32.SetForegroundWindow(hwnd)
+                except Exception:
+                    pass
+                if not was_visible:
+                    win.fade_in()
+
+            QTimer.singleShot(0, _show_main_window)
 
     def handle_new_connection():
         while server.hasPendingConnections():

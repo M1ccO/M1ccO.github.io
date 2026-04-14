@@ -5,7 +5,6 @@ import json
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 # Add parent directory to path so shared module can be imported
@@ -13,7 +12,7 @@ if str(Path(__file__).resolve().parent.parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtNetwork import QLocalServer
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
@@ -120,14 +119,6 @@ def main():
         except Exception:
             return False
         return True
-
-    def tool_library_server_ready(server_name: str) -> bool:
-        socket = QLocalSocket()
-        socket.connectToServer(server_name)
-        ready = socket.waitForConnected(150)
-        if ready:
-            socket.disconnectFromServer()
-        return ready
 
     def is_safe_tool_library_target(candidate: Path) -> bool:
         try:
@@ -301,13 +292,7 @@ def main():
         app._preview_warmup_widget = None
 
     if ENABLE_TOOL_LIBRARY_PRELOAD:
-        step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_tool_library', 'Tool Library warming up...')}")
-        ready_deadline = time.time() + 12.0
-        while time.time() < ready_deadline:
-            if tool_library_server_ready(TOOL_LIBRARY_SERVER_NAME):
-                break
-            app.processEvents()
-            time.sleep(0.1)
+        step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_tool_library', 'Tool Library warming up in background...')}")
     else:
         step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.skip_preload', 'Skipping Tool Library preload...')}")
 

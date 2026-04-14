@@ -30,6 +30,7 @@ from shared.ui.helpers.topbar_common import (
     build_search_toggle,
     rebuild_filter_row,
 )
+from ui.widgets.common import apply_shared_dropdown_style
 from ui.jaw_catalog_delegate import JawCatalogDelegate
 from ui.jaw_page_support.catalog_list_widgets import JawCatalogListView
 from ui.jaw_page_support.selector_widgets import JawAssignmentSlot, SelectorRemoveDropButton
@@ -77,6 +78,7 @@ class JawSelectorLayoutMixin:
         self.view_filter.addItem(self._t('jaw_library.nav.soft_jaws', 'Soft Jaws'), 'soft')
         self.view_filter.addItem(self._t('jaw_library.nav.hard_group', 'Hard / Spiked / Special'), 'hard_group')
         self.view_filter.currentIndexChanged.connect(self._refresh_catalog)
+        apply_shared_dropdown_style(self.view_filter)
 
         # Preview toggle: hidden — no detached window in selector yet
         self.preview_window_btn = build_preview_toggle(

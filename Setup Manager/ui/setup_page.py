@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QToolButton,
-    QScrollArea,
     QSplitter,
     QTextEdit,
     QVBoxLayout,
@@ -32,28 +31,14 @@ from PySide6.QtWidgets import (
 
 from config import (
     USER_DATA_DIR,
-    TOOL_ICONS_DIR,
-    TOOL_TYPE_TO_ICON,
-    DEFAULT_TOOL_ICON,
     TEMP_DIR,
 )
 from ui.widgets.common import AutoShrinkLabel, add_shadow, repolish_widget, styled_list_item_height
 from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID, SetupCatalogDelegate
 from ui.setup_page_support import (
-    AdaptiveColumnsWidget,
     build_library_launch_context_payload,
-    clear_section,
     collect_library_filter_ids,
-    format_lookup,
-    format_lookup_list,
-    head_zero_fields,
     LogEntryDialog,
-    make_detail_field,
-    set_jaw_overview,
-    set_section_fields,
-    set_tool_cards,
-    ToolNameCardWidget,
-    WorkRowWidget,
 )
 from ui.work_editor_dialog import WorkEditorDialog
 try:
@@ -102,7 +87,6 @@ class SetupPage(QWidget):
         self.latest_entries_by_work = {}
         self._search_visible = False
         self._min_list_panel_width = 340
-        self._clamping_splitter = False
         self._last_mouse_button = None  # Track mouse button for double-click handling
         self._row_headers = {
             "work_id": self._t("setup_page.row.work_id", "Work ID"),
@@ -110,23 +94,6 @@ class SetupPage(QWidget):
             "description": self._t("setup_page.row.description", "Description"),
             "last_run": self._t("setup_page.row.last_run", "Last run"),
         }
-        self._section_title_keys = {
-            "programs": ("setup_page.section.programs", "Programs"),
-            "jaws": ("setup_page.section.jaw_setup", "Jaw Setup"),
-            "head1": ("setup_page.section.head1", "Head 1"),
-            "head1_tools": ("setup_page.section.head1_tools", "Head 1 Tools"),
-            "head2": ("setup_page.section.head2", "Head 2"),
-            "head2_tools": ("setup_page.section.head2_tools", "Head 2 Tools"),
-            "robot": ("setup_page.section.robot", "Robot"),
-            "notes": ("setup_page.section.notes", "Notes"),
-            "sources": ("setup_page.section.data_sources", "Data Sources"),
-        }
-        self._section_titles = {
-            key: self._t(translation_key, default)
-            for key, (translation_key, default) in self._section_title_keys.items()
-        }
-        self._detail_section_title_labels: dict[str, QLabel] = {}
-        self._details_open = False
         self._tool_db_mtime = self._safe_mtime(self.draw_service.tool_db_path)
         self._jaw_db_mtime = self._safe_mtime(self.draw_service.jaw_db_path)
 
@@ -291,11 +258,6 @@ class SetupPage(QWidget):
         self._tool_db_mtime = tool_mtime
         self._jaw_db_mtime = jaw_mtime
 
-        # If details are open, refresh immediately so deleted/updated tools and jaws
-        # are reflected without restarting Setup Manager.
-        if self._details_open and self.current_work_id:
-            self._refresh_details()
-
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None):
         if translate is not None:
             self._translate = translate
@@ -305,16 +267,8 @@ class SetupPage(QWidget):
             "description": self._t("setup_page.row.description", "Description"),
             "last_run": self._t("setup_page.row.last_run", "Last run"),
         }
-        self._section_titles = {
-            key: self._t(translation_key, default)
-            for key, (translation_key, default) in self._section_title_keys.items()
-        }
         if hasattr(self, "_work_delegate"):
             self._work_delegate.set_headers(self._row_headers)
-        if hasattr(self, "detail_heading_key"):
-            self.detail_heading_key.setText(self._t("setup_page.field.drawing_id", "Drawing ID"))
-        for key, label in self._detail_section_title_labels.items():
-            label.setText(self._section_titles.get(key, label.text()))
         self.search_toggle_btn.setToolTip(self._t("setup_page.search_toggle_tip", "Show/hide search"))
         self.search_input.setPlaceholderText(self._t("setup_page.search_placeholder", "Search works..."))
         self.make_logbook_entry_btn.setText(self._t("setup_page.make_logbook_entry", "Make logbook entry"))
@@ -326,12 +280,6 @@ class SetupPage(QWidget):
         self._update_selection_count_label()
         self.refresh_works()
 
-    def _format_lookup(self, item_id, ref_lookup):
-        return format_lookup(item_id, ref_lookup, translate=self._t)
-
-    def _format_lookup_list(self, values, ref_lookup):
-        return format_lookup_list(values, ref_lookup, translate=self._t)
-
     def refresh_works(self):
         search = self.search_input.text().strip()
         works = self.work_service.list_works(search)
@@ -340,7 +288,6 @@ class SetupPage(QWidget):
         )
         previous_id = self.current_work_id
         restored = False
-        details_were_open = self._details_open
 
         blocker = QSignalBlocker(self.work_list.selectionModel())
         self._work_model.clear()
@@ -502,18 +449,6 @@ class SetupPage(QWidget):
         
         self._last_mouse_button = None
 
-    def _on_detail_toggle_clicked(self):
-        return
-
-    def show_details(self):
-        return
-
-    def hide_details(self):
-        return
-
-    def _on_splitter_moved(self, pos: int, index: int):
-        return
-
     def _set_selected_card(self, work_id):
         _ = work_id
         self.work_list.viewport().update()
@@ -530,46 +465,6 @@ class SetupPage(QWidget):
         self.work_list.doItemsLayout()
         self.work_list.viewport().update()
 
-    def _set_section_fields(self, key: str, fields: list):
-        set_section_fields(
-            self.detail_sections,
-            key,
-            fields,
-            make_detail_field_fn=self._make_detail_field,
-        )
-
-    def _make_detail_field(self, label_text: str, value_text: str) -> QFrame:
-        return make_detail_field(label_text, value_text)
-
-    def _clear_section(self, key: str):
-        clear_section(self.detail_sections, key)
-
-    def _set_jaw_overview(
-        self,
-        main_jaw_id: str,
-        sub_jaw_id: str,
-        main_stop_screws: str = "",
-        sub_stop_screws: str = "",
-    ):
-        set_jaw_overview(
-            self.detail_sections,
-            self.draw_service,
-            self._t,
-            main_jaw_id,
-            sub_jaw_id,
-            main_stop_screws,
-            sub_stop_screws,
-        )
-
-    def _set_tool_cards(self, key: str, tool_assignments: list):
-        set_tool_cards(
-            self.detail_sections,
-            self.draw_service,
-            self._t,
-            key,
-            tool_assignments,
-        )
-
     def _update_open_library_viewer_visibility(self, work=None):
         tool_ids, jaw_ids = collect_library_filter_ids(work)
         return bool(tool_ids or jaw_ids)
@@ -583,85 +478,6 @@ class SetupPage(QWidget):
     def _create_db_backup(self, tag: str):
         backup_path = create_db_backup(Path(self.work_service.db.path), tag)
         return backup_path
-
-    def _refresh_details(self):
-        if not self.current_work_id:
-            self.hide_details()
-            return
-        if not self._details_open:
-            return
-
-        work = self.work_service.get_work(self.current_work_id)
-        if not work:
-            self.detail_id_label.setText(self._t("setup_page.message.missing_work", "Missing work"))
-            self.detail_description_label.setText("")
-            self.detail_description_label.hide()
-            self._update_open_library_viewer_visibility(None)
-            for key in self.detail_sections:
-                self._set_section_fields(key, [])
-            return
-
-        status = self.draw_service.get_reference_source_status()
-        tool_db_state = status["tool_db_path"] if status["tool_db_exists"] else self._t(
-            "setup_page.message.missing_path", "missing: {path}", path=status["tool_db_path"]
-        )
-        jaw_db_state = status["jaw_db_path"] if status["jaw_db_exists"] else self._t(
-            "setup_page.message.missing_path", "missing: {path}", path=status["jaw_db_path"]
-        )
-
-        self.detail_id_label.setText((work.get("drawing_id", "") or "").strip() or "-")
-        description = (work.get("description", "") or "").strip()
-        self.detail_description_label.setVisible(bool(description))
-        self.detail_description_label.setText(description)
-
-        main_jaw = (work.get("main_jaw_id") or "").strip()
-        sub_jaw = (work.get("sub_jaw_id") or "").strip()
-        main_stop_screws = (work.get("main_stop_screws") or "").strip()
-        sub_stop_screws = (work.get("sub_stop_screws") or "").strip()
-        self._update_open_library_viewer_visibility(work)
-
-        sp1_label = self._t("setup_page.field.sp1", "SP1")
-        sp2_label = self._t("setup_page.field.sp2", "SP2")
-
-        self._set_section_fields("programs", [
-            (self._t("setup_page.field.main_program", "Main Program"), (work.get("main_program", "") or "").strip()),
-            (self._t("setup_page.field.sub_programs_head1", "Sub Programs Head 1"), (work.get("head1_sub_program", "") or "").strip()),
-            (self._t("setup_page.field.sub_programs_head2", "Sub Programs Head 2"), (work.get("head2_sub_program", "") or "").strip()),
-        ])
-        self._set_jaw_overview(main_jaw, sub_jaw, main_stop_screws, sub_stop_screws)
-        self._set_section_fields(
-            "head1",
-            head_zero_fields(work, "head1", sp1_label, sp2_label),
-        )
-        self._set_tool_cards(
-            "head1_tools",
-            work.get("head1_tool_assignments") or work.get("head1_tool_ids") or [],
-        )
-        head2_fields = head_zero_fields(work, "head2", sp1_label, sp2_label)
-        self._set_section_fields(
-            "head2",
-            head2_fields if head2_fields else [
-                (self._t("setup_page.field.status", "Status"), self._t("setup_page.field.unused_setup", "Unused for this setup"))
-            ],
-        )
-        self._set_tool_cards(
-            "head2_tools",
-            work.get("head2_tool_assignments") or work.get("head2_tool_ids") or [],
-        )
-        sub_pickup = (work.get("sub_pickup_z") or "").strip()
-        robot_info = (work.get("robot_info", "") or "").strip()
-        robot_fields = []
-        if sub_pickup:
-            robot_fields.append((self._t("setup_page.field.sub_pickup_z", "Sub pickup Z"), sub_pickup))
-        if robot_info:
-            robot_fields.append((self._t("setup_page.field.robot_info", "Robot info"), robot_info))
-        self._set_section_fields("robot", robot_fields)
-        notes_text = (work.get("notes", "") or "").strip()
-        self._set_section_fields("notes", [(self._t("setup_page.field.notes", "Notes"), notes_text)] if notes_text else [])
-        self._set_section_fields("sources", [
-            (self._t("setup_page.field.tool_db", "Tool DB"), tool_db_state),
-            (self._t("setup_page.field.jaw_db", "Jaw DB"), jaw_db_state),
-        ])
 
     def _open_library_viewer(self):
         if not self.current_work_id:

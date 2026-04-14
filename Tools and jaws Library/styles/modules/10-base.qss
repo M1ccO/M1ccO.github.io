@@ -17,8 +17,20 @@
     color: #1f1f1f;
 }
 
-QMainWindow, QWidget {
+QMainWindow,
+QWidget#appRoot {
     background-color: #eceff2;
+}
+
+/* Nav-rail footer (import/export launcher card) is transparent so it
+   inherits the enclosing navFrame background colour */
+QFrame[launchCard="true"] {
+    background-color: transparent;
+    border: none;
+}
+
+QFrame[launchCard="true"] QLabel {
+    background-color: transparent;
 }
 
 QToolTip {

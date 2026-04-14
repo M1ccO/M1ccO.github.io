@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 class LocalizationService:
@@ -32,7 +35,7 @@ class LocalizationService:
             try:
                 text = text.format(**kwargs)
             except Exception:
-                pass
+                logger.debug("localization: format failed for key=%r kwargs=%r", key, kwargs)
         return text
 
     def _load_catalog(self, language: str) -> dict:
@@ -49,8 +52,10 @@ class LocalizationService:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
         except Exception:
+            logger.warning("localization: failed to load catalog %s", path, exc_info=True)
             return {}
         if not isinstance(payload, dict):
+            logger.warning("localization: catalog %s is not a JSON object", path)
             return {}
         return {str(k): str(v) for k, v in payload.items()}
 

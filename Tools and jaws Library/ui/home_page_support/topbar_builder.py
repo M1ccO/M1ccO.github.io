@@ -29,6 +29,7 @@ from shared.ui.helpers.topbar_common import (
     build_toolbar_title,
     rebuild_filter_row as _rebuild_filter_row_common,
 )
+from ui.widgets.common import apply_shared_dropdown_style
 
 __all__ = [
     "build_tool_filter_toolbar",
@@ -76,6 +77,7 @@ def build_tool_filter_toolbar(page) -> QFrame:
     page.type_filter.setMinimumWidth(140)
     page._build_tool_type_filter_items()
     page.type_filter.currentIndexChanged.connect(page._on_filter_changed)
+    apply_shared_dropdown_style(page.type_filter)
 
     page.preview_window_btn = build_preview_toggle(
         TOOL_ICONS_DIR,
