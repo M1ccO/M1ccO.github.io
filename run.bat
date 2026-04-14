@@ -5,6 +5,7 @@ set "VENV_DIR=%ROOT%.venv"
 set "PY=%VENV_DIR%\Scripts\python.exe"
 set "PYW=%VENV_DIR%\Scripts\pythonw.exe"
 set "APP=%ROOT%Setup Manager\main.py"
+set "LIB_APP=%ROOT%Tools and jaws Library\main.py"
 set "REQ=%ROOT%Setup Manager\requirements.txt"
 
 if not exist "%APP%" (
@@ -20,6 +21,8 @@ if not exist "%REQ%" (
 	pause
 	exit /b 1
 )
+
+call :kill_old_instances
 
 call :ensure_venv
 if not "%ERRORLEVEL%"=="0" (
@@ -100,4 +103,11 @@ exit /b 1
 echo library_ready > "%MARKER%"
 
 :venv_ready
+exit /b 0
+
+:kill_old_instances
+where powershell >nul 2>&1
+if errorlevel 1 exit /b 0
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$targets = @('%APP%', '%LIB_APP%'); $procs = @(Get-CimInstance Win32_Process | Where-Object { $cmd = $_.CommandLine; if (-not $cmd) { return $false }; if ($_.Name -notmatch '^pythonw?(\.exe)?$') { return $false }; foreach ($t in $targets) { if ($t -and $cmd -like ('*' + $t + '*')) { return $true } }; return $false }); if ($procs.Count -gt 0) { foreach ($p in $procs) { Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue }; Write-Host ('Closed old instance(s): ' + $procs.Count) }"
 exit /b 0

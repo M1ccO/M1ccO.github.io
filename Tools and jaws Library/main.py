@@ -189,7 +189,7 @@ def main():
     win = MainWindow(tool_service, jaw_service, export_service, settings_service, launch_master_filter=launch_master_filter)
 
     def warm_preview_after_startup():
-        if _known_args.hidden or getattr(app, '_preview_warmup_widget', None) is not None:
+        if getattr(app, '_preview_warmup_widget', None) is not None:
             return
         try:
             from shared.ui.stl_preview import StlPreviewWidget
@@ -200,9 +200,12 @@ def main():
         except Exception:
             app._preview_warmup_widget = None
 
+    # Warm up preview engine in both hidden and visible starts so first detail
+    # open is smooth after Setup Manager handoff.
+    QTimer.singleShot(250, warm_preview_after_startup)
+
     if not _known_args.hidden:
         win.show()
-        QTimer.singleShot(250, warm_preview_after_startup)
     # Hidden mode: window stays hidden until an IPC show request arrives.
     # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
@@ -226,6 +229,9 @@ def main():
     def process_external_request(payload: dict):
         win.apply_external_request(payload)
         geometry_text = str(payload.get('geometry', '')).strip()
+        selector_mode = str(payload.get('selector_mode', '')).strip().lower()
+        selector_active_request = selector_mode in {'tools', 'jaws'}
+        was_visible = bool(win.isVisible() and not win.isMinimized())
 
         if bool(payload.get('show', True)):
             app.setQuitOnLastWindowClosed(True)
@@ -234,10 +240,16 @@ def main():
             except Exception:
                 pass
 
+            # Selector requests are hosted in standalone dialogs; do not surface
+            # the main library window behind them.
+            if selector_active_request:
+                return
+
             win.setWindowOpacity(1.0)
             if win.isMinimized():
                 win.showNormal()
-            win.show()
+            if not win.isVisible():
+                win.show()
             if geometry_text:
                 _apply_frame_geometry_string(win, geometry_text)
                 QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
@@ -251,7 +263,8 @@ def main():
                 ctypes.windll.user32.SetForegroundWindow(hwnd)
             except Exception:
                 pass
-            win.fade_in()
+            if not was_visible:
+                win.fade_in()
 
     def handle_new_connection():
         while server.hasPendingConnections():

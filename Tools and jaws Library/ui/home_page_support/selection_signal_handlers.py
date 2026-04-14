@@ -5,6 +5,7 @@ Extracted from home_page.py to keep the page class thin and orchestration-focuse
 
 from __future__ import annotations
 
+from PySide6.QtCore import QTimer
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
@@ -109,8 +110,8 @@ def on_item_double_clicked(page, index) -> None:
         return
 
     if page._details_hidden:
-        page.populate_details(page._get_selected_tool())
         page.show_details()
+        QTimer.singleShot(0, lambda: page.populate_details(page._get_selected_tool()))
         return
 
     page.hide_details()

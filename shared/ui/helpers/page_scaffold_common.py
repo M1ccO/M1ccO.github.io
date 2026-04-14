@@ -46,6 +46,7 @@ def apply_catalog_list_view_defaults(list_view: QListView) -> None:
     list_view.setObjectName('toolCatalog')
     list_view.setVerticalScrollMode(QListView.ScrollPerPixel)
     list_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    list_view.setEditTriggers(QListView.NoEditTriggers)
     list_view.setSelectionMode(QListView.ExtendedSelection)
     list_view.setDragEnabled(True)
     list_view.setMouseTracking(True)

@@ -215,9 +215,11 @@ JAW_LIBRARY_DB_PATH = _first_existing_path(
 
 NAV_ITEMS = ["SETUPS", "DRAWINGS", "LOGBOOK"]
 
-# Keep Setup Manager startup responsive by default. Tool Library is launched on
-# demand and selector IPC now retries robustly while it warms up.
-ENABLE_TOOL_LIBRARY_PRELOAD = False
+# Preload Tool Library by default so first switch from Setup Manager is seamless.
+# Can be disabled for diagnostics via NTX_ENABLE_TOOL_LIBRARY_PRELOAD=0.
+ENABLE_TOOL_LIBRARY_PRELOAD = str(
+    os.environ.get("NTX_ENABLE_TOOL_LIBRARY_PRELOAD", "1")
+).strip().lower() not in {"0", "false", "no", "off"}
 
 JAW_TYPES = ["Soft jaws", "Hard jaws", "Spiked jaws", "Special jaws"]
 SPINDLE_SIDES = ["SP1", "SP2", "Both"]

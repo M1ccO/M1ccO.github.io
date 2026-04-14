@@ -1,5 +1,145 @@
 {
-  "version": 1,
+  "version": 2,
+  "description": "Machine-readable architecture map for AI agents and tooling. Describes app ownership, module structure, dependency rules, and key entry points. Last updated: 2026-04-14.",
+
+  "apps": {
+    "toolsAndJawsLibrary": {
+      "root": "Tools and jaws Library",
+      "entryPoint": "Tools and jaws Library/main.py",
+      "mainWindow": "Tools and jaws Library/ui/main_window.py",
+      "pages": {
+        "toolCatalog": {
+          "label": "Tool Library / Tool Catalog",
+          "orchestrator": "Tools and jaws Library/ui/home_page.py",
+          "support": "Tools and jaws Library/ui/home_page_support/",
+          "delegate": "Tools and jaws Library/ui/tool_catalog_delegate.py"
+        },
+        "jawCatalog": {
+          "label": "Jaw Library / Jaw Catalog",
+          "orchestrator": "Tools and jaws Library/ui/jaw_page.py",
+          "support": "Tools and jaws Library/ui/jaw_page_support/",
+          "delegate": "Tools and jaws Library/ui/jaw_catalog_delegate.py"
+        },
+        "export": "Tools and jaws Library/ui/export_page.py",
+        "jawExport": "Tools and jaws Library/ui/jaw_export_page.py"
+      },
+      "editors": {
+        "toolEditor": {
+          "dialog": "Tools and jaws Library/ui/tool_editor_dialog.py",
+          "support": "Tools and jaws Library/ui/tool_editor_support/"
+        },
+        "jawEditor": {
+          "dialog": "Tools and jaws Library/ui/jaw_editor_dialog.py",
+          "support": "Tools and jaws Library/ui/jaw_editor_support/"
+        }
+      },
+      "selectors": {
+        "description": "Standalone selector dialogs opened by MainWindow when Setup Manager requests a selection. Each dialog is self-contained — catalog + assignment panel + DONE/CANCEL.",
+        "toolSelector": "Tools and jaws Library/ui/selectors/tool_selector_dialog.py",
+        "jawSelector": "Tools and jaws Library/ui/selectors/jaw_selector_dialog.py",
+        "common": "Tools and jaws Library/ui/selectors/common.py",
+        "selectorSessionLifecycle": "Tools and jaws Library/ui/main_window.py",
+        "selectorSessionMethods": {
+          "_open_selector_dialog_for_session": "line ~1100 — creates and shows the appropriate dialog",
+          "_on_selector_dialog_submit": "line ~1145 — receives result payload from dialog DONE",
+          "_on_selector_dialog_cancel": "line ~1137 — handles dialog CANCEL, clears session",
+          "_send_selector_result_payload": "line ~1159 — sends result back to Setup Manager via QLocalSocket IPC",
+          "_clear_selector_session": "line ~1060 — closes dialogs, resets all session state",
+          "_close_selector_dialogs": "line ~1085 — safe close of open selector dialogs"
+        }
+      },
+      "sharedUiHelpers": {
+        "selectorMime": "Tools and jaws Library/ui/selector_mime.py",
+        "selectorStateHelpers": "Tools and jaws Library/ui/selector_state_helpers.py",
+        "selectorUiHelpers": "Tools and jaws Library/ui/selector_ui_helpers.py",
+        "selectorPanelBuilders": "Tools and jaws Library/ui/shared/selector_panel_builders.py"
+      },
+      "ownedDomains": ["tools", "jaws", "export", "selector workflows"],
+      "intentionalBoundaries": [
+        "Tools and jaws Library/data/migrations.py remains app-specific",
+        "Tools and jaws Library/config.py remains app-specific"
+      ]
+    },
+    "setupManager": {
+      "root": "Setup Manager",
+      "entryPoint": "Setup Manager/main.py",
+      "mainWindow": "Setup Manager/ui/main_window.py",
+      "pages": {
+        "setupPage": {
+          "label": "Works / Setups list",
+          "orchestrator": "Setup Manager/ui/setup_page.py",
+          "support": "Setup Manager/ui/setup_page_support/"
+        },
+        "logbook": "Setup Manager/ui/logbook_page.py",
+        "drawings": {
+          "orchestrator": "Setup Manager/ui/drawing_page.py",
+          "support": "Setup Manager/ui/drawing_page_support/"
+        }
+      },
+      "editors": {
+        "workEditor": {
+          "label": "Work Editor (large central dialog)",
+          "dialog": "Setup Manager/ui/work_editor_dialog.py",
+          "support": "Setup Manager/ui/work_editor_support/",
+          "refactorStatus": "Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md"
+        }
+      },
+      "services": {
+        "workService": "Setup Manager/services/work_service.py",
+        "logbookService": "Setup Manager/services/logbook_service.py",
+        "drawService": "Setup Manager/services/draw_service.py",
+        "printService": "Setup Manager/services/print_service.py"
+      },
+      "ownedDomains": ["works", "logbook", "drawings", "setup database preferences"],
+      "intentionalBoundaries": [
+        "Setup Manager/data/migrations.py remains app-specific",
+        "Setup Manager/config.py remains app-specific"
+      ]
+    }
+  },
+
+  "shared": {
+    "root": "shared",
+    "platforms": {
+      "catalogPageBase": "shared/ui/platforms/catalog_page_base.py",
+      "editorDialogBase": "shared/ui/platforms/editor_dialog_base.py",
+      "catalogDelegate": "shared/ui/platforms/catalog_delegate.py",
+      "selectorState": "shared/ui/platforms/selector_state.py",
+      "exportSpecification": "shared/ui/platforms/export_specification.py"
+    },
+    "services": [
+      "shared/services/localization_service.py",
+      "shared/services/ui_preferences_service.py"
+    ],
+    "models": [
+      "shared/models/tool.py",
+      "shared/models/jaw.py"
+    ],
+    "ui": {
+      "stlPreview": "shared/ui/stl_preview.py",
+      "miniAssignmentCard": "shared/ui/cards/mini_assignment_card.py",
+      "editorHelpers": "shared/ui/helpers/editor_helpers.py",
+      "pageScaffoldCommon": "shared/ui/helpers/page_scaffold_common.py",
+      "dragdropHelpers": "shared/ui/helpers/dragdrop_helpers.py",
+      "editorTable": "shared/ui/helpers/editor_table.py",
+      "preferencesDialogBase": "shared/ui/preferences_dialog_base.py"
+    },
+    "data": {
+      "modelPaths": "shared/data/model_paths.py"
+    }
+  },
+
+  "ipc": {
+    "description": "Setup Manager and Tools/Jaws Library communicate via QLocalSocket. Setup Manager opens a named socket server; Tools/Jaws Library connects and sends JSON payloads.",
+    "selectorFlow": [
+      "Setup Manager sends 'open_selector' command with mode ('tools'|'jaws'), head, spindle, initial_assignments",
+      "Tools/Jaws Library MainWindow receives payload → calls _open_selector_dialog_for_session()",
+      "User completes selection in ToolSelectorDialog or JawSelectorDialog",
+      "Dialog calls on_submit callback → _on_selector_dialog_submit() → _send_selector_result_payload()",
+      "MainWindow connects QLocalSocket to callback_server name from payload → sends JSON result"
+    ]
+  },
+
   "canonicalSharedModules": {
     "services": [
       "shared.services.localization_service",
@@ -20,34 +160,7 @@
       "shared.data.model_paths"
     ]
   },
-  "appOwnership": {
-    "setupManager": {
-      "root": "Setup Manager",
-      "ownedDomains": [
-        "works",
-        "logbook",
-        "drawings",
-        "setup database preferences"
-      ],
-      "intentionalBoundaries": [
-        "Setup Manager/data/migrations.py remains app-specific",
-        "Setup Manager/config.py remains app-specific"
-      ]
-    },
-    "toolsAndJawsLibrary": {
-      "root": "Tools and jaws Library",
-      "ownedDomains": [
-        "tools",
-        "jaws",
-        "export",
-        "selector workflows"
-      ],
-      "intentionalBoundaries": [
-        "Tools and jaws Library/data/migrations.py remains app-specific",
-        "Tools and jaws Library/config.py remains app-specific"
-      ]
-    }
-  },
+
   "dependencyRules": {
     "allow": [
       "app -> shared",
@@ -56,7 +169,8 @@
     "deny": [
       "Setup Manager -> Tools and jaws Library direct imports",
       "Tools and jaws Library -> Setup Manager direct imports",
-      "legacy shared import aliases"
+      "legacy shared import aliases",
+      "home_page_support -> jaw_page_support (or vice versa)"
     ]
   }
 }

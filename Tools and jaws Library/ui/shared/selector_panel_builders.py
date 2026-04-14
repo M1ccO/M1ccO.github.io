@@ -107,6 +107,23 @@ def build_selector_toggle_button(
     return toggle_btn
 
 
+def style_selector_context_button(
+    button: QPushButton,
+    *,
+    checkable: bool = False,
+    fixed_height: int = 30,
+    min_width: int = 120,
+    max_width: int = 140,
+) -> None:
+    """Apply shared sizing + style defaults for selector context buttons (HEAD/SP)."""
+    button.setProperty("panelActionButton", True)
+    button.setCheckable(checkable)
+    button.setFixedHeight(fixed_height)
+    button.setMinimumWidth(min_width)
+    button.setMaximumWidth(max_width)
+    style_panel_action_button(button)
+
+
 def build_selector_hint_label(
     *,
     text: str,

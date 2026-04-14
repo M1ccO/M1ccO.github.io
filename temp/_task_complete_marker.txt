@@ -1,1 +1,0 @@
-Task completion marker: recovery from rate-limit wall addressed; work continued and status synchronized.

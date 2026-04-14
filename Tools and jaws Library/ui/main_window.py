@@ -51,6 +51,7 @@ from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
 from ui.main_window_support import empty_selector_session_state, selector_session_from_payload
+from ui.selectors import JawSelectorDialog, ToolSelectorDialog
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from shared.ui.main_window_helpers import (
     THEME_PALETTES,
@@ -186,6 +187,9 @@ class MainWindow(QMainWindow):
         self._selector_spindle = ''
         self._selector_initial_assignments: list[dict] = []
         self._selector_initial_assignment_buckets: dict[str, list[dict]] = {}
+        self._tool_selector_dialog: ToolSelectorDialog | None = None
+        self._jaw_selector_dialog: JawSelectorDialog | None = None
+        self._closing_selector_dialogs = False
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.export_service, self.settings_service)
@@ -480,11 +484,6 @@ class MainWindow(QMainWindow):
         self.master_filter_toggle.setVisible(self._master_filter_enabled)
         self.master_filter_toggle.clicked.connect(self._on_master_filter_toggled)
         footer_layout.addWidget(self.master_filter_toggle, 0, Qt.AlignHCenter)
-
-        self.selector_send_btn = QPushButton(self._t('tool_library.selector.done', 'DONE'))
-        self.selector_send_btn.setProperty('selectorPrimaryActionButton', True)
-        self.selector_send_btn.setVisible(False)
-        self.selector_send_btn.clicked.connect(self._send_selector_selection)
 
         self.back_to_setup_btn = QToolButton()
         self.back_to_setup_btn.setProperty('topBarIconButton', True)
@@ -899,7 +898,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "master_filter_toggle"):
             self.master_filter_toggle.setToolTip(self._t("tool_library.master_filter.button", "MASTER FILTER"))
             self._update_master_filter_toggle_visual()
-        self._update_selector_action_button()
         if hasattr(self, "tool_head_filter_combo"):
             self._rebuild_head_filter_combo_items()
             self.tool_head_filter_combo.setToolTip(self._t('tool_library.head_filter.toggle_tip', 'Left click toggles HEAD1 and HEAD2. Right click shows both heads.'))
@@ -981,8 +979,6 @@ class MainWindow(QMainWindow):
         # hidden Tool Library instance always reopens in normal library mode
         # unless a fresh selector payload explicitly enables selector mode.
         self._set_selector_session_state(empty_selector_session_state())
-        self._update_selector_action_button()
-        self._apply_selector_context_to_pages()
 
         x, y, width, height = self._current_window_rect()
 
@@ -1062,9 +1058,8 @@ class MainWindow(QMainWindow):
             )
 
     def _clear_selector_session(self, show: bool = True):
+        self._close_selector_dialogs()
         self._set_selector_session_state(empty_selector_session_state())
-        self._update_selector_action_button()
-        self._apply_selector_context_to_pages()
         # Remove stay-on-top hint so the window behaves normally
         self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
         if show:
@@ -1087,68 +1082,91 @@ class MainWindow(QMainWindow):
         else:
             self._selector_initial_assignment_buckets = {}
 
-    def _update_selector_action_button(self):
-        if not hasattr(self, 'selector_send_btn'):
-            return
-        self.selector_send_btn.setVisible(False)
-        self.selector_send_btn.setToolTip('')
+    def _close_selector_dialogs(self) -> None:
+        self._closing_selector_dialogs = True
+        dialogs = [self._tool_selector_dialog, self._jaw_selector_dialog]
+        self._tool_selector_dialog = None
+        self._jaw_selector_dialog = None
+        for dialog in dialogs:
+            if dialog is None:
+                continue
+            try:
+                dialog.blockSignals(True)
+                dialog.close()
+            except Exception:
+                pass
+        self._closing_selector_dialogs = False
 
-    def _apply_selector_context_to_pages(self):
-        tools_selector_active = self._selector_mode == 'tools'
-        jaws_selector_active = self._selector_mode == 'jaws'
-        selector_head = self._selector_head
-        selector_spindle = self._selector_spindle
-        selector_assignments = self._selector_initial_assignments if (tools_selector_active or jaws_selector_active) else []
-        selector_assignment_buckets = self._selector_initial_assignment_buckets if tools_selector_active else {}
+    def _open_selector_dialog_for_session(self, should_show: bool) -> None:
+        self._close_selector_dialogs()
 
-        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
-            if hasattr(page, 'set_selector_context'):
-                page.set_selector_context(
-                    tools_selector_active,
-                    selector_head,
-                    selector_spindle,
-                    selector_assignments,
-                    selector_assignment_buckets,
-                )
-        if hasattr(self.jaws_page, 'set_selector_context'):
-            self.jaws_page.set_selector_context(jaws_selector_active, selector_spindle, selector_assignments)
-
-    def _send_selector_selection(self):
-        if self._selector_mode not in ('tools', 'jaws'):
-            return
-
-        if self._selector_mode == 'jaws':
-            selected_items = []
-            if hasattr(self.jaws_page, 'selector_assigned_jaws_for_setup_assignment'):
-                selected_items = self.jaws_page.selector_assigned_jaws_for_setup_assignment()
-            if not selected_items:
-                selected_items = self.jaws_page.selected_jaws_for_setup_assignment()
-            kind = 'jaws'
+        if self._selector_mode == 'tools':
+            dialog = ToolSelectorDialog(
+                tool_service=self.tool_service,
+                machine_profile=self.machine_profile,
+                translate=self._t,
+                selector_head=self._selector_head,
+                selector_spindle=self._selector_spindle,
+                initial_assignments=self._selector_initial_assignments,
+                initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                on_submit=self._on_selector_dialog_submit,
+                on_cancel=self._on_selector_dialog_cancel,
+                parent=self,
+            )
+            self._tool_selector_dialog = dialog
+        elif self._selector_mode == 'jaws':
+            dialog = JawSelectorDialog(
+                jaw_service=self.jaw_service,
+                machine_profile=self.machine_profile,
+                translate=self._t,
+                selector_spindle=self._selector_spindle,
+                initial_assignments=self._selector_initial_assignments,
+                on_submit=self._on_selector_dialog_submit,
+                on_cancel=self._on_selector_dialog_cancel,
+                parent=self,
+            )
+            self._jaw_selector_dialog = dialog
         else:
-            active_page = self.stack.currentWidget() if hasattr(self, 'stack') else None
-            selected_items = []
-            selector_head = self._selector_head
-            selector_spindle = self._selector_spindle
-            assignment_buckets_by_target: dict = {}
-            if hasattr(active_page, 'selector_assigned_tools_for_setup_assignment'):
-                selected_items = active_page.selector_assigned_tools_for_setup_assignment()
-            if hasattr(active_page, 'selector_assignment_buckets_for_setup_assignment'):
-                assignment_buckets_by_target = active_page.selector_assignment_buckets_for_setup_assignment()
-            if hasattr(active_page, 'selector_current_target_for_setup_assignment'):
-                target = active_page.selector_current_target_for_setup_assignment()
-                if isinstance(target, dict):
-                    target_head = str(target.get('head') or '').strip().upper()
-                    target_spindle = str(target.get('spindle') or '').strip().lower()
-                    if target_head in {'HEAD1', 'HEAD2'}:
-                        selector_head = target_head
-                    if target_spindle in {'main', 'sub'}:
-                        selector_spindle = target_spindle
-            if not selected_items and hasattr(active_page, 'selected_tools_for_setup_assignment'):
-                selected_items = active_page.selected_tools_for_setup_assignment()
-            if not selected_items:
-                selected_items = self.home_page.selected_tools_for_setup_assignment()
-            kind = 'tools'
+            return
 
+        if should_show:
+            # Stay on top of the Setup Manager Work Editor (cross-process).
+            dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+
+    def _on_selector_dialog_cancel(self) -> None:
+        if self._closing_selector_dialogs:
+            return
+        if self._selector_mode not in {'tools', 'jaws'}:
+            return
+        self._clear_selector_session(show=False)
+        self._back_to_setup_manager()
+
+    def _on_selector_dialog_submit(self, result: dict) -> None:
+        kind = str(result.get('kind') or '').strip().lower()
+        selected_items = result.get('selected_items') or []
+        selector_head = str(result.get('selector_head') or self._selector_head or '').strip().upper()
+        selector_spindle = str(result.get('selector_spindle') or self._selector_spindle or '').strip().lower()
+        assignment_buckets_by_target = result.get('assignment_buckets_by_target') or {}
+        self._send_selector_result_payload(
+            kind=kind,
+            selected_items=selected_items,
+            selector_head=selector_head,
+            selector_spindle=selector_spindle,
+            assignment_buckets_by_target=assignment_buckets_by_target,
+        )
+
+    def _send_selector_result_payload(
+        self,
+        *,
+        kind: str,
+        selected_items: list[dict],
+        selector_head: str = '',
+        selector_spindle: str = '',
+        assignment_buckets_by_target: dict | None = None,
+    ) -> None:
         if kind == 'tools' and not selected_items:
             QMessageBox.information(
                 self,
@@ -1260,16 +1278,26 @@ class MainWindow(QMainWindow):
         selector_state = selector_session_from_payload(payload)
         selector_mode = str(selector_state.get('mode') or '')
         should_show = bool(payload.get('show', True))
-        if selector_state.get('active'):
+        selector_active = bool(selector_state.get('active'))
+        selector_dialog_open = bool(
+            (self._tool_selector_dialog is not None and self._tool_selector_dialog.isVisible())
+            or (self._jaw_selector_dialog is not None and self._jaw_selector_dialog.isVisible())
+        )
+
+        # During an active selector dialog, ignore generic non-selector IPC
+        # requests so they cannot surface the main library window behind it.
+        if selector_dialog_open and not selector_active:
+            return
+
+        if selector_active:
             self._set_selector_session_state(selector_state)
-            self._update_selector_action_button()
-            self._apply_selector_context_to_pages()
-            # Bring window on top of Work Editor
-            self.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-            if should_show:
-                self.show()
-                self.raise_()
-                self.activateWindow()
+            # Open the standalone selector dialog — it is the sole UI.  Hide
+            # the main library window so it does NOT appear behind the dialog.
+            # Do NOT call show/raise on the main window and do NOT switch the
+            # catalog module (those were part of the old embedded-selector flow
+            # that has been replaced by standalone dialogs).
+            self.hide()
+            self._open_selector_dialog_for_session(should_show=should_show)
         else:
             self._clear_selector_session(show=should_show)
             # Remove stay-on-top when exiting selector mode
@@ -1277,14 +1305,14 @@ class MainWindow(QMainWindow):
             if should_show:
                 self.show()
 
-        # Switch module if requested.
-        module = selector_mode if selector_mode in ('tools', 'jaws') else str(payload.get('module', '')).strip()
-        if module in ('tools', 'jaws'):
-            self._apply_module_mode(module)
+            # Switch module only when NOT in selector mode.
+            module = selector_mode if selector_mode in ('tools', 'jaws') else str(payload.get('module', '')).strip()
+            if module in ('tools', 'jaws'):
+                self._apply_module_mode(module)
 
         kind = str(payload.get('kind', '')).strip()
         item_id = str(payload.get('item_id', '')).strip()
-        if kind:
+        if kind and not selector_active:
             self.navigate_to(kind, item_id)
 
     def _apply_style(self):

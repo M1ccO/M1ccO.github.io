@@ -277,7 +277,12 @@ def warmup_preview_engine(page) -> None:
             'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
         )
     )
-    page._inline_preview_warmup.hide()
+
+    # Force one-time OpenGL initialization offscreen so the first visible
+    # detail preview does not appear to close/reopen the whole window.
+    page._inline_preview_warmup.setGeometry(-10000, -10000, 8, 8)
+    page._inline_preview_warmup.show()
+    QTimer.singleShot(0, page._inline_preview_warmup.hide)
 
     def _drop_warmup():
         if page._inline_preview_warmup is not None:

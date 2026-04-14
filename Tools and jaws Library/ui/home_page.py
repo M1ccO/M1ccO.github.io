@@ -98,6 +98,20 @@ from ui.home_page_support.selector_context import (
     selector_current_target_for_setup_assignment as _selector_current_target_impl,
     set_selector_context as _set_selector_context_impl,
     selector_assigned_tools_for_setup_assignment as _selector_assigned_tools_impl,
+    on_selector_toggle_clicked as _on_selector_toggle_clicked_impl,
+    on_selector_cancel as _on_selector_cancel_impl,
+    on_selector_done as _on_selector_done_impl,
+    toggle_selector_spindle as _toggle_selector_spindle_impl,
+    on_selector_tools_dropped as _on_selector_tools_dropped_impl,
+    sync_selector_assignment_order as _sync_selector_assignment_order_impl,
+    remove_selector_assignment as _remove_selector_assignment_impl,
+    remove_selector_assignments_by_drop as _remove_selector_assignments_by_drop_impl,
+    move_selector_up as _move_selector_up_impl,
+    move_selector_down as _move_selector_down_impl,
+    add_selector_comment as _add_selector_comment_impl,
+    delete_selector_comment as _delete_selector_comment_impl,
+    sync_selector_card_selection_states as _sync_selector_card_selection_states_impl,
+    update_selector_assignment_buttons as _update_selector_assignment_buttons_impl,
 )
 from ui.home_page_support.filter_coordinator import (
     apply_filters as _apply_filters_impl,
@@ -258,6 +272,8 @@ class HomePage(CatalogPageBase):
             return
         self._initial_load_done = True
         self._deferred_refresh_needed = False
+        # Warm OpenGL preview once so first detail open is smooth.
+        self._warmup_preview_engine()
         self.refresh_catalog()
 
     def showEvent(self, event) -> None:
@@ -546,6 +562,48 @@ class HomePage(CatalogPageBase):
     def selector_assigned_tools_for_setup_assignment(self) -> list[dict]:
         """Return persisted tools with head/spindle metadata for setup assignment."""
         return _selector_assigned_tools_impl(self)
+
+    def _on_selector_toggle_clicked(self) -> None:
+        _on_selector_toggle_clicked_impl(self)
+
+    def _on_selector_cancel(self) -> None:
+        _on_selector_cancel_impl(self)
+
+    def _on_selector_done(self) -> None:
+        _on_selector_done_impl(self)
+
+    def _toggle_selector_spindle(self) -> None:
+        _toggle_selector_spindle_impl(self)
+
+    def _on_selector_tools_dropped(self, dropped_items: list, insert_row: int) -> None:
+        _on_selector_tools_dropped_impl(self, dropped_items, insert_row)
+
+    def _sync_selector_assignment_order(self) -> None:
+        _sync_selector_assignment_order_impl(self)
+
+    def _remove_selector_assignment(self) -> None:
+        _remove_selector_assignment_impl(self)
+
+    def _remove_selector_assignments_by_drop(self, dropped_items: list) -> None:
+        _remove_selector_assignments_by_drop_impl(self, dropped_items)
+
+    def _move_selector_up(self) -> None:
+        _move_selector_up_impl(self)
+
+    def _move_selector_down(self) -> None:
+        _move_selector_down_impl(self)
+
+    def _add_selector_comment(self) -> None:
+        _add_selector_comment_impl(self)
+
+    def _delete_selector_comment(self) -> None:
+        _delete_selector_comment_impl(self)
+
+    def _sync_selector_card_selection_states(self) -> None:
+        _sync_selector_card_selection_states_impl(self)
+
+    def _update_selector_assignment_buttons(self) -> None:
+        _update_selector_assignment_buttons_impl(self)
 
     def set_module_switch_handler(self, callback) -> None:
         """Set external callback for module switch button."""

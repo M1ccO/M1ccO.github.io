@@ -47,6 +47,7 @@ from ui.jaw_page_support import (
     sync_detached_preview,
     toggle_preview_window,
     update_detached_measurement_toggle_icon,
+    warmup_preview_engine as _warmup_preview_engine_impl,
 )
 from ui.jaw_page_support.event_filter import handle_jaw_page_event
 from ui.jaw_page_support.page_builders import build_jaw_page_layout
@@ -109,6 +110,7 @@ class JawPage(CatalogPageBase):
         self._detached_measurements_enabled = True
         self._measurement_toggle_btn = None
         self._close_preview_shortcut = None
+        self._inline_preview_warmup = None
 
         super().__init__(parent=parent, item_service=jaw_service, translate=self._translate)
 
@@ -129,6 +131,8 @@ class JawPage(CatalogPageBase):
             return
         self._initial_load_done = True
         self._deferred_refresh_needed = False
+        # Warm OpenGL preview once so first detail open is smooth.
+        self._warmup_preview_engine()
         self.refresh_catalog()
 
     def showEvent(self, event) -> None:
@@ -475,6 +479,9 @@ class JawPage(CatalogPageBase):
 
     def toggle_preview_window(self) -> None:
         toggle_preview_window(self)
+
+    def _warmup_preview_engine(self) -> None:
+        _warmup_preview_engine_impl(self)
 
     # ------------------------------------------------------------------
     # Batch editing

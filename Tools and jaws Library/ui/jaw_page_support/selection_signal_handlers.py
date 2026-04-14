@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtCore import QTimer
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
@@ -85,8 +86,8 @@ def on_item_double_clicked(page, index) -> None:
         return
 
     if page._details_hidden:
-        page.populate_details(page._get_selected_jaw())
         page.show_details()
+        QTimer.singleShot(0, lambda: page.populate_details(page._get_selected_jaw()))
         return
 
     page.hide_details()

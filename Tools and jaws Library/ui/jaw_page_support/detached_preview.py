@@ -214,6 +214,38 @@ def toggle_preview_window(page) -> None:
     )
 
 
+def warmup_preview_engine(page) -> None:
+    """Pre-create a hidden preview widget to reduce first detail-open latency."""
+    from PySide6.QtCore import QTimer
+
+    if StlPreviewWidget is None:
+        return
+
+    if getattr(page, '_inline_preview_warmup', None) is not None:
+        return
+
+    page._inline_preview_warmup = StlPreviewWidget(parent=page)
+    page._inline_preview_warmup.set_control_hint_text(
+        page._t(
+            'tool_editor.hint.rotate_pan_zoom',
+            'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+        )
+    )
+
+    # Force one-time OpenGL initialization offscreen so the first visible
+    # detail preview does not appear to close/reopen the whole window.
+    page._inline_preview_warmup.setGeometry(-10000, -10000, 8, 8)
+    page._inline_preview_warmup.show()
+    QTimer.singleShot(0, page._inline_preview_warmup.hide)
+
+    def _drop_warmup():
+        if page._inline_preview_warmup is not None:
+            page._inline_preview_warmup.deleteLater()
+            page._inline_preview_warmup = None
+
+    QTimer.singleShot(10000, _drop_warmup)
+
+
 __all__ = [
     "apply_detached_measurement_state",
     "apply_detached_preview_default_bounds",
@@ -226,4 +258,5 @@ __all__ = [
     "sync_detached_preview",
     "toggle_preview_window",
     "update_detached_measurement_toggle_icon",
+    "warmup_preview_engine",
 ]
