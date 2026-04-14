@@ -18,7 +18,9 @@ import sys
 import tempfile
 import types
 import unittest
+import importlib.util
 from pathlib import Path
+from unittest import mock
 
 # ---------------------------------------------------------------------------
 # Offscreen Qt platform — must be set before any PySide6 import.
@@ -30,17 +32,76 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # ---------------------------------------------------------------------------
 _HERE = Path(__file__).resolve().parent
 _WORKSPACE = _HERE.parent
+_SETUP_MANAGER_ROOT = _WORKSPACE / "Setup Manager"
 for _candidate in (_WORKSPACE / "Tools and jaws Library", _WORKSPACE):
     candidate_str = str(_candidate)
     if candidate_str not in sys.path:
         sys.path.insert(0, candidate_str)
+
+
+def _load_module_from_path(module_name: str, module_path: Path):
+    spec = importlib.util.spec_from_file_location(module_name, str(module_path))
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load module {module_name} from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_SETUP_MIGRATIONS = _load_module_from_path(
+    "setup_manager_migrations_for_tests",
+    _SETUP_MANAGER_ROOT / "data" / "migrations.py",
+)
+_SETUP_WORK_SERVICE = _load_module_from_path(
+    "setup_manager_work_service_for_tests",
+    _SETUP_MANAGER_ROOT / "services" / "work_service.py",
+)
+_SETUP_LOGBOOK_SERVICE = _load_module_from_path(
+    "setup_manager_logbook_service_for_tests",
+    _SETUP_MANAGER_ROOT / "services" / "logbook_service.py",
+)
+_SETUP_DRAW_SERVICE = _load_module_from_path(
+    "setup_manager_draw_service_for_tests",
+    _SETUP_MANAGER_ROOT / "services" / "draw_service.py",
+)
+
+
+def _load_tool_library_main_window_module():
+    return _load_module_from_path(
+        "tool_library_main_window_for_tests",
+        _WORKSPACE / "Tools and jaws Library" / "ui" / "main_window.py",
+    )
+
+
+def _load_setup_manager_print_service_module():
+    setup_root_str = str(_SETUP_MANAGER_ROOT)
+    original_config = sys.modules.pop("config", None)
+    sys.path.insert(0, setup_root_str)
+    try:
+        return _load_module_from_path(
+            "setup_manager_print_service_for_tests",
+            _SETUP_MANAGER_ROOT / "services" / "print_service.py",
+        )
+    finally:
+        try:
+            sys.path.remove(setup_root_str)
+        except ValueError:
+            pass
+        if original_config is not None:
+            sys.modules["config"] = original_config
+        else:
+            sys.modules.pop("config", None)
+
+
+_SETUP_PRINT_SERVICE = _load_setup_manager_print_service_module()
 
 # ---------------------------------------------------------------------------
 # Create the QApplication singleton early — before any Qt widget import.
 # filter_coordinator imports tool_catalog_delegate at module level, which
 # imports PySide6.QtWidgets, so Qt must be initialized first.
 # ---------------------------------------------------------------------------
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtCore import Qt  # noqa: E402
+from PySide6.QtWidgets import QApplication, QListWidget, QVBoxLayout, QWidget  # noqa: E402
 _APP = QApplication.instance() or QApplication([])
 
 
@@ -439,6 +500,761 @@ class TestFilterCoordinator(unittest.TestCase):
         page = self._make_page(tools, master_filter_active=True, master_filter_ids=set())
         result = apply_filters(page, {})
         self.assertEqual(len(result), 0)
+
+
+# ===========================================================================
+# 7. WorkService business logic
+# ===========================================================================
+
+class TestWorkService(unittest.TestCase):
+
+    def setUp(self):
+        self._db = _InMemDb()
+        _SETUP_MIGRATIONS.create_or_migrate_schema(self._db.conn)
+
+        WorkService = _SETUP_WORK_SERVICE.WorkService
+        self.svc = WorkService.__new__(WorkService)
+        self.svc.db = self._db
+
+    def tearDown(self):
+        self._db.close()
+
+    def test_save_work_requires_work_id(self):
+        with self.assertRaises(ValueError):
+            self.svc.save_work({"work_id": ""})
+
+    def test_save_and_get_work_roundtrip_assignments_and_flags(self):
+        saved = self.svc.save_work(
+            {
+                "work_id": "W001",
+                "drawing_id": "D-100",
+                "description": "Primary setup",
+                "head1_tool_assignments": [
+                    {
+                        "tool_id": "T001",
+                        "tool_uid": "12",
+                        "spindle": "MAIN",
+                        "comment": "roughing",
+                        "pot": "P01",
+                    },
+                    {
+                        "tool_id": "T002",
+                        "spindle": "invalid-spindle",
+                    },
+                ],
+                "head2_tool_assignments": [{"tool_id": "T010", "spindle": "sub"}],
+                "print_pots": True,
+                "notes": "--",
+                "robot_info": "-",
+            }
+        )
+
+        self.assertEqual(saved["work_id"], "W001")
+        self.assertEqual(saved["head1_tool_ids"], ["T001", "T002"])
+        self.assertEqual(saved["head2_tool_ids"], ["T010"])
+        self.assertEqual(saved["head1_tool_assignments"][0]["tool_uid"], 12)
+        self.assertEqual(saved["head1_tool_assignments"][1]["spindle"], "main")
+        self.assertTrue(saved["print_pots"])
+        self.assertEqual(saved["notes"], "")
+        self.assertEqual(saved["robot_info"], "")
+
+    def test_legacy_tool_ids_fallback_when_assignments_missing(self):
+        with self._db.conn:
+            self._db.conn.execute(
+                "INSERT INTO works (work_id, head1_tool_ids, head1_tool_assignments) VALUES (?, ?, ?)",
+                ("W-LEGACY", "[\"T100\", \"T101\"]", ""),
+            )
+
+        work = self.svc.get_work("W-LEGACY")
+        self.assertEqual(work["head1_tool_ids"], ["T100", "T101"])
+        self.assertEqual(
+            [item["tool_id"] for item in work["head1_tool_assignments"]],
+            ["T100", "T101"],
+        )
+
+    def test_row_to_work_derives_program_fields_from_legacy_columns(self):
+        with self._db.conn:
+            self._db.conn.execute(
+                "INSERT INTO works (work_id, head1_program, head2_program, main_program, head1_sub_program, head2_sub_program) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                ("W-PROG", "O100", "O200", "", "", ""),
+            )
+
+        work = self.svc.get_work("W-PROG")
+        self.assertEqual(work["main_program"], "")
+        self.assertEqual(work["head1_sub_program"], "O100")
+        self.assertEqual(work["head2_sub_program"], "O200")
+
+    def test_duplicate_work_creates_new_record_with_override_description(self):
+        self.svc.save_work(
+            {
+                "work_id": "W-SRC",
+                "description": "Original",
+                "head1_tool_assignments": [{"tool_id": "T001", "spindle": "main"}],
+            }
+        )
+
+        clone = self.svc.duplicate_work("W-SRC", "W-CLONE", "Cloned setup")
+        self.assertEqual(clone["work_id"], "W-CLONE")
+        self.assertEqual(clone["description"], "Cloned setup")
+        self.assertEqual(clone["head1_tool_ids"], ["T001"])
+
+    def test_delete_work_removes_row(self):
+        self.svc.save_work({"work_id": "W-DEL", "description": "to delete"})
+        self.assertIsNotNone(self.svc.get_work("W-DEL"))
+
+        self.svc.delete_work("W-DEL")
+        self.assertIsNone(self.svc.get_work("W-DEL"))
+
+    def test_list_works_search_filters_by_description(self):
+        self.svc.save_work({"work_id": "W-A", "description": "Alpha rough"})
+        self.svc.save_work({"work_id": "W-B", "description": "Beta finish"})
+
+        results = self.svc.list_works(search="rough")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["work_id"], "W-A")
+
+
+# ===========================================================================
+# 8. PrintService helper behavior
+# ===========================================================================
+
+class TestPrintServiceHelpers(unittest.TestCase):
+
+    def setUp(self):
+        PrintService = _SETUP_PRINT_SERVICE.PrintService
+        self.svc = PrintService()
+
+    def test_coord_z_combines_coord_and_z(self):
+        self.assertEqual(self.svc._coord_z("A", "Z10"), "A | Z10")
+        self.assertEqual(self.svc._coord_z("", "Z10"), "Z10")
+        self.assertEqual(self.svc._coord_z("A", ""), "A")
+        self.assertEqual(self.svc._coord_z("", ""), "-")
+
+    def test_tool_entry_normalizes_spindle_and_applies_overrides(self):
+        tool = self.svc._tool_entry_data(
+            {
+                "tool_id": "T001",
+                "spindle": "INVALID",
+                "override_id": "T999",
+                "override_description": "Override",
+            }
+        )
+        self.assertIsNotNone(tool)
+        self.assertEqual(tool["spindle"], "main")
+        self.assertEqual(tool["id"], "T999")
+        self.assertEqual(tool["description"], "Override")
+
+    def test_tool_entry_unknown_tool_returns_minimal_payload(self):
+        tool = self.svc._tool_entry_data({"tool_id": "T404", "spindle": "sub"})
+        self.assertEqual(tool["id"], "T404")
+        self.assertEqual(tool["description"], "")
+        self.assertEqual(tool["spindle"], "sub")
+
+    def test_get_logbook_color_invalid_date_uses_fallback(self):
+        color = self.svc._get_logbook_color_for_date("not-a-date")
+        self.assertEqual(color, self.svc._hex_to_rgb("#8B8B8B"))
+
+
+class TestPrintServicePdfGuards(unittest.TestCase):
+
+    def setUp(self):
+        PrintService = _SETUP_PRINT_SERVICE.PrintService
+        self.svc = PrintService()
+        self._real_import = __import__
+
+    def _missing_reportlab_import(self, name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "reportlab" or name.startswith("reportlab."):
+            raise ImportError("reportlab not available")
+        return self._real_import(name, globals, locals, fromlist, level)
+
+    def test_generate_setup_card_requires_reportlab(self):
+        with mock.patch("builtins.__import__", side_effect=self._missing_reportlab_import):
+            with self.assertRaisesRegex(RuntimeError, "reportlab is required for PDF generation"):
+                self.svc.generate_setup_card({}, None, Path("ignored.pdf"))
+
+    def test_generate_logbook_entry_card_requires_reportlab(self):
+        with mock.patch("builtins.__import__", side_effect=self._missing_reportlab_import):
+            with self.assertRaisesRegex(RuntimeError, "reportlab is required for PDF generation"):
+                self.svc.generate_logbook_entry_card({}, {}, Path("ignored.pdf"))
+
+
+@unittest.skipUnless(importlib.util.find_spec("reportlab"), "reportlab not installed")
+class TestPrintServicePdfSmoke(unittest.TestCase):
+
+    def setUp(self):
+        PrintService = _SETUP_PRINT_SERVICE.PrintService
+        self.svc = PrintService()
+
+    def test_generate_setup_card_writes_pdf_file(self):
+        work = {
+            "work_id": "W-PDF-1",
+            "drawing_id": "D-100",
+            "description": "PDF setup smoke",
+            "main_program": "O100",
+            "head1_sub_program": "",
+            "head2_sub_program": "",
+            "main_jaw_id": "",
+            "sub_jaw_id": "",
+            "head1_tool_assignments": [{"tool_id": "T001", "spindle": "main"}],
+            "head2_tool_assignments": [{"tool_id": "T002", "spindle": "sub"}],
+            "print_pots": False,
+            "notes": "",
+            "robot_info": "",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "setup_card.pdf"
+            result = self.svc.generate_setup_card(work, None, output_path)
+            self.assertEqual(Path(result), output_path)
+            self.assertTrue(output_path.exists())
+            self.assertGreater(output_path.stat().st_size, 0)
+
+    def test_generate_dispatch_card_writes_pdf_file(self):
+        work = {
+            "work_id": "W-PDF-2",
+            "drawing_id": "D-200",
+            "description": "Dispatch smoke",
+            "main_jaw_id": "",
+            "sub_jaw_id": "",
+            "main_program": "O200",
+            "head1_sub_program": "",
+            "head2_sub_program": "",
+            "main_stop_screws": "",
+            "sub_stop_screws": "",
+        }
+        entry = {
+            "batch_serial": "A26",
+            "order_number": "500",
+            "quantity": 2,
+            "date": "2026-04-14",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "dispatch_card.pdf"
+            result = self.svc.generate_dispatch_card(work, entry, output_path)
+            self.assertEqual(Path(result), output_path)
+            self.assertTrue(output_path.exists())
+            self.assertGreater(output_path.stat().st_size, 0)
+
+    def test_generate_logbook_entry_card_writes_pdf_file(self):
+        work = {"work_id": "W-PDF-3"}
+        entry = {
+            "work_id": "W-PDF-3",
+            "order_number": "700",
+            "date": "2026-04-14",
+            "batch_serial": "C26",
+            "quantity": 5,
+            "notes": "Smoke test entry",
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "logbook_entry.pdf"
+            result = self.svc.generate_logbook_entry_card(work, entry, output_path)
+            self.assertEqual(Path(result), output_path)
+            self.assertTrue(output_path.exists())
+            self.assertGreater(output_path.stat().st_size, 0)
+
+
+class TestLogbookService(unittest.TestCase):
+
+    def setUp(self):
+        self._db = _InMemDb()
+        _SETUP_MIGRATIONS.create_or_migrate_schema(self._db.conn)
+
+        LogbookService = _SETUP_LOGBOOK_SERVICE.LogbookService
+        self.svc = LogbookService(self._db)
+
+    def tearDown(self):
+        self._db.close()
+
+    def test_generate_next_serial_advances_past_existing_prefixes(self):
+        with self._db.conn:
+            self._db.conn.execute(
+                "INSERT INTO logbook (work_id, batch_serial, date) VALUES (?, ?, ?)",
+                ("W001", "A26", "2026-04-01"),
+            )
+            self._db.conn.execute(
+                "INSERT INTO logbook (work_id, batch_serial, date) VALUES (?, ?, ?)",
+                ("W001", "B26/4", "2026-04-02"),
+            )
+
+        self.assertEqual(self.svc.generate_next_serial("W001", 2026), "C26")
+
+    def test_latest_entries_by_work_ids_returns_latest_per_work(self):
+        with self._db.conn:
+            self._db.conn.execute(
+                "INSERT INTO logbook (work_id, order_number, quantity, batch_serial, date, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                ("W001", "10", 1, "A26", "2026-04-01", "older"),
+            )
+            self._db.conn.execute(
+                "INSERT INTO logbook (work_id, order_number, quantity, batch_serial, date, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                ("W001", "11", 2, "B26", "2026-04-03", "newer"),
+            )
+            self._db.conn.execute(
+                "INSERT INTO logbook (work_id, order_number, quantity, batch_serial, date, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                ("W002", "20", 3, "A26", "2026-04-02", "other"),
+            )
+
+        latest = self.svc.latest_entries_by_work_ids(["W001", "W002"])
+        self.assertEqual(latest["W001"]["notes"], "newer")
+        self.assertEqual(latest["W002"]["order_number"], "20")
+
+    def test_format_date_dmy_invalid_returns_original_text(self):
+        self.assertEqual(self.svc._format_date_dmy("not-a-date"), "not-a-date")
+
+
+class TestDrawService(unittest.TestCase):
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self._drawing_dir = Path(self._tmp.name) / "drawings"
+        self._drawing_dir.mkdir()
+        (self._drawing_dir / "alpha.pdf").write_text("", encoding="utf-8")
+        subdir = self._drawing_dir / "subfolder"
+        subdir.mkdir()
+        (subdir / "beta.pdf").write_text("", encoding="utf-8")
+        self._external_pdf = Path(self._tmp.name) / "linked.pdf"
+        self._external_pdf.write_text("", encoding="utf-8")
+
+        DrawService = _SETUP_DRAW_SERVICE.DrawService
+        self.svc = DrawService(
+            self._drawing_dir,
+            Path(self._tmp.name) / "tools.db",
+            Path(self._tmp.name) / "jaws.db",
+        )
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_list_drawings_with_context_prioritizes_explicit_linked_path(self):
+        results = self.svc.list_drawings_with_context(
+            context={"drawing_path": str(self._external_pdf)}
+        )
+
+        self.assertGreaterEqual(len(results), 3)
+        self.assertEqual(results[0]["source"], "linked")
+        self.assertEqual(results[0]["context_score"], 100)
+        self.assertEqual(Path(results[0]["path"]), self._external_pdf.resolve())
+
+    def test_list_drawings_search_matches_relative_path_and_category(self):
+        results = self.svc.list_drawings_with_context(search="subfolder")
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["drawing_id"], "beta")
+        self.assertEqual(results[0]["category"], "subfolder")
+
+
+class TestDetailPanelBuilders(unittest.TestCase):
+
+    def test_normalized_component_items_filters_invalid_entries_and_sorts_order(self):
+        from ui.home_page_support.detail_panel_builder import DetailPanelBuilder
+
+        builder = DetailPanelBuilder(types.SimpleNamespace())
+        normalized = builder._normalized_component_items(
+            {
+                "component_items": json.dumps(
+                    [
+                        {"role": "support", "code": "S-10", "label": " Support ", "order": "bad"},
+                        {"role": "holder", "code": "H-20", "label": "Holder", "order": 2},
+                        {"role": "junk", "code": "X-00", "order": 1},
+                        {"role": "cutting", "label": "Missing code"},
+                    ]
+                )
+            }
+        )
+
+        self.assertEqual([item["code"] for item in normalized], ["S-10", "H-20"])
+        self.assertEqual(normalized[0]["label"], "Support")
+        self.assertEqual(normalized[0]["order"], 0)
+        self.assertEqual(normalized[1]["order"], 2)
+
+    def test_spare_index_by_component_accepts_dict_and_json_items(self):
+        from ui.home_page_support.detail_panel_builder import DetailPanelBuilder
+
+        index = DetailPanelBuilder._spare_index_by_component(
+            [
+                json.dumps({"component_code": "H-20", "name": "Shim"}),
+                {"component": "S-10", "name": "Clamp"},
+                "not-json",
+            ]
+        )
+
+        self.assertIn("H-20", index)
+        self.assertIn("S-10", index)
+        self.assertEqual(index["H-20"][0]["name"], "Shim")
+        self.assertEqual(index["S-10"][0]["name"], "Clamp")
+
+
+class TestJawPreviewRules(unittest.TestCase):
+
+    def test_parts_payload_parses_json_list_and_filters_non_dict_items(self):
+        from ui.jaw_page_support.preview_rules import jaw_preview_parts_payload
+
+        payload = jaw_preview_parts_payload(
+            {"stl_path": json.dumps([{"file": "jaw.stl"}, "skip-me", {"file": "jaw2.stl"}])}
+        )
+
+        self.assertEqual(len(payload), 2)
+        self.assertEqual(payload[0]["file"], "jaw.stl")
+        self.assertEqual(payload[1]["file"], "jaw2.stl")
+
+    def test_measurement_overlays_invalid_json_returns_empty(self):
+        from ui.jaw_page_support.preview_rules import jaw_preview_measurement_overlays
+
+        self.assertEqual(jaw_preview_measurement_overlays({"measurement_overlays": "{"}), [])
+
+    def test_transform_signature_normalizes_selected_parts(self):
+        from ui.jaw_page_support.preview_rules import jaw_preview_transform_signature
+
+        signature = jaw_preview_transform_signature(
+            {
+                "preview_plane": "yz",
+                "preview_rot_x": "90",
+                "preview_rot_y": 0,
+                "preview_rot_z": 180,
+                "preview_transform_mode": "translate",
+                "preview_fine_transform": True,
+                "preview_selected_part": "4",
+                "preview_selected_parts": ["1", "bad", 3],
+            }
+        )
+
+        self.assertEqual(signature[0], "YZ")
+        self.assertEqual(signature[1:4], (90, 0, 180))
+        self.assertEqual(signature[6], 4)
+        self.assertEqual(signature[7], (1, 3))
+
+
+# ===========================================================================
+# 9. Selector state + payload mixins
+# ===========================================================================
+
+class TestSelectorMixins(unittest.TestCase):
+
+    def test_build_initial_buckets_normalizes_keys_and_deduplicates(self):
+        from ui.selectors.tool_selector_state import ToolSelectorStateMixin
+
+        class _DummyToolState(ToolSelectorStateMixin):
+            pass
+
+        dummy = _DummyToolState()
+        dummy._current_head = "HEAD2"
+        dummy._current_spindle = "sub"
+
+        buckets = dummy._build_initial_buckets(
+            initial_assignments=None,
+            initial_assignment_buckets={
+                "head1/sub": [
+                    {"tool_id": "T001", "uid": 1, "tool_head": "HEAD1", "spindle": "sub"},
+                    {"tool_id": "T001", "uid": 1, "tool_head": "HEAD1", "spindle": "sub"},
+                ],
+                "HEAD2:main": [{"tool_id": "T002", "uid": 2}],
+            },
+        )
+
+        self.assertIn("HEAD1:sub", buckets)
+        self.assertIn("HEAD2:main", buckets)
+        self.assertIn("HEAD2:sub", buckets)
+        self.assertEqual(len(buckets["HEAD1:sub"]), 1)
+
+    def test_tool_selector_send_selector_selection_emits_payload(self):
+        from ui.selectors.tool_selector_payload import ToolSelectorPayloadMixin
+
+        class _DummyToolPayload(ToolSelectorPayloadMixin):
+            def __init__(self):
+                self._assigned_tools = [{"tool_id": "T001", "spindle": "main"}]
+                self._assignments_by_target = {"HEAD1:main": [{"tool_id": "T001", "spindle": "main"}]}
+                self._current_head = "HEAD1"
+                self._current_spindle = "main"
+                self._on_submit = object()
+                self.captured = None
+
+            def _sync_assignment_order(self):
+                return None
+
+            def _finish_submit(self, callback, payload):
+                self.captured = (callback, payload)
+
+        dummy = _DummyToolPayload()
+        dummy._send_selector_selection()
+
+        self.assertIsNotNone(dummy.captured)
+        callback, payload = dummy.captured
+        self.assertIs(callback, dummy._on_submit)
+        self.assertEqual(payload["kind"], "tools")
+        self.assertEqual(payload["selector_head"], "HEAD1")
+        self.assertEqual(payload["selector_spindle"], "main")
+        self.assertEqual(payload["selected_items"][0]["tool_id"], "T001")
+
+    def test_jaw_selector_send_selector_selection_emits_slot_payload(self):
+        from ui.selectors.jaw_selector_payload import JawSelectorPayloadMixin
+        from ui.selectors.jaw_selector_state import JawSelectorStateMixin
+
+        class _DummyJawPayload(JawSelectorPayloadMixin, JawSelectorStateMixin):
+            def __init__(self):
+                self._selector_assignments = {
+                    "main": {"jaw_id": "J001", "jaw_type": "Soft jaws", "spindle_side": "Both"},
+                    "sub": {"jaw_id": "J002", "jaw_type": "Hard jaws", "spindle_side": "Sub spindle"},
+                }
+                self._on_submit = object()
+                self.captured = None
+
+            def _finish_submit(self, callback, payload):
+                self.captured = (callback, payload)
+
+        dummy = _DummyJawPayload()
+        dummy._send_selector_selection()
+
+        self.assertIsNotNone(dummy.captured)
+        callback, payload = dummy.captured
+        self.assertIs(callback, dummy._on_submit)
+        self.assertEqual(payload["kind"], "jaws")
+        slots = {item["slot"]: item for item in payload["selected_items"]}
+        self.assertIn("main", slots)
+        self.assertIn("sub", slots)
+        self.assertEqual(slots["main"]["jaw_id"], "J001")
+        self.assertEqual(slots["sub"]["jaw_id"], "J002")
+
+
+class TestSelectorUiWiring(unittest.TestCase):
+
+    def test_build_selector_bottom_bar_wires_cancel_and_done_callbacks(self):
+        from ui.selectors.common import build_selector_bottom_bar
+
+        host = QWidget()
+        host_layout = QVBoxLayout(host)
+
+        events: list[str] = []
+        _, cancel_btn, done_btn = build_selector_bottom_bar(
+            host_layout,
+            translate=lambda _k, default=None, **_kwargs: default or "",
+            on_cancel=lambda: events.append("cancel"),
+            on_done=lambda: events.append("done"),
+        )
+
+        cancel_btn.click()
+        done_btn.click()
+        self.assertEqual(events, ["cancel", "done"])
+
+    def test_selector_dialog_base_cancel_notified_once(self):
+        from ui.selectors.common import SelectorDialogBase
+
+        events: list[str] = []
+
+        class _DummyDialog(SelectorDialogBase):
+            pass
+
+        dialog = _DummyDialog(
+            translate=lambda _k, default=None, **_kwargs: default or "",
+            on_cancel=lambda: events.append("cancel"),
+        )
+
+        dialog._cancel_dialog()
+        dialog.close()
+        QApplication.processEvents()
+        self.assertEqual(events, ["cancel"])
+
+    def test_selected_rows_or_current_uses_current_when_no_selection(self):
+        from ui.selectors.common import selected_rows_or_current
+
+        view = QListWidget()
+        view.addItem("A")
+        view.addItem("B")
+        view.setCurrentRow(1)
+
+        indexes = selected_rows_or_current(view)
+        self.assertEqual(len(indexes), 1)
+        self.assertEqual(indexes[0].row(), 1)
+
+    def test_selected_rows_or_current_prefers_explicit_selection(self):
+        from ui.selectors.common import selected_rows_or_current
+
+        view = QListWidget()
+        view.setSelectionMode(QListWidget.ExtendedSelection)
+        view.addItem("A")
+        view.addItem("B")
+        view.addItem("C")
+
+        view.item(0).setSelected(True)
+        view.item(2).setSelected(True)
+        indexes = selected_rows_or_current(view)
+
+        self.assertEqual([idx.row() for idx in indexes], [0, 2])
+
+
+class TestMainWindowSelectorSessionFlow(unittest.TestCase):
+
+    def setUp(self):
+        self.main_window_module = _load_tool_library_main_window_module()
+        self.MainWindow = self.main_window_module.MainWindow
+
+    def test_open_selector_dialog_for_tools_builds_tool_dialog(self):
+        built = {}
+
+        class _FakeDialog:
+            def __init__(self, **kwargs):
+                built.update(kwargs)
+
+        dummy = types.SimpleNamespace(
+            _selector_mode="tools",
+            tool_service=object(),
+            jaw_service=object(),
+            machine_profile=object(),
+            _selector_head="HEAD1",
+            _selector_spindle="main",
+            _selector_initial_assignments=[{"tool_id": "T001"}],
+            _selector_initial_assignment_buckets={"HEAD1:main": [{"tool_id": "T001"}]},
+            _tool_selector_dialog=None,
+            _jaw_selector_dialog=None,
+            _t=lambda _k, default=None, **_kwargs: default or "",
+            _on_selector_dialog_submit=object(),
+            _on_selector_dialog_cancel=object(),
+            _close_selector_dialogs=lambda: built.setdefault("closed", True),
+        )
+
+        with mock.patch.object(self.main_window_module, "ToolSelectorDialog", _FakeDialog):
+            self.MainWindow._open_selector_dialog_for_session(dummy, False)
+
+        self.assertTrue(built.get("closed"))
+        self.assertIsNotNone(dummy._tool_selector_dialog)
+        self.assertEqual(built["selector_head"], "HEAD1")
+        self.assertEqual(built["selector_spindle"], "main")
+        self.assertEqual(built["initial_assignments"][0]["tool_id"], "T001")
+
+    def test_open_selector_dialog_for_jaws_builds_jaw_dialog(self):
+        built = {}
+
+        class _FakeDialog:
+            def __init__(self, **kwargs):
+                built.update(kwargs)
+
+        dummy = types.SimpleNamespace(
+            _selector_mode="jaws",
+            tool_service=object(),
+            jaw_service=object(),
+            machine_profile=object(),
+            _selector_head="",
+            _selector_spindle="sub",
+            _selector_initial_assignments=[{"jaw_id": "J001"}],
+            _selector_initial_assignment_buckets={},
+            _tool_selector_dialog=None,
+            _jaw_selector_dialog=None,
+            _t=lambda _k, default=None, **_kwargs: default or "",
+            _on_selector_dialog_submit=object(),
+            _on_selector_dialog_cancel=object(),
+            _close_selector_dialogs=lambda: built.setdefault("closed", True),
+        )
+
+        with mock.patch.object(self.main_window_module, "JawSelectorDialog", _FakeDialog):
+            self.MainWindow._open_selector_dialog_for_session(dummy, False)
+
+        self.assertTrue(built.get("closed"))
+        self.assertIsNotNone(dummy._jaw_selector_dialog)
+        self.assertEqual(built["selector_spindle"], "sub")
+        self.assertEqual(built["initial_assignments"][0]["jaw_id"], "J001")
+
+    def test_on_selector_dialog_cancel_handoff_only_when_active_session(self):
+        events: list[str] = []
+        dummy = types.SimpleNamespace(
+            _closing_selector_dialogs=False,
+            _selector_mode="tools",
+            _clear_selector_session=lambda show=False: events.append(f"clear:{show}"),
+            _back_to_setup_manager=lambda: events.append("back"),
+        )
+
+        self.MainWindow._on_selector_dialog_cancel(dummy)
+        self.assertEqual(events, ["clear:False", "back"])
+
+        events.clear()
+        dummy._selector_mode = ""
+        self.MainWindow._on_selector_dialog_cancel(dummy)
+        self.assertEqual(events, [])
+
+    def test_on_selector_dialog_submit_normalizes_and_forwards_payload(self):
+        captured = {}
+        dummy = types.SimpleNamespace(
+            _selector_head="head2",
+            _selector_spindle="sub",
+            _send_selector_result_payload=lambda **kwargs: captured.update(kwargs),
+        )
+
+        self.MainWindow._on_selector_dialog_submit(
+            dummy,
+            {
+                "kind": "TOOLS",
+                "selected_items": [{"tool_id": "T001"}],
+                "selector_head": "",
+                "selector_spindle": "",
+                "assignment_buckets_by_target": {"HEAD2:sub": [{"tool_id": "T001"}]},
+            },
+        )
+
+        self.assertEqual(captured["kind"], "tools")
+        self.assertEqual(captured["selector_head"], "HEAD2")
+        self.assertEqual(captured["selector_spindle"], "sub")
+        self.assertIn("HEAD2:sub", captured["assignment_buckets_by_target"])
+
+    def test_send_selector_result_payload_warns_when_callback_missing(self):
+        dummy = types.SimpleNamespace(
+            _selector_callback_server="",
+            _selector_request_id="REQ-1",
+            _t=lambda _k, default=None, **_kwargs: default or "",
+            _back_to_setup_manager=lambda: self.fail("handoff should not happen when callback is missing"),
+        )
+
+        with mock.patch.object(self.main_window_module.QMessageBox, "warning") as warning_mock:
+            self.MainWindow._send_selector_result_payload(
+                dummy,
+                kind="jaws",
+                selected_items=[{"jaw_id": "J001"}],
+            )
+
+        warning_mock.assert_called_once()
+
+    def test_send_selector_result_payload_sends_and_handoffs_on_success(self):
+        events: list[str] = []
+
+        class _FakeSocket:
+            def connectToServer(self, _name):
+                events.append("connect")
+
+            def waitForConnected(self, _timeout):
+                return True
+
+            def write(self, payload):
+                decoded = json.loads(payload.decode("utf-8"))
+                events.append(f"kind:{decoded.get('kind')}")
+
+            def flush(self):
+                events.append("flush")
+
+            def waitForBytesWritten(self, _timeout):
+                return True
+
+            def disconnectFromServer(self):
+                events.append("disconnect")
+
+        dummy = types.SimpleNamespace(
+            _selector_callback_server="selector-callback",
+            _selector_request_id="REQ-2",
+            _t=lambda _k, default=None, **_kwargs: default or "",
+            _back_to_setup_manager=lambda: events.append("back"),
+        )
+
+        with mock.patch.object(self.main_window_module, "QLocalSocket", _FakeSocket):
+            self.MainWindow._send_selector_result_payload(
+                dummy,
+                kind="tools",
+                selected_items=[{"tool_id": "T001"}],
+                selector_head="HEAD1",
+                selector_spindle="main",
+                assignment_buckets_by_target={"HEAD1:main": [{"tool_id": "T001"}]},
+            )
+
+        self.assertIn("connect", events)
+        self.assertIn("kind:tools", events)
+        self.assertIn("disconnect", events)
+        self.assertIn("back", events)
 
 
 # ===========================================================================

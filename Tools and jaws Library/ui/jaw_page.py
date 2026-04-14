@@ -106,6 +106,8 @@ class JawPage(CatalogPageBase):
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._detached_preview_last_model_key = None
+        self._detached_preview_sync_delay_ms = 60
+        self._detached_preview_sync_request_id = 0
         self._detached_measurements_enabled = True
         self._measurement_toggle_btn = None
         self._close_preview_shortcut = None
@@ -474,7 +476,20 @@ class JawPage(CatalogPageBase):
         close_detached_preview(self)
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
-        return sync_detached_preview(self, show_errors)
+        if show_errors:
+            return sync_detached_preview(self, True)
+
+        # Coalesce rapid selection-change bursts to avoid detached window bounce.
+        self._detached_preview_sync_request_id += 1
+        request_id = self._detached_preview_sync_request_id
+
+        def _run_deferred_sync() -> None:
+            if request_id != self._detached_preview_sync_request_id:
+                return
+            sync_detached_preview(self, False)
+
+        QTimer.singleShot(int(self._detached_preview_sync_delay_ms), _run_deferred_sync)
+        return False
 
     def toggle_preview_window(self) -> None:
         toggle_preview_window(self)

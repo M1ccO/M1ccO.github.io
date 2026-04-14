@@ -49,9 +49,10 @@ class JawAssignmentSlot(QGroupBox):
     jawDropped = Signal(str, dict)
     slotClicked = Signal(str, bool)
 
-    def __init__(self, slot_key: str, title: str, parent=None):
+    def __init__(self, slot_key: str, title: str, parent=None, translate=None):
         super().__init__(parent)
         self._slot_key = slot_key
+        self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
         self._assignment: dict | None = None
         self._drop_placeholder = "Drop jaw here"
         self._assignment_card: MiniAssignmentCard | None = None
@@ -126,10 +127,14 @@ class JawAssignmentSlot(QGroupBox):
         self._assignment = normalized
         self._refresh_ui()
 
+    def _localized_jaw_type(self, raw_type: str) -> str:
+        normalized = (raw_type or '').strip().lower().replace(' ', '_')
+        return self._translate(f'jaw_library.jaw_type.{normalized}', raw_type)
+
     def _refresh_ui(self):
         if isinstance(self._assignment, dict):
             jaw_id = str(self._assignment.get("jaw_id") or "").strip()
-            jaw_type = str(self._assignment.get("jaw_type") or "").strip()
+            jaw_type = self._localized_jaw_type(str(self._assignment.get("jaw_type") or "").strip())
             title = f"{jaw_id}  -  {jaw_type}" if jaw_type else jaw_id
             icon_jaw = {**self._assignment, "spindle_side": "sub" if self._slot_key == "sub" else "main"}
             if self._assignment_card is None:

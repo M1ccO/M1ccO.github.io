@@ -143,6 +143,24 @@ Tools and jaws Library/ui/
     models_tab.py                           ← 3D models tab
 ```
 
+### Measurement Editor (measurement definitions for tools/jaws)
+```
+Tools and jaws Library/ui/
+  measurement_editor_dialog.py              ← dialog orchestrator; builds forms, wires coordinators
+  measurement_editor/
+    coordinators/
+      list_manager.py                       ← MeasurementListManager — list CRUD, selection, kind filtering
+      pick_coordinator.py                   ← PickCoordinator — pick_target / dist_pick_stage /
+                                              diam_pick_stage state + point-picked dispatch
+      distance_editor.py                    ← DistanceEditor — distance edit model, two-point pick
+      diameter_editor.py                    ← DiameterEditor — diameter edit model, center/edge pick
+      axis_overlay.py                       ← AxisOverlay — axis-pick overlay hint on preview
+      preview_coordinator.py                ← PreviewCoordinator — preview_sync bridge
+    models/                                 ← distance, diameter, radius, angle dataclasses + registry
+    forms/                                  ← form builder helpers (read-only during refactor)
+    utils/                                  ← coordinates, axis_math
+```
+
 ### Main Window — Selector Session Lifecycle (IPC + dialog orchestration)
 ```
 Tools and jaws Library/ui/main_window.py

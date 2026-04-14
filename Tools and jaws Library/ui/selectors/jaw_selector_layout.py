@@ -39,7 +39,6 @@ from ui.shared.selector_panel_builders import (
     build_selector_card_shell,
     build_selector_hint_label,
     build_selector_info_header,
-    style_selector_context_button,
 )
 from ui.selectors.common import build_selector_bottom_bar
 
@@ -176,26 +175,22 @@ class JawSelectorLayoutMixin:
         )
         selector_layout.addWidget(self.selector_info_header, 0)
 
-        ctx_row = QHBoxLayout()
-        ctx_row.setContentsMargins(0, 0, 0, 0)
-        ctx_row.setSpacing(10)
-        ctx_row.addStretch(1)
-
-        self.spindle_btn = QPushButton('SP1')
-        self.spindle_btn.clicked.connect(self._toggle_spindle)
-        style_selector_context_button(self.spindle_btn, checkable=True)
-        ctx_row.addWidget(self.spindle_btn, 0)
-        ctx_row.addStretch(1)
-        selector_layout.addLayout(ctx_row)
-
         hint = build_selector_hint_label(
             text=self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.'),
             multiline=False,
         )
         selector_layout.addWidget(hint, 0)
 
-        self.slot_main = JawAssignmentSlot('main', self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
-        self.slot_sub = JawAssignmentSlot('sub', self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'))
+        self.slot_main = JawAssignmentSlot(
+            'main',
+            self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'),
+            translate=self._t,
+        )
+        self.slot_sub = JawAssignmentSlot(
+            'sub',
+            self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'),
+            translate=self._t,
+        )
         self.slot_main.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.slot_sub.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.slot_main.jawDropped.connect(self._on_slot_dropped)

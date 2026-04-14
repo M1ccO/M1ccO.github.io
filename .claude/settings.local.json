@@ -12,7 +12,19 @@
       "Bash(python -c ':*)",
       "Bash(grep -n \"selector.*button\\\\|Tool.*Selector\\\\|Jaw.*Selector\\\\|tool_selector_btn\\\\|jaw_selector_btn\" /c/Users/pz9079/\"NTX Setup Manager\"/\"Setup Manager\"/ui/work_editor_support/*.py)",
       "Bash(grep -n \"spindle_side\\\\|_selector_spindle\\\\|apply_filters\" /c/Users/pz9079/\"NTX Setup Manager\"/\"Tools and jaws Library\"/ui/jaw_page_support/*.py)",
-      "Bash(\"C:/Users/pz9079/NTX Setup Manager/.venv/Scripts/python.exe\" -m unittest tests.test_priority1_targeted)"
+      "Bash(\"C:/Users/pz9079/NTX Setup Manager/.venv/Scripts/python.exe\" -m unittest tests.test_priority1_targeted)",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/measurement_editor_dialog.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/measurement_editor/coordinators/preview_coordinator.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/measurement_editor/coordinators/axis_overlay.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/measurement_editor/coordinators/distance_editor.py\")",
+      "Bash(python scripts/smoke_test.py)",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/measurement_editor/coordinators/diameter_editor.py\")",
+      "Bash(awk 'NR==1071{exit} {print}' \"Tools and jaws Library/ui/measurement_editor_dialog.py\")",
+      "Bash(awk 'NR>=1604{print}' \"Tools and jaws Library/ui/measurement_editor_dialog.py\")",
+      "Read(//tmp/**)",
+      "Bash(python /tmp/replace_diameter.py)",
+      "Bash(python \"c:/tmp/replace_diameter.py\")",
+      "Bash(python -m py_compile ui/measurement_editor_dialog.py ui/measurement_editor/coordinators/list_manager.py)"
     ]
   }
 }

@@ -91,9 +91,7 @@ class DetailPanelBuilder:
         components_panel = self._build_components_panel(tool, support_parts)
         layout.addWidget(components_panel)
 
-        # Build preview panel (3D STL viewer)
-        preview_panel = self._build_preview_panel(tool.get("stl_path"))
-        layout.addWidget(preview_panel)
+        # Inline 3D preview section intentionally removed.
 
         layout.addStretch(1)
         self.page.detail_layout.addWidget(card)
@@ -446,6 +444,7 @@ class DetailPanelBuilder:
             if viewer.parent() is not diagram:
                 viewer.setParent(diagram)
             viewer.setStyleSheet("background: transparent; border: none;")
+            viewer.set_status_overlay_enabled(False)
             viewer.set_control_hint_text(
                 self.page._t(
                     "tool_editor.hint.rotate_pan_zoom",

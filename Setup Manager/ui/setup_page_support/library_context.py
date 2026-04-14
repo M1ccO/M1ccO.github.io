@@ -55,3 +55,22 @@ def build_library_launch_context_payload(work=None) -> dict:
         "has_jaws": bool(jaw_ids),
         "has_data": bool(tool_ids or jaw_ids),
     }
+
+
+def has_library_links(work=None) -> bool:
+    tool_ids, jaw_ids = collect_library_filter_ids(work)
+    return bool(tool_ids or jaw_ids)
+
+
+def emit_library_launch_context(page, work=None) -> None:
+    page.libraryLaunchContextChanged.emit(build_library_launch_context_payload(work))
+
+
+def open_library_viewer_for_current_work(page) -> None:
+    if not page.current_work_id:
+        return
+    work = page.work_service.get_work(page.current_work_id)
+    if not work:
+        return
+    tool_ids, jaw_ids = collect_library_filter_ids(work)
+    page.openLibraryMasterFilterRequested.emit(tool_ids, jaw_ids)

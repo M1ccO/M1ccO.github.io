@@ -947,13 +947,14 @@ class MainWindow(QMainWindow):
             "QListWidget#toolCatalog::viewport {\n"
             f"    background-color: {palette['surface_bg']};\n"
             "}\n"
-            # detail panel host — scroll area, panel widget, and hero header
-            # all get info_box_bg; individual QFrame[detailField] value boxes
-            # stay white via static QSS.
+            # detail panel host uses info_box_bg, while the hero header stays
+            # transparent so only its border is visible.
             "QScrollArea#detailScrollArea,\n"
-            "QWidget#detailPanel,\n"
-            "QFrame[detailHeader=\"true\"] {\n"
+            "QWidget#detailPanel {\n"
             f"    background-color: {palette['info_box_bg']};\n"
+            "}\n"
+            "QFrame[detailHeader=\"true\"] {\n"
+            "    background-color: transparent;\n"
             "}\n"
             # input field focus ring
             "QLineEdit:focus,\n"

@@ -1,24 +1,42 @@
 {
-  "version": 2,
-  "description": "Machine-readable architecture map for AI agents and tooling. Describes app ownership, module structure, dependency rules, and key entry points. Last updated: 2026-04-14.",
+  "version": 3,
+  "description": "Machine-readable architecture map for AI agents and tooling. Describes app ownership, module structure, active support packages, runtime boundaries, dependency rules, and key entry points. Last updated: 2026-04-14.",
 
   "apps": {
     "toolsAndJawsLibrary": {
       "root": "Tools and jaws Library",
       "entryPoint": "Tools and jaws Library/main.py",
       "mainWindow": "Tools and jaws Library/ui/main_window.py",
+      "currentNotes": [
+        "Platform overhaul phases 0-9 are complete.",
+        "Phase 11 shared support modularization is complete.",
+        "Inline detail-panel preview is currently disabled; detached preview is the active primary path.",
+        "Measurement editor refactor is active and now uses coordinator modules under ui/measurement_editor/coordinators/."
+      ],
       "pages": {
         "toolCatalog": {
           "label": "Tool Library / Tool Catalog",
           "orchestrator": "Tools and jaws Library/ui/home_page.py",
           "support": "Tools and jaws Library/ui/home_page_support/",
-          "delegate": "Tools and jaws Library/ui/tool_catalog_delegate.py"
+          "delegate": "Tools and jaws Library/ui/tool_catalog_delegate.py",
+          "sharedScaffolding": [
+            "shared/ui/helpers/page_scaffold_common.py",
+            "shared/ui/helpers/topbar_common.py",
+            "shared/ui/helpers/selection_common.py",
+            "shared/ui/helpers/detached_preview_common.py"
+          ]
         },
         "jawCatalog": {
           "label": "Jaw Library / Jaw Catalog",
           "orchestrator": "Tools and jaws Library/ui/jaw_page.py",
           "support": "Tools and jaws Library/ui/jaw_page_support/",
-          "delegate": "Tools and jaws Library/ui/jaw_catalog_delegate.py"
+          "delegate": "Tools and jaws Library/ui/jaw_catalog_delegate.py",
+          "sharedScaffolding": [
+            "shared/ui/helpers/page_scaffold_common.py",
+            "shared/ui/helpers/topbar_common.py",
+            "shared/ui/helpers/selection_common.py",
+            "shared/ui/helpers/detached_preview_common.py"
+          ]
         },
         "export": "Tools and jaws Library/ui/export_page.py",
         "jawExport": "Tools and jaws Library/ui/jaw_export_page.py"
@@ -31,7 +49,20 @@
         "jawEditor": {
           "dialog": "Tools and jaws Library/ui/jaw_editor_dialog.py",
           "support": "Tools and jaws Library/ui/jaw_editor_support/"
+        },
+        "measurementEditor": {
+          "dialog": "Tools and jaws Library/ui/measurement_editor_dialog.py",
+          "support": "Tools and jaws Library/ui/measurement_editor/",
+          "coordinators": "Tools and jaws Library/ui/measurement_editor/coordinators/",
+          "refactorPlan": "Tools and jaws Library/MEASUREMENT_EDITOR_REFACTOR_PLAN.md"
         }
+      },
+      "supportPackages": {
+        "homePageSupport": "Tools and jaws Library/ui/home_page_support/",
+        "jawPageSupport": "Tools and jaws Library/ui/jaw_page_support/",
+        "toolEditorSupport": "Tools and jaws Library/ui/tool_editor_support/",
+        "jawEditorSupport": "Tools and jaws Library/ui/jaw_editor_support/",
+        "selectorDialogs": "Tools and jaws Library/ui/selectors/"
       },
       "selectors": {
         "description": "Standalone selector dialogs opened by MainWindow when Setup Manager requests a selection. Each dialog is self-contained — catalog + assignment panel + DONE/CANCEL.",
@@ -40,12 +71,12 @@
         "common": "Tools and jaws Library/ui/selectors/common.py",
         "selectorSessionLifecycle": "Tools and jaws Library/ui/main_window.py",
         "selectorSessionMethods": {
-          "_open_selector_dialog_for_session": "line ~1100 — creates and shows the appropriate dialog",
-          "_on_selector_dialog_submit": "line ~1145 — receives result payload from dialog DONE",
-          "_on_selector_dialog_cancel": "line ~1137 — handles dialog CANCEL, clears session",
-          "_send_selector_result_payload": "line ~1159 — sends result back to Setup Manager via QLocalSocket IPC",
-          "_clear_selector_session": "line ~1060 — closes dialogs, resets all session state",
-          "_close_selector_dialogs": "line ~1085 — safe close of open selector dialogs"
+          "_open_selector_dialog_for_session": "creates and shows the appropriate selector dialog for the current session",
+          "_on_selector_dialog_submit": "receives result payload from dialog DONE and normalizes it",
+          "_on_selector_dialog_cancel": "handles dialog CANCEL and clears selector session state",
+          "_send_selector_result_payload": "sends selector result back to Setup Manager via QLocalSocket IPC",
+          "_clear_selector_session": "closes dialogs and resets all selector session state",
+          "_close_selector_dialogs": "safely closes any open selector dialogs"
         }
       },
       "sharedUiHelpers": {
@@ -56,7 +87,7 @@
       },
       "ownedDomains": ["tools", "jaws", "export", "selector workflows"],
       "intentionalBoundaries": [
-        "Tools and jaws Library/data/migrations.py remains app-specific",
+        "Tools and jaws Library/data/migrations/ remains app-specific",
         "Tools and jaws Library/config.py remains app-specific"
       ]
     },
@@ -64,6 +95,13 @@
       "root": "Setup Manager",
       "entryPoint": "Setup Manager/main.py",
       "mainWindow": "Setup Manager/ui/main_window.py",
+      "currentNotes": [
+        "Setup Manager remains owner of works, logbook, drawings, and print workflows.",
+        "Tool and jaw master data stay read-only and come from the sibling app.",
+        "Main window and setup page now use extracted support packages.",
+        "Drawings page is runtime-capable but preference-gated.",
+        "Work Editor refactor is active and tracked in WORK_EDITOR_REFACTOR_STATUS.md."
+      ],
       "pages": {
         "setupPage": {
           "label": "Works / Setups list",
@@ -83,6 +121,11 @@
           "support": "Setup Manager/ui/work_editor_support/",
           "refactorStatus": "Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md"
         }
+      },
+      "supportPackages": {
+        "mainWindowSupport": "Setup Manager/ui/main_window_support/",
+        "setupPageSupport": "Setup Manager/ui/setup_page_support/",
+        "workEditorSupport": "Setup Manager/ui/work_editor_support/"
       },
       "services": {
         "workService": "Setup Manager/services/work_service.py",
@@ -118,8 +161,12 @@
     "ui": {
       "stlPreview": "shared/ui/stl_preview.py",
       "miniAssignmentCard": "shared/ui/cards/mini_assignment_card.py",
+      "commonWidgets": "shared/ui/helpers/common_widgets.py",
       "editorHelpers": "shared/ui/helpers/editor_helpers.py",
+      "detachedPreviewCommon": "shared/ui/helpers/detached_preview_common.py",
       "pageScaffoldCommon": "shared/ui/helpers/page_scaffold_common.py",
+      "selectionCommon": "shared/ui/helpers/selection_common.py",
+      "topbarCommon": "shared/ui/helpers/topbar_common.py",
       "dragdropHelpers": "shared/ui/helpers/dragdrop_helpers.py",
       "editorTable": "shared/ui/helpers/editor_table.py",
       "preferencesDialogBase": "shared/ui/preferences_dialog_base.py"
@@ -152,7 +199,12 @@
     "ui": [
       "shared.ui.stl_preview",
       "shared.ui.preferences_dialog_base",
+      "shared.ui.helpers.common_widgets",
       "shared.ui.helpers.editor_helpers",
+      "shared.ui.helpers.page_scaffold_common",
+      "shared.ui.helpers.selection_common",
+      "shared.ui.helpers.topbar_common",
+      "shared.ui.helpers.detached_preview_common",
       "shared.ui.helpers.editor_table",
       "shared.ui.cards.mini_assignment_card"
     ],

@@ -69,6 +69,32 @@ class PreferencesDialog(PreferencesDialogBase):
         self.assembly_transform_cb.setStyleSheet("QCheckBox { background: transparent; }")
         card_layout.addWidget(self.assembly_transform_cb)
 
+        self.detached_preview_mode_combo = QComboBox()
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.follow_last", "Follow Last Closed Position"),
+            "follow_last",
+        )
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.right", "Open on Right Side"),
+            "right",
+        )
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.left", "Open on Left Side"),
+            "left",
+        )
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.current", "Keep Current Position"),
+            "current",
+        )
+        apply_shared_dropdown_style(self.detached_preview_mode_combo)
+        add_shadow(self.detached_preview_mode_combo)
+        card_layout.addWidget(
+            self._row(
+                self._t("preferences.detached_preview.mode", "Detached 3D Preview Position"),
+                self.detached_preview_mode_combo,
+            )
+        )
+
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 6, 0, 0)
         buttons.setSpacing(8)
@@ -94,11 +120,19 @@ class PreferencesDialog(PreferencesDialogBase):
             "language": self.language_combo.currentData() or "en",
             "color_theme": self.theme_combo.currentData() or "classic",
             "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
+            "detached_preview_policy": {
+                "mode": self.detached_preview_mode_combo.currentData() or "follow_last",
+            },
         }
 
     def _load_current_values(self):
         self._set_combo_by_data(self.language_combo, self._current.get("language", "en"))
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
         self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
+        policy = self._current.get("detached_preview_policy")
+        mode = str((policy or {}).get("mode") if isinstance(policy, dict) else "follow_last").strip().lower()
+        if mode not in {"follow_last", "left", "right", "current"}:
+            mode = "follow_last"
+        self._set_combo_by_data(self.detached_preview_mode_combo, mode)
 
     # Shared combo row, translation, and combo-data helpers are inherited.

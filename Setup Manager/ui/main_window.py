@@ -1,25 +1,15 @@
-﻿import ctypes
-import json
-from pathlib import Path
-import sqlite3
-import shutil
-import sys
+﻿from pathlib import Path
 
-from PySide6.QtCore import QEvent, QProcess, QTimer, QSize, Qt
+from PySide6.QtCore import QEvent, QTimer, QSize, Qt
 from PySide6.QtGui import QIcon
-from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
-    QComboBox,
-    QDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QMainWindow,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
     QStackedWidget,
     QStatusBar,
@@ -42,33 +32,34 @@ from config import (
 )
 
 
-def _allow_set_foreground():
-    """Grant any process permission to call SetForegroundWindow (Windows)."""
-    try:
-        ctypes.windll.user32.AllowSetForegroundWindow(ctypes.wintypes.DWORD(-1))
-    except Exception:
-        pass
 from ui.drawing_page import DrawingPage
 from ui.logbook_page import LogbookPage
-from ui.preferences_dialog import PreferencesDialog
 from ui.setup_page import SetupPage
 from shared.services.ui_preferences_service import UiPreferencesService
 from shared.services.localization_service import LocalizationService
-from ui.widgets.common import add_shadow, clear_focused_dropdown_on_outside_click
+from ui.widgets.common import clear_focused_dropdown_on_outside_click
+from ui.main_window_support import (
+    allow_set_foreground,
+    build_compatibility_report_bundle,
+    launch_tool_library,
+    on_setup_launch_context_changed,
+    open_jaws_library_action,
+    open_preferences_action,
+    open_tool_library_action,
+    resolve_compatibility_target_path,
+    show_compatibility_report_dialog,
+    send_request_with_retry,
+    send_to_tool_library,
+    update_launch_actions,
+    update_navigation_labels,
+)
 from shared.ui.main_window_helpers import (
-    THEME_PALETTES,
     current_window_rect,
     fade_in as _shared_fade_in,
     fade_out_and as _shared_fade_out_and,
     get_active_theme_palette,
     is_interactive_widget_click,
 )
-try:
-    from shared.ui.helpers.editor_helpers import create_titled_section, setup_editor_dialog
-except ModuleNotFoundError:
-    from editor_helpers import create_titled_section, setup_editor_dialog
-
-
 class MainWindow(QMainWindow):
     def __init__(self, work_service, logbook_service, draw_service, print_service):
         super().__init__()
@@ -143,26 +134,42 @@ class MainWindow(QMainWindow):
 
         self.nav_buttons = []
         for idx, item_name in enumerate(NAV_ITEMS):
-            key = (
-                "setup_manager.nav.setups"
-                if idx == 0
-                else "setup_manager.nav.drawings"
-                if idx == 1
-                else "setup_manager.nav.logbook"
-            )
-            button = QPushButton(self._t(key, item_name))
-            button.setProperty("navButton", True)
-            button.clicked.connect(lambda checked=False, i=idx: self._set_page(i))
+            button = self._build_nav_button(idx, item_name)
             nav_layout.addWidget(button)
             self.nav_buttons.append(button)
 
         nav_layout.addStretch(1)
+        nav_layout.addWidget(self._build_launch_card())
 
+        root.addWidget(self.nav_rail)
+
+        self._initialize_pages()
+        root.addWidget(self.stack, 1)
+
+        self._initialize_status_bar()
+
+        self._set_page(0)
+
+    def _build_nav_button(self, index: int, fallback_text: str) -> QPushButton:
+        key = (
+            "setup_manager.nav.setups"
+            if index == 0
+            else "setup_manager.nav.drawings"
+            if index == 1
+            else "setup_manager.nav.logbook"
+        )
+        button = QPushButton(self._t(key, fallback_text))
+        button.setProperty("navButton", True)
+        button.clicked.connect(lambda checked=False, i=index: self._set_page(i))
+        return button
+
+    def _build_launch_card(self) -> QFrame:
         launch_card = QFrame()
         launch_card.setProperty("launchCard", True)
         launch_layout = QVBoxLayout(launch_card)
         launch_layout.setContentsMargins(12, 12, 12, 12)
         launch_layout.setSpacing(8)
+
         self.launch_title = QLabel(self._t("setup_manager.launch.title", "Master Data"))
         self.launch_title.setProperty("sectionTitle", True)
         self.launch_body = QLabel(
@@ -173,16 +180,19 @@ class MainWindow(QMainWindow):
         )
         self.launch_body.setWordWrap(True)
         self.launch_body.setProperty("navHint", True)
+
         self.open_tools_btn = QPushButton(self._t("setup_manager.open_tool_library", "Open Tool Library"))
         self.open_tools_btn.setProperty("panelActionButton", True)
         self.open_tools_btn.setProperty("sidebarLaunchButton", True)
         self.open_tools_btn.setMinimumWidth(154)
-        self.open_tools_btn.clicked.connect(self._open_tool_library_action)
+        self.open_tools_btn.clicked.connect(lambda: open_tool_library_action(self))
+
         self.open_jaws_btn = QPushButton(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
         self.open_jaws_btn.setProperty("panelActionButton", True)
         self.open_jaws_btn.setProperty("sidebarLaunchButton", True)
         self.open_jaws_btn.setMinimumWidth(154)
-        self.open_jaws_btn.clicked.connect(self._open_jaws_library_action)
+        self.open_jaws_btn.clicked.connect(lambda: open_jaws_library_action(self))
+
         self.preferences_btn = QToolButton()
         self.preferences_btn.setProperty("topBarIconButton", True)
         self.preferences_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / "menu_icon.svg")))
@@ -191,16 +201,16 @@ class MainWindow(QMainWindow):
         self.preferences_btn.setFixedSize(38, 38)
         self.preferences_btn.setAutoRaise(True)
         self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
-        self.preferences_btn.clicked.connect(self._open_preferences)
+        self.preferences_btn.clicked.connect(lambda: open_preferences_action(self))
+
         launch_layout.addWidget(self.launch_title)
         launch_layout.addWidget(self.launch_body)
         launch_layout.addWidget(self.open_tools_btn)
         launch_layout.addWidget(self.open_jaws_btn)
         launch_layout.addWidget(self.preferences_btn, 0, Qt.AlignHCenter)
-        nav_layout.addWidget(launch_card)
+        return launch_card
 
-        root.addWidget(self.nav_rail)
-
+    def _initialize_pages(self):
         self.stack = QStackedWidget()
         self.setup_page = SetupPage(
             self.work_service,
@@ -216,7 +226,10 @@ class MainWindow(QMainWindow):
         self.logbook_page.logbookChanged.connect(self.setup_page.refresh_works)
         self.setup_page.openLibraryMasterFilterRequested.connect(self._open_tool_library_with_master_filter)
         self.setup_page.openLibraryWithModuleRequested.connect(self._open_tool_library_with_master_filter)
-        self.setup_page.libraryLaunchContextChanged.connect(self._on_setup_launch_context_changed)
+        # Keep launch-card state in sync with selection changes from SetupPage.
+        self.setup_page.libraryLaunchContextChanged.connect(
+            lambda context: on_setup_launch_context_changed(self, context)
+        )
         self.setup_page.libraryLaunchContextChanged.connect(self.drawing_page.set_setup_context)
 
         self._launch_context = {
@@ -232,14 +245,14 @@ class MainWindow(QMainWindow):
             "has_data": False,
         }
         self.drawing_page.set_setup_context(self._launch_context)
-        self._update_launch_actions()
+        update_launch_actions(self)
         self.setup_page.drawings_enabled = self.ui_preferences.get("enable_drawings_tab", True)
 
         self.stack.addWidget(self.setup_page)
         self.stack.addWidget(self.drawing_page)
         self.stack.addWidget(self.logbook_page)
-        root.addWidget(self.stack, 1)
 
+    def _initialize_status_bar(self):
         status_bar = QStatusBar()
         self.setStatusBar(status_bar)
         self._status_bar = status_bar
@@ -262,77 +275,22 @@ class MainWindow(QMainWindow):
         }
         self._update_status_message()
 
-        self._set_page(0)
-
     # ------------------------------------------------------------------
     # Tool Library launcher helpers
     # ------------------------------------------------------------------
 
     def _send_to_tool_library(self, payload: dict) -> bool:
         """Send an IPC message to a running Tool Library instance. Returns True on success."""
-        for _ in range(3):
-            sock = QLocalSocket()
-            sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
-            if not sock.waitForConnected(1500):
-                try:
-                    sock.disconnectFromServer()
-                except Exception:
-                    pass
-                continue
-            try:
-                sock.write(json.dumps(payload).encode("utf-8"))
-                sock.flush()
-                if sock.waitForBytesWritten(1500):
-                    return True
-            except Exception:
-                pass
-            finally:
-                try:
-                    sock.disconnectFromServer()
-                except Exception:
-                    pass
-        return False
+        return send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, payload)
 
     def _launch_tool_library(self, extra_args: list = None) -> bool:
         """Start the Tool Library process. Returns True on success."""
-        args = list(extra_args or [])
-
-        def _is_safe_exe_target(exe_path: Path) -> bool:
-            try:
-                resolved = exe_path.resolve()
-                current = Path(sys.executable).resolve()
-            except Exception:
-                return False
-            if not resolved.exists() or resolved == current:
-                return False
-            return "tool library" in resolved.name.lower()
-
-        if TOOL_LIBRARY_MAIN_PATH.exists() and not getattr(sys, "frozen", False):
-            candidates = []
-            # Prefer pythonw.exe on Windows: no console window flash when launching hidden.
-            pythonw = Path(sys.executable).parent / "pythonw.exe"
-            if pythonw.exists():
-                candidates.append(str(pythonw))
-            candidates.append(str(Path(sys.executable)))
-            py_cmd = shutil.which("python")
-            if py_cmd:
-                candidates.append(py_cmd)
-            py_launcher = shutil.which("py")
-            if py_launcher:
-                candidates.append(py_launcher)
-
-            for candidate in candidates:
-                cmd_args = [str(TOOL_LIBRARY_MAIN_PATH)] + args
-                if Path(candidate).name.lower() == "py.exe" or Path(candidate).name.lower() == "py":
-                    cmd_args = ["-3", str(TOOL_LIBRARY_MAIN_PATH)] + args
-                if QProcess.startDetached(candidate, cmd_args, str(TOOL_LIBRARY_PROJECT_DIR)):
-                    return True
-
-        for exe_path in TOOL_LIBRARY_EXE_CANDIDATES:
-            if _is_safe_exe_target(exe_path):
-                if QProcess.startDetached(str(exe_path), args, str(exe_path.parent)):
-                    return True
-        return False
+        return launch_tool_library(
+            TOOL_LIBRARY_MAIN_PATH,
+            TOOL_LIBRARY_EXE_CANDIDATES,
+            TOOL_LIBRARY_PROJECT_DIR,
+            extra_args,
+        )
 
     def _preload_tool_library_background(self):
         """Launch Tool Library hidden in background so selectors open instantly."""
@@ -349,7 +307,13 @@ class MainWindow(QMainWindow):
     def _current_window_rect(self) -> tuple[int, int, int, int]:
         return current_window_rect(self)
 
+    def _complete_tool_library_handoff(self):
+        # Centralize hide/opacity reset so IPC and process-launch paths stay in sync.
+        self.hide()
+        self.setWindowOpacity(1.0)
+
     def _open_tool_library_together(self):
+        # Legacy external hook retained for backward compatibility.
         """Backward-compatible helper that opens Tool Library tools module without filters."""
         self._open_tool_library_module("tools")
 
@@ -358,9 +322,10 @@ class MainWindow(QMainWindow):
         x, y, width, height = self._current_window_rect()
 
         # Grant the Tool Library process permission to take foreground focus.
-        _allow_set_foreground()
+        allow_set_foreground()
 
         # Preferred path: IPC to the already-running (hidden) Tool Library.
+        # This is fastest and preserves an already warmed process.
         payload = {
             "geometry": f"{x},{y},{width},{height}",
             "show": True,
@@ -368,22 +333,16 @@ class MainWindow(QMainWindow):
             "module": "jaws" if module == "jaws" else "tools",
         }
         if self._send_to_tool_library(payload):
-            def _finish_handoff():
-                self.hide()
-                self.setWindowOpacity(1.0)
-            self._fade_out_and(_finish_handoff)
+            self._fade_out_and(self._complete_tool_library_handoff)
             return
 
         # Fallback: launch a new Tool Library process.
+        # We still retry IPC shortly after launch to push intended module/filter state.
         args = ["--geometry", f"{x},{y},{width},{height}"]
         if self._launch_tool_library(args):
-            def _finish_launch():
-                self.hide()
-                self.setWindowOpacity(1.0)
-
             self._send_request_with_retry(
                 payload,
-                on_success=lambda: self._fade_out_and(_finish_launch),
+                on_success=lambda: self._fade_out_and(self._complete_tool_library_handoff),
             )
             return
 
@@ -397,10 +356,12 @@ class MainWindow(QMainWindow):
         )
 
     def _open_tool_library_separate(self):
+        # Legacy external hook retained for backward compatibility.
         """Backward-compatible helper that now opens Jaws module without filters."""
         self._open_tool_library_module("jaws")
 
     def _open_tool_library_deep_link(self, kind: str, item_id: str):
+        # Deep links bypass IPC filter-state setup and open directly by item ID.
         """Open Tool Library and navigate directly to a specific jaw or tool."""
         x, y, width, height = self._current_window_rect()
         if kind == "jaw":
@@ -419,8 +380,10 @@ class MainWindow(QMainWindow):
 
     def _open_tool_library_with_master_filter(self, tool_ids, jaw_ids, module: str = "tools"):
         """Open Tool Library in launch-scoped master filter mode."""
-        safe_tools = [str(t).strip() for t in (tool_ids or []) if str(t).strip()]
-        safe_jaws = [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]
+        raw_tools = [str(t).strip() for t in (tool_ids or []) if str(t).strip()]
+        raw_jaws = [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]
+        safe_tools = list(raw_tools)
+        safe_jaws = list(raw_jaws)
 
         # Keep module filtering strict even when one side has no linked IDs.
         # The Tool/Jaw pages treat empty filter lists as "show all", so we
@@ -432,14 +395,15 @@ class MainWindow(QMainWindow):
         if not safe_jaws:
             safe_jaws = [no_match_id]
 
-        if selected_module == "tools" and tool_ids is not None and not [str(t).strip() for t in (tool_ids or []) if str(t).strip()]:
+        # Keep the warning tied to user intent (explicitly selected module with no links).
+        if selected_module == "tools" and tool_ids is not None and not raw_tools:
             safe_tools = [no_match_id]
             QMessageBox.information(
                 self,
                 self._t("setup_manager.viewer.title", "Viewer"),
                 self._t("setup_manager.viewer.no_tools", "No tools selected for this work."),
             )
-        if selected_module == "jaws" and jaw_ids is not None and not [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]:
+        if selected_module == "jaws" and jaw_ids is not None and not raw_jaws:
             QMessageBox.information(
                 self,
                 self._t("setup_manager.viewer.title", "Viewer"),
@@ -447,7 +411,7 @@ class MainWindow(QMainWindow):
             )
 
         x, y, width, height = self._current_window_rect()
-        _allow_set_foreground()
+        allow_set_foreground()
 
         # Preferred path: IPC to the already-running Tool Library.
         payload = {
@@ -459,10 +423,7 @@ class MainWindow(QMainWindow):
             "module": selected_module,
         }
         if self._send_to_tool_library(payload):
-            def _finish_handoff():
-                self.hide()
-                self.setWindowOpacity(1.0)
-            self._fade_out_and(_finish_handoff)
+            self._fade_out_and(self._complete_tool_library_handoff)
             return
 
         # Fallback: launch a new Tool Library process.
@@ -473,13 +434,9 @@ class MainWindow(QMainWindow):
             "--master-filter-active", "1",
         ]
         if self._launch_tool_library(args):
-            def _finish_launch():
-                self.hide()
-                self.setWindowOpacity(1.0)
-
             self._send_request_with_retry(
                 payload,
-                on_success=lambda: self._fade_out_and(_finish_launch),
+                on_success=lambda: self._fade_out_and(self._complete_tool_library_handoff),
             )
             return
 
@@ -500,197 +457,43 @@ class MainWindow(QMainWindow):
         on_success=None,
         on_failed=None,
     ):
-        """Retry IPC shortly after launching Tool Library so module/filter payload is applied."""
-        if self._send_to_tool_library(payload):
-            if callable(on_success):
-                on_success()
-            return
-        if attempts <= 1:
-            if callable(on_failed):
-                on_failed()
-            return
-        QTimer.singleShot(
-            delay_ms,
-            lambda: self._send_request_with_retry(
-                payload,
-                attempts - 1,
-                delay_ms,
-                on_success=on_success,
-                on_failed=on_failed,
-            ),
+        """Retry IPC shortly after launching Tool Library so module/filter payload is applied.
+
+        Tool Library startup can race with the first IPC attempt; this helper smooths over
+        that timing window without blocking the UI thread.
+        """
+        send_request_with_retry(
+            self._send_to_tool_library,
+            payload,
+            attempts=attempts,
+            delay_ms=delay_ms,
+            on_success=on_success,
+            on_failed=on_failed,
         )
-
-    def _set_launch_button_variant(self, button: QPushButton, primary: bool):
-        button.setProperty("primaryAction", bool(primary))
-        button.setProperty("secondaryAction", not bool(primary))
-        button.style().unpolish(button)
-        button.style().polish(button)
-
-    def _on_setup_launch_context_changed(self, context):
-        self._launch_context = dict(context or {})
-        self._update_launch_actions()
-
-    def _update_navigation_labels(self):
-        drawings_enabled = self.ui_preferences.get("enable_drawings_tab", True)
-        for idx, button in enumerate(getattr(self, "nav_buttons", [])):
-            if idx == 0:
-                text = self._t("setup_manager.nav.setups", "SETUPS")
-                button.setVisible(True)
-            elif idx == 1:
-                key = "setup_manager.nav.show_drawing" if self._launch_context.get("selected") else "setup_manager.nav.drawings"
-                default = "SHOW DRAWING" if self._launch_context.get("selected") else "DRAWINGS"
-                text = self._t(key, default)
-                button.setVisible(drawings_enabled)
-                button.setEnabled(drawings_enabled)
-                button.setToolTip("" if drawings_enabled else self._t("preferences.drawings_tab_disabled_hint", "Drawings tab is disabled in Preferences."))
-            else:
-                text = self._t("setup_manager.nav.logbook", "LOGBOOK")
-                button.setVisible(True)
-            button.setText(text)
-
-    def _update_launch_actions(self):
-        selected = bool(self._launch_context.get("selected"))
-        self._update_navigation_labels()
-        if selected:
-            work_id = str(self._launch_context.get("work_id") or "").strip()
-            self.launch_body.setText(
-                self._t(
-                    "setup_manager.launch.selected_body",
-                    "Selected work {work_id}: open filtered Tool Library and Jaws Library views.",
-                    work_id=work_id,
-                )
-                if work_id
-                else self._t(
-                    "setup_manager.launch.selected_body_no_id",
-                    "Selected work: open filtered Tool Library and Jaws Library views.",
-                )
-            )
-            self._set_launch_button_variant(self.open_tools_btn, True)
-            self._set_launch_button_variant(self.open_jaws_btn, True)
-        else:
-            self.launch_body.setText(
-                self._t(
-                    "setup_manager.launch.default_body",
-                    "Open Tool Library or Jaws Library. Select a work in Setup to open filtered data.",
-                )
-            )
-            self._set_launch_button_variant(self.open_tools_btn, False)
-            self._set_launch_button_variant(self.open_jaws_btn, False)
-
-    def _open_tool_library_action(self):
-        if self._launch_context.get("selected"):
-            if not self._launch_context.get("has_data"):
-                QMessageBox.information(
-                    self,
-                    self._t("setup_manager.viewer.title", "Viewer"),
-                    self._t("setup_manager.viewer.no_links", "No jaw/tool links were found for this setup."),
-                )
-                return
-            self._open_tool_library_with_master_filter(
-                self._launch_context.get("tool_ids") or [],
-                self._launch_context.get("jaw_ids") or [],
-                module="tools",
-            )
-            return
-        self._open_tool_library_module("tools")
-
-    def _open_jaws_library_action(self):
-        if self._launch_context.get("selected"):
-            tool_ids = self._launch_context.get("tool_ids") or []
-            jaw_ids = self._launch_context.get("jaw_ids") or []
-            if not jaw_ids:
-                QMessageBox.information(
-                    self,
-                    self._t("setup_manager.viewer.title", "Viewer"),
-                    self._t("setup_manager.viewer.no_jaw_links", "Selected work has no jaw links."),
-                )
-                return
-            self._open_tool_library_with_master_filter(tool_ids, jaw_ids, module="jaws")
-            return
-        self._open_tool_library_module("jaws")
-
-    def _open_preferences(self):
-        dialog = PreferencesDialog(
-            self.ui_preferences,
-            self._t,
-            parent=self,
-            active_db_path=str(getattr(self.work_service.db, "path", "") or ""),
-            on_check_compatibility=self._check_setup_db_compatibility,
-        )
-        if dialog.exec() != PreferencesDialog.Accepted:
-            return
-
-        previous_language = self.ui_preferences.get("language", "en")
-        previous_setup_db = str(self.ui_preferences.get("setup_db_path", "") or "").strip()
-        self.ui_preferences = self.ui_preferences_service.save(dialog.preferences_payload())
-        self.localization.set_language(self.ui_preferences.get("language", "en"))
-        if hasattr(self.print_service, "set_translator"):
-            self.print_service.set_translator(self._t)
-        self._apply_style()
-        self._refresh_localized_labels()
-
-        # If currently on drawings page and it was just disabled, switch away
-        if self.stack.currentIndex() == 1 and not self.ui_preferences.get("enable_drawings_tab", True):
-            self._set_page(0)
-        self.setup_page.drawings_enabled = self.ui_preferences.get("enable_drawings_tab", True)
-
-        QMessageBox.information(
-            self,
-            self._t("preferences.saved_title", "Preferences"),
-            self._t("preferences.saved_body", "Preferences saved."),
-        )
-        if self.ui_preferences.get("language", "en") != previous_language:
-            QMessageBox.information(
-                self,
-                self._t("preferences.restart_title", "Restart Required"),
-                self._t("preferences.restart_body", "Language changes will be applied after restarting the app."),
-            )
-        current_setup_db = str(self.ui_preferences.get("setup_db_path", "") or "").strip()
-        if current_setup_db != previous_setup_db:
-            QMessageBox.information(
-                self,
-                self._t("preferences.restart_title", "Restart Required"),
-                self._t(
-                    "preferences.restart_db_body",
-                    "Database path changes will be applied after restarting the app.",
-                ),
-            )
 
     def _check_setup_db_compatibility(self, database_path: str):
-        target_path = Path(str(database_path or "").strip()).expanduser()
-        if not str(target_path).strip():
-            QMessageBox.warning(
-                self,
-                self._t("preferences.database.compatibility.title", "Compatibility Check"),
-                self._t("preferences.database.compatibility.empty_path", "No Setup database path was provided."),
-            )
-            return
-        if not target_path.exists():
+        target_path, path_error = resolve_compatibility_target_path(database_path)
+        if path_error is not None:
             QMessageBox.warning(
                 self,
                 self._t("preferences.database.compatibility.title", "Compatibility Check"),
                 self._t(
-                    "preferences.database.compatibility.missing_path",
-                    "The selected Setup database was not found:\n{path}",
-                    path=str(target_path),
+                    path_error["message_key"],
+                    path_error["default"],
+                    **path_error["kwargs"],
                 ),
             )
             return
 
-        tool_refs = self.draw_service.list_tool_refs(force_reload=True, dedupe_by_id=False)
-        jaw_refs = self.draw_service.list_jaw_refs(force_reload=True)
-        tool_ids = {str(item.get("id") or "").strip() for item in tool_refs if str(item.get("id") or "").strip()}
-        tool_uids = {
-            int(item.get("uid")): item
-            for item in tool_refs
-            if item.get("uid") is not None and str(item.get("uid")).strip()
-        }
-        jaw_ids = {str(item.get("id") or "").strip() for item in jaw_refs if str(item.get("id") or "").strip()}
-
         try:
-            conn = sqlite3.connect(str(target_path))
-            conn.row_factory = sqlite3.Row
-            rows = conn.execute("SELECT * FROM works ORDER BY work_id COLLATE NOCASE ASC").fetchall()
+            # Bundle includes both the computed compatibility report and human-readable
+            # DB path summary text used in the dialog.
+            bundle = build_compatibility_report_bundle(
+                target_path,
+                self.draw_service,
+                self.work_service._row_to_work,
+                self._t,
+            )
         except Exception as exc:
             QMessageBox.critical(
                 self,
@@ -702,190 +505,19 @@ class MainWindow(QMainWindow):
                 ),
             )
             return
-        finally:
-            try:
-                conn.close()
-            except Exception:
-                pass
 
-        works = [self.work_service._row_to_work(row) for row in rows]
-
-        total_works = len(works)
-        fully_resolved = 0
-        works_with_issues = 0
-        jaw_match_count = 0
-        tool_uid_match_count = 0
-        tool_id_fallback_count = 0
-        missing_jaw_count = 0
-        missing_tool_count = 0
-        issue_lines = []
-
-        for work in works:
-            work_id = str(work.get("work_id") or "").strip() or "(no work ID)"
-            local_missing = []
-
-            for label, jaw_id in (
-                (self._t("work_editor.ref.main_jaw", "Main jaw"), str(work.get("main_jaw_id") or "").strip()),
-                (self._t("work_editor.ref.sub_jaw", "Sub jaw"), str(work.get("sub_jaw_id") or "").strip()),
-            ):
-                if not jaw_id:
-                    continue
-                if jaw_id in jaw_ids:
-                    jaw_match_count += 1
-                else:
-                    missing_jaw_count += 1
-                    local_missing.append(f"{label}: {jaw_id}")
-
-            for head_label, assignments in (
-                (self._t("work_editor.ref.head1_tool", "Head 1 tool"), work.get("head1_tool_assignments") or []),
-                (self._t("work_editor.ref.head2_tool", "Head 2 tool"), work.get("head2_tool_assignments") or []),
-            ):
-                for assignment in assignments:
-                    tool_id = str((assignment or {}).get("tool_id") or "").strip()
-                    raw_uid = (assignment or {}).get("tool_uid")
-                    matched = False
-                    if raw_uid is not None and str(raw_uid).strip():
-                        try:
-                            if int(raw_uid) in tool_uids:
-                                tool_uid_match_count += 1
-                                matched = True
-                        except Exception:
-                            pass
-                    if not matched and tool_id and tool_id in tool_ids:
-                        tool_id_fallback_count += 1
-                        matched = True
-                    if not matched and tool_id:
-                        missing_tool_count += 1
-                        uid_text = f" [uid {raw_uid}]" if raw_uid is not None and str(raw_uid).strip() else ""
-                        local_missing.append(f"{head_label}: {tool_id}{uid_text}")
-
-            if local_missing:
-                works_with_issues += 1
-                issue_lines.append(f"{work_id}: " + "; ".join(local_missing))
-            else:
-                fully_resolved += 1
-
-        summary = self._t(
-            "preferences.database.compatibility.summary",
-            "Works checked: {total}\nFully resolved: {resolved}\nWorks with issues: {issues}\n\nJaw matches: {jaw_matches}\nTool matches by UID: {tool_uid_matches}\nTool matches by ID fallback: {tool_id_fallbacks}\nMissing jaws: {missing_jaws}\nMissing tools: {missing_tools}",
-            total=total_works,
-            resolved=fully_resolved,
-            issues=works_with_issues,
-            jaw_matches=jaw_match_count,
-            tool_uid_matches=tool_uid_match_count,
-            tool_id_fallbacks=tool_id_fallback_count,
-            missing_jaws=missing_jaw_count,
-            missing_tools=missing_tool_count,
-        )
-
-        informative = self._t(
-            "preferences.database.compatibility.informative",
-            "Setup DB: {setup_db}\nTool DB: {tool_db}\nJaw DB: {jaw_db}",
-            setup_db=str(target_path),
-            tool_db=str(self.draw_service.tool_db_path),
-            jaw_db=str(self.draw_service.jaw_db_path),
-        )
-        self._show_compatibility_report_dialog(
+        show_compatibility_report_dialog(
+            self,
             title=self._t("preferences.database.compatibility.title", "Compatibility Check"),
-            summary=summary,
-            informative=informative,
-            details="\n".join(issue_lines[:200]),
-            has_issues=bool(works_with_issues),
+            summary=bundle["report"]["summary"],
+            informative=bundle["informative"],
+            details=bundle["report"]["details"],
+            has_issues=bundle["report"]["has_issues"],
         )
-
-    def _show_compatibility_report_dialog(
-        self,
-        *,
-        title: str,
-        summary: str,
-        informative: str,
-        details: str,
-        has_issues: bool,
-    ):
-        dialog = QDialog(self)
-        setup_editor_dialog(dialog)
-        dialog.setObjectName("compatibilityReportDialog")
-        dialog.setProperty("preferencesDialog", True)
-        dialog.setAttribute(Qt.WA_StyledBackground, True)
-        dialog.setStyleSheet(
-            "QDialog#compatibilityReportDialog {"
-            " background-color: #ffffff;"
-            "}"
-        )
-        dialog.setModal(True)
-        dialog.setWindowTitle(title)
-        dialog.resize(700, 560)
-
-        root = QVBoxLayout(dialog)
-        root.setContentsMargins(14, 14, 14, 14)
-        root.setSpacing(12)
-
-        summary_group = create_titled_section(self._t("preferences.database.compatibility.summary_title", "Summary"))
-        summary_layout = QVBoxLayout(summary_group)
-        summary_layout.setContentsMargins(12, 12, 12, 12)
-        summary_layout.setSpacing(8)
-
-        status_label = QLabel(
-            self._t(
-                "preferences.database.compatibility.status_warning",
-                "Compatibility issues were found.",
-            )
-            if has_issues
-            else self._t(
-                "preferences.database.compatibility.status_ok",
-                "All checked work references resolved successfully.",
-            )
-        )
-        status_label.setProperty("detailHint", True)
-        status_label.setWordWrap(True)
-        summary_layout.addWidget(status_label)
-
-        summary_text = QPlainTextEdit()
-        summary_text.setReadOnly(True)
-        summary_text.setPlainText(summary)
-        summary_text.setMinimumHeight(180)
-        summary_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
-        summary_layout.addWidget(summary_text)
-        root.addWidget(summary_group)
-
-        db_group = create_titled_section(self._t("preferences.database.compatibility.paths_title", "Database Paths"))
-        db_layout = QVBoxLayout(db_group)
-        db_layout.setContentsMargins(12, 12, 12, 12)
-        db_layout.setSpacing(8)
-        info_text = QPlainTextEdit()
-        info_text.setReadOnly(True)
-        info_text.setPlainText(informative)
-        info_text.setMinimumHeight(120)
-        info_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
-        db_layout.addWidget(info_text)
-        root.addWidget(db_group)
-
-        if details:
-            details_group = create_titled_section(self._t("preferences.database.compatibility.details_title", "Issue Details"))
-            details_layout = QVBoxLayout(details_group)
-            details_layout.setContentsMargins(12, 12, 12, 12)
-            details_layout.setSpacing(8)
-            details_text = QPlainTextEdit()
-            details_text.setReadOnly(True)
-            details_text.setPlainText(details)
-            details_text.setMinimumHeight(140)
-            details_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
-            details_layout.addWidget(details_text)
-            root.addWidget(details_group, 1)
-
-        button_row = QHBoxLayout()
-        button_row.addStretch(1)
-        ok_btn = QPushButton(self._t("common.ok", "OK"))
-        ok_btn.setProperty("panelActionButton", True)
-        ok_btn.setProperty("primaryAction", True)
-        add_shadow(ok_btn)
-        ok_btn.clicked.connect(dialog.accept)
-        button_row.addWidget(ok_btn)
-        root.addLayout(button_row)
-
-        dialog.exec()
 
     def _refresh_localized_labels(self):
+        # Keep text refresh order stable: shell labels first, then child pages, then stateful
+        # launch/status text that depends on current context and translated strings.
         self.setWindowTitle(self._t("setup_manager.window_title", APP_TITLE))
         if hasattr(self, "rail_title_label"):
             self.rail_title_label.setText(self._t("setup_manager.rail_title", "Setup Manager"))
@@ -897,7 +529,7 @@ class MainWindow(QMainWindow):
             self.open_jaws_btn.setText(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
         if hasattr(self, "preferences_btn"):
             self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
-        self._update_navigation_labels()
+        update_navigation_labels(self)
         if hasattr(self, "setup_page") and hasattr(self.setup_page, "apply_localization"):
             self.setup_page.apply_localization(self._t)
         if hasattr(self, "drawing_page") and hasattr(self.drawing_page, "apply_localization"):
@@ -905,7 +537,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "logbook_page") and hasattr(self.logbook_page, "apply_localization"):
             self.logbook_page.apply_localization(self._t)
         self._update_status_message()
-        self._update_launch_actions()
+        update_launch_actions(self)
 
     def _update_status_message(self):
         if not hasattr(self, "_status_bar") or not hasattr(self, "_status_data"):

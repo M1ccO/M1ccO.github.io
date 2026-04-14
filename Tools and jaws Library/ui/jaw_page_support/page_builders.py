@@ -184,8 +184,16 @@ def _build_selector_card(page) -> QFrame:
     )
     selector_layout.addWidget(page.selector_hint_label, 0)
 
-    page.selector_sp1_slot = JawAssignmentSlot('main', page._t('jaw_library.selector.sp1_slot', 'SP1 jaw'))
-    page.selector_sp2_slot = JawAssignmentSlot('sub', page._t('jaw_library.selector.sp2_slot', 'SP2 jaw'))
+    page.selector_sp1_slot = JawAssignmentSlot(
+        'main',
+        page._t('jaw_library.selector.sp1_slot', 'SP1 jaw'),
+        translate=page._t,
+    )
+    page.selector_sp2_slot = JawAssignmentSlot(
+        'sub',
+        page._t('jaw_library.selector.sp2_slot', 'SP2 jaw'),
+        translate=page._t,
+    )
     page.selector_sp1_slot.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
     page.selector_sp2_slot.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
     page.selector_sp1_slot.set_drop_placeholder_text(page._t('jaw_library.selector.drop_here', 'Drop jaw here'))

@@ -133,6 +133,31 @@ class PreferencesDialog(PreferencesDialogBase):
         self.drawings_tab_cb.setStyleSheet("QCheckBox { background: transparent; }")
         card_layout.addWidget(self.drawings_tab_cb)
 
+        self.detached_preview_mode_combo = QComboBox()
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.follow_last", "Follow Last Closed Position"),
+            "follow_last",
+        )
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.right", "Open on Right Side"),
+            "right",
+        )
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.left", "Open on Left Side"),
+            "left",
+        )
+        self.detached_preview_mode_combo.addItem(
+            self._t("preferences.detached_preview.mode.current", "Keep Current Position"),
+            "current",
+        )
+        apply_tool_library_combo_style(self.detached_preview_mode_combo)
+        card_layout.addWidget(
+            self._row(
+                self._t("preferences.detached_preview.mode", "Detached 3D Preview Position"),
+                self.detached_preview_mode_combo,
+            )
+        )
+
         layout.addStretch(1)
         return tab
 
@@ -270,6 +295,9 @@ class PreferencesDialog(PreferencesDialogBase):
             "setup_db_path": self.setup_db_path_edit.text().strip(),
             "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
             "enable_drawings_tab": self.drawings_tab_cb.isChecked(),
+            "detached_preview_policy": {
+                "mode": self.detached_preview_mode_combo.currentData() or "follow_last",
+            },
         }
 
     def _load_current_values(self):
@@ -283,6 +311,11 @@ class PreferencesDialog(PreferencesDialogBase):
         self.active_db_path_edit.setToolTip(self._active_db_path or "")
         self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
         self.drawings_tab_cb.setChecked(bool(self._current.get("enable_drawings_tab", True)))
+        policy = self._current.get("detached_preview_policy")
+        mode = str((policy or {}).get("mode") if isinstance(policy, dict) else "follow_last").strip().lower()
+        if mode not in {"follow_last", "left", "right", "current"}:
+            mode = "follow_last"
+        self._set_combo_by_data(self.detached_preview_mode_combo, mode)
 
     def _pick_tools_models_root(self):
         start_dir = self.tools_models_root.text().strip()

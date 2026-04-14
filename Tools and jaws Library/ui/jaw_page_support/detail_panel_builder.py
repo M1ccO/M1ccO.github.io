@@ -89,7 +89,7 @@ def populate_detail_panel(page, jaw: dict | None) -> None:
         )
 
     layout.addLayout(info)
-    layout.addWidget(build_jaw_preview_card(page, jaw))
+    # Inline 3D preview section intentionally removed.
     layout.addStretch(1)
     page.detail_layout.addWidget(card)
 
@@ -185,6 +185,7 @@ def build_jaw_preview_card(page, jaw: dict) -> QWidget:
     if viewer.parent() is not diagram:
         viewer.setParent(diagram)
     viewer.setStyleSheet('background: transparent; border: none;')
+    viewer.set_status_overlay_enabled(False)
     viewer.set_control_hint_text(
         page._t(
             'tool_editor.hint.rotate_pan_zoom',

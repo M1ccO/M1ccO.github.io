@@ -5,6 +5,8 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QVBoxLayout
 
+from config import SHARED_UI_PREFERENCES_PATH
+from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
 from ui.selectors.common import SelectorDialogBase
 from ui.selectors.tool_selector_layout import ToolSelectorLayoutMixin
 from ui.selectors.tool_selector_payload import ToolSelectorPayloadMixin
@@ -72,6 +74,7 @@ class ToolSelectorDialog(
         self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.resize(1180, 720)
+        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -134,4 +137,8 @@ class ToolSelectorDialog(
     def toggle_preview_window(self) -> None:
         from ui.home_page_support.detached_preview import toggle_preview_window
         toggle_preview_window(self)
+
+    def closeEvent(self, event) -> None:
+        save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
+        super().closeEvent(event)
 

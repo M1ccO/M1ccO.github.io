@@ -300,7 +300,7 @@ QFrame[bottomBar="true"] {
 
 /* Header strip inside detail cards */
 QFrame[detailHeader="true"] {
-    background-color: #ffffff;
+    background-color: transparent;
     border: 1px solid #c8d4e0;
     border-radius: 6px;
 }

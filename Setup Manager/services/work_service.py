@@ -1,5 +1,9 @@
 import json
+import logging
 from datetime import datetime
+
+
+logger = logging.getLogger(__name__)
 
 
 class WorkService:
@@ -25,6 +29,7 @@ class WorkService:
                 if isinstance(parsed, list):
                     return [str(item).strip() for item in parsed if str(item).strip()]
             except Exception:
+                logger.debug("Failed to parse JSON list text; falling back to comma split", exc_info=True)
                 return [part.strip() for part in text.split(",") if part.strip()]
         return []
 
@@ -41,6 +46,7 @@ class WorkService:
             try:
                 tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
             except Exception:
+                logger.debug("Failed to parse tool_uid for assignment normalization", exc_info=True)
                 tool_uid = None
             spindle = str(value.get("spindle") or default_spindle or "main").strip().lower()
             comment = str(value.get("comment") or "").strip()
@@ -80,6 +86,7 @@ class WorkService:
             try:
                 parsed = json.loads(raw_value)
             except Exception:
+                logger.debug("Failed to parse tool assignments JSON; ignoring malformed payload", exc_info=True)
                 parsed = None
             source = parsed if isinstance(parsed, list) else []
         else:

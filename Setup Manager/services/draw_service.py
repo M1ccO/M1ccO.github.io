@@ -1,8 +1,12 @@
 import sqlite3
+import logging
 from pathlib import Path
 
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
+
+
+logger = logging.getLogger(__name__)
 
 
 class DrawService:
@@ -23,6 +27,7 @@ class DrawService:
         try:
             return path.stat().st_mtime if Path(path).exists() else None
         except Exception:
+            logger.debug("Failed to read database mtime; treating reference cache as unchanged", exc_info=True)
             return None
 
     def _invalidate_tool_cache(self):
@@ -78,9 +83,11 @@ class DrawService:
         try:
             return Path(path).expanduser().resolve()
         except Exception:
+            logger.debug("Failed to fully resolve drawing path; falling back to expanded path", exc_info=True)
             try:
                 return Path(path).expanduser()
             except Exception:
+                logger.debug("Failed to expand drawing path", exc_info=True)
                 return None
 
     @staticmethod
@@ -106,7 +113,7 @@ class DrawService:
                 tokens.append(path.stem.strip().lower())
                 tokens.append(path.name.strip().lower())
             except Exception:
-                pass
+                logger.exception("Failed to extract context tokens from drawing_path")
 
         return [token for token in tokens if token]
 
@@ -260,6 +267,10 @@ class DrawService:
                     ).fetchall()
                 except Exception:
                     # tool_head and/or tool_type/default_pot may not exist in all DB versions.
+                    logger.debug(
+                        "Falling back to legacy tool reference query for head-filtered lookup",
+                        exc_info=True,
+                    )
                     includes_tool_type = False
                     includes_spindle_orientation = False
                     try:
@@ -269,6 +280,10 @@ class DrawService:
                             (head_filter,),
                         ).fetchall()
                     except Exception:
+                        logger.debug(
+                            "tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows",
+                            exc_info=True,
+                        )
                         rows = conn.execute(
                             "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
                         ).fetchall()
@@ -278,6 +293,10 @@ class DrawService:
                         "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
                     ).fetchall()
                 except Exception:
+                    logger.debug(
+                        "Falling back to legacy tool reference query without tool metadata columns",
+                        exc_info=True,
+                    )
                     includes_tool_type = False
                     includes_spindle_orientation = False
                     rows = conn.execute(

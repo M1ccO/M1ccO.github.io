@@ -1,8 +1,12 @@
 ﻿from datetime import datetime
+import logging
 from pathlib import Path
 import textwrap
 
 from config import DEFAULT_TOOL_ICON, TOOL_ICONS_DIR, TOOL_LIBRARY_TOOL_ICONS_DIR, TOOL_TYPE_TO_ICON
+
+
+logger = logging.getLogger(__name__)
 
 
 class PrintService:
@@ -128,6 +132,7 @@ class PrintService:
             return result_rgb
         except Exception:
             # Fallback color if date parsing fails
+            logger.debug("Failed to parse logbook date for color mapping; using fallback color", exc_info=True)
             return cls._hex_to_rgb("#8B8B8B")  # Gray
 
     def _tool_data(self, tool_id, tool_uid=None):
@@ -144,6 +149,7 @@ class PrintService:
             try:
                 full_by_uid = service.get_full_tool_by_uid(tool_uid)
             except Exception:
+                logger.exception("Failed to resolve full tool by UID during print payload build")
                 full_by_uid = None
             if isinstance(full_by_uid, dict):
                 result.update(full_by_uid)
@@ -152,6 +158,7 @@ class PrintService:
         try:
             full = service.get_full_tool(tool_id)
         except Exception:
+            logger.exception("Failed to resolve full tool by ID during print payload build")
             full = None
         if isinstance(full, dict):
             result.update(full)
@@ -160,6 +167,7 @@ class PrintService:
         try:
             ref = service.get_tool_ref(tool_id)
         except Exception:
+            logger.exception("Failed to resolve tool reference during print payload build")
             ref = None
         if isinstance(ref, dict):
             result.update(ref)
@@ -180,6 +188,7 @@ class PrintService:
             try:
                 tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
             except Exception:
+                logger.debug("Failed to parse tool_uid in tool assignment payload", exc_info=True)
                 tool_uid = None
             spindle = self._to_text(assignment.get("spindle")).lower() or "main"
             comment = self._to_text(assignment.get("comment"))
@@ -245,6 +254,7 @@ class PrintService:
         try:
             full = self.reference_service.get_full_jaw(jaw_id)
         except Exception:
+            logger.exception("Failed to resolve jaw details during print payload build")
             full = None
         if not isinstance(full, dict):
             return {}
@@ -526,7 +536,7 @@ class PrintService:
                 else:
                     canvas.drawImage(str(icon_path), icon_x, icon_y, width=icon_size, height=icon_size, preserveAspectRatio=True, mask='auto')
             except Exception:
-                pass
+                logger.exception("Failed to draw tool icon in setup card PDF")
 
         pot = self._to_text(tool.get("pot")) if show_pot else ""
         pot_width = 0
@@ -1115,6 +1125,7 @@ class PrintService:
             try:
                 date_display = datetime.strptime(date_raw, "%Y-%m-%d").strftime("%d/%m/%Y")
             except Exception:
+                logger.debug("Failed to parse logbook entry date for display; using raw value", exc_info=True)
                 date_display = date_raw
 
 

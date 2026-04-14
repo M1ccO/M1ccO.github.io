@@ -88,19 +88,11 @@ class JawSelectorStateMixin:
     def _update_context_header(self) -> None:
         label = selector_spindle_label(self._current_spindle)
         self.selector_spindle_value_label.setText(label)
-        self.spindle_btn.blockSignals(True)
-        self.spindle_btn.setChecked(self._current_spindle == 'sub')
-        self.spindle_btn.setText(label)
-        self.spindle_btn.blockSignals(False)
 
     def _update_remove_button(self) -> None:
         has_selected = any(self._selector_assignments.get(slot) is not None for slot in self._selected_slots)
         has_assigned = any(self._selector_assignments.get(slot) is not None for slot in ('main', 'sub'))
         self.remove_btn.setEnabled(has_selected or has_assigned)
-
-    def _toggle_spindle(self) -> None:
-        self._current_spindle = 'sub' if self.spindle_btn.isChecked() else 'main'
-        self._update_context_header()
 
     def _on_slot_clicked(self, slot_key: str, ctrl_pressed: bool) -> None:
         slot = normalize_selector_spindle(slot_key)

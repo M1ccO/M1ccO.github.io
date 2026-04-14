@@ -9,7 +9,11 @@ Extracted from data/migrations.py (Phase 6: Data/Migration Segmentation).
 from __future__ import annotations
 
 import json
+import logging
 import sqlite3
+
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "create_or_migrate_tools_schema",
@@ -44,6 +48,7 @@ def json_loads(raw) -> list:
     try:
         return json.loads(raw)
     except Exception:
+        logger.debug("Failed to parse JSON payload in tools migration helper", exc_info=True)
         return []
 
 
@@ -314,6 +319,7 @@ def _legacy_component_items_from_row(row) -> list:
                 try:
                     part = json.loads(part)
                 except Exception:
+                    logger.exception("Failed to parse legacy support part payload; using fallback mapping")
                     part = {'name': part, 'code': '', 'link': '', 'group': ''}
             if not isinstance(part, dict):
                 continue

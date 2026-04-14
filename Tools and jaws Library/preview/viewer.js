@@ -266,6 +266,7 @@ const renderer = new THREE.WebGLRenderer({
   antialias: true,
   alpha: true,
 });
+renderer.setClearColor(0xd6d9de, 1.0);
 
 renderer.setPixelRatio(window.devicePixelRatio || 1);
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -585,6 +586,8 @@ function _markCameraDragJustEnded() {
   setTimeout(() => { _cameraDragJustEnded = false; }, 120);
 }
 
+let statusOverlayEnabled = true;
+
 // Measurement color scheme - distinctive colors for each type
 const measurementColors = {
   distance: 0x00b7ff,       // Electric cyan-blue
@@ -616,6 +619,9 @@ const _measurementLabelDelta = new THREE.Vector3();
 const _measurementLeaderEnd = new THREE.Vector3();
 
 function showStatus(text) {
+  if (!statusOverlayEnabled) {
+    return;
+  }
   status.textContent = text;
   status.style.display = 'block';
 }
@@ -2714,6 +2720,13 @@ window.setWheelZoomEnabled = function (enabled) {
 
 window.setControlHintText = function (text) {
   _setControlHintText(text);
+};
+
+window.setStatusOverlayEnabled = function (enabled) {
+  statusOverlayEnabled = !!enabled;
+  if (!statusOverlayEnabled) {
+    hideStatus();
+  }
 };
 
 window.setAlignmentPlane = function (plane) {

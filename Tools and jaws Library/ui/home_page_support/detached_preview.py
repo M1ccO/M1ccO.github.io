@@ -17,6 +17,13 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
+from config import SHARED_UI_PREFERENCES_PATH
+from shared.ui.helpers.window_geometry_memory import (
+    get_detached_preview_open_mode,
+    place_dialog_near_host,
+    restore_window_geometry,
+    save_window_geometry,
+)
 from shared.ui.helpers.detached_preview_common import (
     apply_detached_preview_default_bounds as _apply_detached_preview_default_bounds,
     bind_escape_close_shortcut,
@@ -120,7 +127,26 @@ def ensure_detached_preview_dialog(page):
 
 
 def apply_detached_preview_default_bounds(page):
-    _apply_detached_preview_default_bounds(page)
+    dialog = getattr(page, '_detached_preview_dialog', None)
+    if dialog is None:
+        return
+
+    mode = get_detached_preview_open_mode(SHARED_UI_PREFERENCES_PATH)
+    if mode == 'follow_last':
+        if restore_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, 'tool_detached_preview_dialog'):
+            return
+        _apply_detached_preview_default_bounds(page)
+        return
+
+    if mode == 'left':
+        place_dialog_near_host(dialog, page.window(), side='left')
+        return
+
+    if mode == 'right':
+        place_dialog_near_host(dialog, page.window(), side='right')
+        return
+
+    # mode == 'current': keep the dialog's current geometry.
 
 
 def update_detached_measurement_toggle_icon(page, enabled: bool):
@@ -137,6 +163,9 @@ def update_detached_measurement_toggle_icon(page, enabled: bool):
 
 
 def on_detached_preview_closed(page):
+    dialog = getattr(page, '_detached_preview_dialog', None)
+    if dialog is not None:
+        save_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, 'tool_detached_preview_dialog')
     if page._detached_preview_widget is not None:
         page._detached_preview_widget.set_measurement_focus_index(-1)
     page._detached_preview_last_model_key = None
@@ -193,12 +222,18 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     if not page.preview_window_btn.isChecked():
         return False
 
+    dialog_visible = bool(page._detached_preview_dialog and page._detached_preview_dialog.isVisible())
+
     if not page.current_tool_id:
+        if dialog_visible and not show_errors:
+            return False
         close_detached_preview(page)
         return False
 
     tool = page._get_selected_tool()
     if not tool:
+        if dialog_visible and not show_errors:
+            return False
         close_detached_preview(page)
         return False
 
@@ -210,6 +245,8 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
                 page._t('tool_library.preview.window_title', '3D Preview'),
                 page._t('tool_library.preview.none_assigned_selected', 'The selected tool has no 3D model assigned.'),
             )
+        if dialog_visible and not show_errors:
+            return False
         close_detached_preview(page)
         return False
 

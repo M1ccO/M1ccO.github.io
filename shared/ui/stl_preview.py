@@ -116,6 +116,7 @@ class StlPreviewWidget(QWidget):
         self._control_hint_text = ''
         self._axis_orbit_visible = False
         self._selection_caption = ''
+        self._status_overlay_enabled = True
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -205,6 +206,11 @@ class StlPreviewWidget(QWidget):
             return
         self._call_js('setControlHintText', str(self._control_hint_text or ''))
 
+    def _apply_status_overlay_mode(self):
+        if not self._page_ready:
+            return
+        self._call_js('setStatusOverlayEnabled', bool(self._status_overlay_enabled))
+
     def _sync_rendering_state(self):
         app = QApplication.instance()
         app_active = True
@@ -256,6 +262,7 @@ class StlPreviewWidget(QWidget):
 
         self._show_web()
         self._apply_hint_text()
+        self._apply_status_overlay_mode()
 
         if self._pending_parts:
             self._send_parts_to_viewer(self._pending_parts)
@@ -267,6 +274,10 @@ class StlPreviewWidget(QWidget):
         self._apply_measurement_state()
         self._apply_axis_orbit_state()
         self._sync_rendering_state()
+
+    def set_status_overlay_enabled(self, enabled: bool):
+        self._status_overlay_enabled = bool(enabled)
+        self._apply_status_overlay_mode()
 
     def _send_model_to_viewer(self, stl_path: Path, label: str | None = None):
         stl_url = QUrl.fromLocalFile(str(stl_path)).toString()

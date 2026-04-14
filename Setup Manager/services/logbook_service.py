@@ -1,4 +1,5 @@
 import re
+import logging
 from datetime import date, datetime
 
 import openpyxl
@@ -7,6 +8,9 @@ from openpyxl.utils import get_column_letter
 
 
 SERIAL_PATTERN = re.compile(r"^([A-Z]+)(\d{2})(?:/(\d+))?$")
+
+
+logger = logging.getLogger(__name__)
 
 
 def index_to_letters(index):
@@ -222,6 +226,7 @@ class LogbookService:
             final_rgb = self._blend_rgb(moderated, white_rgb, progress * 0.70)
             return PatternFill(fill_type='solid', fgColor=self._rgb_to_hex(final_rgb))
         except Exception:
+            logger.debug("Failed to parse logbook date for Excel row fill; using fallback color", exc_info=True)
             return PatternFill(fill_type='solid', fgColor='EEF3F8')
 
     @staticmethod
@@ -242,6 +247,7 @@ class LogbookService:
             dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
             return dt.strftime('%d/%m/%Y')
         except Exception:
+            logger.debug("Failed to parse logbook date for display formatting; using raw value", exc_info=True)
             return date_text or ''
 
     def export_entries_to_excel(self, entries, output_path, headers=None):

@@ -201,6 +201,8 @@ class HomePage(CatalogPageBase):
         self._detached_measurements_enabled = True
         self._detached_measurement_filter = None
         self._detached_preview_last_model_key = None
+        self._detached_preview_sync_delay_ms = 60
+        self._detached_preview_sync_request_id = 0
         self._detail_preview_widget = None
         self._detail_preview_model_key = None
         self._inline_preview_warmup = None
@@ -492,7 +494,20 @@ class HomePage(CatalogPageBase):
 
     def _sync_detached_preview(self, show_errors: bool = True) -> None:
         """Sync detached preview with current tool."""
-        _sync_detached_preview_impl(self, show_errors=show_errors)
+        if show_errors:
+            _sync_detached_preview_impl(self, show_errors=True)
+            return
+
+        # Coalesce rapid selection-change bursts to avoid detached window bounce.
+        self._detached_preview_sync_request_id += 1
+        request_id = self._detached_preview_sync_request_id
+
+        def _run_deferred_sync() -> None:
+            if request_id != self._detached_preview_sync_request_id:
+                return
+            _sync_detached_preview_impl(self, show_errors=False)
+
+        QTimer.singleShot(int(self._detached_preview_sync_delay_ms), _run_deferred_sync)
 
     def set_module_switch_handler(self, callback) -> None:
         """Set external callback for module switch button."""

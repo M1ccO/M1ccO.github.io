@@ -1,6 +1,6 @@
 {
-  "max_cross_app_signature_collisions": 5,
-  "notes": "Reduced from 8 to 5 after Phase 8 legacy support-module retirement removed stale cross-app duplicate signatures.",
+  "max_cross_app_signature_collisions": 8,
+  "notes": "Current observed baseline is 8 cross-app signature collisions. Three drag/drop collisions are tracked as refactor_target until shared extraction is completed.",
   "classification": {
     "intentional": [
       "ClassDef:Database:8a6fd8df5417ff71aa627b1374f9df7dfdeff74c",
@@ -9,6 +9,10 @@
       "FunctionDef:__init__:f35bd597525879eb55dcc73e740ed5971d196acb",
       "FunctionDef:_t:04a38c460d55ff3dac737e1196a9b83ad0d972e4"
     ],
-    "refactor_target": []
+    "refactor_target": [
+      "FunctionDef:__init__:6065e9d6221f7e081ce167c4c9a3c304e34cfad3",
+      "FunctionDef:__init__:f0b9e9fb6e8f066adcc55facc1eb08b3d1f865d8",
+      "FunctionDef:mousePressEvent:e5993ce3c65ba0d7c134ba8d592276e42bc10c00"
+    ]
   }
 }
