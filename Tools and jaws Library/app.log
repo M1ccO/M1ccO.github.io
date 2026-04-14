@@ -167,3 +167,4 @@ json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 2026-04-14 12:13:23,936 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
 2026-04-14 12:22:23,715 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
 2026-04-14 12:22:32,388 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-14 13:04:43,521 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
