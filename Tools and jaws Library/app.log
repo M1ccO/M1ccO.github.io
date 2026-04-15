@@ -2704,3 +2704,19 @@ Traceback (most recent call last):
 RuntimeError: Selection payload was not written to the callback socket.
 2026-04-15 13:16:43,046 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True
 2026-04-15 13:17:14,585 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True
+2026-04-15 14:27:31,108 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 14:27:31,110 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 14:27:31,112 tool_library_main_window_for_tests ERROR selector: failed to send result payload to callback server 'selector-callback'
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Tools and jaws Library\ui\main_window.py", line 1399, in _send_selector_result_payload
+    if bytes_written < 0:
+TypeError: '<' not supported between instances of 'NoneType' and 'int'
+2026-04-15 14:28:03,148 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 14:28:03,149 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 14:28:31,595 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 14:28:31,596 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 14:30:42,478 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 14:35:01,069 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 14:35:54,704 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 14:38:17,273 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 14:38:17,274 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False

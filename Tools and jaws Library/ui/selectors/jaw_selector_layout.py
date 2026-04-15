@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from config import TOOL_ICONS_DIR
 from shared.ui.helpers.editor_helpers import style_icon_action_button, style_panel_action_button
+from shared.ui.helpers.icon_loader import icon_from_path
 from shared.ui.helpers.page_scaffold_common import (
     apply_catalog_list_view_defaults,
     build_catalog_list_shell,
@@ -52,8 +53,8 @@ class JawSelectorLayoutMixin:
         frame.setObjectName('')
         self._filter_layout.setContentsMargins(8, 6, 8, 6)
 
-        search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
-        self._close_icon = QIcon(str(TOOL_ICONS_DIR / 'close_icon.svg'))
+        search_icon = icon_from_path(TOOL_ICONS_DIR / 'search_icon.svg', size=QSize(28, 28))
+        self._close_icon = icon_from_path(TOOL_ICONS_DIR / 'close_icon.svg', size=QSize(20, 20))
 
         self.search_toggle = build_search_toggle(search_icon, self._toggle_search)
 

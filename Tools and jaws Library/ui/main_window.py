@@ -68,6 +68,7 @@ from shared.ui.main_window_helpers import (
     get_active_theme_palette,
     is_interactive_widget_click,
 )
+from shared.ui.helpers.icon_loader import icon_from_path
 
 
 class RailHeadToggleButton(QPushButton):
@@ -304,9 +305,10 @@ class MainWindow(QMainWindow):
             if pm.isNull():
                 return QIcon()
             return QIcon(pm.transformed(QTransform().rotate(rotation), Qt.SmoothTransformation))
-        # Render raster icons through cleanup/scaling; let Qt render SVG directly.
+        # Keep icon loading aligned with shared helper so SVGs still render
+        # even when the Qt SVG icon engine plugin is unavailable.
         if path.suffix.lower() == '.svg':
-            return QIcon(str(path))
+            return icon_from_path(path, size=target_size)
         return QIcon(self._clean_icon_pixmap(str(path), target_size))
 
     def _nav_icon_render_options(self, icon_name: str) -> tuple[QSize, int]:
@@ -341,7 +343,8 @@ class MainWindow(QMainWindow):
 
     def _pixmap_by_path(self, path: Path, target_size: QSize) -> QPixmap:
         if path.suffix.lower() == '.svg':
-            return QIcon(str(path)).pixmap(target_size)
+            icon = icon_from_path(path, size=target_size)
+            return icon.pixmap(target_size) if not icon.isNull() else QPixmap()
         return self._clean_icon_pixmap(str(path), target_size)
 
     def _clean_icon_pixmap(self, icon_path: str, target_size: QSize) -> QPixmap:
@@ -1396,7 +1399,7 @@ class MainWindow(QMainWindow):
 
         try:
             bytes_written = socket.write(json.dumps(payload).encode('utf-8'))
-            if bytes_written < 0:
+            if isinstance(bytes_written, int) and bytes_written < 0:
                 raise RuntimeError('Selection payload write failed.')
             socket.flush()
         except Exception:
@@ -1411,11 +1414,14 @@ class MainWindow(QMainWindow):
             )
             return
 
-        def _close_callback_socket(sock=socket):
+        try:
             socket.disconnectFromServer()
+        except Exception:
+            pass
+        try:
             socket.deleteLater()
-
-        QTimer.singleShot(0, _close_callback_socket)
+        except Exception:
+            pass
 
         self._back_to_setup_manager()
 

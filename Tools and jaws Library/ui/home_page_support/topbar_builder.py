@@ -29,6 +29,7 @@ from shared.ui.helpers.topbar_common import (
     build_toolbar_title,
     rebuild_filter_row as _rebuild_filter_row_common,
 )
+from shared.ui.helpers.icon_loader import icon_from_path
 from ui.widgets.common import apply_shared_dropdown_style
 
 __all__ = [
@@ -48,8 +49,8 @@ def build_tool_filter_toolbar(page) -> QFrame:
     frame, page.filter_layout = build_filter_frame()
     page.toolbar_title_label = build_toolbar_title(page, page.page_title)
 
-    page.search_icon = QIcon(str(TOOL_ICONS_DIR / 'search_icon.svg'))
-    page.close_icon = QIcon(str(TOOL_ICONS_DIR / 'close_icon.svg'))
+    page.search_icon = icon_from_path(TOOL_ICONS_DIR / 'search_icon.svg', size=QSize(28, 28))
+    page.close_icon = icon_from_path(TOOL_ICONS_DIR / 'close_icon.svg', size=QSize(20, 20))
 
     page.search_toggle = build_search_toggle(page.search_icon, page._toggle_search)
 

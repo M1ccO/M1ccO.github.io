@@ -57,6 +57,7 @@ _CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parents[2] / 'assets' / 'check_
 
 
 from shared.ui.helpers.common_widgets import add_shadow
+from shared.ui.helpers.icon_loader import icon_from_path
 
 
 class ResponsiveColumnsHost(QWidget):
@@ -299,7 +300,7 @@ def make_arrow_button(icon_path, tooltip: str) -> QPushButton:
     btn.setProperty('arrowMoveButton', True)
     btn.setToolTip(tooltip)
     btn.setCursor(Qt.PointingHandCursor)
-    icon = QIcon(str(icon_path))
+    icon = icon_from_path(icon_path, size=QSize(18, 18))
     if not icon.isNull():
         btn.setIcon(icon)
         btn.setIconSize(QSize(18, 18))
@@ -322,7 +323,7 @@ def style_icon_action_button(btn: QPushButton, icon_path, tooltip: str, *, dange
     btn.setProperty('panelActionButton', True)
     if danger:
         btn.setProperty('dangerAction', True)
-    icon = QIcon(str(icon_path))
+    icon = icon_from_path(icon_path, size=QSize(18, 18))
     if not icon.isNull():
         btn.setIcon(icon)
         btn.setIconSize(QSize(18, 18))

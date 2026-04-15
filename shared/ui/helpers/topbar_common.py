@@ -9,6 +9,8 @@ from PySide6.QtCore import QSize
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QToolButton, QWidget
 
+from shared.ui.helpers.icon_loader import icon_from_path
+
 
 def build_filter_frame() -> tuple[QFrame, QHBoxLayout]:
     """Create the standard filter frame and layout shell."""
@@ -46,7 +48,7 @@ def build_search_toggle(icon: QIcon, on_clicked: Callable[[], None]) -> QToolBut
 def build_details_toggle(icons_dir: Path, on_clicked: Callable[[], None]) -> QToolButton:
     """Create the standard details toggle toolbutton."""
     btn = QToolButton()
-    btn.setIcon(QIcon(str(icons_dir / 'tooltip.svg')))
+    btn.setIcon(icon_from_path(icons_dir / 'tooltip.svg', size=QSize(28, 28)))
     btn.setIconSize(QSize(28, 28))
     btn.setAutoRaise(True)
     btn.setProperty('topBarIconButton', True)
@@ -84,7 +86,7 @@ def build_detail_header(close_icon: QIcon, title_text: str, on_close: Callable[[
 def build_filter_reset(icons_dir: Path, on_clicked: Callable[[], None]) -> QToolButton:
     """Create the standard filter reset icon button."""
     btn = QToolButton()
-    btn.setIcon(QIcon(str(icons_dir / 'filter_arrow_right.svg')))
+    btn.setIcon(icon_from_path(icons_dir / 'filter_arrow_right.svg', size=QSize(28, 28)))
     btn.setIconSize(QSize(28, 28))
     btn.setAutoRaise(True)
     btn.setProperty('topBarIconButton', True)
@@ -96,7 +98,7 @@ def build_filter_reset(icons_dir: Path, on_clicked: Callable[[], None]) -> QTool
 def build_preview_toggle(icons_dir: Path, tooltip: str, on_clicked: Callable[[], None]) -> QToolButton:
     """Create the standard detached-preview toggle button."""
     btn = QToolButton()
-    btn.setIcon(QIcon(str(icons_dir / '3d_icon.svg')))
+    btn.setIcon(icon_from_path(icons_dir / '3d_icon.svg', size=QSize(28, 28)))
     btn.setIconSize(QSize(28, 28))
     btn.setCheckable(True)
     btn.setAutoRaise(True)

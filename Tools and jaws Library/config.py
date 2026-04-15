@@ -203,8 +203,8 @@ DEFAULT_TOOL_ICON = 'default.png'
 
 NAV_ITEM_TO_ICON = {
     'TOOLS': 'library.svg',
-    'JAWS': 'jaw_icon.png',
-    'FIXTURES': 'jaw_icon.png',
+    'JAWS': 'jaw_main.png',
+    'FIXTURES': 'soft_jaw.png',
     'ASSEMBLIES': 'assemblies_icon.svg',
     'HOLDERS': 'holders_icon.svg',
     'INSERTS': 'inserts_icon.svg',
