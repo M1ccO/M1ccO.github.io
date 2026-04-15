@@ -1,7 +1,7 @@
-"""Event filter handler for FixturePage.
+﻿"""Event filter handler for FixturePage.
 
 Extracted from fixture_page.py (Phase 5 Pass 7).  The single public function
-handle_jaw_page_event() replaces the large eventFilter override in
+handle_fixture_page_event() replaces the large eventFilter override in
 fixture_page.py, keeping that file focused on orchestration logic.
 """
 
@@ -11,11 +11,11 @@ from PySide6.QtCore import QEvent
 from shiboken6 import isValid
 
 from ui.fixture_page_support.selector_actions import (
-    selector_drag_payload_jaw_ids,
+    selector_drag_payload_fixture_ids,
     selector_remove_btn_contains_global_point,
 )
 
-__all__ = ["handle_jaw_page_event"]
+__all__ = ["handle_fixture_page_event"]
 
 
 def _alive(widget) -> bool:
@@ -34,7 +34,7 @@ def _safe_viewport(widget):
     return viewport if _alive(viewport) else None
 
 
-def handle_jaw_page_event(page, obj, event) -> bool:
+def handle_fixture_page_event(page, obj, event) -> bool:
     """Handle Qt events for FixturePage.
 
     Returns True if the event was consumed, False to continue default handling.
@@ -42,11 +42,11 @@ def handle_jaw_page_event(page, obj, event) -> bool:
     through to super().eventFilter() when this returns False.
     """
     # Suppress combo popup flicker during search-toggle rebuild
-    jaw_type_filter = getattr(page, 'jaw_type_filter', None)
+    fixture_type_filter = getattr(page, 'fixture_type_filter', None)
     spindle_filter = getattr(page, 'spindle_filter', None)
     combo_widgets = {
-        jaw_type_filter if _alive(jaw_type_filter) else None,
-        jaw_type_filter.view() if _alive(jaw_type_filter) else None,
+        fixture_type_filter if _alive(fixture_type_filter) else None,
+        fixture_type_filter.view() if _alive(fixture_type_filter) else None,
         spindle_filter if _alive(spindle_filter) else None,
         spindle_filter.view() if _alive(spindle_filter) else None,
     }
@@ -67,13 +67,13 @@ def handle_jaw_page_event(page, obj, event) -> bool:
         and event.type() in (QEvent.DragEnter, QEvent.DragMove, QEvent.Drop)
         and hasattr(event, 'mimeData')
     ):
-        jaw_ids = selector_drag_payload_jaw_ids(page, event.mimeData())
+        fixture_ids = selector_drag_payload_fixture_ids(page, event.mimeData())
         point = event.position().toPoint() if hasattr(event, 'position') else None
-        if jaw_ids and point is not None:
+        if fixture_ids and point is not None:
             global_pos = obj.mapToGlobal(point)
             if selector_remove_btn_contains_global_point(page, global_pos):
                 if event.type() == QEvent.Drop:
-                    page._selector_slot_controller.remove_selector_jaws_by_ids(jaw_ids)
+                    page._selector_slot_controller.remove_selector_fixtures_by_ids(fixture_ids)
                 event.acceptProposedAction()
                 return True
 
@@ -116,10 +116,12 @@ def handle_jaw_page_event(page, obj, event) -> bool:
             page._selector_slot_controller.refresh_selector_slots()
 
     # Click on empty list area clears item selection
-    jaw_list = getattr(page, 'jaw_list', None)
-    jaw_list_viewport = _safe_viewport(jaw_list)
-    if _alive(jaw_list) and obj in (jaw_list, jaw_list_viewport):
-        if event.type() == QEvent.MouseButtonPress and not jaw_list.indexAt(event.pos()).isValid():
+    fixture_list = getattr(page, 'fixture_list', None)
+    fixture_list_viewport = _safe_viewport(fixture_list)
+    if _alive(fixture_list) and obj in (fixture_list, fixture_list_viewport):
+        if event.type() == QEvent.MouseButtonPress and not fixture_list.indexAt(event.pos()).isValid():
             page._clear_selection()
 
     return False
+
+

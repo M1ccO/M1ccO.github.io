@@ -102,6 +102,7 @@ def open_external_selector_session_for_dialog(
     spindle: str | None = None,
     follow_up: dict | None = None,
     initial_assignments: list[dict] | None = None,
+    initial_assignment_buckets: dict[str, list[dict]] | None = None,
 ) -> bool:
     return open_external_selector_session(
         dialog,
@@ -110,4 +111,5 @@ def open_external_selector_session_for_dialog(
         spindle=spindle,
         follow_up=follow_up,
         initial_assignments=initial_assignments,
+        initial_assignment_buckets=initial_assignment_buckets,
     )

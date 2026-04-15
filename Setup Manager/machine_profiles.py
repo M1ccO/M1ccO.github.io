@@ -72,8 +72,8 @@ class MachineProfile:
     default_zero_xy_visible: bool = False
     default_tools_spindle: str = "main"
 
-    # Machine family — "lathe" is fully implemented.
-    # "machining_center" is reserved for future work (Fixtures library, etc.).
+    # Machine family: "lathe" or "machining_center".
+    # Both families are fully implemented and in production use.
     machine_type: str = "lathe"
 
     # Single-spindle profiles set this to True.  Drives OP10/OP20 terminology
@@ -556,6 +556,11 @@ PROFILE_DISPLAY_ORDER: list[str] = [
 ]
 
 
+def is_machining_center_key(key: str | None) -> bool:
+    """Return True when a profile key identifies a machining-center family."""
+    return str(key or "").strip().lower().startswith("machining_center")
+
+
 def is_machining_center(profile: MachineProfile | None) -> bool:
     """Return True when the profile describes a machining center."""
     if profile is None:
@@ -563,12 +568,23 @@ def is_machining_center(profile: MachineProfile | None) -> bool:
     return str(profile.machine_type).strip().lower() == "machining_center"
 
 
+def resolve_profile_key(raw: str | None) -> str:
+    """Normalise and validate a raw profile key string.
+
+    Returns the key unchanged when it is a registered key, or
+    ``DEFAULT_PROFILE_KEY`` when the value is empty or unrecognised.
+    This is the single place that encodes the fallback rule — all other
+    callers that need a guaranteed-valid key should go through here.
+    """
+    normalized = str(raw or "").strip().lower()
+    if normalized in PROFILE_REGISTRY:
+        return normalized
+    return DEFAULT_PROFILE_KEY
+
+
 def load_profile(profile_key: str | None) -> MachineProfile:
     """Return a MachineProfile by key, falling back to the default for unknown keys."""
-    normalized = str(profile_key or "").strip().lower()
-    if normalized and normalized in PROFILE_REGISTRY:
-        return PROFILE_REGISTRY[normalized]
-    return PROFILE_REGISTRY[DEFAULT_PROFILE_KEY]
+    return PROFILE_REGISTRY[resolve_profile_key(profile_key)]
 
 
 def apply_machining_center_overrides(

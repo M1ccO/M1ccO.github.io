@@ -82,3 +82,32 @@
 2026-04-15 10:12:39,812 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
 2026-04-15 10:12:39,812 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
 2026-04-15 10:12:39,812 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 544
+2026-04-15 15:00:32,563 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 15:00:32,563 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 15:00:32,563 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 944
+2026-04-15 15:00:32,564 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 15:00:32,564 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 15:00:32,564 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-15 15:00:32,565 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 15:00:32,565 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 15:00:32,565 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 982
+2026-04-15 15:00:32,566 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 15:00:32,566 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 15:00:32,566 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 544
+2026-04-15 18:49:14,115 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "c:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+sqlite3.OperationalError: no such table: tools
+2026-04-15 18:49:14,116 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "c:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "c:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+sqlite3.OperationalError: no such table: tools

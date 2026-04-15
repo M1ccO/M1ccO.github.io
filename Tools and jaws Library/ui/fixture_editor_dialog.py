@@ -40,7 +40,7 @@ from ui.tool_editor_support.transform_rules import (
 from ui.widgets.common import apply_shared_dropdown_style, clear_focused_dropdown_on_outside_click
 
 
-class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
+class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     # Fixtures use a free-text `fixture_type` (user-defined) instead of a
     # fixed list. `fixture_kind` is constrained to 'Part' or 'Assembly'.
     FIXTURE_KINDS = ['Part', 'Assembly']
@@ -70,7 +70,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.setModal(True)
         setup_editor_dialog(self)
         self._build_ui()
-        self._load_jaw()
+        self._load_fixture()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
@@ -79,16 +79,16 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         if self._group_edit_mode:
             if self._group_count > 1:
                 return self._t(
-                    'jaw_editor.window_title.group',
+                    'fixture_editor.window_title.group',
                     'Group Edit ({count} items)',
                     count=self._group_count,
                 )
-            return self._t('jaw_editor.window_title.group', 'Group Edit')
+            return self._t('fixture_editor.window_title.group', 'Group Edit')
         fixture_id = self.fixture.get('fixture_id', '').strip()
         if fixture_id:
-            base = self._t('jaw_editor.window_title.edit', 'Edit Fixture - {fixture_id}', fixture_id=fixture_id)
+            base = self._t('fixture_editor.window_title.edit', 'Edit Fixture - {fixture_id}', fixture_id=fixture_id)
         else:
-            base = self._t('jaw_editor.window_title.add', 'Add Fixture')
+            base = self._t('fixture_editor.window_title.add', 'Add Fixture')
         if self._batch_label:
             return f"{base} ({self._batch_label})"
         return base
@@ -101,12 +101,12 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         root = QVBoxLayout(self)
         self.tabs = QTabWidget()
         root.addWidget(self.tabs, 1)
-        self.tabs.addTab(self._build_general_tab(), self._t('jaw_editor.tab.general', 'General'))
+        self.tabs.addTab(self._build_general_tab(), self._t('fixture_editor.tab.general', 'General'))
         build_models_tab(self, self.tabs)
 
         self._dialog_buttons = create_dialog_buttons(
             self,
-            save_text=self._t('jaw_editor.action.save_fixture', 'SAVE JAW'),
+            save_text=self._t('fixture_editor.action.save_fixture', 'SAVE FIXTURE'),
             cancel_text=self._t('common.cancel', 'Cancel').upper(),
             on_save=self.accept,
             on_cancel=self.reject,
@@ -162,7 +162,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         title_row = QHBoxLayout()
         title_row.setContentsMargins(0, 0, 0, 0)
         title_row.setSpacing(10)
-        self.header_title = QLabel(self._t('jaw_editor.header.new_jaw', 'New fixture'))
+        self.header_title = QLabel(self._t('fixture_editor.header.new_fixture', 'New fixture'))
         self.header_title.setProperty('detailHeroTitle', True)
         self.header_title.setWordWrap(True)
         self.header_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
@@ -187,19 +187,13 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         # fixture_type is a free-text, user-defined value.
         self.fixture_type = QLineEdit()
         self.fixture_type.setPlaceholderText(
-            self._t('jaw_editor.placeholder.fixture_type', 'e.g. Vise, Collet, Custom...')
+            self._t('fixture_editor.placeholder.fixture_type', 'e.g. Vise, Collet, Custom...')
         )
         self.fixture_kind = QComboBox()
         for raw_kind in self.FIXTURE_KINDS:
             self.fixture_kind.addItem(self._localized_fixture_kind(raw_kind), raw_kind)
-        self.clamping_diameter_text = QLineEdit()
-        self.clamping_length = QLineEdit()
-        self.turning_washer = QLineEdit()
         self.last_modified = QLineEdit()
         self.notes = QLineEdit()
-
-        self.clamping_diameter_text.setPlaceholderText(self._t('jaw_editor.placeholder.clamping_diameter', '52.40 mm or 50-58 mm'))
-        self.clamping_length.setPlaceholderText(self._t('jaw_editor.placeholder.clamping_length', 'e.g. 24.0 mm'))
 
         self._style_combo(self.fixture_kind)
         self.fixture_type.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -208,23 +202,17 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.fixture_kind.setMinimumWidth(180)
 
         group1 = self._build_field_group([
-            self._build_edit_field(self._t('jaw_library.field.fixture_id', 'Fixture ID'), self.fixture_id),
-            self._build_edit_field(self._t('jaw_library.field.fixture_type', 'Fixture type'), self.fixture_type),
-            self._build_edit_field(self._t('jaw_library.field.fixture_kind', 'Fixture kind'), self.fixture_kind),
+            self._build_edit_field(self._t('fixture_library.field.fixture_id', 'Fixture ID'), self.fixture_id),
+            self._build_edit_field(self._t('fixture_library.field.fixture_type', 'Fixture type'), self.fixture_type),
+            self._build_edit_field(self._t('fixture_library.field.fixture_kind', 'Fixture kind'), self.fixture_kind),
         ])
-        group2 = self._build_field_group([
-            self._build_edit_field(self._t('jaw_library.field.clamping_diameter', 'Clamping diameter'), self.clamping_diameter_text),
-            self._build_edit_field(self._t('jaw_library.field.clamping_length', 'Clamping length'), self.clamping_length),
-            self._build_edit_field(self._t('jaw_library.field.turning_ring', 'Turning ring'), self.turning_washer),
-        ])
-        self._last_modified_field = self._build_edit_field(self._t('jaw_library.field.last_modified', 'Last modified'), self.last_modified)
+        self._last_modified_field = self._build_edit_field(self._t('fixture_library.field.last_modified', 'Last modified'), self.last_modified)
         group3 = self._build_field_group([
             self._last_modified_field,
-            self._build_edit_field(self._t('jaw_library.field.notes', 'Notes'), self.notes),
+            self._build_edit_field(self._t('fixture_library.field.notes', 'Notes'), self.notes),
         ])
 
         form_layout.addWidget(group1)
-        form_layout.addWidget(group2)
         form_layout.addWidget(group3)
         general_content_layout.addWidget(form_frame)
         general_content_layout.addStretch(1)
@@ -251,23 +239,20 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     def _update_header(self):
         fixture_id = self.fixture_id.text().strip()
         self.header_title.setText(
-            self._t('jaw_editor.header.new_jaw', 'New fixture')
+            self._t('fixture_editor.header.new_fixture', 'New fixture')
             if not fixture_id
-            else self._t('jaw_editor.header.jaw_with_id', 'Fixture {fixture_id}', fixture_id=fixture_id)
+            else self._t('fixture_editor.header.fixture_with_id', 'Fixture {fixture_id}', fixture_id=fixture_id)
         )
         self.header_id.setText(fixture_id)
         self.type_badge.setText(self.fixture_type.text())
 
-    def _load_jaw(self):
+    def _load_fixture(self):
         if not self.fixture:
             self._update_measurement_summary_label()
             return
         self.fixture_id.setText(self.fixture.get('fixture_id', ''))
         self.fixture_type.setText(self.fixture.get('fixture_type', ''))
         self._set_combo_by_data(self.fixture_kind, self.fixture.get('fixture_kind', 'Part'))
-        self.clamping_diameter_text.setText(self.fixture.get('clamping_diameter_text', ''))
-        self.clamping_length.setText(self.fixture.get('clamping_length', ''))
-        self.turning_washer.setText(self.fixture.get('turning_washer', ''))
         self.last_modified.setText(self.fixture.get('last_modified', ''))
         self.notes.setText(self.fixture.get('notes', ''))
 
@@ -360,16 +345,16 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     # ------------------------------------------------------------------
     # Model-table helpers  (provided by ModelTableMixin)
     # ------------------------------------------------------------------
-    def _jaws_models_root(self):
-        _, jaws_models_root = read_model_roots(
+    def _fixtures_models_root(self):
+        _, fixtures_models_root = read_model_roots(
             SHARED_UI_PREFERENCES_PATH,
             TOOL_MODELS_ROOT_DEFAULT,
             FIXTURE_MODELS_ROOT_DEFAULT,
         )
-        jaws_models_root.mkdir(parents=True, exist_ok=True)
-        return jaws_models_root
+        fixtures_models_root.mkdir(parents=True, exist_ok=True)
+        return fixtures_models_root
 
-    _models_root = _jaws_models_root
+    _models_root = _fixtures_models_root
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -385,17 +370,17 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         super().moveEvent(event)
         self._ensure_on_screen()
 
-    def get_jaw_data(self):
+    def get_fixture_data(self):
         self._sync_preview_transform_snapshot_for_save()
         parts = self._model_table_to_parts()
         fixture = {
             'fixture_id': self.fixture_id.text().strip(),
             'fixture_type': self.fixture_type.text().strip(),
             'fixture_kind': self.fixture_kind.currentData() or self.fixture_kind.currentText(),
-            'clamping_diameter_text': self.clamping_diameter_text.text().strip(),
-            'clamping_length': self.clamping_length.text().strip(),
+            'clamping_diameter_text': '',
+            'clamping_length': '',
             'used_in_work': '',
-            'turning_washer': self.turning_washer.text().strip(),
+            'turning_washer': '',
             'last_modified': self.last_modified.text().strip(),
             'notes': self.notes.text().strip(),
             'stl_path': json.dumps(parts) if parts else '',
@@ -407,16 +392,17 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         }
 
         if not fixture['fixture_id'] and not self._group_edit_mode:
-            raise ValueError(self._t('jaw_editor.error.jaw_id_required', 'Fixture ID is required.'))
+            raise ValueError(self._t('fixture_editor.error.fixture_id_required', 'Fixture ID is required.'))
         if fixture['fixture_kind'] not in self.FIXTURE_KINDS:
-            raise ValueError(self._t('jaw_editor.error.fixture_kind_invalid', 'Fixture kind is invalid.'))
+            raise ValueError(self._t('fixture_editor.error.fixture_kind_invalid', 'Fixture kind is invalid.'))
         return fixture
 
     def accept(self):
         try:
-            self.get_jaw_data()
+            self.get_fixture_data()
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
             return
         super().accept()
+
 

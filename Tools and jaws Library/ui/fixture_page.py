@@ -1,4 +1,4 @@
-"""Fixture catalog page refactored onto CatalogPageBase."""
+﻿"""Fixture catalog page refactored onto CatalogPageBase."""
 
 from __future__ import annotations
 
@@ -23,17 +23,17 @@ from ui.fixture_page_support.selection_signal_handlers import (
 )
 from shared.ui.platforms.catalog_page_base import CatalogPageBase
 from shared.ui.stl_preview import StlPreviewWidget
-from ui.fixture_catalog_delegate import FixtureCatalogDelegate, ROLE_JAW_ID
+from ui.fixture_catalog_delegate import FixtureCatalogDelegate, ROLE_FIXTURE_ID
 from ui.fixture_page_support import (
     SelectorSlotController,
     apply_detached_measurement_state,
     apply_detached_preview_default_bounds,
-    batch_edit_jaws,
+    batch_edit_fixtures,
     build_filter_toolbar,
     close_detached_preview,
     ensure_detached_preview_dialog,
-    group_edit_jaws,
-    jaw_preview_transform_signature,
+    group_edit_fixtures,
+    fixture_preview_transform_signature,
     load_preview_content,
     on_detached_measurements_toggled,
     on_detached_preview_closed,
@@ -48,16 +48,16 @@ from ui.fixture_page_support import (
     toggle_preview_window,
     update_detached_measurement_toggle_icon,
 )
-from ui.fixture_page_support.event_filter import handle_jaw_page_event
-from ui.fixture_page_support.page_builders import build_jaw_page_layout
+from ui.fixture_page_support.event_filter import handle_fixture_page_event
+from ui.fixture_page_support.page_builders import build_fixture_page_layout
 from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 
 __all__ = ['FixturePage']
 
 
 class FixturePage(CatalogPageBase):
-    jaw_selected = Signal(str)
-    jaw_deleted = Signal(str)
+    fixture_selected = Signal(str)
+    fixture_deleted = Signal(str)
 
     NAV_MODES = [
         ('all', 'all'),
@@ -78,7 +78,7 @@ class FixturePage(CatalogPageBase):
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
         self.machine_profile = machine_profile
 
-        self.current_jaw_id: str | None = None
+        self.current_fixture_id: str | None = None
         self.current_view_mode = 'all'
         self._details_hidden = True
         self._last_splitter_sizes: list[int] | None = None
@@ -150,11 +150,11 @@ class FixturePage(CatalogPageBase):
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
 
-    def _localized_jaw_type(self, raw_type: str) -> str:
+    def _localized_fixture_type(self, raw_type: str) -> str:
         normalized = (raw_type or '').strip().lower().replace(' ', '_')
         return self._t(f'jaw_library.fixture_type.{normalized}', raw_type)
 
-    def _localized_spindle_side(self, raw_side: str) -> str:
+    def _localized_fixture_kind(self, raw_side: str) -> str:
         normalized = (raw_side or '').strip().lower().replace(' ', '_')
         return self._t(f'jaw_library.fixture_kind.{normalized}', raw_side)
 
@@ -178,13 +178,13 @@ class FixturePage(CatalogPageBase):
             fixture_type_filter=fixture_type,
         )
         if self._selector_active:
-            fixtures = [fixture for fixture in fixtures if self._jaw_matches_selector_spindle(fixture)]
+            fixtures = [fixture for fixture in fixtures if self._fixture_matches_selector_spindle(fixture)]
         if self._master_filter_active:
             fixtures = [fixture for fixture in fixtures if str(fixture.get('fixture_id', '')).strip() in self._master_filter_ids]
         return [self._catalog_item_dict(fixture) for fixture in fixtures]
 
     def _build_ui(self) -> None:
-        build_jaw_page_layout(self)
+        build_fixture_page_layout(self)
 
     # ------------------------------------------------------------------
     # Model helpers
@@ -224,9 +224,9 @@ class FixturePage(CatalogPageBase):
         }
 
     def _catalog_item_id(self, index: QModelIndex) -> str:
-        return str(index.data(ROLE_JAW_ID) or '').strip()
+        return str(index.data(ROLE_FIXTURE_ID) or '').strip()
 
-    def _jaw_matches_spindle_filter(self, fixture: dict, spindle_filter: str) -> bool:
+    def _fixture_matches_spindle_filter(self, fixture: dict, spindle_filter: str) -> bool:
         side = str(fixture.get('fixture_kind') or '').strip().lower()
         if spindle_filter == 'main':
             return 'main' in side or 'both' in side or 'paa' in side or 'molem' in side
@@ -234,17 +234,17 @@ class FixturePage(CatalogPageBase):
             return 'sub' in side or 'both' in side or 'vasta' in side or 'molem' in side
         return True
 
-    def _jaw_matches_selector_spindle(self, fixture: dict) -> bool:
+    def _fixture_matches_selector_spindle(self, fixture: dict) -> bool:
         if not self._selector_active:
             return True
-        return self._selector_slot_controller.jaw_supports_selector_slot(fixture, self._selector_spindle)
+        return self._selector_slot_controller.fixture_supports_selector_slot(fixture, self._selector_spindle)
 
     # ------------------------------------------------------------------
     # Event handling
     # ------------------------------------------------------------------
 
     def eventFilter(self, obj, event):
-        if handle_jaw_page_event(self, obj, event):
+        if handle_fixture_page_event(self, obj, event):
             return True
         return super().eventFilter(obj, event)
 
@@ -290,7 +290,7 @@ class FixturePage(CatalogPageBase):
             self.search_input.clear()
             self.refresh_list()
         rebuild_filter_row(self)
-        for combo in (self.jaw_type_filter,):
+        for combo in (self.fixture_type_filter,):
             combo.hidePopup()
             combo.setEnabled(False)
             QTimer.singleShot(0, lambda c=combo: c.setEnabled(True))
@@ -304,7 +304,7 @@ class FixturePage(CatalogPageBase):
         self.refresh_list()
 
     def _clear_filters(self) -> None:
-        self.jaw_type_filter.setCurrentIndex(0)
+        self.fixture_type_filter.setCurrentIndex(0)
 
     def _set_view_mode(self, mode: str, refresh: bool = True) -> None:
         self.current_view_mode = mode
@@ -352,8 +352,8 @@ class FixturePage(CatalogPageBase):
         )
         self.refresh_list()
 
-    def selector_assigned_jaws_for_setup_assignment(self) -> list[dict]:
-        return self._selector_slot_controller.selector_assigned_jaws_for_setup_assignment()
+    def selector_assigned_fixtures_for_setup_assignment(self) -> list[dict]:
+        return self._selector_slot_controller.selector_assigned_fixtures_for_setup_assignment()
 
     def set_module_switch_handler(self, callback) -> None:
         self._module_switch_callback = callback
@@ -371,8 +371,8 @@ class FixturePage(CatalogPageBase):
             self._t('tool_library.module.switch_to_target', 'Switch to {target} module', target=display)
         )
 
-    def set_master_filter(self, jaw_ids, active: bool) -> None:
-        self._master_filter_ids = {str(j).strip() for j in (jaw_ids or []) if str(j).strip()}
+    def set_master_filter(self, fixture_ids, active: bool) -> None:
+        self._master_filter_ids = {str(fixture_id).strip() for fixture_id in (fixture_ids or []) if str(fixture_id).strip()}
         self._master_filter_active = bool(active) and bool(self._master_filter_ids)
         self.refresh_list()
 
@@ -387,18 +387,18 @@ class FixturePage(CatalogPageBase):
     # ------------------------------------------------------------------
 
     def _clear_selection(self) -> None:
-        _sel.clear_jaw_selection(self)
+        _sel.clear_fixture_selection(self)
 
-    def _selected_jaw_ids(self) -> list[str]:
-        return _sel.selected_jaw_ids(self)
+    def _selected_fixture_ids(self) -> list[str]:
+        return _sel.selected_fixture_ids(self)
 
-    def selected_jaws_for_setup_assignment(self) -> list[dict]:
-        return _sel.selected_jaws_for_setup_assignment(self)
+    def selected_fixtures_for_setup_assignment(self) -> list[dict]:
+        return _sel.selected_fixtures_for_setup_assignment(self)
 
-    def _get_selected_jaw(self) -> dict | None:
-        if not self.current_jaw_id:
+    def _get_selected_fixture(self) -> dict | None:
+        if not self.current_fixture_id:
             return None
-        return self.fixture_service.get_fixture(self.current_jaw_id)
+        return self.fixture_service.get_fixture(self.current_fixture_id)
 
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key_Escape:
@@ -415,13 +415,13 @@ class FixturePage(CatalogPageBase):
         self._sync_detached_preview(show_errors=False)
 
     def show_details(self) -> None:
-        _detail_vis.show_jaw_details(self)
+        _detail_vis.show_fixture_details(self)
 
     def hide_details(self) -> None:
-        _detail_vis.hide_jaw_details(self)
+        _detail_vis.hide_fixture_details(self)
 
     def toggle_details(self) -> None:
-        _detail_vis.toggle_jaw_details(self)
+        _detail_vis.toggle_fixture_details(self)
 
     # ------------------------------------------------------------------
     # Preview delegation
@@ -439,7 +439,7 @@ class FixturePage(CatalogPageBase):
             meas_key = json.dumps(fixture.get('measurement_overlays', []), ensure_ascii=False, sort_keys=True)
         except Exception:
             meas_key = str(fixture.get('measurement_overlays', []))
-        return fixture_id, stl_key, meas_key, jaw_preview_transform_signature(fixture)
+        return fixture_id, stl_key, meas_key, fixture_preview_transform_signature(fixture)
 
     def _set_preview_button_checked(self, checked: bool) -> None:
         set_preview_button_checked(self, checked)
@@ -494,11 +494,11 @@ class FixturePage(CatalogPageBase):
     def _prompt_batch_cancel_behavior(self) -> str:
         return prompt_batch_cancel_behavior(self)
 
-    def _batch_edit_jaws(self, jaw_ids: list[str]) -> None:
-        batch_edit_jaws(self, jaw_ids)
+    def _batch_edit_fixtures(self, fixture_ids: list[str]) -> None:
+        batch_edit_fixtures(self, fixture_ids)
 
-    def _group_edit_jaws(self, jaw_ids: list[str]) -> None:
-        group_edit_jaws(self, jaw_ids)
+    def _group_edit_fixtures(self, fixture_ids: list[str]) -> None:
+        group_edit_fixtures(self, fixture_ids)
 
     # ------------------------------------------------------------------
     # Catalog refresh
@@ -520,10 +520,10 @@ class FixturePage(CatalogPageBase):
             self._item_model.appendRow(self._create_catalog_item(item_dict))
         self._item_model.blockSignals(False)
 
-        self._jaw_model = self._item_model
+        self._fixture_model = self._item_model
         self._connect_selection_model()
         if self._item_model.rowCount() == 0:
-            self.current_jaw_id = None
+            self.current_fixture_id = None
             self._current_item_id = None
             self.populate_details(None)
             self._sync_detached_preview(show_errors=False)
@@ -541,9 +541,9 @@ class FixturePage(CatalogPageBase):
             return
         self.refresh_catalog()
 
-    def select_jaw_by_id(self, fixture_id: str) -> None:
-        self.current_jaw_id = fixture_id.strip() or None
-        self._current_item_id = self.current_jaw_id
+    def select_fixture_by_id(self, fixture_id: str) -> None:
+        self.current_fixture_id = fixture_id.strip() or None
+        self._current_item_id = self.current_fixture_id
         self._current_item_uid = None
         self.refresh_list()
 
@@ -551,21 +551,23 @@ class FixturePage(CatalogPageBase):
     # CRUD
     # ------------------------------------------------------------------
 
-    def add_jaw(self) -> None:
-        _crud.add_jaw(self)
+    def add_fixture(self) -> None:
+        _crud.add_fixture(self)
 
-    def edit_jaw(self) -> None:
-        _crud.edit_jaw(self)
+    def edit_fixture(self) -> None:
+        _crud.edit_fixture(self)
 
     def delete_fixture(self) -> None:
         _crud.delete_fixture(self)
 
-    def copy_jaw(self) -> None:
-        _crud.copy_jaw(self)
+    def copy_fixture(self) -> None:
+        _crud.copy_fixture(self)
 
     # ------------------------------------------------------------------
     # Localization
     # ------------------------------------------------------------------
 
     def apply_localization(self, translate: Callable[[str, str | None], str] | None = None) -> None:
-        _retranslate.apply_jaw_page_localization(self, translate)
+        _retranslate.apply_fixture_page_localization(self, translate)
+
+

@@ -47,14 +47,10 @@ class PreferencesDialog(PreferencesDialogBase):
         current_preferences: dict,
         translate: Callable[[str, str | None], str],
         parent=None,
-        active_db_path: str = "",
-        on_check_compatibility: Callable[[str], None] | None = None,
         machine_config_svc: MachineConfigService | None = None,
     ):
         super().__init__(translate, parent)
         self._current = dict(current_preferences or {})
-        self._active_db_path = str(active_db_path or "").strip()
-        self._on_check_compatibility = on_check_compatibility
         self._machine_config_svc = machine_config_svc
 
         # When the user triggers a live config switch (via dropdown, Edit, or
@@ -78,11 +74,9 @@ class PreferencesDialog(PreferencesDialogBase):
         self.general_tab = self._build_general_tab()
         self.machines_tab = self._build_machines_tab()
         self.models_tab = self._build_models_tab()
-        self.database_tab = self._build_database_tab()
         self.tabs.addTab(self.general_tab, self._t("preferences.tab.general", "General"))
         self.tabs.addTab(self.machines_tab, self._t("preferences.tab.machines", "Machines"))
         self.tabs.addTab(self.models_tab, self._t("preferences.tab.models_3d", "3D Models"))
-        self.tabs.addTab(self.database_tab, self._t("preferences.tab.database", "Database"))
 
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 6, 0, 0)
@@ -404,90 +398,24 @@ class PreferencesDialog(PreferencesDialogBase):
             )
         )
 
-        layout.addStretch(1)
-        return tab
-
-    def _build_database_tab(self) -> QWidget:
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-        layout.setContentsMargins(0, 0, 0, 0)
-
-        card = QFrame()
-        card.setProperty("card", True)
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(16, 14, 16, 14)
-        card_layout.setSpacing(10)
-        layout.addWidget(card)
-
-        hint = QLabel(
-            self._t(
-                "preferences.database.hint",
-                "Choose the active Setup Manager database (.db). Changes apply after restart.",
-            )
+        self.fixtures_models_root = QLineEdit()
+        self.fixtures_models_root.setMinimumWidth(260)
+        self.fixtures_models_root.setPlaceholderText(
+            self._t("preferences.models.fixtures.placeholder", "Folder for fixture models")
         )
-        hint.setWordWrap(True)
-        hint.setProperty("detailHint", True)
-        card_layout.addWidget(hint)
-
-        warning = QLabel(
-            self._t(
-                "preferences.database.warning",
-                "Warning: Setup Manager work links depend on matching tool and jaw IDs in the "
-                "currently configured Tool Library and Jaws Library databases. Changing only the "
-                "Setup database may leave some work references unresolved.",
-            )
-        )
-        warning.setWordWrap(True)
-        warning.setProperty("detailHint", True)
-        card_layout.addWidget(warning)
-
-        self.setup_db_path_edit = QLineEdit()
-        self.setup_db_path_edit.setMinimumWidth(260)
-        self.setup_db_path_edit.setPlaceholderText(
-            self._t(
-                "preferences.database.path.placeholder", "Path to setup_manager.db"
-            )
-        )
-        self.setup_db_browse = QPushButton(
+        self.fixtures_models_browse = QPushButton(
             self._t("preferences.models.browse", "BROWSE")
         )
-        self.setup_db_browse.setProperty("panelActionButton", True)
-        self.setup_db_browse.clicked.connect(self._pick_setup_database)
-        add_shadow(self.setup_db_browse)
+        self.fixtures_models_browse.setProperty("panelActionButton", True)
+        self.fixtures_models_browse.clicked.connect(self._pick_fixtures_models_root)
+        add_shadow(self.fixtures_models_browse)
         card_layout.addWidget(
             self._path_row(
-                self._t("preferences.database.path", "Setup DB"),
-                self.setup_db_path_edit,
-                self.setup_db_browse,
+                self._t("preferences.models.fixtures_root", "Fixtures 3D Root"),
+                self.fixtures_models_root,
+                self.fixtures_models_browse,
             )
         )
-
-        self.active_db_path_edit = QLineEdit()
-        self.active_db_path_edit.setReadOnly(True)
-        self.active_db_path_edit.setFocusPolicy(Qt.NoFocus)
-        self.active_db_path_edit.setMinimumWidth(260)
-        self.active_db_path_edit.setPlaceholderText(
-            self._t(
-                "preferences.database.active_runtime.placeholder",
-                "No active database path",
-            )
-        )
-        card_layout.addWidget(
-            self._line_row(
-                self._t("preferences.database.active_runtime", "Active Runtime DB"),
-                self.active_db_path_edit,
-            )
-        )
-
-        self.check_compatibility_btn = QPushButton(
-            self._t(
-                "preferences.database.check_compatibility", "CHECK COMPATIBILITY"
-            )
-        )
-        self.check_compatibility_btn.setProperty("panelActionButton", True)
-        self.check_compatibility_btn.clicked.connect(self._check_compatibility)
-        add_shadow(self.check_compatibility_btn)
-        card_layout.addWidget(self.check_compatibility_btn, 0, Qt.AlignLeft)
 
         layout.addStretch(1)
         return tab
@@ -504,7 +432,7 @@ class PreferencesDialog(PreferencesDialogBase):
             # and must only be changed via the machine configuration manager.
             "tools_models_root": self.tools_models_root.text().strip(),
             "jaws_models_root": self.jaws_models_root.text().strip(),
-            "setup_db_path": self.setup_db_path_edit.text().strip(),
+            "fixtures_models_root": self.fixtures_models_root.text().strip(),
             "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
             "enable_drawings_tab": self.drawings_tab_cb.isChecked(),
             "detached_preview_policy": {
@@ -532,9 +460,7 @@ class PreferencesDialog(PreferencesDialogBase):
 
         self.tools_models_root.setText(str(self._current.get("tools_models_root", "")))
         self.jaws_models_root.setText(str(self._current.get("jaws_models_root", "")))
-        self.setup_db_path_edit.setText(str(self._current.get("setup_db_path", "")))
-        self.active_db_path_edit.setText(self._active_db_path)
-        self.active_db_path_edit.setToolTip(self._active_db_path or "")
+        self.fixtures_models_root.setText(str(self._current.get("fixtures_models_root", "")))
         self.assembly_transform_cb.setChecked(
             bool(self._current.get("enable_assembly_transform", False))
         )
@@ -687,12 +613,59 @@ class PreferencesDialog(PreferencesDialogBase):
         if cfg is None:
             return
 
+        try:
+            plan = self._machine_config_svc.database_cleanup_plan(config_id)
+        except ValueError as exc:
+            QMessageBox.warning(
+                self,
+                self._t("machine_config.delete_error_title", "Cannot Delete"),
+                str(exc),
+            )
+            return
+
+        delete_paths = list(plan.get("delete_paths") or [])
+        shared_paths = list(plan.get("shared_paths") or [])
+        missing_paths = list(plan.get("missing_paths") or [])
+
+        warn_lines = [
+            self._t(
+                "machine_config.delete_databases_warning",
+                "This will also delete related database files that are only used by this configuration.",
+            )
+        ]
+        if delete_paths:
+            warn_lines.append(
+                self._t(
+                    "machine_config.delete_databases_count",
+                    "Database files to delete: {count}",
+                    count=len(delete_paths),
+                )
+            )
+        if shared_paths:
+            warn_lines.append(
+                self._t(
+                    "machine_config.delete_databases_shared",
+                    "Shared database files kept: {count}",
+                    count=len(shared_paths),
+                )
+            )
+        if missing_paths:
+            warn_lines.append(
+                self._t(
+                    "machine_config.delete_databases_missing",
+                    "Already missing files: {count}",
+                    count=len(missing_paths),
+                )
+            )
+
         confirmed = QMessageBox.question(
             self,
             self._t("machine_config.delete_title", "Delete Configuration"),
             self._t(
-                "machine_config.delete_body",
-                f"Delete configuration '{cfg.name}'?\n\nThis cannot be undone.",
+                "machine_config.delete_body_with_cleanup",
+                "Delete configuration '{name}'?\n\n{warning}\n\nThis cannot be undone.",
+                name=cfg.name,
+                warning="\n".join(warn_lines),
             ),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No,
@@ -701,7 +674,10 @@ class PreferencesDialog(PreferencesDialogBase):
             return
 
         try:
-            self._machine_config_svc.delete_config(config_id)
+            delete_result = self._machine_config_svc.delete_config(
+                config_id,
+                delete_related_databases=True,
+            )
         except ValueError as exc:
             QMessageBox.warning(
                 self,
@@ -709,6 +685,22 @@ class PreferencesDialog(PreferencesDialogBase):
                 str(exc),
             )
             return
+
+        deleted_count = len(delete_result.get("deleted_paths") or [])
+        failed_count = len(delete_result.get("failed_paths") or [])
+        shared_count = len(delete_result.get("shared_paths") or [])
+        if deleted_count or failed_count or shared_count:
+            QMessageBox.information(
+                self,
+                self._t("machine_config.delete_cleanup_result_title", "Database Cleanup"),
+                self._t(
+                    "machine_config.delete_cleanup_result_body",
+                    "Deleted DB files: {deleted}\nKept shared files: {shared}\nFailed to delete: {failed}",
+                    deleted=deleted_count,
+                    shared=shared_count,
+                    failed=failed_count,
+                ),
+            )
 
         self._refresh_config_combo()
 
@@ -740,30 +732,16 @@ class PreferencesDialog(PreferencesDialogBase):
         if chosen:
             self.jaws_models_root.setText(chosen)
 
-    def _pick_setup_database(self):
-        start_dir = self.setup_db_path_edit.text().strip()
-        if not start_dir:
-            start_dir = str(Path.home())
-        chosen, _ = QFileDialog.getOpenFileName(
+    def _pick_fixtures_models_root(self):
+        start_dir = self.fixtures_models_root.text().strip()
+        chosen = QFileDialog.getExistingDirectory(
             self,
             self._t(
-                "preferences.database.select", "Select Setup Manager database"
+                "preferences.models.fixtures.select", "Select fixtures model root folder"
             ),
             start_dir,
-            self._t(
-                "preferences.database.file_filter",
-                "SQLite Database (*.db);;All Files (*.*)",
-            ),
         )
         if chosen:
-            self.setup_db_path_edit.setText(chosen)
-
-    def _check_compatibility(self):
-        if not callable(self._on_check_compatibility):
-            return
-        target_path = (
-            self.setup_db_path_edit.text().strip() or self._active_db_path
-        )
-        self._on_check_compatibility(target_path)
+            self.fixtures_models_root.setText(chosen)
 
     # Shared combo/path/line row, translation, and combo-data helpers are inherited.

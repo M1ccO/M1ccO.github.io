@@ -10,13 +10,13 @@ SUPPORTED_THEMES = {"classic", "graphite"}
 SUPPORTED_DETACHED_PREVIEW_MODES = {"follow_last", "left", "right", "embedded", "current"}
 
 
-def _default_model_roots() -> tuple[Path, Path]:
+def _default_model_roots() -> tuple[Path, Path, Path]:
     workspace_root = Path(__file__).resolve().parents[2]
     base_dir = workspace_root / "Tools and jaws Library" / "assets" / "3d"
-    return base_dir / "tools", base_dir / "jaws"
+    return base_dir / "tools", base_dir / "jaws", base_dir / "fixtures"
 
 
-_DEFAULT_TOOLS_ROOT, _DEFAULT_JAWS_ROOT = _default_model_roots()
+_DEFAULT_TOOLS_ROOT, _DEFAULT_JAWS_ROOT, _DEFAULT_FIXTURES_ROOT = _default_model_roots()
 
 
 def _base_defaults() -> dict:
@@ -27,6 +27,7 @@ def _base_defaults() -> dict:
         "machine_profile_key": "ntx_2sp_2h",
         "tools_models_root": str(_DEFAULT_TOOLS_ROOT),
         "jaws_models_root": str(_DEFAULT_JAWS_ROOT),
+        "fixtures_models_root": str(_DEFAULT_FIXTURES_ROOT),
         "enable_assembly_transform": False,
         "enable_drawings_tab": True,
         "detached_preview_policy": {"mode": "follow_last"},
@@ -77,8 +78,10 @@ class UiPreferencesService:
 
         tools_root = str(data.get("tools_models_root") or self.default_preferences["tools_models_root"]).strip()
         jaws_root = str(data.get("jaws_models_root") or self.default_preferences["jaws_models_root"]).strip()
+        fixtures_root = str(data.get("fixtures_models_root") or self.default_preferences["fixtures_models_root"]).strip()
         data["tools_models_root"] = str(Path(tools_root).expanduser().resolve())
         data["jaws_models_root"] = str(Path(jaws_root).expanduser().resolve())
+        data["fixtures_models_root"] = str(Path(fixtures_root).expanduser().resolve())
 
         if self.include_setup_db_path:
             setup_db_path = str(data.get("setup_db_path") or "").strip()
@@ -126,12 +129,14 @@ class UiPreferencesService:
 
         Path(normalized["tools_models_root"]).mkdir(parents=True, exist_ok=True)
         Path(normalized["jaws_models_root"]).mkdir(parents=True, exist_ok=True)
+        Path(normalized["fixtures_models_root"]).mkdir(parents=True, exist_ok=True)
         return normalized
 
     def save(self, payload: dict) -> dict:
         normalized = self._normalize_preferences(payload)
         Path(normalized["tools_models_root"]).mkdir(parents=True, exist_ok=True)
         Path(normalized["jaws_models_root"]).mkdir(parents=True, exist_ok=True)
+        Path(normalized["fixtures_models_root"]).mkdir(parents=True, exist_ok=True)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps(normalized, indent=2, ensure_ascii=False), encoding="utf-8")
         return normalized

@@ -1,4 +1,4 @@
-"""Detail panel builders for FixturePage."""
+﻿"""Detail panel builders for FixturePage."""
 
 from __future__ import annotations
 
@@ -16,12 +16,12 @@ from shared.ui.helpers.editor_helpers import (
     create_titled_section,
 )
 from shared.ui.stl_preview import StlPreviewWidget
-from ui.fixture_page_support.detail_layout_rules import apply_jaw_detail_grid_rules
+from ui.fixture_page_support.detail_layout_rules import apply_fixture_detail_grid_rules
 from ui.fixture_page_support.preview_rules import (
-    apply_jaw_preview_transform,
-    jaw_preview_label,
-    jaw_preview_measurement_overlays,
-    jaw_preview_stl_path,
+    apply_fixture_preview_transform,
+    fixture_preview_label,
+    fixture_preview_measurement_overlays,
+    fixture_preview_stl_path,
 )
 
 
@@ -38,7 +38,7 @@ def populate_detail_panel(page, fixture: dict | None) -> None:
     layout = QVBoxLayout(card)
     layout.setContentsMargins(14, 14, 14, 14)
     layout.setSpacing(10)
-    layout.addWidget(build_jaw_detail_header(page, fixture))
+    layout.addWidget(build_fixture_detail_header(page, fixture))
 
     info = QGridLayout()
     info.setHorizontalSpacing(14)
@@ -54,10 +54,10 @@ def populate_detail_panel(page, fixture: dict | None) -> None:
             Qt.AlignTop,
         )
 
-    next_row = apply_jaw_detail_grid_rules(
+    next_row = apply_fixture_detail_grid_rules(
         fixture=fixture,
         translate=page._t,
-        localized_spindle_side=page._localized_spindle_side(fixture.get('fixture_kind', '')),
+        localized_spindle_side=page._localized_fixture_kind(fixture.get('fixture_kind', '')),
         add_field=add_field,
     )
 
@@ -119,7 +119,7 @@ def build_empty_details_card(page) -> QFrame:
     return card
 
 
-def build_jaw_detail_header(page, fixture: dict) -> QFrame:
+def build_fixture_detail_header(page, fixture: dict) -> QFrame:
     header = QFrame()
     header.setProperty('detailHeader', True)
     header_layout = QVBoxLayout(header)
@@ -130,20 +130,20 @@ def build_jaw_detail_header(page, fixture: dict) -> QFrame:
     title_row.setContentsMargins(0, 0, 0, 0)
     title_row.setSpacing(10)
 
-    jaw_id_lbl = QLabel(fixture.get('fixture_id', ''))
-    jaw_id_lbl.setProperty('detailHeroTitle', True)
-    jaw_id_lbl.setWordWrap(True)
+    fixture_id_lbl = QLabel(fixture.get('fixture_id', ''))
+    fixture_id_lbl.setProperty('detailHeroTitle', True)
+    fixture_id_lbl.setWordWrap(True)
 
     diam_lbl = QLabel(fixture.get('clamping_diameter_text', '') or '')
     diam_lbl.setProperty('detailHeroTitle', True)
     diam_lbl.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
 
-    title_row.addWidget(jaw_id_lbl, 1)
+    title_row.addWidget(fixture_id_lbl, 1)
     title_row.addWidget(diam_lbl, 0, Qt.AlignRight)
 
     badge_row = QHBoxLayout()
     badge_row.setContentsMargins(0, 0, 0, 0)
-    badge = QLabel(page._localized_jaw_type(fixture.get('fixture_type', '')))
+    badge = QLabel(page._localized_fixture_type(fixture.get('fixture_type', '')))
     badge.setProperty('toolBadge', True)
     badge_row.addWidget(badge, 0, Qt.AlignLeft)
     badge_row.addStretch(1)
@@ -153,7 +153,7 @@ def build_jaw_detail_header(page, fixture: dict) -> QFrame:
     return header
 
 
-def build_jaw_preview_card(page, fixture: dict) -> QWidget:
+def build_fixture_preview_card(page, fixture: dict) -> QWidget:
     preview_card = create_titled_section(page._t('tool_library.section.preview', 'Preview'))
     preview_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -195,7 +195,7 @@ def build_jaw_preview_card(page, fixture: dict) -> QWidget:
 
     model_key = page._preview_model_key(fixture)
     if page._detail_preview_model_key != model_key:
-        loaded = page._load_preview_content(viewer, fixture, label=jaw_preview_label(fixture, page._t))
+        loaded = page._load_preview_content(viewer, fixture, label=fixture_preview_label(fixture, page._t))
         if loaded:
             page._detail_preview_model_key = model_key
         else:
@@ -204,8 +204,8 @@ def build_jaw_preview_card(page, fixture: dict) -> QWidget:
         loaded = True
 
     if loaded:
-        apply_jaw_preview_transform(viewer, fixture)
-        overlays = jaw_preview_measurement_overlays(fixture)
+        apply_fixture_preview_transform(viewer, fixture)
+        overlays = fixture_preview_measurement_overlays(fixture)
         viewer.set_measurement_overlays(overlays)
         viewer.set_measurements_visible(bool(overlays))
         diagram_layout.addWidget(viewer, 1)
@@ -213,7 +213,7 @@ def build_jaw_preview_card(page, fixture: dict) -> QWidget:
     else:
         viewer.clear()
         viewer.hide()
-        stl_path = jaw_preview_stl_path(fixture)
+        stl_path = fixture_preview_stl_path(fixture)
         placeholder = QLabel(
             page._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
             if stl_path
@@ -280,7 +280,7 @@ def _lookup_setup_db_used_in_works(fixture_id: str) -> str:
 
 __all__ = [
     'build_empty_details_card',
-    'build_jaw_detail_header',
-    'build_jaw_preview_card',
+    'build_fixture_detail_header',
+    'build_fixture_preview_card',
     'populate_detail_panel',
 ]

@@ -1,4 +1,4 @@
-"""Selector-slot compatibility helpers for FixturePage."""
+﻿"""Selector-slot compatibility helpers for FixturePage."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class SelectorSlotController:
         self._page = page
 
     @staticmethod
-    def normalize_selector_jaw(fixture: dict | None) -> dict | None:
+    def normalize_selector_fixture(fixture: dict | None) -> dict | None:
         if not isinstance(fixture, dict):
             return None
         # Selector payloads still arrive with either fixture_id or the older generic id key.
@@ -39,7 +39,7 @@ class SelectorSlotController:
         return normalized
 
     @staticmethod
-    def normalize_jaw_spindle_side(value: str | None) -> str:
+    def normalize_fixture_kind_for_slot(value: str | None) -> str:
         raw = str(value or '').strip().lower()
         if not raw:
             return 'both'
@@ -56,8 +56,8 @@ class SelectorSlotController:
             return 'main'
         return 'both'
 
-    def jaw_supports_selector_slot(self, fixture: dict | None, slot: str) -> bool:
-        side = self.normalize_jaw_spindle_side((fixture or {}).get('fixture_kind') if isinstance(fixture, dict) else '')
+    def fixture_supports_selector_slot(self, fixture: dict | None, slot: str) -> bool:
+        side = self.normalize_fixture_kind_for_slot((fixture or {}).get('fixture_kind') if isinstance(fixture, dict) else '')
         target = normalize_selector_spindle(slot)
         if side == 'both':
             return True
@@ -69,7 +69,7 @@ class SelectorSlotController:
         for item in initial_assignments or []:
             if not isinstance(item, dict):
                 continue
-            normalized = self.normalize_selector_jaw(item)
+            normalized = self.normalize_selector_fixture(item)
             if normalized is None:
                 continue
             spindle = normalize_selector_spindle(item.get('spindle') or item.get('slot') or '')
@@ -106,20 +106,20 @@ class SelectorSlotController:
         apply_selector_slot_selection(page)
         update_selector_remove_button(page)
 
-    def on_selector_jaw_dropped(self, slot_key: str, fixture: dict) -> None:
+    def on_selector_fixture_dropped(self, slot_key: str, fixture: dict) -> None:
         page = self._page
         normalized_slot = normalize_selector_spindle(slot_key)
-        normalized_jaw = self.normalize_selector_jaw(fixture)
-        if normalized_jaw is not None and not self.jaw_supports_selector_slot(normalized_jaw, normalized_slot):
+        normalized_fixture = self.normalize_selector_fixture(fixture)
+        if normalized_fixture is not None and not self.fixture_supports_selector_slot(normalized_fixture, normalized_slot):
             slot_widget = page.selector_sp1_slot if normalized_slot == 'main' else page.selector_sp2_slot
             if slot_widget is not None:
                 slot_widget.flash_invalid_drop()
             return
-        page._selector_assignments[normalized_slot] = normalized_jaw
-        page._selector_selected_slots = {normalized_slot} if normalized_jaw is not None else set()
+        page._selector_assignments[normalized_slot] = normalized_fixture
+        page._selector_selected_slots = {normalized_slot} if normalized_fixture is not None else set()
         self.refresh_selector_slots()
 
-    def remove_selected_selector_jaws(self) -> None:
+    def remove_selected_selector_fixtures(self) -> None:
         page = self._page
         if not page._selector_selected_slots:
             return
@@ -128,9 +128,9 @@ class SelectorSlotController:
         page._selector_selected_slots.clear()
         self.refresh_selector_slots()
 
-    def remove_selector_jaws_by_ids(self, jaw_ids: list[str]) -> None:
+    def remove_selector_fixtures_by_ids(self, fixture_ids: list[str]) -> None:
         page = self._page
-        targets = {str(fixture_id).strip() for fixture_id in jaw_ids if str(fixture_id).strip()}
+        targets = {str(fixture_id).strip() for fixture_id in fixture_ids if str(fixture_id).strip()}
         if not targets:
             return
         changed = False
@@ -228,11 +228,13 @@ class SelectorSlotController:
             page._last_splitter_sizes = default_selector_splitter_sizes(page.splitter.width())
         page.splitter.setSizes(page._last_splitter_sizes)
 
-    def selector_assigned_jaws_for_setup_assignment(self) -> list[dict]:
+    def selector_assigned_fixtures_for_setup_assignment(self) -> list[dict]:
         page = self._page
         payload: list[dict] = []
         for slot in ('main', 'sub'):
-            normalized = self.normalize_selector_jaw(page._selector_assignments.get(slot))
+            normalized = self.normalize_selector_fixture(page._selector_assignments.get(slot))
             if normalized is not None:
                 payload.append({**normalized, 'slot': slot})
         return payload
+
+

@@ -49,6 +49,7 @@ from data.jaw_database import JawDatabase
 from services.fixture_service import FixtureService
 from services.jaw_service import JawService
 from shared.services.localization_service import LocalizationService
+from shared.services.tool_lib_profile_view import ToolLibProfileView, profile_view_from_key
 from services.tool_service import ToolService
 from shared.services.ui_preferences_service import UiPreferencesService
 from ui.export_page import ExportPage
@@ -167,7 +168,9 @@ class MainWindow(QMainWindow):
             include_setup_db_path=False,
         )
         self.ui_preferences = self.ui_preferences_service.load()
-        self.machine_profile = self._resolve_machine_profile(self.ui_preferences.get('machine_profile_key'))
+        self.machine_profile: ToolLibProfileView = self._resolve_machine_profile(
+            self.ui_preferences.get('machine_profile_key')
+        )
         self.localization = LocalizationService(I18N_DIR)
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         if hasattr(self.export_service, "set_translator"):
@@ -210,34 +213,15 @@ class MainWindow(QMainWindow):
         return self.localization.t(key, default, **kwargs)
 
     @staticmethod
-    def _resolve_machine_profile(profile_key: str | None) -> dict:
-        """Resolve profile key into a lightweight profile mapping for this app."""
-        normalized = str(profile_key or '').strip().lower()
-        is_mc = normalized.startswith('machining_center')
-        return {
-            'key': normalized or 'ntx_2sp_2h',
-            'machine_type': 'machining_center' if is_mc else 'lathe',
-            'heads': [
-                {'key': 'HEAD1', 'label_key': 'tool_library.head_filter.head1', 'label_default': 'HEAD1'},
-                {'key': 'HEAD2', 'label_key': 'tool_library.head_filter.head2', 'label_default': 'HEAD2'},
-            ],
-            'spindles': [
-                {'key': 'main', 'label_key': 'jaw_library.filter.main_spindle', 'label_default': 'Main spindle'},
-                {'key': 'sub', 'label_key': 'jaw_library.filter.sub_spindle', 'label_default': 'Sub spindle'},
-            ],
-        }
+    def _resolve_machine_profile(profile_key: str | None) -> ToolLibProfileView:
+        """Resolve a profile key into the shared lightweight Tool Library profile view."""
+        return profile_view_from_key(profile_key)
 
     def _is_machining_center(self) -> bool:
-        return str((self.machine_profile or {}).get('machine_type') or '').strip().lower() == 'machining_center'
+        return self.machine_profile.is_machining_center()
 
     def _profile_head_keys(self) -> list[str]:
-        heads = self.machine_profile.get('heads') if isinstance(self.machine_profile, dict) else []
-        keys: list[str] = []
-        for head in heads or []:
-            key = str((head or {}).get('key') or '').strip().upper()
-            if key and key not in keys:
-                keys.append(key)
-        return keys or ['HEAD1', 'HEAD2']
+        return self.machine_profile.head_keys()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -851,7 +835,10 @@ class MainWindow(QMainWindow):
             except Exception:
                 pass
         else:
-            self.tool_head_filter_combo.show()
+            if self._is_machining_center():
+                self.tool_head_filter_combo.hide()
+            else:
+                self.tool_head_filter_combo.show()
             sibling_target = 'FIXTURES' if self._is_machining_center() else 'JAWS'
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
                 page.set_module_switch_target(sibling_target)
@@ -886,14 +873,9 @@ class MainWindow(QMainWindow):
         items = []
         if allow_combined:
             items.append((self._t('tool_library.head_filter.all', 'HEAD1/2'), 'HEAD1/2'))
-        for head in (self.machine_profile.get('heads') or []):
-            head_key = str((head or {}).get('key') or '').strip().upper()
-            if not head_key:
-                continue
-            label_key = str((head or {}).get('label_key') or '').strip()
-            label_default = str((head or {}).get('label_default') or head_key)
-            label = self._t(label_key, label_default) if label_key else label_default
-            items.append((label, head_key))
+        for head in self.machine_profile.heads:
+            label = self._t(head.label_i18n_key, head.label_default)
+            items.append((label, head.key))
         if not items:
             items = [(default_value, default_value)]
 
@@ -1294,6 +1276,8 @@ class MainWindow(QMainWindow):
                 fixture_service=self.fixture_service,
                 translate=self._t,
                 initial_assignments=self._selector_initial_assignments,
+                initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                initial_target_key='',
                 on_submit=self._on_selector_dialog_submit,
                 on_cancel=self._on_selector_dialog_cancel,
                 parent=self,
@@ -1323,12 +1307,14 @@ class MainWindow(QMainWindow):
         selector_head = str(result.get('selector_head') or self._selector_head or '').strip().upper()
         selector_spindle = str(result.get('selector_spindle') or self._selector_spindle or '').strip().lower()
         assignment_buckets_by_target = result.get('assignment_buckets_by_target') or {}
+        target_key = str(result.get('target_key') or '').strip()
         self._send_selector_result_payload(
             kind=kind,
             selected_items=selected_items,
             selector_head=selector_head,
             selector_spindle=selector_spindle,
             assignment_buckets_by_target=assignment_buckets_by_target,
+            target_key=target_key,
         )
 
     def _send_selector_result_payload(
@@ -1339,6 +1325,7 @@ class MainWindow(QMainWindow):
         selector_head: str = '',
         selector_spindle: str = '',
         assignment_buckets_by_target: dict | None = None,
+        target_key: str = '',
     ) -> None:
         if kind == 'tools' and not selected_items:
             QMessageBox.information(
@@ -1383,6 +1370,8 @@ class MainWindow(QMainWindow):
             payload['selector_spindle'] = selector_spindle
             if assignment_buckets_by_target:
                 payload['assignment_buckets_by_target'] = assignment_buckets_by_target
+            if target_key:
+                payload['target_key'] = target_key
 
         socket = QLocalSocket()
         socket.connectToServer(self._selector_callback_server)
@@ -1441,6 +1430,17 @@ class MainWindow(QMainWindow):
         # IPC handoff path so it never blocks the transition animation.
         if reload_preferences:
             self._reload_shared_preferences()
+
+        # Selector sessions can arrive before shared preferences are refreshed.
+        # Prefer explicit machine profile key from payload when provided.
+        incoming_profile_key = str(payload.get('machine_profile_key') or '').strip().lower()
+        if incoming_profile_key:
+            resolved_profile = self._resolve_machine_profile(incoming_profile_key)
+            if resolved_profile != self.machine_profile:
+                self.machine_profile = resolved_profile
+                for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page, self.fixtures_page]:
+                    page.machine_profile = self.machine_profile
+                self._rebuild_head_filter_combo_items()
 
         # Switch tool/jaw databases if the active machine config has config-specific paths.
         new_tools_db = str(payload.get('tools_db_path') or '').strip()

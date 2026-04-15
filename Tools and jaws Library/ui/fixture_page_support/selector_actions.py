@@ -1,8 +1,8 @@
-"""Selector action helpers for FixturePage."""
+﻿"""Selector action helpers for FixturePage."""
 
 from __future__ import annotations
 
-from ui.selector_mime import jaw_payload_ids
+from ui.selector_mime import fixture_payload_ids
 from ui.selector_state_helpers import has_any_selector_assignment
 from ui.selector_ui_helpers import event_point, normalize_selector_spindle, selector_spindle_label, widget_contains_global_point
 
@@ -32,11 +32,11 @@ def selector_remove_btn_contains_global_point(page, global_pos) -> bool:
     return widget_contains_global_point(getattr(page, "selector_remove_btn", None), global_pos)
 
 
-def selector_drag_payload_jaw_ids(page, mime) -> list[str]:
+def selector_drag_payload_fixture_ids(page, mime) -> list[str]:
     remove_btn = getattr(page, "selector_remove_btn", None)
-    if remove_btn is not None and hasattr(remove_btn, "_payload_jaw_ids"):
-        return remove_btn._payload_jaw_ids(mime)
-    return jaw_payload_ids(mime)
+    if remove_btn is not None and hasattr(remove_btn, "_payload_fixture_ids"):
+        return remove_btn._payload_fixture_ids(mime)
+    return fixture_payload_ids(mime)
 
 
 def on_selector_cancel(page) -> None:
@@ -60,3 +60,5 @@ def on_selector_toggle_clicked(page) -> None:
         page._selector_slot_controller.set_selector_panel_mode("selector")
     else:
         page._selector_slot_controller.set_selector_panel_mode("details")
+
+

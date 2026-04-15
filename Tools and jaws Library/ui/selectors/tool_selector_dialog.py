@@ -45,6 +45,7 @@ class ToolSelectorDialog(
     ):
         super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
         self.tool_service = tool_service
+        self.machine_profile = machine_profile
         self._on_submit = on_submit
 
         self._current_head = self._normalize_head(selector_head)

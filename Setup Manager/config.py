@@ -237,6 +237,11 @@ JAW_LIBRARY_DB_PATH = _first_existing_path(
     TOOL_LIBRARY_USER_DB_DIR / "jaws_library.db",
     DB_DIR / "jaws_library.db",
 )
+FIXTURE_LIBRARY_DB_PATH = _first_existing_path(
+    TOOL_LIBRARY_PROJECT_DIR / "databases" / "fixtures_library.db",
+    TOOL_LIBRARY_USER_DB_DIR / "fixtures_library.db",
+    DB_DIR / "fixtures_library.db",
+)
 
 NAV_ITEMS = ["SETUPS", "DRAWINGS", "LOGBOOK"]
 

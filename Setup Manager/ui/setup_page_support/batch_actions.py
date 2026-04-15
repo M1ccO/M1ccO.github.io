@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import traceback
 
 from PySide6.QtWidgets import QDialog, QMessageBox
 
@@ -49,15 +50,24 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
         work = page.work_service.get_work(work_id)
         if not work:
             continue
-        dialog = WorkEditorDialog(
-            page.draw_service,
-            work=work,
-            parent=page,
-            translate=page._t,
-            batch_label=f"{idx}/{total}",
-            drawings_enabled=page.drawings_enabled,
-            machine_profile_key=page.work_service.get_machine_profile_key(),
-        )
+        try:
+            dialog = WorkEditorDialog(
+                page.draw_service,
+                work=work,
+                parent=page,
+                translate=page._t,
+                batch_label=f"{idx}/{total}",
+                drawings_enabled=page.drawings_enabled,
+                machine_profile_key=page.work_service.get_machine_profile_key(),
+            )
+        except Exception as exc:
+            QMessageBox.critical(
+                page,
+                page._t("setup_page.message.open_editor_failed", "Work Editor failed to open"),
+                f"{exc}\n\n{traceback.format_exc()}",
+            )
+            page.refresh_works()
+            return
         if dialog.exec() != QDialog.Accepted:
             if saved_before:
                 action = prompt_batch_cancel_behavior(page)
@@ -72,15 +82,24 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
 
 
 def group_edit_works(page, work_ids: list[str]) -> None:
-    baseline_dialog = WorkEditorDialog(
-        page.draw_service,
-        parent=page,
-        translate=page._t,
-        group_edit_mode=True,
-        group_count=len(work_ids),
-        drawings_enabled=page.drawings_enabled,
-        machine_profile_key=page.work_service.get_machine_profile_key(),
-    )
+    try:
+        baseline_dialog = WorkEditorDialog(
+            page.draw_service,
+            parent=page,
+            translate=page._t,
+            group_edit_mode=True,
+            group_count=len(work_ids),
+            drawings_enabled=page.drawings_enabled,
+            machine_profile_key=page.work_service.get_machine_profile_key(),
+        )
+    except Exception as exc:
+        QMessageBox.critical(
+            page,
+            page._t("setup_page.message.open_editor_failed", "Work Editor failed to open"),
+            f"{exc}\n\n{traceback.format_exc()}",
+        )
+        page.refresh_works()
+        return
     baseline = baseline_dialog.get_work_data()
     if baseline_dialog.exec() != QDialog.Accepted:
         return

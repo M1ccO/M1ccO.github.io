@@ -28,6 +28,7 @@ from shared.ui.helpers.page_scaffold_common import (
     build_catalog_list_shell,
     build_detail_container_shell,
 )
+from shared.services.tool_lib_profile_view import ToolLibProfileView
 from shared.ui.helpers.topbar_common import (
     build_detail_header,
     build_details_toggle,
@@ -55,6 +56,12 @@ from ui.tool_catalog_delegate import ToolCatalogDelegate
 
 
 class ToolSelectorLayoutMixin:
+
+    def _selector_is_machining_center(self) -> bool:
+        profile: ToolLibProfileView | None = getattr(self, 'machine_profile', None)
+        if profile is None:
+            return False
+        return profile.is_machining_center()
 
     def _build_toolbar(self, root: QVBoxLayout) -> None:
         """Build the shared filter toolbar matching the library style."""
@@ -184,6 +191,10 @@ class ToolSelectorLayoutMixin:
             right_badge_text=self._t('tool_library.selector.head_upper', 'Upper Spindle'),
             fixed_height_policy=True,
         )
+        self._is_machining_center_selector_mode = self._selector_is_machining_center()
+        if self._is_machining_center_selector_mode:
+            self.selector_spindle_value_label.setVisible(False)
+            self.selector_head_value_label.setVisible(False)
         selector_layout.addWidget(self.selector_info_header, 0)
 
         context_row = QHBoxLayout()
@@ -201,6 +212,10 @@ class ToolSelectorLayoutMixin:
         style_selector_context_button(self.spindle_btn, checkable=True)
         context_row.addWidget(self.spindle_btn, 0)
         context_row.addStretch(1)
+        if self._is_machining_center_selector_mode:
+            self.head_btn.setVisible(False)
+            self.spindle_btn.setVisible(False)
+            context_row.setSpacing(0)
         selector_layout.addLayout(context_row, 0)
 
         hint = build_selector_hint_label(

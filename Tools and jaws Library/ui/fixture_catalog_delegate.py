@@ -16,11 +16,11 @@ from shared.ui.platforms.catalog_page_base import (
     CATALOG_ROLE_ID,
 )
 
-__all__ = ['FixtureCatalogDelegate', 'ROLE_JAW_DATA', 'ROLE_JAW_ICON', 'ROLE_JAW_ID', 'jaw_icon_for_row']
+__all__ = ['FixtureCatalogDelegate', 'ROLE_FIXTURE_DATA', 'ROLE_FIXTURE_ICON', 'ROLE_FIXTURE_ID', 'fixture_icon_for_row']
 
-ROLE_JAW_ID = CATALOG_ROLE_ID
-ROLE_JAW_DATA = CATALOG_ROLE_DATA
-ROLE_JAW_ICON = CATALOG_ROLE_ICON
+ROLE_FIXTURE_ID = CATALOG_ROLE_ID
+ROLE_FIXTURE_DATA = CATALOG_ROLE_DATA
+ROLE_FIXTURE_ICON = CATALOG_ROLE_ICON
 
 ICON_SIZE = 48
 ICON_SLOT_W = 52
@@ -49,7 +49,7 @@ def _value_font(point_size: float) -> QFont:
     return font
 
 
-def jaw_icon_for_row(fixture: dict) -> QIcon:
+def fixture_icon_for_row(fixture: dict) -> QIcon:
     path = TOOL_ICONS_DIR / 'jaw_main.png'
     if not path.exists():
         fallback = TOOL_ICONS_DIR / 'jaw_icon.png'
@@ -62,7 +62,7 @@ def jaw_icon_for_row(fixture: dict) -> QIcon:
     return _ICON_OBJECT_CACHE[cache_key]
 
 
-def _is_sub_spindle_jaw(fixture: dict) -> bool:
+def _is_sub_spindle_fixture(fixture: dict) -> bool:
     fixture_kind = str(fixture.get('fixture_kind') or '').strip().lower()
     return ('sub' in fixture_kind or 'vasta' in fixture_kind or 'ala' in fixture_kind)
 
@@ -124,9 +124,9 @@ class FixtureCatalogDelegate(CatalogDelegate):
             stage = 'icon-only'
 
         icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2, ICON_SLOT_W, ICON_SIZE)
-        icon = jaw_icon_for_row(fixture)
+        icon = fixture_icon_for_row(fixture)
         pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE)) if not icon.isNull() else QPixmap()
-        if not pixmap.isNull() and _is_sub_spindle_jaw(fixture):
+        if not pixmap.isNull() and _is_sub_spindle_fixture(fixture):
             pixmap = pixmap.transformed(QTransform().scale(-1, 1))
         if not pixmap.isNull():
             px = icon_rect.x() + (ICON_SLOT_W - pixmap.width()) // 2
@@ -237,3 +237,4 @@ class FixtureCatalogDelegate(CatalogDelegate):
     @staticmethod
     def _elide(metrics: QFontMetrics, text: str, width: int) -> str:
         return metrics.elidedText(str(text or ''), Qt.ElideRight, max(10, width - 4))
+

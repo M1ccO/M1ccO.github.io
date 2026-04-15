@@ -7,6 +7,7 @@ from PySide6.QtCore import QMimeData
 
 SELECTOR_TOOL_MIME = "application/x-tool-library-tool-assignment"
 SELECTOR_JAW_MIME = "application/x-tool-library-jaw-assignment"
+SELECTOR_FIXTURE_MIME = SELECTOR_JAW_MIME
 
 
 def _decode_payload(mime: QMimeData, mime_type: str) -> list[dict]:
@@ -30,6 +31,10 @@ def decode_tool_payload(mime: QMimeData) -> list[dict]:
 
 def decode_jaw_payload(mime: QMimeData) -> list[dict]:
     return _decode_payload(mime, SELECTOR_JAW_MIME)
+
+
+def decode_fixture_payload(mime: QMimeData) -> list[dict]:
+    return _decode_payload(mime, SELECTOR_FIXTURE_MIME)
 
 
 def tool_payload_keys(mime: QMimeData) -> list[tuple[str, str | None]]:
@@ -71,3 +76,33 @@ def jaw_payload_ids(mime: QMimeData) -> list[str]:
         if jaw_id and jaw_id not in jaw_ids:
             jaw_ids.append(jaw_id)
     return jaw_ids
+
+
+def first_dropped_fixture(mime: QMimeData) -> dict | None:
+    for item in decode_fixture_payload(mime):
+        if not isinstance(item, dict):
+            continue
+        fixture_id = str(item.get("fixture_id") or item.get("jaw_id") or item.get("id") or "").strip()
+        if not fixture_id:
+            continue
+        fixture_type = str(item.get("fixture_type") or item.get("jaw_type") or "").strip()
+        fixture_kind = str(item.get("fixture_kind") or item.get("spindle_side") or "").strip()
+        payload = {
+            "fixture_id": fixture_id,
+            "fixture_type": fixture_type,
+        }
+        if fixture_kind:
+            payload["fixture_kind"] = fixture_kind
+        return payload
+    return None
+
+
+def fixture_payload_ids(mime: QMimeData) -> list[str]:
+    fixture_ids: list[str] = []
+    for item in decode_fixture_payload(mime):
+        if not isinstance(item, dict):
+            continue
+        fixture_id = str(item.get("fixture_id") or item.get("jaw_id") or item.get("id") or "").strip()
+        if fixture_id and fixture_id not in fixture_ids:
+            fixture_ids.append(fixture_id)
+    return fixture_ids

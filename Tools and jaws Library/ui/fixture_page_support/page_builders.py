@@ -1,4 +1,4 @@
-"""UI layout builders for FixturePage.
+﻿"""UI layout builders for FixturePage.
 
 Extracted from fixture_page.py (Phase 5 Pass 7) to reduce page size.
 All functions take the page object as their first argument and mutate
@@ -43,11 +43,11 @@ from ui.shared.selector_panel_builders import (
 )
 
 __all__ = [
-    "build_jaw_page_layout",
+    "build_fixture_page_layout",
 ]
 
 
-def build_jaw_page_layout(page) -> None:
+def build_fixture_page_layout(page) -> None:
     """Build the full FixturePage UI layout.
 
     Creates: search_input, filter_pane, sidebar, splitter, list view,
@@ -109,14 +109,14 @@ def _build_catalog_list_card(page) -> QFrame:
     list_card, list_layout = build_catalog_list_shell()
 
     page.list_view = FixtureCatalogListView()
-    page.jaw_list = page.list_view
+    page.fixture_list = page.list_view
     apply_catalog_list_view_defaults(page.list_view)
 
     page._item_model = page._item_model or page._create_model()
-    page._jaw_model = page._item_model
+    page._fixture_model = page._item_model
     page.list_view.setModel(page._item_model)
-    page._jaw_delegate = page.create_delegate()
-    page.list_view.setItemDelegate(page._jaw_delegate)
+    page._fixture_delegate = page.create_delegate()
+    page.list_view.setItemDelegate(page._fixture_delegate)
     page.list_view.clicked.connect(page._on_catalog_clicked)
     page.list_view.doubleClicked.connect(page.on_item_double_clicked)
     install_catalog_list_event_filters(page.list_view, page)
@@ -198,8 +198,8 @@ def _build_selector_card(page) -> QFrame:
     page.selector_sp2_slot.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
     page.selector_sp1_slot.set_drop_placeholder_text(page._t('jaw_library.selector.drop_here', 'Drop fixture here'))
     page.selector_sp2_slot.set_drop_placeholder_text(page._t('jaw_library.selector.drop_here', 'Drop fixture here'))
-    page.selector_sp1_slot.jawDropped.connect(page._selector_slot_controller.on_selector_jaw_dropped)
-    page.selector_sp2_slot.jawDropped.connect(page._selector_slot_controller.on_selector_jaw_dropped)
+    page.selector_sp1_slot.fixtureDropped.connect(page._selector_slot_controller.on_selector_fixture_dropped)
+    page.selector_sp2_slot.fixtureDropped.connect(page._selector_slot_controller.on_selector_fixture_dropped)
     page.selector_sp1_slot.slotClicked.connect(page._selector_slot_controller.on_selector_slot_clicked)
     page.selector_sp2_slot.slotClicked.connect(page._selector_slot_controller.on_selector_slot_clicked)
     selector_layout.addWidget(page.selector_sp1_slot, 0)
@@ -214,10 +214,10 @@ def _build_selector_card(page) -> QFrame:
         danger=True,
     )
     page.selector_remove_btn.clicked.connect(
-        page._selector_slot_controller.remove_selected_selector_jaws
+        page._selector_slot_controller.remove_selected_selector_fixtures
     )
-    page.selector_remove_btn.jawsDropped.connect(
-        page._selector_slot_controller.remove_selector_jaws_by_ids
+    page.selector_remove_btn.fixturesDropped.connect(
+        page._selector_slot_controller.remove_selector_fixtures_by_ids
     )
     selector_actions = build_selector_actions_row(spacing=4)
     selector_actions.addWidget(page.selector_remove_btn, 0, Qt.AlignLeft)
@@ -244,3 +244,4 @@ def _install_layout_event_filters(page) -> None:
     ):
         if widget is not None:
             widget.installEventFilter(page)
+

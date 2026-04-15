@@ -10,10 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class DrawService:
-    def __init__(self, drawing_dir, tool_db_path, jaw_db_path):
+    def __init__(self, drawing_dir, tool_db_path, jaw_db_path, fixture_db_path=None):
         self.drawing_dir = Path(drawing_dir)
         self.tool_db_path = Path(tool_db_path)
         self.jaw_db_path = Path(jaw_db_path)
+        self.fixture_db_path = Path(fixture_db_path) if fixture_db_path else Path(jaw_db_path)
         self._tool_cache = None
         self._jaw_cache = None
         self._tool_index = None
@@ -71,6 +72,8 @@ class DrawService:
             "tool_db_exists": self.tool_db_path.exists(),
             "jaw_db_path": str(self.jaw_db_path),
             "jaw_db_exists": self.jaw_db_path.exists(),
+            "fixture_db_path": str(self.fixture_db_path),
+            "fixture_db_exists": self.fixture_db_path.exists(),
         }
 
     def list_drawings(self, search=""):

@@ -1,4 +1,4 @@
-"""Selection and signal handlers for FixturePage."""
+﻿"""Selection and signal handlers for FixturePage."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from shared.ui.helpers.selection_common import (
     on_multi_selection_changed_refresh_label,
     update_selection_count_label as update_multi_selection_count_label,
 )
-from ui.fixture_catalog_delegate import ROLE_JAW_ID
+from ui.fixture_catalog_delegate import ROLE_FIXTURE_ID
 
 __all__ = [
     'connect_selection_model',
@@ -35,41 +35,41 @@ def connect_selection_model(page) -> None:
 
 def on_item_selected_internal(page, fixture_id: str, _uid: int) -> None:
     """Handle CatalogPageBase item_selected signal for FixturePage."""
-    page.current_jaw_id = str(fixture_id or '').strip() or None
+    page.current_fixture_id = str(fixture_id or '').strip() or None
     page._update_selection_count_label()
     if not page._details_hidden:
-        page.populate_details(page._get_selected_jaw())
+        page.populate_details(page._get_selected_fixture())
     page._sync_detached_preview(show_errors=False)
-    if page.current_jaw_id:
-        page.jaw_selected.emit(page.current_jaw_id)
+    if page.current_fixture_id:
+        page.fixture_selected.emit(page.current_fixture_id)
 
 
 def on_item_deleted_internal(page, fixture_id: str) -> None:
     """Handle CatalogPageBase item_deleted signal for FixturePage."""
-    if page.current_jaw_id == fixture_id:
-        page.current_jaw_id = None
+    if page.current_fixture_id == fixture_id:
+        page.current_fixture_id = None
         page._current_item_id = None
         page.populate_details(None)
     page._sync_detached_preview(show_errors=False)
-    page.jaw_deleted.emit(fixture_id)
+    page.fixture_deleted.emit(fixture_id)
 
 
 def on_current_item_changed(page, current, previous) -> None:
     """Track current item and refresh detail panel selection state."""
     _ = previous
     if not current.isValid():
-        page.current_jaw_id = None
+        page.current_fixture_id = None
         page._current_item_id = None
         page._update_selection_count_label()
         page.populate_details(None)
         page._sync_detached_preview(show_errors=False)
         return
 
-    page.current_jaw_id = str(current.data(ROLE_JAW_ID) or '').strip() or None
-    page._current_item_id = page.current_jaw_id
+    page.current_fixture_id = str(current.data(ROLE_FIXTURE_ID) or '').strip() or None
+    page._current_item_id = page.current_fixture_id
     page._update_selection_count_label()
     if not page._details_hidden:
-        page.populate_details(page._get_selected_jaw())
+        page.populate_details(page._get_selected_fixture())
     page._sync_detached_preview(show_errors=False)
 
 
@@ -78,16 +78,16 @@ def on_item_double_clicked(page, index) -> None:
     if not index.isValid():
         return
 
-    page.current_jaw_id = str(index.data(ROLE_JAW_ID) or '').strip() or None
-    page._current_item_id = page.current_jaw_id
+    page.current_fixture_id = str(index.data(ROLE_FIXTURE_ID) or '').strip() or None
+    page._current_item_id = page.current_fixture_id
 
     if QApplication.keyboardModifiers() & Qt.ControlModifier:
-        page.edit_jaw()
+        page.edit_fixture()
         return
 
     if page._details_hidden:
         page.show_details()
-        QTimer.singleShot(0, lambda: page.populate_details(page._get_selected_jaw()))
+        QTimer.singleShot(0, lambda: page.populate_details(page._get_selected_fixture()))
         return
 
     page.hide_details()
@@ -102,6 +102,7 @@ def update_selection_count_label(page) -> None:
     """Render selected-count label for multi-selection state."""
     update_multi_selection_count_label(
         page,
-        count=len(page._selected_jaw_ids()),
+        count=len(page._selected_fixture_ids()),
         translation_key='jaw_library.selection.count',
     )
+

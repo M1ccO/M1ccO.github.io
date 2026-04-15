@@ -355,6 +355,16 @@ class ToolSelectorStateMixin:
         self._update_context_header()
 
     def _update_context_header(self) -> None:
+        if bool(getattr(self, '_is_machining_center_selector_mode', False)):
+            self.selector_head_value_label.setVisible(False)
+            self.selector_spindle_value_label.setVisible(False)
+            self.head_btn.setVisible(False)
+            self.spindle_btn.setVisible(False)
+            self.assignment_frame.setTitle(
+                self._t('tool_library.selector.operation_tools', 'Operation tools')
+            )
+            return
+
         head_label = (
             self._t('tool_library.selector.head_lower', 'Lower Turret')
             if self._current_head == 'HEAD2'

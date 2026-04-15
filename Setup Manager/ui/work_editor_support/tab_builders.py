@@ -24,6 +24,7 @@ try:
     from shared.ui.helpers.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 except ModuleNotFoundError:
     from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
+from machine_profiles import is_machining_center
 from .machining_center import build_machining_center_zeros_tab_ui
 from .selector_flow import open_combined_tools_jaws_selector_session
 
@@ -267,7 +268,7 @@ def build_zeros_tab_ui(
     jaw_selector_panel_cls: type,
     create_titled_section_fn: Callable[[str], object],
 ) -> None:
-    if str(getattr(dialog.machine_profile, 'machine_type', '') or '').strip().lower() == 'machining_center':
+    if is_machining_center(dialog.machine_profile):
         build_machining_center_zeros_tab_ui(
             dialog,
             create_titled_section_fn=create_titled_section_fn,

@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import QEvent, QModelIndex, QSignalBlocker, QTimer, Qt
 from PySide6.QtGui import QStandardItem
 
+from machine_profiles import is_machining_center, load_profile
 from ui.setup_catalog_delegate import ROLE_WORK_DATA, ROLE_WORK_ID
 from ui.setup_page_support.library_context import collect_library_filter_ids, emit_library_launch_context
 
@@ -56,9 +57,14 @@ def handle_item_double_clicked(page, item) -> None:
         return
 
     tool_ids, jaw_ids = collect_library_filter_ids(work)
+    try:
+        profile = load_profile(page.work_service.get_machine_profile_key())
+        secondary_module = 'fixtures' if is_machining_center(profile) else 'jaws'
+    except Exception:
+        secondary_module = 'jaws'
     # Right-click + double-click opens Jaws view; default double-click opens Tools view.
     if page._last_mouse_button == Qt.RightButton:
-        page.openLibraryWithModuleRequested.emit(tool_ids, jaw_ids, "jaws")
+        page.openLibraryWithModuleRequested.emit(tool_ids, jaw_ids, secondary_module)
     else:
         page.openLibraryWithModuleRequested.emit(tool_ids, jaw_ids, "tools")
 

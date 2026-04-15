@@ -36,6 +36,17 @@ def update_navigation_labels(window) -> None:
 
 def update_launch_actions(window) -> None:
     selected = bool(window._launch_context.get("selected"))
+    mc = bool(getattr(window, "_is_machining_center_profile", lambda: False)())
+    secondary_label = "Fixtures" if mc else "Jaws"
+    if hasattr(window, "open_jaws_btn"):
+        if mc:
+            window.open_jaws_btn.setText(
+                window._t("setup_manager.open_fixtures_library", "Open Fixtures Library")
+            )
+        else:
+            window.open_jaws_btn.setText(
+                window._t("setup_manager.open_jaws_library", "Open Jaws Library")
+            )
     update_navigation_labels(window)
     if selected:
         # Selected-work mode: make launch actions clearly contextual and emphasize
@@ -44,13 +55,15 @@ def update_launch_actions(window) -> None:
         window.launch_body.setText(
             window._t(
                 "setup_manager.launch.selected_body",
-                "Selected work {work_id}: open filtered Tool Library and Jaws Library views.",
+                "Selected work {work_id}: open filtered Tool Library and {secondary_label} Library views.",
                 work_id=work_id,
+                secondary_label=secondary_label,
             )
             if work_id
             else window._t(
                 "setup_manager.launch.selected_body_no_id",
-                "Selected work: open filtered Tool Library and Jaws Library views.",
+                "Selected work: open filtered Tool Library and {secondary_label} Library views.",
+                secondary_label=secondary_label,
             )
         )
         set_launch_button_variant(window, window.open_tools_btn, True)
@@ -60,7 +73,8 @@ def update_launch_actions(window) -> None:
         window.launch_body.setText(
             window._t(
                 "setup_manager.launch.default_body",
-                "Open Tool Library or Jaws Library. Select a work in Setup to open filtered data.",
+                "Open Tool Library or {secondary_label} Library. Select a work in Setup to open filtered data.",
+                secondary_label=secondary_label,
             )
         )
         set_launch_button_variant(window, window.open_tools_btn, False)
@@ -86,16 +100,18 @@ def open_tool_library_action(window) -> None:
 
 
 def open_jaws_library_action(window) -> None:
+    mc = bool(getattr(window, "_is_machining_center_profile", lambda: False)())
+    secondary_module = "fixtures" if mc else "jaws"
     if window._launch_context.get("selected"):
         tool_ids = window._launch_context.get("tool_ids") or []
         jaw_ids = window._launch_context.get("jaw_ids") or []
-        if not jaw_ids:
+        if not jaw_ids and not mc:
             QMessageBox.information(
                 window,
                 window._t("setup_manager.viewer.title", "Viewer"),
                 window._t("setup_manager.viewer.no_jaws", "No jaws selected for this work."),
             )
             return
-        window._open_tool_library_with_master_filter(tool_ids, jaw_ids, module="jaws")
+        window._open_tool_library_with_master_filter(tool_ids, jaw_ids, module=secondary_module)
         return
-    window._open_tool_library_module("jaws")
+    window._open_tool_library_module(secondary_module)

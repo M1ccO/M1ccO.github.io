@@ -14,23 +14,12 @@ __all__ = [
 
 
 def _profile_head_keys(page) -> list[str]:
+    from shared.services.tool_lib_profile_view import ToolLibProfileView
+
     profile = getattr(page, 'machine_profile', None)
-    heads = []
-    if isinstance(profile, dict):
-        heads = profile.get('heads') or []
-    elif profile is not None:
-        heads = getattr(profile, 'heads', ()) or ()
-
-    keys: list[str] = []
-    for head in heads:
-        if isinstance(head, dict):
-            key = str(head.get('key') or '').strip().upper()
-        else:
-            key = str(getattr(head, 'key', '') or '').strip().upper()
-        if key and key not in keys:
-            keys.append(key)
-
-    return keys or ['HEAD1', 'HEAD2']
+    if isinstance(profile, ToolLibProfileView):
+        return profile.head_keys()
+    return ['HEAD1', 'HEAD2']
 
 
 def selected_head_filter(page) -> str:

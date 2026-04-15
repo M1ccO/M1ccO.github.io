@@ -40,19 +40,17 @@ from shared.services.localization_service import LocalizationService
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from ui.main_window_support import (
     allow_set_foreground,
-    build_compatibility_report_bundle,
     launch_tool_library,
     on_setup_launch_context_changed,
     open_jaws_library_action,
     open_preferences_action,
     open_tool_library_action,
-    resolve_compatibility_target_path,
-    show_compatibility_report_dialog,
     send_request_with_retry,
     send_to_tool_library,
     update_launch_actions,
     update_navigation_labels,
 )
+from machine_profiles import is_machining_center, load_profile
 from shared.ui.main_window_helpers import (
     current_window_rect,
     fade_in as _shared_fade_in,
@@ -285,12 +283,26 @@ class MainWindow(QMainWindow):
             if source_status["jaw_db_exists"]
             else self._t("setup_manager.status.missing", "missing")
         )
+        fixture_state = (
+            Path(source_status["fixture_db_path"]).name
+            if source_status.get("fixture_db_exists")
+            else self._t("setup_manager.status.missing", "missing")
+        )
         self._status_data = {
             "setup_db": db_name,
             "tool_db": tool_state,
             "jaw_db": jaw_state,
+            "fixture_db": fixture_state,
         }
         self._update_status_message()
+
+    def _is_machining_center_profile(self) -> bool:
+        try:
+            key = str(self.work_service.get_machine_profile_key() or "").strip()
+            profile = load_profile(key)
+            return bool(is_machining_center(profile))
+        except Exception:
+            return False
 
     # ------------------------------------------------------------------
     # Tool Library launcher helpers
@@ -369,9 +381,10 @@ class MainWindow(QMainWindow):
             "geometry": f"{x},{y},{width},{height}",
             "show": True,
             "clear_master_filter": True,
-            "module": "jaws" if module == "jaws" else "tools",
+            "module": "fixtures" if module == "fixtures" else ("jaws" if module == "jaws" else "tools"),
             "tools_db_path": str(self.draw_service.tool_db_path),
             "jaws_db_path": str(self.draw_service.jaw_db_path),
+            "fixtures_db_path": str(getattr(self.draw_service, "fixture_db_path", self.draw_service.jaw_db_path)),
         }
         if self._send_to_tool_library(payload):
             self._fade_out_and(self._complete_tool_library_handoff)
@@ -398,8 +411,8 @@ class MainWindow(QMainWindow):
 
     def _open_tool_library_separate(self):
         # Legacy external hook retained for backward compatibility.
-        """Backward-compatible helper that now opens Jaws module without filters."""
-        self._open_tool_library_module("jaws")
+        """Backward-compatible helper that opens Jaws/Fixtures module without filters."""
+        self._open_tool_library_module("fixtures" if self._is_machining_center_profile() else "jaws")
 
     def _open_tool_library_deep_link(self, kind: str, item_id: str):
         # Deep links bypass IPC filter-state setup and open directly by item ID.
@@ -430,7 +443,7 @@ class MainWindow(QMainWindow):
         # The Tool/Jaw pages treat empty filter lists as "show all", so we
         # pass a guaranteed non-matching sentinel to force an empty result set.
         no_match_id = "__NO_MATCH_LINKED_ITEMS__"
-        selected_module = "jaws" if module == "jaws" else "tools"
+        selected_module = "fixtures" if module == "fixtures" else ("jaws" if module == "jaws" else "tools")
         if not safe_tools:
             safe_tools = [no_match_id]
         if not safe_jaws:
@@ -450,6 +463,12 @@ class MainWindow(QMainWindow):
                 self._t("setup_manager.viewer.title", "Viewer"),
                 self._t("setup_manager.viewer.no_jaws", "No jaws selected for this work."),
             )
+        if selected_module == "fixtures" and jaw_ids is not None and not raw_jaws:
+            QMessageBox.information(
+                self,
+                self._t("setup_manager.viewer.title", "Viewer"),
+                self._t("setup_manager.viewer.no_fixtures", "No fixtures selected for this work."),
+            )
 
         x, y, width, height = self._current_window_rect()
         allow_set_foreground()
@@ -464,6 +483,7 @@ class MainWindow(QMainWindow):
             "module": selected_module,
             "tools_db_path": str(self.draw_service.tool_db_path),
             "jaws_db_path": str(self.draw_service.jaw_db_path),
+            "fixtures_db_path": str(getattr(self.draw_service, "fixture_db_path", self.draw_service.jaw_db_path)),
         }
         if self._send_to_tool_library(payload):
             self._fade_out_and(self._complete_tool_library_handoff)
@@ -514,50 +534,6 @@ class MainWindow(QMainWindow):
             on_failed=on_failed,
         )
 
-    def _check_setup_db_compatibility(self, database_path: str):
-        target_path, path_error = resolve_compatibility_target_path(database_path)
-        if path_error is not None:
-            QMessageBox.warning(
-                self,
-                self._t("preferences.database.compatibility.title", "Compatibility Check"),
-                self._t(
-                    path_error["message_key"],
-                    path_error["default"],
-                    **path_error["kwargs"],
-                ),
-            )
-            return
-
-        try:
-            # Bundle includes both the computed compatibility report and human-readable
-            # DB path summary text used in the dialog.
-            bundle = build_compatibility_report_bundle(
-                target_path,
-                self.draw_service,
-                self.work_service._row_to_work,
-                self._t,
-            )
-        except Exception as exc:
-            QMessageBox.critical(
-                self,
-                self._t("preferences.database.compatibility.title", "Compatibility Check"),
-                self._t(
-                    "preferences.database.compatibility.failed",
-                    "Could not read the selected Setup database:\n{error}",
-                    error=str(exc),
-                ),
-            )
-            return
-
-        show_compatibility_report_dialog(
-            self,
-            title=self._t("preferences.database.compatibility.title", "Compatibility Check"),
-            summary=bundle["report"]["summary"],
-            informative=bundle["informative"],
-            details=bundle["report"]["details"],
-            has_issues=bundle["report"]["has_issues"],
-        )
-
     def _refresh_localized_labels(self):
         # Keep text refresh order stable: shell labels first, then child pages, then stateful
         # launch/status text that depends on current context and translated strings.
@@ -569,7 +545,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, "open_tools_btn"):
             self.open_tools_btn.setText(self._t("setup_manager.open_tool_library", "Open Tool Library"))
         if hasattr(self, "open_jaws_btn"):
-            self.open_jaws_btn.setText(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
+            if self._is_machining_center_profile():
+                self.open_jaws_btn.setText(self._t("setup_manager.open_fixtures_library", "Open Fixtures Library"))
+            else:
+                self.open_jaws_btn.setText(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
         if hasattr(self, "preferences_btn"):
             self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
         update_navigation_labels(self)
@@ -585,15 +564,23 @@ class MainWindow(QMainWindow):
     def _update_status_message(self):
         if not hasattr(self, "_status_bar") or not hasattr(self, "_status_data"):
             return
-        self._status_bar.showMessage(
-            self._t(
+        if self._is_machining_center_profile():
+            message = self._t(
+                "setup_manager.status.message_mc",
+                "Setup DB: {setup_db} | Tool DB: {tool_db} | Fixture DB: {fixture_db}",
+                setup_db=self._status_data.get("setup_db", ""),
+                tool_db=self._status_data.get("tool_db", ""),
+                fixture_db=self._status_data.get("fixture_db", ""),
+            )
+        else:
+            message = self._t(
                 "setup_manager.status.message",
                 "Setup DB: {setup_db} | Tool DB: {tool_db} | Jaw DB: {jaw_db}",
                 setup_db=self._status_data.get("setup_db", ""),
                 tool_db=self._status_data.get("tool_db", ""),
                 jaw_db=self._status_data.get("jaw_db", ""),
             )
-        )
+        self._status_bar.showMessage(message)
 
     def _build_ui_preference_overrides(self) -> str:
         palette = get_active_theme_palette(self.ui_preferences)

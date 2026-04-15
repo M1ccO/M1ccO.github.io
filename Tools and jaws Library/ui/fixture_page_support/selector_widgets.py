@@ -1,4 +1,4 @@
-"""Selector slot widgets for FixturePage."""
+﻿"""Selector slot widgets for FixturePage."""
 
 from __future__ import annotations
 
@@ -8,11 +8,16 @@ from PySide6.QtWidgets import QApplication, QGroupBox, QLabel, QPushButton, QSiz
 
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.editor_helpers import apply_titled_section_style
-from ui.fixture_catalog_delegate import jaw_icon_for_row
-from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
+from ui.fixture_catalog_delegate import fixture_icon_for_row
+from ui.selector_mime import (
+    SELECTOR_FIXTURE_MIME,
+    encode_selector_payload,
+    first_dropped_fixture,
+    fixture_payload_ids,
+)
 
 
-class _DraggableJawAssignmentCard(MiniAssignmentCard):
+class _DraggableFixtureAssignmentCard(MiniAssignmentCard):
     slotClicked = Signal(bool)
     dragRequested = Signal()
 
@@ -46,7 +51,7 @@ class _DraggableJawAssignmentCard(MiniAssignmentCard):
 
 
 class FixtureAssignmentSlot(QGroupBox):
-    jawDropped = Signal(str, dict)
+    fixtureDropped = Signal(str, dict)
     slotClicked = Signal(str, bool)
 
     def __init__(self, slot_key: str, title: str, parent=None, translate=None):
@@ -127,19 +132,19 @@ class FixtureAssignmentSlot(QGroupBox):
         self._assignment = normalized
         self._refresh_ui()
 
-    def _localized_jaw_type(self, raw_type: str) -> str:
+    def _localized_fixture_type(self, raw_type: str) -> str:
         normalized = (raw_type or '').strip().lower().replace(' ', '_')
         return self._translate(f'jaw_library.fixture_type.{normalized}', raw_type)
 
     def _refresh_ui(self):
         if isinstance(self._assignment, dict):
             fixture_id = str(self._assignment.get("fixture_id") or "").strip()
-            fixture_type = self._localized_jaw_type(str(self._assignment.get("fixture_type") or "").strip())
+            fixture_type = self._localized_fixture_type(str(self._assignment.get("fixture_type") or "").strip())
             title = f"{fixture_id}  -  {fixture_type}" if fixture_type else fixture_id
-            icon_jaw = {**self._assignment, "fixture_kind": "sub" if self._slot_key == "sub" else "main"}
+            icon_fixture = {**self._assignment, "fixture_kind": "sub" if self._slot_key == "sub" else "main"}
             if self._assignment_card is None:
-                icon = jaw_icon_for_row(icon_jaw)
-                self._assignment_card = _DraggableJawAssignmentCard(
+                icon = fixture_icon_for_row(icon_fixture)
+                self._assignment_card = _DraggableFixtureAssignmentCard(
                     icon=icon,
                     title=title,
                     subtitle="",
@@ -158,7 +163,7 @@ class FixtureAssignmentSlot(QGroupBox):
                     self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
                 self.layout().insertWidget(0, self._assignment_card)
             else:
-                icon = jaw_icon_for_row(icon_jaw)
+                icon = fixture_icon_for_row(icon_fixture)
                 self._assignment_card.icon_label.setFixedSize(32, 32)
                 if icon is not None and not icon.isNull():
                     self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
@@ -199,7 +204,7 @@ class FixtureAssignmentSlot(QGroupBox):
             return
         payload = [dict(self._assignment)]
         mime = QMimeData()
-        encode_selector_payload(mime, SELECTOR_JAW_MIME, payload)
+        encode_selector_payload(mime, SELECTOR_FIXTURE_MIME, payload)
 
         drag = QDrag(self)
         drag.setMimeData(mime)
@@ -223,32 +228,32 @@ class FixtureAssignmentSlot(QGroupBox):
         super().mouseReleaseEvent(event)
 
     @staticmethod
-    def _normalized_first_dropped_jaw(mime: QMimeData) -> dict | None:
-        return first_dropped_jaw(mime)
+    def _normalized_first_dropped_fixture(mime: QMimeData) -> dict | None:
+        return first_dropped_fixture(mime)
 
     def dragEnterEvent(self, event):
-        if event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+        if event.mimeData().hasFormat(SELECTOR_FIXTURE_MIME):
             event.acceptProposedAction()
             return
         event.ignore()
 
     def dragMoveEvent(self, event):
-        if event.mimeData().hasFormat(SELECTOR_JAW_MIME):
+        if event.mimeData().hasFormat(SELECTOR_FIXTURE_MIME):
             event.acceptProposedAction()
             return
         event.ignore()
 
     def dropEvent(self, event):
-        fixture = self._normalized_first_dropped_jaw(event.mimeData())
+        fixture = self._normalized_first_dropped_fixture(event.mimeData())
         if fixture is None:
             event.ignore()
             return
-        self.jawDropped.emit(self._slot_key, fixture)
+        self.fixtureDropped.emit(self._slot_key, fixture)
         event.acceptProposedAction()
 
 
 class SelectorRemoveDropButton(QPushButton):
-    jawsDropped = Signal(list)
+    fixturesDropped = Signal(list)
 
     def __init__(self, parent=None, *, enable_drop: bool = True):
         super().__init__(parent)
@@ -256,25 +261,27 @@ class SelectorRemoveDropButton(QPushButton):
             self.setAcceptDrops(True)
 
     @staticmethod
-    def _payload_jaw_ids(mime: QMimeData) -> list[str]:
-        return jaw_payload_ids(mime)
+    def _payload_fixture_ids(mime: QMimeData) -> list[str]:
+        return fixture_payload_ids(mime)
 
     def dragEnterEvent(self, event):
-        if self._payload_jaw_ids(event.mimeData()):
+        if self._payload_fixture_ids(event.mimeData()):
             event.acceptProposedAction()
             return
         event.ignore()
 
     def dragMoveEvent(self, event):
-        if self._payload_jaw_ids(event.mimeData()):
+        if self._payload_fixture_ids(event.mimeData()):
             event.acceptProposedAction()
             return
         event.ignore()
 
     def dropEvent(self, event):
-        jaw_ids = self._payload_jaw_ids(event.mimeData())
-        if not jaw_ids:
+        fixture_ids = self._payload_fixture_ids(event.mimeData())
+        if not fixture_ids:
             event.ignore()
             return
-        self.jawsDropped.emit(jaw_ids)
+        self.fixturesDropped.emit(fixture_ids)
         event.acceptProposedAction()
+
+

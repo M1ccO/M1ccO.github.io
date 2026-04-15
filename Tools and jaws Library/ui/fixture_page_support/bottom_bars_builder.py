@@ -1,4 +1,4 @@
-"""Bottom action bar builders for FixturePage."""
+﻿"""Bottom action bar builders for FixturePage."""
 
 from __future__ import annotations
 
@@ -13,19 +13,19 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     actions.setContentsMargins(10, 8, 10, 8)
     actions.setSpacing(8)
 
-    page.edit_btn = QPushButton(page._t('jaw_library.action.edit_jaw_button', 'EDIT JAW'))
-    page.delete_btn = QPushButton(page._t('jaw_library.action.delete_jaw_button', 'DELETE JAW'))
-    page.add_btn = QPushButton(page._t('jaw_library.action.add_jaw_button', 'ADD JAW'))
-    page.copy_btn = QPushButton(page._t('jaw_library.action.copy_jaw_button', 'COPY JAW'))
+    page.edit_btn = QPushButton(page._t('fixture_library.action.edit_fixture_button', 'EDIT FIXTURE'))
+    page.delete_btn = QPushButton(page._t('fixture_library.action.delete_fixture_button', 'DELETE FIXTURE'))
+    page.add_btn = QPushButton(page._t('fixture_library.action.add_fixture_button', 'ADD FIXTURE'))
+    page.copy_btn = QPushButton(page._t('fixture_library.action.copy_fixture_button', 'COPY FIXTURE'))
     for btn in (page.edit_btn, page.delete_btn, page.add_btn, page.copy_btn):
         btn.setProperty('panelActionButton', True)
     page.delete_btn.setProperty('dangerAction', True)
     page.add_btn.setProperty('primaryAction', True)
 
-    page.edit_btn.clicked.connect(page.edit_jaw)
+    page.edit_btn.clicked.connect(page.edit_fixture)
     page.delete_btn.clicked.connect(page.delete_fixture)
-    page.add_btn.clicked.connect(page.add_jaw)
-    page.copy_btn.clicked.connect(page.copy_jaw)
+    page.add_btn.clicked.connect(page.add_fixture)
+    page.copy_btn.clicked.connect(page.copy_fixture)
 
     page.module_switch_label = QLabel(page._t('tool_library.module.switch_to', 'Switch to'))
     page.module_switch_label.setProperty('pageSubtitle', True)
@@ -74,10 +74,10 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
 
 
 def retranslate_bottom_bars(page) -> None:
-    page.edit_btn.setText(page._t('jaw_library.action.edit_jaw_button', 'EDIT JAW'))
-    page.delete_btn.setText(page._t('jaw_library.action.delete_jaw_button', 'DELETE JAW'))
-    page.add_btn.setText(page._t('jaw_library.action.add_jaw_button', 'ADD JAW'))
-    page.copy_btn.setText(page._t('jaw_library.action.copy_jaw_button', 'COPY JAW'))
+    page.edit_btn.setText(page._t('fixture_library.action.edit_fixture_button', 'EDIT FIXTURE'))
+    page.delete_btn.setText(page._t('fixture_library.action.delete_fixture_button', 'DELETE FIXTURE'))
+    page.add_btn.setText(page._t('fixture_library.action.add_fixture_button', 'ADD FIXTURE'))
+    page.copy_btn.setText(page._t('fixture_library.action.copy_fixture_button', 'COPY FIXTURE'))
     page.selector_cancel_btn.setText(page._t('tool_library.selector.cancel', 'CANCEL'))
     page.selector_done_btn.setText(page._t('tool_library.selector.done', 'DONE'))
     page.module_switch_label.setText(page._t('tool_library.module.switch_to', 'Switch to'))

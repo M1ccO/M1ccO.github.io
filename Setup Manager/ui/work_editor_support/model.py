@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from machine_profiles import KNOWN_HEAD_KEYS, KNOWN_SPINDLE_KEYS, MachineProfile
+from machine_profiles import KNOWN_HEAD_KEYS, KNOWN_SPINDLE_KEYS, MachineProfile, is_machining_center
 from .machining_center import collect_machining_center_payload, load_machining_center_payload
 
 
@@ -47,6 +47,7 @@ class WorkEditorPayloadAdapter:
 
     def populate_dialog(self, dialog, work: dict):
         payload = dict(work or {})
+        is_mc = is_machining_center(self.profile)
         dialog.work_id_input.setText(payload.get("work_id", ""))
         dialog.work_id_input.setEnabled(not bool(payload.get("work_id")))
         dialog.drawing_id_input.setText(payload.get("drawing_id", ""))
@@ -82,7 +83,7 @@ class WorkEditorPayloadAdapter:
 
         dialog.main_program_input.setText(payload.get("main_program", ""))
 
-        if str(getattr(self.profile, "machine_type", "") or "").strip().lower() == "machining_center":
+        if is_mc:
             load_machining_center_payload(dialog, payload)
 
         for head in self.profile.heads:
@@ -108,7 +109,7 @@ class WorkEditorPayloadAdapter:
                         widget.setText(payload.get(self.axis_field(head.key, spindle.key, axis), ""))
 
             ordered_list = dialog._ordered_tool_lists.get(head.key)
-            if ordered_list is not None:
+            if ordered_list is not None and not is_mc:
                 ordered_list.set_tool_assignments(payload.get(self.tool_assignment_field(head.key), []))
 
         if hasattr(dialog, "sub_pickup_z_input"):
@@ -121,6 +122,7 @@ class WorkEditorPayloadAdapter:
         dialog.notes_input.setPlainText(payload.get("notes", ""))
 
     def collect_payload(self, dialog, *, persisted_work: dict | None = None, drawings_enabled: bool = True) -> dict:
+        is_mc = is_machining_center(self.profile)
         # Start from the persisted row so fields hidden by the active machine
         # profile keep their previous values instead of being erased on save.
         payload = dict(persisted_work or {})
@@ -148,7 +150,7 @@ class WorkEditorPayloadAdapter:
             }
         )
 
-        if str(getattr(self.profile, "machine_type", "") or "").strip().lower() == "machining_center":
+        if is_mc:
             mc_operation_count, mc_operations = collect_machining_center_payload(dialog)
             payload["mc_operation_count"] = mc_operation_count
             payload["mc_operations"] = mc_operations
@@ -165,7 +167,7 @@ class WorkEditorPayloadAdapter:
 
         for head_key in KNOWN_HEAD_KEYS:
             ordered_list = dialog._ordered_tool_lists.get(head_key)
-            if ordered_list is not None:
+            if ordered_list is not None and not is_mc:
                 assignments = ordered_list.get_tool_assignments()
                 payload[self.tool_assignment_field(head_key)] = assignments
                 payload[self.tool_ids_field(head_key)] = ordered_list.get_tool_ids()

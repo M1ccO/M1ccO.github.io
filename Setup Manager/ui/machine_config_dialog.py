@@ -36,7 +36,7 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(_workspace))
     from shared.services.machine_config_service import MachineConfig, MachineConfigService
 
-from machine_profiles import load_profile
+from machine_profiles import load_profile, is_machining_center
 from ui.widgets.common import add_shadow, apply_tool_library_combo_style
 
 
@@ -55,7 +55,7 @@ class _DbRow(QFrame):
     def __init__(
         self,
         label_text: str,
-        db_attr: str,           # "setup_db_path" | "tools_db_path" | "jaws_db_path"
+        db_attr: str,           # "setup_db_path" | "tools_db_path" | "jaws_db_path" | "fixtures_db_path"
         svc: MachineConfigService,
         own_config_id: str,     # "" for new-config mode
         translate: Callable,
@@ -259,6 +259,7 @@ class MachineConfigDialog(QDialog):
         self._original_setup_db: str = ""
         self._original_tools_db: str = ""
         self._original_jaws_db: str = ""
+        self._original_fixtures_db: str = ""
 
         self._profile_key: str = "ntx_2sp_2h"
         self._result_config: MachineConfig | None = None
@@ -271,6 +272,7 @@ class MachineConfigDialog(QDialog):
                 self._original_setup_db = existing.setup_db_path
                 self._original_tools_db = existing.tools_db_path
                 self._original_jaws_db = existing.jaws_db_path
+                self._original_fixtures_db = existing.fixtures_db_path
                 self._profile_key = existing.machine_profile_key
 
         self.setObjectName("appRoot")
@@ -387,6 +389,15 @@ class MachineConfigDialog(QDialog):
         )
         card_layout.addWidget(self._jaws_db_row)
 
+        self._fixtures_db_row = _DbRow(
+            self._t("machine_config.fixtures_db", "Fixtures Library"),
+            "fixtures_db_path",
+            self._svc,
+            own_id,
+            self._translate,
+        )
+        card_layout.addWidget(self._fixtures_db_row)
+
         if self._is_create:
             note = QLabel(
                 self._t(
@@ -423,12 +434,15 @@ class MachineConfigDialog(QDialog):
         root.addLayout(buttons)
 
         self._refresh_profile_label()
+        self._refresh_library_rows_visibility()
 
     def _populate(self, config: MachineConfig) -> None:
         self.name_edit.setText(config.name)
         self._setup_db_row.set_value(config.setup_db_path)
         self._tools_db_row.set_value(config.tools_db_path)
         self._jaws_db_row.set_value(config.jaws_db_path)
+        self._fixtures_db_row.set_value(config.fixtures_db_path)
+        self._refresh_library_rows_visibility()
 
     # ------------------------------------------------------------------ #
     # Layout helpers                                                       #
@@ -459,6 +473,17 @@ class MachineConfigDialog(QDialog):
         except Exception:
             self.profile_label.setText(self._profile_key)
 
+    def _is_mc_profile(self) -> bool:
+        try:
+            return bool(is_machining_center(load_profile(self._profile_key)))
+        except Exception:
+            return False
+
+    def _refresh_library_rows_visibility(self) -> None:
+        mc = self._is_mc_profile()
+        self._jaws_db_row.setVisible(not mc)
+        self._fixtures_db_row.setVisible(mc)
+
     def _update_profile_warning(self) -> None:
         changed = (
             not self._is_create
@@ -477,6 +502,7 @@ class MachineConfigDialog(QDialog):
         if wizard.exec() == QDialog.Accepted:
             self._profile_key = wizard.selected_profile_key()
             self._refresh_profile_label()
+            self._refresh_library_rows_visibility()
             self._update_profile_warning()
             try:
                 overrides = wizard.selected_mc_overrides() or {}
@@ -514,6 +540,9 @@ class MachineConfigDialog(QDialog):
         setup_db = self._setup_db_row.get_value()
         tools_db = self._tools_db_row.get_value()
         jaws_db = self._jaws_db_row.get_value()
+        fixtures_db = self._fixtures_db_row.get_value()
+        if self._is_mc_profile():
+            jaws_db = ""
 
         if self._is_create:
             config = self._svc.create_config(
@@ -522,6 +551,7 @@ class MachineConfigDialog(QDialog):
                 setup_db_path=setup_db,
                 tools_db_path=tools_db,
                 jaws_db_path=jaws_db,
+                fixtures_db_path=fixtures_db,
             )
             self._bootstrap_new_db(config)
         else:
@@ -532,6 +562,7 @@ class MachineConfigDialog(QDialog):
                 setup_db_path=setup_db,
                 tools_db_path=tools_db,
                 jaws_db_path=jaws_db,
+                fixtures_db_path=fixtures_db,
             )
 
         self._result_config = config
@@ -560,11 +591,11 @@ class MachineConfigDialog(QDialog):
                 ),
             )
 
-        # Pre-create empty tool/jaw library SQLite files so they exist on disk
+        # Pre-create empty tool/jaw/fixture library SQLite files so they exist on disk
         # as soon as the config is saved.  The Tool Library will apply its full
         # schema when it first connects to the file.
         import sqlite3 as _sqlite3
-        for lib_path_str in (config.tools_db_path, config.jaws_db_path):
+        for lib_path_str in (config.tools_db_path, config.jaws_db_path, config.fixtures_db_path):
             if not lib_path_str:
                 continue
             lib_path = Path(lib_path_str)
@@ -595,4 +626,5 @@ class MachineConfigDialog(QDialog):
             or self._result_config.setup_db_path != self._original_setup_db
             or self._result_config.tools_db_path != self._original_tools_db
             or self._result_config.jaws_db_path != self._original_jaws_db
+            or self._result_config.fixtures_db_path != self._original_fixtures_db
         )

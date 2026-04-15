@@ -1,4 +1,4 @@
-"""CRUD action handlers for FixturePage.
+﻿"""CRUD action handlers for FixturePage.
 
 Extracted from fixture_page.py (Phase 5 Pass 8) to reduce page size.
 All public functions take the page object as their first argument.
@@ -21,75 +21,81 @@ from shared.ui.helpers.editor_helpers import (
     create_dialog_buttons,
     setup_editor_dialog,
 )
-from ui.fixture_editor_dialog import AddEditJawDialog
+from ui.fixture_editor_dialog import AddEditFixtureDialog
 
 __all__ = [
-    "add_jaw",
-    "copy_jaw",
+    "add_fixture",
+    "copy_fixture",
     "delete_fixture",
-    "edit_jaw",
+    "edit_fixture",
     "prompt_text",
     "save_from_dialog",
 ]
 
 
-def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
+def save_from_dialog(page, dlg, original_fixture_id: str | None = None) -> None:
     try:
-        data = dlg.get_jaw_data()
+        data = dlg.get_fixture_data()
         page.fixture_service.save_fixture(data)
-        new_jaw_id = data['fixture_id']
-        if original_jaw_id and original_jaw_id != new_jaw_id:
-            page.fixture_service.delete_fixture(original_jaw_id)
-        page.current_jaw_id = new_jaw_id
-        page._current_item_id = new_jaw_id
+        new_fixture_id = data['fixture_id']
+        if original_fixture_id and original_fixture_id != new_fixture_id:
+            page.fixture_service.delete_fixture(original_fixture_id)
+        page.current_fixture_id = new_fixture_id
+        page._current_item_id = new_fixture_id
         page.refresh_list()
-        page.populate_details(page.fixture_service.get_fixture(new_jaw_id))
+        page.populate_details(page.fixture_service.get_fixture(new_fixture_id))
     except ValueError as exc:
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
 
 
-def add_jaw(page) -> None:
-    dlg = AddEditJawDialog(page, translate=page._t)
+def add_fixture(page) -> None:
+    dlg = AddEditFixtureDialog(page, translate=page._t)
     if dlg.exec() == QDialog.Accepted:
         save_from_dialog(page, dlg)
 
 
-def edit_jaw(page) -> None:
-    selected_ids = page._selected_jaw_ids()
+def edit_fixture(page) -> None:
+    selected_ids = page._selected_fixture_ids()
     if not selected_ids:
         QMessageBox.information(
             page,
-            page._t('jaw_library.action.edit_jaw', 'Edit fixture'),
-            page._t('jaw_library.message.select_jaw_first', 'Select a fixture first.'),
+            page._t('fixture_library.action.edit_fixture', 'Edit fixture'),
+            page._t('fixture_library.message.select_fixture_first', 'Select a fixture first.'),
         )
         return
     if len(selected_ids) > 1:
         mode = ask_multi_edit_mode(page, len(selected_ids), page._t)
         if mode == 'batch':
-            page._batch_edit_jaws(selected_ids)
+            page._batch_edit_fixtures(selected_ids)
         elif mode == 'group':
-            page._group_edit_jaws(selected_ids)
+            page._group_edit_fixtures(selected_ids)
         return
     fixture = page.fixture_service.get_fixture(selected_ids[0])
-    dlg = AddEditJawDialog(page, fixture=fixture, translate=page._t)
+    dlg = AddEditFixtureDialog(page, fixture=fixture, translate=page._t)
     if dlg.exec() == QDialog.Accepted:
-        save_from_dialog(page, dlg, original_jaw_id=fixture.get('fixture_id', ''))
+        save_from_dialog(page, dlg, original_fixture_id=fixture.get('fixture_id', ''))
 
 
 def delete_fixture(page) -> None:
-    if not page.current_jaw_id:
+    if not page.current_fixture_id:
         QMessageBox.information(
             page,
-            page._t('jaw_library.action.delete_fixture', 'Delete fixture'),
-            page._t('jaw_library.message.select_jaw_first', 'Select a fixture first.'),
+            page._t('fixture_library.action.delete_fixture', 'Delete fixture'),
+            page._t('fixture_library.message.select_fixture_first', 'Select a fixture first.'),
         )
         return
 
     box = QMessageBox(page)
     setup_editor_dialog(box)
     box.setIcon(QMessageBox.Warning)
-    box.setWindowTitle(page._t('jaw_library.action.delete_fixture', 'Delete fixture'))
-    box.setText(page._t('jaw_library.message.delete_jaw_prompt', 'Delete fixture {fixture_id}?', fixture_id=page.current_jaw_id))
+    box.setWindowTitle(page._t('fixture_library.action.delete_fixture', 'Delete fixture'))
+    box.setText(
+        page._t(
+            'fixture_library.message.delete_fixture_prompt',
+            'Delete fixture {fixture_id}?',
+            fixture_id=page.current_fixture_id,
+        )
+    )
     box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
 
     yes_btn = box.button(QMessageBox.Yes)
@@ -106,31 +112,31 @@ def delete_fixture(page) -> None:
     if box.exec() != QMessageBox.Yes:
         return
 
-    deleted_id = page.current_jaw_id
+    deleted_id = page.current_fixture_id
     page.fixture_service.delete_fixture(deleted_id)
     page.item_deleted.emit(deleted_id)
-    page.current_jaw_id = None
+    page.current_fixture_id = None
     page._current_item_id = None
     page.refresh_list()
     page.populate_details(None)
 
 
-def copy_jaw(page) -> None:
-    if not page.current_jaw_id:
+def copy_fixture(page) -> None:
+    if not page.current_fixture_id:
         QMessageBox.information(
             page,
-            page._t('jaw_library.action.copy_jaw', 'Copy fixture'),
-            page._t('jaw_library.message.select_jaw_first', 'Select a fixture first.'),
+            page._t('fixture_library.action.copy_fixture', 'Copy fixture'),
+            page._t('fixture_library.message.select_fixture_first', 'Select a fixture first.'),
         )
         return
-    fixture = page.fixture_service.get_fixture(page.current_jaw_id)
+    fixture = page.fixture_service.get_fixture(page.current_fixture_id)
     if not fixture:
         return
 
     new_id, accepted = prompt_text(
         page,
-        page._t('jaw_library.action.copy_jaw', 'Copy fixture'),
-        page._t('jaw_library.prompt.new_jaw_id', 'New Fixture ID:'),
+        page._t('fixture_library.action.copy_fixture', 'Copy fixture'),
+        page._t('fixture_library.prompt.new_fixture_id', 'New Fixture ID:'),
     )
     if not accepted or not new_id.strip():
         return
@@ -139,12 +145,12 @@ def copy_jaw(page) -> None:
     copied['fixture_id'] = new_id.strip()
     try:
         page.fixture_service.save_fixture(copied)
-        page.current_jaw_id = copied['fixture_id']
+        page.current_fixture_id = copied['fixture_id']
         page._current_item_id = copied['fixture_id']
         page.refresh_list()
-        page.populate_details(page.fixture_service.get_fixture(page.current_jaw_id))
+        page.populate_details(page.fixture_service.get_fixture(page.current_fixture_id))
     except ValueError as exc:
-        QMessageBox.warning(page, page._t('jaw_library.action.copy_jaw', 'Copy fixture'), str(exc))
+        QMessageBox.warning(page, page._t('fixture_library.action.copy_fixture', 'Copy fixture'), str(exc))
 
 
 def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, bool]:
@@ -179,3 +185,4 @@ def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, b
     editor.setFocus()
     editor.selectAll()
     return editor.text(), dlg.exec() == QDialog.Accepted
+

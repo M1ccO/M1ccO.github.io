@@ -10,8 +10,6 @@ def open_preferences_action(window) -> None:
         window.ui_preferences,
         window._t,
         parent=window,
-        active_db_path=str(getattr(window.work_service.db, "path", "") or ""),
-        on_check_compatibility=window._check_setup_db_compatibility,
         machine_config_svc=getattr(window, "machine_config_svc", None),
     )
     result = dialog.exec()
@@ -35,10 +33,6 @@ def open_preferences_action(window) -> None:
     # Normal Save — language, theme, model paths, DB path, etc.
     # ----------------------------------------------------------------
     previous_language = window.ui_preferences.get("language", "en")
-    previous_setup_db = str(
-        window.ui_preferences.get("setup_db_path", "") or ""
-    ).strip()
-
     # Carry the DB-bound machine_profile_key forward so save() does not
     # overwrite it with the UiPreferencesService default.
     payload = dialog.preferences_payload()
@@ -75,17 +69,5 @@ def open_preferences_action(window) -> None:
             window._t(
                 "preferences.restart_body",
                 "Language changes will be applied after restarting the app.",
-            ),
-        )
-    current_setup_db = str(
-        window.ui_preferences.get("setup_db_path", "") or ""
-    ).strip()
-    if current_setup_db != previous_setup_db:
-        QMessageBox.information(
-            window,
-            window._t("preferences.restart_title", "Restart Required"),
-            window._t(
-                "preferences.restart_db_body",
-                "Database path changes will be applied after restarting the app.",
             ),
         )

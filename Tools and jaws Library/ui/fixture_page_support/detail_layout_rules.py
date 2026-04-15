@@ -1,11 +1,11 @@
-"""Rule helpers for FixturePage detail-grid row composition."""
+﻿"""Rule helpers for FixturePage detail-grid row composition."""
 
 from __future__ import annotations
 
 from typing import Callable
 
 
-def apply_jaw_detail_grid_rules(
+def apply_fixture_detail_grid_rules(
     *,
     fixture: dict,
     translate: Callable[..., str],
@@ -71,4 +71,5 @@ def apply_jaw_detail_grid_rules(
             fixture.get('last_modified', ''),
         )
     return 3
+
 

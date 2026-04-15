@@ -22,7 +22,7 @@ def selector_session_from_payload(payload: dict) -> dict:
     raw_assignments = (payload or {}).get("current_assignments")
     assignments = [dict(item) for item in (raw_assignments or []) if isinstance(item, dict)]
 
-    raw_buckets = (payload or {}).get("current_assignments_by_target") if mode == "tools" else {}
+    raw_buckets = (payload or {}).get("current_assignments_by_target") if mode in {"tools", "fixtures"} else {}
     if isinstance(raw_buckets, dict):
         assignment_buckets = {
             str(key): [dict(item) for item in value if isinstance(item, dict)]

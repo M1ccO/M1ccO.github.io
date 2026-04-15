@@ -1,4 +1,4 @@
-"""Detail panel visibility helpers for FixturePage.
+﻿"""Detail panel visibility helpers for FixturePage.
 
 Extracted from fixture_page.py (Phase 5 Pass 8).
 All functions take the page object as their first argument.
@@ -9,10 +9,10 @@ from __future__ import annotations
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox
 
-__all__ = ["hide_jaw_details", "show_jaw_details", "toggle_jaw_details"]
+__all__ = ["hide_fixture_details", "show_fixture_details", "toggle_fixture_details"]
 
 
-def show_jaw_details(page) -> None:
+def show_fixture_details(page) -> None:
     """Show the detail panel, or switch selector to details mode."""
     if page._selector_active:
         page._selector_slot_controller.set_selector_panel_mode('details')
@@ -29,7 +29,7 @@ def show_jaw_details(page) -> None:
     page.list_view.viewport().update()
 
 
-def hide_jaw_details(page) -> None:
+def hide_fixture_details(page) -> None:
     """Hide the detail panel, or switch selector to selector mode."""
     if page._selector_active:
         page._selector_slot_controller.set_selector_panel_mode('selector')
@@ -45,10 +45,10 @@ def hide_jaw_details(page) -> None:
     page.list_view.viewport().update()
 
 
-def toggle_jaw_details(page) -> None:
+def toggle_fixture_details(page) -> None:
     """Toggle detail panel open/closed; prompt if no fixture is selected."""
     if page._details_hidden:
-        fixture = page._get_selected_jaw()
+        fixture = page._get_selected_fixture()
         if fixture is None:
             QMessageBox.information(
                 page,
@@ -59,6 +59,7 @@ def toggle_jaw_details(page) -> None:
         # Show the panel first, then populate on the next tick so the UI
         # does not appear to close/reopen while heavy detail widgets initialize.
         page.show_details()
-        QTimer.singleShot(0, lambda: page.populate_details(page._get_selected_jaw()))
+        QTimer.singleShot(0, lambda: page.populate_details(page._get_selected_fixture()))
         return
     page.hide_details()
+

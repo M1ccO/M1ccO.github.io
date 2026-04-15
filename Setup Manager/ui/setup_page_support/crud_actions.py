@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import traceback
 
 from PySide6.QtWidgets import QDialog, QInputDialog, QMessageBox
 
@@ -15,13 +16,21 @@ except ModuleNotFoundError:
 
 
 def create_work(page) -> None:
-    dialog = WorkEditorDialog(
-        page.draw_service,
-        parent=page,
-        translate=page._t,
-        drawings_enabled=page.drawings_enabled,
-        machine_profile_key=page.work_service.get_machine_profile_key(),
-    )
+    try:
+        dialog = WorkEditorDialog(
+            page.draw_service,
+            parent=page,
+            translate=page._t,
+            drawings_enabled=page.drawings_enabled,
+            machine_profile_key=page.work_service.get_machine_profile_key(),
+        )
+    except Exception as exc:
+        QMessageBox.critical(
+            page,
+            page._t("setup_page.message.open_editor_failed", "Work Editor failed to open"),
+            f"{exc}\n\n{traceback.format_exc()}",
+        )
+        return
     if dialog.exec() != QDialog.Accepted:
         return
     try:
@@ -56,14 +65,22 @@ def edit_work(page) -> None:
         page.refresh_works()
         return
 
-    dialog = WorkEditorDialog(
-        page.draw_service,
-        work=work,
-        parent=page,
-        translate=page._t,
-        drawings_enabled=page.drawings_enabled,
-        machine_profile_key=page.work_service.get_machine_profile_key(),
-    )
+    try:
+        dialog = WorkEditorDialog(
+            page.draw_service,
+            work=work,
+            parent=page,
+            translate=page._t,
+            drawings_enabled=page.drawings_enabled,
+            machine_profile_key=page.work_service.get_machine_profile_key(),
+        )
+    except Exception as exc:
+        QMessageBox.critical(
+            page,
+            page._t("setup_page.message.open_editor_failed", "Work Editor failed to open"),
+            f"{exc}\n\n{traceback.format_exc()}",
+        )
+        return
     if dialog.exec() != QDialog.Accepted:
         return
     try:

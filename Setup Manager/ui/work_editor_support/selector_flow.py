@@ -62,10 +62,25 @@ def open_jaw_selector_session(dialog: Any, *, initial_spindle: str | None = None
 
 
 def open_fixture_selector_session(dialog: Any, *, operation_key: str, initial_assignments: list[dict] | None = None) -> bool:
+    buckets: dict[str, list[dict]] = {}
+    for op in getattr(dialog, '_mc_operations', []) or []:
+        if not isinstance(op, dict):
+            continue
+        op_key = str(op.get('op_key') or '').strip()
+        if not op_key:
+            continue
+        buckets[op_key] = [dict(item) for item in (op.get('fixture_items') or []) if isinstance(item, dict)]
+
+    active_key = str(operation_key or '').strip()
+    if not active_key and buckets:
+        active_key = next(iter(buckets.keys()))
+    active_assignments = list(initial_assignments or buckets.get(active_key) or [])
+
     return dialog._open_external_selector_session(
         kind='fixtures',
-        follow_up={'target_key': operation_key},
-        initial_assignments=initial_assignments or [],
+        follow_up={'target_key': active_key},
+        initial_assignments=active_assignments,
+        initial_assignment_buckets=buckets,
     )
 
 

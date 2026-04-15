@@ -1,7 +1,7 @@
-"""Localization refresh helpers for FixturePage.
+﻿"""Localization refresh helpers for FixturePage.
 
 Extracted from fixture_page.py (Phase 5 Pass 8).
-The single public function apply_jaw_page_localization() replaces
+The single public function apply_fixture_page_localization() replaces
 the large apply_localization() override in fixture_page.py.
 """
 
@@ -12,18 +12,18 @@ from typing import Callable
 from ui.fixture_page_support.bottom_bars_builder import retranslate_bottom_bars
 from ui.fixture_page_support.topbar_builder import retranslate_filter_toolbar
 
-__all__ = ["apply_jaw_page_localization"]
+__all__ = ["apply_fixture_page_localization"]
 
 
-def apply_jaw_page_localization(
+def apply_fixture_page_localization(
     page,
     translate: Callable[[str, str | None], str] | None = None,
 ) -> None:
     """Refresh all user-visible strings on FixturePage after a locale change."""
     if translate is not None:
         page._translate = translate
-    if hasattr(page, '_jaw_delegate'):
-        page._jaw_delegate.set_translate(page._t)
+    if hasattr(page, '_fixture_delegate'):
+        page._fixture_delegate.set_translate(page._t)
 
     retranslate_filter_toolbar(page)
     retranslate_bottom_bars(page)
@@ -57,7 +57,8 @@ def apply_jaw_page_localization(
     page._selector_slot_controller.refresh_selector_slots()
     page._update_selection_count_label()
     page.refresh_list()
-    if page.current_jaw_id:
-        page.populate_details(page.fixture_service.get_fixture(page.current_jaw_id))
+    if page.current_fixture_id:
+        page.populate_details(page.fixture_service.get_fixture(page.current_fixture_id))
     else:
         page.populate_details(None)
+

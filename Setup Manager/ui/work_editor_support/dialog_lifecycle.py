@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QDialogButtonBox,
     QPushButton,
@@ -41,15 +40,11 @@ def setup_button_row(dialog) -> None:
 
 
 def finalize_ui(dialog) -> None:
-    """Re-polish combos and install event filters after full widget hierarchy is built."""
+    """Finalize visual polish after full widget hierarchy is built."""
     for combo in dialog.findChildren(QComboBox):
         if combo.property("toolLibraryCombo"):
             combo.style().unpolish(combo)
             combo.style().polish(combo)
-
-    dialog._ensure_selector_callback_server()
-    dialog.destroyed.connect(lambda *_args: dialog._shutdown_selector_bridge())
-    QApplication.instance().installEventFilter(dialog)
 
 
 def apply_secondary_button_theme(dialog) -> None:

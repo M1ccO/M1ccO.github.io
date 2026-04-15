@@ -217,6 +217,7 @@ def main():
         DRAWINGS_DIR,
         ENABLE_TOOL_LIBRARY_PRELOAD,
         JAW_LIBRARY_DB_PATH,
+        FIXTURE_LIBRARY_DB_PATH,
         MACHINE_CONFIGS_PATH,
         TOOL_LIBRARY_DB_PATH,
         TOOL_LIBRARY_EXE_CANDIDATES,
@@ -275,6 +276,7 @@ def main():
     machine_config_svc.migrate_empty_db_paths(
         str(TOOL_LIBRARY_DB_PATH),
         str(JAW_LIBRARY_DB_PATH),
+        str(FIXTURE_LIBRARY_DB_PATH),
     )
 
     # Copy all DB files into per-config folders with machine-name filenames.
@@ -294,11 +296,13 @@ def main():
         active_setup_db_path = str(DB_PATH)
         active_tools_db_path = str(TOOL_LIBRARY_DB_PATH)
         active_jaws_db_path = str(JAW_LIBRARY_DB_PATH)
+        active_fixtures_db_path = str(FIXTURE_LIBRARY_DB_PATH)
     else:
         _active_cfg = machine_config_svc.get_active_config()
         active_setup_db_path = _active_cfg.setup_db_path or str(DB_PATH)
         active_tools_db_path = _active_cfg.tools_db_path or str(TOOL_LIBRARY_DB_PATH)
         active_jaws_db_path = _active_cfg.jaws_db_path or str(JAW_LIBRARY_DB_PATH)
+        active_fixtures_db_path = _active_cfg.fixtures_db_path or str(FIXTURE_LIBRARY_DB_PATH)
 
     db = Database(active_setup_db_path)
 
@@ -313,6 +317,7 @@ def main():
         drawing_dir=DRAWINGS_DIR,
         tool_db_path=active_tools_db_path,
         jaw_db_path=active_jaws_db_path,
+        fixture_db_path=active_fixtures_db_path,
     )
 
     step(7, f"{loading_header}\n\n{_lt('setup_manager.loading.load_print_service', 'Loading print service...')}")
@@ -403,6 +408,7 @@ def main():
             setup_db_path=active_setup_db_path,
             tools_db_path=str(TOOL_LIBRARY_DB_PATH),
             jaws_db_path=str(JAW_LIBRARY_DB_PATH),
+            fixtures_db_path=str(FIXTURE_LIBRARY_DB_PATH),
         )
 
     if ENABLE_TOOL_LIBRARY_PRELOAD:
@@ -514,6 +520,7 @@ def main():
             ("setup_db_path", "Setup DB"),
             ("tools_db_path", "Tools Library"),
             ("jaws_db_path", "Jaws Library"),
+            ("fixtures_db_path", "Fixtures Library"),
         ]
 
         # Discover which DBs this config shares with others.
@@ -615,6 +622,7 @@ def main():
         new_setup_db = active.setup_db_path or str(DB_PATH)
         new_tools_db = active.tools_db_path or str(TOOL_LIBRARY_DB_PATH)
         new_jaws_db = active.jaws_db_path or str(JAW_LIBRARY_DB_PATH)
+        new_fixtures_db = active.fixtures_db_path or str(FIXTURE_LIBRARY_DB_PATH)
 
         # Close old window without triggering app.quit().
         win._suppress_quit = True
@@ -633,6 +641,7 @@ def main():
                 drawing_dir=DRAWINGS_DIR,
                 tool_db_path=new_tools_db,
                 jaw_db_path=new_jaws_db,
+                fixture_db_path=new_fixtures_db,
             )
             print_service.set_reference_service(new_draw_service)
 
@@ -683,6 +692,7 @@ def main():
                 "show": False,
                 "tools_db_path": new_tools_db,
                 "jaws_db_path": new_jaws_db,
+                "fixtures_db_path": new_fixtures_db,
             })
         except Exception:
             pass

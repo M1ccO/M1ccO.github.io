@@ -10,11 +10,14 @@ def show_selector_warning(dialog: Any, title: str, body: str) -> None:
 
 
 def ensure_selector_callback_server(dialog: Any) -> bool:
-    return dialog._selector_bridge.ensure_server()
+    bridge = dialog._ensure_selector_bridge()
+    return bool(bridge is not None and bridge.ensure_server())
 
 
 def shutdown_selector_bridge(dialog: Any) -> None:
-    dialog._selector_bridge.shutdown()
+    bridge = getattr(dialog, "_selector_bridge", None)
+    if bridge is not None:
+        bridge.shutdown()
 
 
 def open_external_selector_session(
@@ -25,11 +28,14 @@ def open_external_selector_session(
     spindle: str | None = None,
     follow_up: dict | None = None,
     initial_assignments: list[dict] | None = None,
+    initial_assignment_buckets: dict[str, list[dict]] | None = None,
 ) -> bool:
-    return dialog._selector_bridge.open_session(
+    bridge = dialog._ensure_selector_bridge()
+    return bridge.open_session(
         kind=kind,
         head=head,
         spindle=spindle,
         follow_up=follow_up,
         initial_assignments=initial_assignments,
+        initial_assignment_buckets=initial_assignment_buckets,
     )

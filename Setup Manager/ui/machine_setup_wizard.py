@@ -709,6 +709,10 @@ class MachineSetupWizard(QDialog):
         if self._current_page_index == self._summary_index:
             self.accept()
             return
+        # Commit current page state before computing the next applicable page.
+        # This is required for page 0 where machine_type controls branching
+        # between lathe pages and the machining-center axis page.
+        self._pages[self._current_page_index].on_leave()
         target = self._next_applicable(self._current_page_index, +1)
         if target != self._current_page_index:
             self._go_to_page(target)

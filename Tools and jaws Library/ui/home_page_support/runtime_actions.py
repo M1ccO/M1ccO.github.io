@@ -34,6 +34,8 @@ def set_module_switch_target(page, target: str) -> None:
     display = (
         page._t('tool_library.module.tools', 'TOOLS')
         if target_text == 'TOOLS'
+        else page._t('tool_library.module.fixtures', 'FIXTURES')
+        if target_text == 'FIXTURES'
         else page._t('tool_library.module.jaws', 'JAWS')
     )
     if hasattr(page, 'module_toggle_btn'):

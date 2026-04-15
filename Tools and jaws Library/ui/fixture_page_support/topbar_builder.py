@@ -1,4 +1,4 @@
-"""Top toolbar builders for FixturePage."""
+﻿"""Top toolbar builders for FixturePage."""
 
 from __future__ import annotations
 
@@ -22,20 +22,20 @@ from ui.widgets.common import apply_shared_dropdown_style
 
 
 def populate_fixture_type_filter(page) -> None:
-    current = page.jaw_type_filter.currentData() if page.jaw_type_filter.count() else 'all'
+    current = page.fixture_type_filter.currentData() if page.fixture_type_filter.count() else 'all'
     try:
         fixture_types = page.fixture_service.list_fixture_types(page.current_view_mode)
     except Exception:
         fixture_types = []
 
     page._type_filter_values = ['all', *fixture_types]
-    page.jaw_type_filter.blockSignals(True)
-    page.jaw_type_filter.clear()
-    page.jaw_type_filter.addItem(page._t('fixture_library.filter.all_types', 'All types'), 'all')
+    page.fixture_type_filter.blockSignals(True)
+    page.fixture_type_filter.clear()
+    page.fixture_type_filter.addItem(page._t('fixture_library.filter.all_types', 'All types'), 'all')
     for fixture_type in fixture_types:
-        page.jaw_type_filter.addItem(fixture_type, fixture_type)
-    _set_combo_value(page.jaw_type_filter, current if current in page._type_filter_values else 'all')
-    page.jaw_type_filter.blockSignals(False)
+        page.fixture_type_filter.addItem(fixture_type, fixture_type)
+    _set_combo_value(page.fixture_type_filter, current if current in page._type_filter_values else 'all')
+    page.fixture_type_filter.blockSignals(False)
 
 
 def build_filter_toolbar(page) -> QFrame:
@@ -63,15 +63,15 @@ def build_filter_toolbar(page) -> QFrame:
 
     page.filter_icon = build_filter_reset(TOOL_ICONS_DIR, page._clear_filters)
 
-    page.jaw_type_filter = QComboBox()
-    page.jaw_type_filter.setObjectName('topTypeFilter')
-    page.jaw_type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-    page.jaw_type_filter.setMinimumWidth(80)
-    page.jaw_type_filter.setProperty('dropdownSizeProfile', 'compact')
-    page.jaw_type_filter.currentIndexChanged.connect(page._on_filter_changed)
-    apply_shared_dropdown_style(page.jaw_type_filter)
-    page.jaw_type_filter.installEventFilter(page)
-    page.jaw_type_filter.view().installEventFilter(page)
+    page.fixture_type_filter = QComboBox()
+    page.fixture_type_filter.setObjectName('topTypeFilter')
+    page.fixture_type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+    page.fixture_type_filter.setMinimumWidth(80)
+    page.fixture_type_filter.setProperty('dropdownSizeProfile', 'compact')
+    page.fixture_type_filter.currentIndexChanged.connect(page._on_filter_changed)
+    apply_shared_dropdown_style(page.fixture_type_filter)
+    page.fixture_type_filter.installEventFilter(page)
+    page.fixture_type_filter.view().installEventFilter(page)
 
     page.preview_window_btn = build_preview_toggle(
         TOOL_ICONS_DIR,
@@ -84,7 +84,7 @@ def build_filter_toolbar(page) -> QFrame:
 
     filter_frame.get_filters = lambda: {
         'view_mode': page.current_view_mode,
-        'fixture_type': page.jaw_type_filter.currentData() or 'all',
+        'fixture_type': page.fixture_type_filter.currentData() or 'all',
     }
     return filter_frame
 
@@ -96,7 +96,7 @@ def rebuild_filter_row(page) -> None:
         page.toggle_details_btn,
         page.search_input,
         page.filter_icon,
-        [page.jaw_type_filter],
+        [page.fixture_type_filter],
         page.preview_window_btn,
         page.detail_header_container,
     )
@@ -128,7 +128,7 @@ def _set_combo_value(combo: QComboBox, value: str) -> None:
 
 
 def _update_filter_icon(page) -> None:
-    active = (page.jaw_type_filter.currentData() or 'all') != 'all'
+    active = (page.fixture_type_filter.currentData() or 'all') != 'all'
     icon_name = 'filter_off.svg' if active else 'filter_arrow_right.svg'
     page.filter_icon.setIcon(icon_from_path(TOOL_ICONS_DIR / icon_name, size=QSize(28, 28)))
 

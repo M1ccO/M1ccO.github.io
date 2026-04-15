@@ -37,8 +37,10 @@ class SelectorSessionBridge(QObject):
         tool_library_main_path: Path,
         tool_library_project_dir: Path,
         tool_library_exe_candidates: list[Path],
+        machine_profile_key: str = "",
         tools_db_path: str = "",
         jaws_db_path: str = "",
+        fixtures_db_path: str = "",
         parent=None,
     ):
         super().__init__(parent)
@@ -56,8 +58,10 @@ class SelectorSessionBridge(QObject):
         self._tool_library_main_path = Path(tool_library_main_path)
         self._tool_library_project_dir = Path(tool_library_project_dir)
         self._tool_library_exe_candidates = [Path(item) for item in tool_library_exe_candidates]
+        self._machine_profile_key = str(machine_profile_key).strip().lower()
         self._tools_db_path = str(tools_db_path).strip()
         self._jaws_db_path = str(jaws_db_path).strip()
+        self._fixtures_db_path = str(fixtures_db_path).strip()
         self._callback_server: QLocalServer | None = None
         self._callback_server_name = ""
         self._pending_requests: dict[str, dict] = {}
@@ -113,6 +117,7 @@ class SelectorSessionBridge(QObject):
         spindle: str | None = None,
         follow_up: dict | None = None,
         initial_assignments: list[dict] | None = None,
+        initial_assignment_buckets: dict[str, list[dict]] | None = None,
     ) -> bool:
         raw_kind = str(kind or "").strip().lower()
         if raw_kind == 'jaws':
@@ -133,8 +138,10 @@ class SelectorSessionBridge(QObject):
             "selector_mode": selector_kind,
             "selector_callback_server": self._callback_server_name,
             "selector_request_id": request_id,
+            "machine_profile_key": self._machine_profile_key,
             "tools_db_path": self._tools_db_path,
             "jaws_db_path": self._jaws_db_path,
+            "fixtures_db_path": self._fixtures_db_path,
         }
         if normalized_head:
             payload["selector_head"] = normalized_head
@@ -142,7 +149,13 @@ class SelectorSessionBridge(QObject):
             payload["selector_spindle"] = normalized_spindle
         if isinstance(initial_assignments, list):
             payload["current_assignments"] = [dict(item) for item in initial_assignments if isinstance(item, dict)]
-        if selector_kind == "tools":
+        if isinstance(initial_assignment_buckets, dict) and initial_assignment_buckets:
+            payload["current_assignments_by_target"] = {
+                str(key): [dict(item) for item in value if isinstance(item, dict)]
+                for key, value in initial_assignment_buckets.items()
+                if isinstance(value, list)
+            }
+        elif selector_kind == "tools":
             # Tool Library may switch heads/spindles during a selector session,
             # so we send every bucket up front instead of only the active one.
             payload["current_assignments_by_target"] = self._initial_tool_assignment_buckets()
@@ -331,7 +344,11 @@ class SelectorSessionBridge(QObject):
                     ),
                 )
                 return
-            handled = self._apply_fixture_result(request, selected_items)
+            effective_request = dict(request)
+            payload_target = str(payload.get('target_key') or '').strip()
+            if payload_target:
+                effective_request['target_key'] = payload_target
+            handled = self._apply_fixture_result(effective_request, selected_items)
         else:
             self._show_warning(
                 self._t("work_editor.selector.malformed_callback.title", "Selection callback failed"),

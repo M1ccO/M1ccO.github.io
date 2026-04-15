@@ -4,7 +4,6 @@ from PySide6.QtCore import QEvent, QSize, Qt
 from PySide6.QtGui import QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QApplication,
     QBoxLayout,
     QCheckBox,
     QComboBox,
@@ -29,7 +28,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from machine_profiles import NTX_MACHINE_PROFILE, load_profile
+from machine_profiles import NTX_MACHINE_PROFILE, is_machining_center, load_profile
 from ui.work_editor_support import (
     WorkEditorJawSelectorPanel,
     WorkEditorOrderedToolList,
@@ -214,25 +213,7 @@ class WorkEditorDialog(QDialog):
         self._zero_coord_combos: list[QComboBox] = []
         self._zero_row_spacers: list[QLabel] = []
         self._zero_grids_with_groups: list[tuple] = []
-        self._selector_bridge = SelectorSessionBridge(
-            parent=self,
-            translate=self._t,
-            show_warning=self._show_selector_warning,
-            normalize_head=self._normalize_selector_head,
-            normalize_spindle=self._normalize_selector_spindle,
-            default_spindle=self._default_selector_spindle,
-            initial_tool_assignment_buckets=self._selector_initial_tool_assignment_buckets,
-            apply_fixture_result=self._apply_fixture_selector_result,
-            apply_tool_result=self._apply_tool_selector_result,
-            apply_jaw_result=self._apply_jaw_selector_result,
-            open_jaw_selector=self._open_jaw_selector,
-            tool_library_server_name=TOOL_LIBRARY_SERVER_NAME,
-            tool_library_main_path=TOOL_LIBRARY_MAIN_PATH,
-            tool_library_project_dir=TOOL_LIBRARY_PROJECT_DIR,
-            tool_library_exe_candidates=TOOL_LIBRARY_EXE_CANDIDATES,
-            tools_db_path=str(draw_service.tool_db_path),
-            jaws_db_path=str(draw_service.jaw_db_path),
-        )
+        self._selector_bridge: SelectorSessionBridge | None = None
 
         setup_tabs(self)
 
@@ -260,7 +241,6 @@ class WorkEditorDialog(QDialog):
         return super().eventFilter(obj, event)
 
     def hideEvent(self, event):
-        QApplication.instance().removeEventFilter(self)
         super().hideEvent(event)
 
     def closeEvent(self, event):
@@ -314,6 +294,32 @@ class WorkEditorDialog(QDialog):
 
     def _show_selector_warning(self, title: str, body: str):
         show_selector_warning_for_dialog(self, title, body)
+
+    def _ensure_selector_bridge(self):
+        """Create selector runtime bridge lazily on first selector-related use."""
+        if self._selector_bridge is None:
+            self._selector_bridge = SelectorSessionBridge(
+                parent=self,
+                translate=self._t,
+                show_warning=self._show_selector_warning,
+                normalize_head=self._normalize_selector_head,
+                normalize_spindle=self._normalize_selector_spindle,
+                default_spindle=self._default_selector_spindle,
+                initial_tool_assignment_buckets=self._selector_initial_tool_assignment_buckets,
+                apply_fixture_result=self._apply_fixture_selector_result,
+                apply_tool_result=self._apply_tool_selector_result,
+                apply_jaw_result=self._apply_jaw_selector_result,
+                open_jaw_selector=self._open_jaw_selector,
+                tool_library_server_name=TOOL_LIBRARY_SERVER_NAME,
+                tool_library_main_path=TOOL_LIBRARY_MAIN_PATH,
+                tool_library_project_dir=TOOL_LIBRARY_PROJECT_DIR,
+                tool_library_exe_candidates=TOOL_LIBRARY_EXE_CANDIDATES,
+                machine_profile_key=str(getattr(self.machine_profile, 'key', '') or ''),
+                tools_db_path=str(self.draw_service.tool_db_path),
+                jaws_db_path=str(self.draw_service.jaw_db_path),
+                fixtures_db_path=str(getattr(self.draw_service, 'fixture_db_path', self.draw_service.jaw_db_path)),
+            )
+        return self._selector_bridge
 
     def _ensure_selector_callback_server(self) -> bool:
         return ensure_selector_callback_server(self)
@@ -448,7 +454,7 @@ class WorkEditorDialog(QDialog):
         build_spindles_tab_ui(self, jaw_selector_panel_cls=WorkEditorJawSelectorPanel)
 
     def _build_zeros_tab(self):
-        if str(getattr(self.machine_profile, 'machine_type', '') or '').strip().lower() == 'machining_center':
+        if is_machining_center(self.machine_profile):
             build_machining_center_zeros_tab_ui(
                 self,
                 create_titled_section_fn=create_titled_section,
@@ -556,6 +562,11 @@ class WorkEditorDialog(QDialog):
         initial_spindle: str | None = None,
         initial_assignments: list[dict] | None = None,
     ) -> bool:
+        if hasattr(self, '_sync_mc_tools_operation_payload'):
+            try:
+                self._sync_mc_tools_operation_payload()
+            except Exception:
+                pass
         return open_tool_selector_session(
             self,
             initial_head=initial_head,
@@ -569,19 +580,30 @@ class WorkEditorDialog(QDialog):
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
         return open_jaw_selector_session(self, initial_spindle=initial_spindle)
 
-    def _open_fixture_selector(self, operation_key: str) -> bool:
+    def _open_fixture_selector(self, operation_key: str | None = None) -> bool:
+        resolved_key = str(operation_key or '').strip()
+        if not resolved_key:
+            first_op = next(
+                (
+                    item
+                    for item in getattr(self, '_mc_operations', [])
+                    if isinstance(item, dict) and str(item.get('op_key') or '').strip()
+                ),
+                None,
+            )
+            resolved_key = str((first_op or {}).get('op_key') or '').strip()
         op = next(
             (
                 item
                 for item in getattr(self, '_mc_operations', [])
-                if str(item.get('op_key') or '').strip() == str(operation_key or '').strip()
+                if str(item.get('op_key') or '').strip() == resolved_key
             ),
             None,
         )
         initial_assignments = list((op or {}).get('fixture_items') or [])
         return open_fixture_selector_session(
             self,
-            operation_key=str(operation_key or '').strip(),
+            operation_key=resolved_key,
             initial_assignments=initial_assignments,
         )
 
@@ -633,6 +655,11 @@ class WorkEditorDialog(QDialog):
         self._sync_tool_head_view()
 
     def get_work_data(self) -> dict:
+        if hasattr(self, '_sync_mc_tools_operation_payload'):
+            try:
+                self._sync_mc_tools_operation_payload()
+            except Exception:
+                pass
         return self._payload_adapter.collect_payload(
             self,
             persisted_work=self.work,

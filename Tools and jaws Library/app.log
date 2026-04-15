@@ -2720,3 +2720,217 @@ TypeError: '<' not supported between instances of 'NoneType' and 'int'
 2026-04-15 14:35:54,704 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
 2026-04-15 14:38:17,273 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
 2026-04-15 14:38:17,274 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 14:53:15,686 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 14:53:33,082 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 15:06:31,293 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 15:06:31,295 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 15:49:39,296 shared.services.localization_service DEBUG localization: format failed for key='jaw_editor.window_title.edit' kwargs={'fixture_id': 'Puristin 1'}
+2026-04-15 15:50:43,144 shared.services.localization_service DEBUG localization: format failed for key='jaw_editor.window_title.edit' kwargs={'fixture_id': 'Puristin kokoonpano'}
+2026-04-15 15:52:00,053 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 15:54:39,634 shared.services.localization_service DEBUG localization: format failed for key='jaw_editor.window_title.edit' kwargs={'fixture_id': 'Puristin kokoonpano'}
+2026-04-15 15:57:10,385 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 16:01:33,463 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 16:02:26,602 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 16:19:46,288 shared.services.localization_service DEBUG localization: format failed for key='jaw_editor.window_title.edit' kwargs={'fixture_id': 'Puristin kokoonpano'}
+2026-04-15 16:30:06,023 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 16:32:59,715 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 16:37:37,700 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 16:37:51,134 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 16:38:07,435 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 16:49:49,801 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 17:31:05,390 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpscaplun0\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 17:31:05,391 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpscaplun0\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 17:31:05,395 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-15 17:31:05,427 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 17:31:05,464 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 17:31:05,465 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 17:31:05,468 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 17:31:05,778 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 17:31:05,778 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 17:31:05,778 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-15 17:32:59,284 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmptxup7s99\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 17:32:59,285 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmptxup7s99\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 17:32:59,287 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-15 17:32:59,297 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 17:32:59,327 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 17:32:59,328 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 17:32:59,332 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 17:32:59,416 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 17:32:59,416 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 17:32:59,416 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-15 18:23:29,354 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 18:23:57,953 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 18:26:06,783 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmplfm5g48f\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 18:26:06,784 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmplfm5g48f\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 18:26:06,786 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-15 18:26:06,794 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 18:26:06,823 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 18:26:06,824 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 18:26:06,827 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 18:26:06,911 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 18:26:06,912 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 18:26:06,912 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-15 18:26:16,135 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 18:26:28,583 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 18:27:11,778 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 18:31:58,874 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 18:32:31,036 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpdt2sf093\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 18:32:31,037 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpdt2sf093\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-15 18:32:31,039 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-15 18:32:31,048 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 18:32:31,077 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-15 18:32:31,078 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-15 18:32:31,081 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-15 18:32:31,165 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-15 18:32:31,165 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-15 18:32:31,165 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-15 18:34:23,210 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 18:35:37,194 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 18:35:40,100 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 18:42:04,501 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True
+2026-04-15 18:42:28,002 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 18:52:05,855 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='main' show=True

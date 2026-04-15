@@ -1,4 +1,4 @@
-"""Detached preview window helpers for FixturePage."""
+﻿"""Detached preview window helpers for FixturePage."""
 
 from __future__ import annotations
 
@@ -32,12 +32,12 @@ from shared.ui.helpers.detached_preview_common import (
 )
 from shared.ui.stl_preview import StlPreviewWidget
 from ui.fixture_page_support.preview_rules import (
-    apply_jaw_preview_transform,
-    jaw_preview_has_model_payload,
-    jaw_preview_label,
-    jaw_preview_measurement_overlays,
-    jaw_preview_parts_payload,
-    jaw_preview_stl_path,
+    apply_fixture_preview_transform,
+    fixture_preview_has_model_payload,
+    fixture_preview_label,
+    fixture_preview_measurement_overlays,
+    fixture_preview_parts_payload,
+    fixture_preview_stl_path,
 )
 
 
@@ -49,15 +49,15 @@ def load_preview_content(page, viewer: StlPreviewWidget, fixture: dict, *, label
     if viewer is None or not isinstance(fixture, dict):
         return False
 
-    parts = jaw_preview_parts_payload(fixture)
+    parts = fixture_preview_parts_payload(fixture)
     if parts:
         viewer.load_parts(parts)
         return True
 
-    stl_path = jaw_preview_stl_path(fixture)
+    stl_path = fixture_preview_stl_path(fixture)
     if not stl_path:
         return False
-    viewer.load_stl(stl_path, label=label or jaw_preview_label(fixture, page._t))
+    viewer.load_stl(stl_path, label=label or fixture_preview_label(fixture, page._t))
     return True
 
 
@@ -164,7 +164,7 @@ def on_detached_measurements_toggled(page, checked: bool) -> None:
 def apply_detached_measurement_state(page, fixture: dict) -> None:
     if page._detached_preview_widget is None:
         return
-    overlays = jaw_preview_measurement_overlays(fixture)
+    overlays = fixture_preview_measurement_overlays(fixture)
     page._detached_preview_widget.set_measurement_overlays(overlays)
     page._detached_preview_widget.set_measurements_visible(bool(overlays) and page._detached_measurements_enabled)
     if page._measurement_toggle_btn is not None:
@@ -189,14 +189,14 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     if not page.preview_window_btn.isChecked():
         return False
     dialog_visible = bool(page._detached_preview_dialog and page._detached_preview_dialog.isVisible())
-    if not page.current_jaw_id:
+    if not page.current_fixture_id:
         if dialog_visible and not show_errors:
             return False
         close_detached_preview(page)
         return False
 
-    fixture = page.fixture_service.get_fixture(page.current_jaw_id)
-    if not fixture or not jaw_preview_has_model_payload(fixture):
+    fixture = page.fixture_service.get_fixture(page.current_fixture_id)
+    if not fixture or not fixture_preview_has_model_payload(fixture):
         if show_errors:
             QMessageBox.information(
                 page,
@@ -213,9 +213,9 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     model_key = page._preview_model_key(fixture)
     loaded = True
     if page._detached_preview_last_model_key != model_key:
-        loaded = load_preview_content(page, page._detached_preview_widget, fixture, label=jaw_preview_label(fixture, page._t))
+        loaded = load_preview_content(page, page._detached_preview_widget, fixture, label=fixture_preview_label(fixture, page._t))
         if loaded:
-            apply_jaw_preview_transform(page._detached_preview_widget, fixture)
+            apply_fixture_preview_transform(page._detached_preview_widget, fixture)
             page._detached_preview_last_model_key = model_key
         else:
             page._detached_preview_last_model_key = None
@@ -265,7 +265,7 @@ def warmup_preview_engine(page) -> None:
     page._inline_preview_warmup.set_control_hint_text(
         page._t(
             'tool_editor.hint.rotate_pan_zoom',
-            'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
+            'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
         )
     )
 
@@ -297,3 +297,4 @@ __all__ = [
     "update_detached_measurement_toggle_icon",
     "warmup_preview_engine",
 ]
+

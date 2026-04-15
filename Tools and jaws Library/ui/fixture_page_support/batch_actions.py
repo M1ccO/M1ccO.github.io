@@ -1,4 +1,4 @@
-"""Batch and group edit action helpers for FixturePage."""
+﻿"""Batch and group edit action helpers for FixturePage."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup
-from ui.fixture_editor_dialog import AddEditJawDialog
+from ui.fixture_editor_dialog import AddEditFixtureDialog
 
 
 def _backup(page, tag: str) -> Path:
@@ -42,14 +42,14 @@ def prompt_batch_cancel_behavior(page) -> str:
     return 'keep'
 
 
-def batch_edit_jaws(page, jaw_ids: list[str]) -> None:
+def batch_edit_fixtures(page, fixture_ids: list[str]) -> None:
     saved_before: list[dict] = []
-    total = len(jaw_ids)
-    for idx, fixture_id in enumerate(jaw_ids, 1):
+    total = len(fixture_ids)
+    for idx, fixture_id in enumerate(fixture_ids, 1):
         fixture = page.fixture_service.get_fixture(fixture_id)
         if not fixture:
             continue
-        dlg = AddEditJawDialog(
+        dlg = AddEditFixtureDialog(
             page,
             fixture=fixture,
             translate=page._t,
@@ -64,21 +64,21 @@ def batch_edit_jaws(page, jaw_ids: list[str]) -> None:
             page.refresh_list()
             return
         saved_before.append(dict(fixture))
-        page.fixture_service.save_fixture(dlg.get_jaw_data())
+        page.fixture_service.save_fixture(dlg.get_fixture_data())
     page.refresh_list()
 
 
-def group_edit_jaws(page, jaw_ids: list[str]) -> None:
-    dlg = AddEditJawDialog(
+def group_edit_fixtures(page, fixture_ids: list[str]) -> None:
+    dlg = AddEditFixtureDialog(
         page,
         translate=page._t,
         group_edit_mode=True,
-        group_count=len(jaw_ids),
+        group_count=len(fixture_ids),
     )
-    baseline = dlg.get_jaw_data()
+    baseline = dlg.get_fixture_data()
     if dlg.exec() != QDialog.Accepted:
         return
-    edited_data = dlg.get_jaw_data()
+    edited_data = dlg.get_fixture_data()
     changed_fields = {
         key: value
         for key, value in edited_data.items()
@@ -94,7 +94,7 @@ def group_edit_jaws(page, jaw_ids: list[str]) -> None:
         return
 
     _backup(page, 'group_edit')
-    for fixture_id in jaw_ids:
+    for fixture_id in fixture_ids:
         fixture = page.fixture_service.get_fixture(fixture_id)
         if not fixture:
             continue
@@ -106,7 +106,9 @@ def group_edit_jaws(page, jaw_ids: list[str]) -> None:
 
 
 __all__ = [
-    "batch_edit_jaws",
-    "group_edit_jaws",
+    "batch_edit_fixtures",
+    "group_edit_fixtures",
     "prompt_batch_cancel_behavior",
 ]
+
+
