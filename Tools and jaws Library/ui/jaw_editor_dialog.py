@@ -3,7 +3,6 @@ from typing import Callable
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -115,7 +114,6 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
         root.addWidget(self._dialog_buttons)
         apply_secondary_button_theme(self, self._save_btn)
-        QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:

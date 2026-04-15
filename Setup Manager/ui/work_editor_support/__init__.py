@@ -41,7 +41,6 @@ from .selectors import (
 from .pot_editor import open_pot_editor_dialog
 from .selector_flow import (
     build_initial_jaw_assignments,
-    open_combined_tools_jaws_selector_session,
     open_fixture_selector_session,
     open_jaw_selector_session,
     open_tool_selector_session,
@@ -145,7 +144,6 @@ __all__ = [
     "effective_active_tool_list",
     "open_pot_editor_dialog",
     "on_tool_list_interaction",
-    "open_combined_tools_jaws_selector_session",
     "open_fixture_selector_session",
     "open_jaw_selector_session",
     "open_tool_selector_session",

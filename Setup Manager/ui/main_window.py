@@ -94,11 +94,10 @@ class MainWindow(QMainWindow):
         self._tool_library_preload_retries = 0
         self._tool_library_preload_max_retries = 24
         self._tool_library_preload_scheduled = False
+        self._runtime_initialized = False
 
         self._build_ui()
         self._apply_style()
-        QApplication.instance().installEventFilter(self)
-        QTimer.singleShot(2000, self._preload_tool_library_background)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
@@ -685,6 +684,10 @@ class MainWindow(QMainWindow):
     def showEvent(self, event):
         """Reload shared preferences when window is shown to sync with Tool Library."""
         super().showEvent(event)
+        if not self._runtime_initialized:
+            self._runtime_initialized = True
+            QApplication.instance().installEventFilter(self)
+            QTimer.singleShot(2000, self._preload_tool_library_background)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
 

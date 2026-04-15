@@ -3,7 +3,6 @@ from typing import Callable
 
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtWidgets import (
-    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -95,7 +94,7 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def _localized_fixture_kind(self, raw: str) -> str:
         normalized = (raw or '').strip().lower().replace(' ', '_')
-        return self._t(f'jaw_library.fixture_kind.{normalized}', raw)
+        return self._t(f'fixture_library.fixture_kind.{normalized}', raw)
 
     def _build_ui(self):
         root = QVBoxLayout(self)
@@ -114,7 +113,6 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._save_btn = self._dialog_buttons.button(QDialogButtonBox.Save)
         root.addWidget(self._dialog_buttons)
         apply_secondary_button_theme(self, self._save_btn)
-        QApplication.instance().installEventFilter(self)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
@@ -404,5 +402,4 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
             return
         super().accept()
-
 

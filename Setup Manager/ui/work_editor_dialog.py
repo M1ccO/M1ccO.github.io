@@ -60,7 +60,6 @@ from ui.work_editor_support import (
     normalize_selector_head,
     normalize_selector_spindle,
     on_tool_list_interaction,
-    open_combined_tools_jaws_selector_session,
     open_external_selector_session_for_dialog,
     open_fixture_selector_session,
     open_jaw_selector_session,
@@ -239,9 +238,6 @@ class WorkEditorDialog(QDialog):
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
         return super().eventFilter(obj, event)
-
-    def hideEvent(self, event):
-        super().hideEvent(event)
 
     def closeEvent(self, event):
         self._shutdown_selector_bridge()
@@ -606,9 +602,6 @@ class WorkEditorDialog(QDialog):
             operation_key=resolved_key,
             initial_assignments=initial_assignments,
         )
-
-    def _open_combined_tools_jaws_selector(self):
-        open_combined_tools_jaws_selector_session(self)
 
     def _build_notes_tab(self):
         build_notes_tab_ui(self, create_titled_section_fn=create_titled_section)

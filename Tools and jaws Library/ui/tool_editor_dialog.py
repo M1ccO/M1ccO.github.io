@@ -2,7 +2,6 @@
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QApplication,
     QAbstractItemView, QComboBox, QDialog, QDialogButtonBox, QFrame, QHBoxLayout, QLabel,
     QLineEdit, QMessageBox, QPushButton, QSizePolicy, QTabWidget, QVBoxLayout, QWidget,
     QTableWidgetItem, QHeaderView, QTreeWidget, QTreeWidgetItem
@@ -191,10 +190,6 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         root.addWidget(self._dialog_buttons)
 
         apply_secondary_button_theme(self, self._save_btn)
-
-        # The dialog-level event filter coordinates Enter handling, right-click
-        # transform reset, and outside-click dropdown cleanup across tabs.
-        QApplication.instance().installEventFilter(self)
 
         for le in [
             self.tool_id,

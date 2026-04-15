@@ -203,11 +203,11 @@ class MainWindow(QMainWindow):
         self._jaw_selector_dialog: JawSelectorDialog | None = None
         self._fixture_selector_dialog: FixtureSelectorDialog | None = None
         self._closing_selector_dialogs = False
+        self._runtime_initialized = False
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.fixture_service, self.export_service, self.settings_service)
         self._apply_style()
-        QApplication.instance().installEventFilter(self)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
@@ -235,6 +235,9 @@ class MainWindow(QMainWindow):
     def showEvent(self, event):
         """Reload shared preferences when window is shown to sync with Setup Manager."""
         super().showEvent(event)
+        if not self._runtime_initialized:
+            self._runtime_initialized = True
+            QApplication.instance().installEventFilter(self)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._ensure_on_screen()

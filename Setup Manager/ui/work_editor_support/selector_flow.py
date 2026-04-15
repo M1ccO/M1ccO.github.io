@@ -84,15 +84,3 @@ def open_fixture_selector_session(dialog: Any, *, operation_key: str, initial_as
     )
 
 
-def open_combined_tools_jaws_selector_session(dialog: Any) -> None:
-    spindle = dialog._default_selector_spindle()
-    default_head = dialog._default_selector_head()
-    # Keep tool->jaw chaining in one place so follow-up payload stays aligned
-    # if profile-driven defaults for spindle/head evolve later.
-    dialog._open_external_selector_session(
-        kind="tools",
-        head=default_head,
-        spindle=spindle,
-        follow_up={"kind": "jaws", "spindle": spindle},
-        initial_assignments=dialog._selector_initial_tool_assignments(default_head, spindle),
-    )

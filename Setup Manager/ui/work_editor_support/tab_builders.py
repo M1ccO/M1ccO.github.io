@@ -26,7 +26,6 @@ except ModuleNotFoundError:
     from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 from machine_profiles import is_machining_center
 from .machining_center import build_machining_center_zeros_tab_ui
-from .selector_flow import open_combined_tools_jaws_selector_session
 
 
 def _setup_jaw_selectors(
@@ -183,19 +182,6 @@ def build_general_tab_ui(
     layout.addWidget(general_group)
     layout.addWidget(raw_part_group)
 
-    selector_row = QHBoxLayout()
-    selector_row.setContentsMargins(0, 4, 0, 0)
-    selector_row.setSpacing(8)
-    dialog.tools_jaws_selector_btn = QPushButton(
-        dialog._t("work_editor.selector.tools_jaws_button", "Tools && Jaws Selector")
-    )
-    dialog.tools_jaws_selector_btn.setProperty("panelActionButton", True)
-    dialog.tools_jaws_selector_btn.clicked.connect(
-        lambda: open_combined_tools_jaws_selector_session(dialog)
-    )
-    selector_row.addWidget(dialog.tools_jaws_selector_btn, 0)
-    selector_row.addStretch(1)
-    layout.addLayout(selector_row)
     layout.addStretch(1)
 
 

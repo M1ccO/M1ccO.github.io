@@ -369,7 +369,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self.view_filter.addItem(self._t('tool_library.nav.fixture_assemblies', 'Assemblies'), 'assemblies')
         self.view_filter.currentIndexChanged.connect(self._refresh_catalog)
 
-            self.target_filter = QComboBox()  # Added target filter
+        self.target_filter = QComboBox()
         self.target_filter.setObjectName('topTypeFilter')
         for target_key in self._target_keys:
             self.target_filter.addItem(target_key, target_key)

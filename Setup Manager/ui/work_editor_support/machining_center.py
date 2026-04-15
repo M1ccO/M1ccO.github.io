@@ -355,6 +355,10 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         idx = coord_combo.findText(str(op.get('coord') or '').strip())
         if idx >= 0:
             coord_combo.setCurrentIndex(idx)
+        coord_combo.setMinimumWidth(92)
+        coord_combo.setMaximumWidth(150)
+        coord_combo.setFixedHeight(38)
+        coord_combo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
 
         work_offset_label = QLabel(dialog._t('work_editor.mc.work_offset', 'Work offset'))
         work_offset_label.setProperty('detailFieldKey', True)
@@ -390,7 +394,9 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
             axis_input = QLineEdit(str((op.get('axes') or {}).get(axis, '') or '').strip())
             axis_input.setPlaceholderText(_axis_display_label(dialog, axis))
             axis_input.setMinimumWidth(88)
-            axis_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            axis_input.setMaximumWidth(150)
+            axis_input.setFixedHeight(38)
+            axis_input.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             axis_inputs[axis] = axis_input
             section_grid.addWidget(axis_input, 1, col + 2)
 
@@ -405,15 +411,10 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         fixtures_controls_layout.setContentsMargins(0, 0, 0, 0)
         fixtures_controls_layout.setSpacing(8)
 
-        fixtures_assembly_host = QWidget(fixtures_controls_host)
-        fixtures_assembly_layout = QVBoxLayout(fixtures_assembly_host)
-        fixtures_assembly_layout.setContentsMargins(0, 0, 0, 0)
-        fixtures_assembly_layout.setSpacing(0)
-        fixtures_controls_layout.addWidget(fixtures_assembly_host, 0)
-
         fixtures_part_combo = QComboBox(fixtures_controls_host)
         fixtures_part_combo.setProperty('modernDropdown', True)
         fixtures_part_combo.setMinimumWidth(92)
+        fixtures_part_combo.setFixedHeight(38)
         fixtures_part_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         dialog._apply_coord_combo_popup_style(fixtures_part_combo)
         fixtures_controls_layout.addWidget(fixtures_part_combo, 0)
@@ -435,9 +436,10 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         section_grid.addWidget(fixtures_controls_host, 2, 1, 1, len(display_axes) + 1)
 
         section_grid.setColumnStretch(0, 0)
-        section_grid.setColumnStretch(1, 1)
+        section_grid.setColumnStretch(1, 0)
         for col in range(2, 2 + len(display_axes)):
-            section_grid.setColumnStretch(col, 1)
+            section_grid.setColumnStretch(col, 0)
+        section_grid.setColumnStretch(2 + len(display_axes), 1)
         card_layout.addLayout(section_grid)
 
         def _on_fixture_part_combo_changed(_index: int, *, combo: QComboBox = fixtures_part_combo, key: str = op_key) -> None:
@@ -505,6 +507,13 @@ def build_machining_center_zeros_tab_ui(
     dialog.mc_operation_count_spin.setMaximum(20)
     dialog.mc_operation_count_spin.setValue(1)
     programs_layout.addRow(dialog._t('work_editor.mc.operation_count', 'Operations'), dialog.mc_operation_count_spin)
+
+    dialog.mc_select_fixtures_btn = QPushButton(dialog._t('work_editor.mc.select_fixtures', 'SELECT FIXTURES'))
+    dialog.mc_select_fixtures_btn.setProperty('panelActionButton', True)
+    dialog.mc_select_fixtures_btn.setMinimumHeight(34)
+    dialog.mc_select_fixtures_btn.clicked.connect(lambda _checked=False: dialog._open_fixture_selector())
+    programs_layout.addRow('', dialog.mc_select_fixtures_btn)
+
     scroll = QScrollArea()
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QScrollArea.NoFrame)
