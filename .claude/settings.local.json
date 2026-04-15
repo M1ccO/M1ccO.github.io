@@ -24,7 +24,15 @@
       "Read(//tmp/**)",
       "Bash(python /tmp/replace_diameter.py)",
       "Bash(python \"c:/tmp/replace_diameter.py\")",
-      "Bash(python -m py_compile ui/measurement_editor_dialog.py ui/measurement_editor/coordinators/list_manager.py)"
+      "Bash(python -m py_compile ui/measurement_editor_dialog.py ui/measurement_editor/coordinators/list_manager.py)",
+      "Bash(python -m pytest \"Setup Manager/tests/\" -x -q)",
+      "Bash(.venv/Scripts/python.exe -m pytest \"Setup Manager/tests/\" -x -q)",
+      "Bash(.venv/Scripts/python.exe -c \"import pytest; print\\('pytest found'\\)\")",
+      "Bash(.venv/Scripts/python.exe tests/test_priority1_targeted.py)",
+      "Bash(.venv/Scripts/python.exe tests/test_shared_regressions.py)",
+      "Bash(.venv/Scripts/python.exe -c ':*)",
+      "Bash(PYTHONPATH=\".:Setup Manager\" .venv/Scripts/python.exe tests/test_shared_regressions.py)",
+      "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, '.'\\); from shared.services.localization_service import LocalizationService; print\\('ok'\\)\")"
     ]
   }
 }

@@ -7,7 +7,7 @@ from pathlib import Path
 SUPPORTED_LANGUAGES = {"en", "fi"}
 SUPPORTED_FONTS = {"Segoe UI", "Tahoma", "Verdana"}
 SUPPORTED_THEMES = {"classic", "graphite"}
-SUPPORTED_DETACHED_PREVIEW_MODES = {"follow_last", "left", "right", "current"}
+SUPPORTED_DETACHED_PREVIEW_MODES = {"follow_last", "left", "right", "embedded", "current"}
 
 
 def _default_model_roots() -> tuple[Path, Path]:
@@ -30,6 +30,7 @@ def _base_defaults() -> dict:
         "enable_assembly_transform": False,
         "enable_drawings_tab": True,
         "detached_preview_policy": {"mode": "follow_last"},
+        "show_shared_db_notice": False,
     }
 
 
@@ -84,11 +85,15 @@ class UiPreferencesService:
 
         data["enable_assembly_transform"] = bool(data.get("enable_assembly_transform", False))
         data["enable_drawings_tab"] = bool(data.get("enable_drawings_tab", True))
+        data["show_shared_db_notice"] = bool(data.get("show_shared_db_notice", False))
 
         policy = data.get("detached_preview_policy")
         if not isinstance(policy, dict):
             policy = {}
         mode = str(policy.get("mode") or "follow_last").strip().lower()
+        # Convert legacy 'current' mode to 'embedded'
+        if mode == "current":
+            mode = "embedded"
         if mode not in SUPPORTED_DETACHED_PREVIEW_MODES:
             mode = "follow_last"
         data["detached_preview_policy"] = {"mode": mode}

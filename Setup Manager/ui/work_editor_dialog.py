@@ -205,6 +205,8 @@ class WorkEditorDialog(QDialog):
             tool_library_main_path=TOOL_LIBRARY_MAIN_PATH,
             tool_library_project_dir=TOOL_LIBRARY_PROJECT_DIR,
             tool_library_exe_candidates=TOOL_LIBRARY_EXE_CANDIDATES,
+            tools_db_path=str(draw_service.tool_db_path),
+            jaws_db_path=str(draw_service.jaw_db_path),
         )
 
         setup_tabs(self)

@@ -162,21 +162,39 @@ def build_spindles_tab_ui(
     selector_row.addStretch(1)
     layout.addLayout(selector_row)
 
+    # Resolve jaw selector titles and filters from the machine profile so
+    # single-spindle (OP terminology) and custom profiles get correct labels.
+    _main_sp = dialog.machine_profile.spindle("main")
+    _sub_sp = dialog.machine_profile.spindle("sub")
+
+    _main_jaw_title = dialog._t(
+        _main_sp.jaw_title_key if _main_sp else "work_editor.spindles.sp1_jaw",
+        _main_sp.jaw_title_default if _main_sp else "Pääkara",
+    )
+    _sub_jaw_title = dialog._t(
+        _sub_sp.jaw_title_key if _sub_sp else "work_editor.spindles.sp2_jaw",
+        _sub_sp.jaw_title_default if _sub_sp else "Vastakara",
+    )
+    _main_filter_ph = (
+        (_main_sp.jaw_filter_placeholder_key if _main_sp else "work_editor.jaw.filter_sp1_placeholder"),
+        (_main_sp.jaw_filter_placeholder_default if _main_sp else "Suodata Pääkara-leukoja..."),
+    )
+    _sub_filter_ph = (
+        (_sub_sp.jaw_filter_placeholder_key if _sub_sp else "work_editor.jaw.filter_sp2_placeholder"),
+        (_sub_sp.jaw_filter_placeholder_default if _sub_sp else "Suodata Vastakara-leukoja..."),
+    )
+    _main_side_filter = _main_sp.jaw_filter if _main_sp else "Main spindle"
+    _sub_side_filter = _sub_sp.jaw_filter if _sub_sp else "Sub spindle"
+
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
-        main_title=dialog._t("work_editor.spindles.sp1_jaw", "PÃ¤Ã¤kara"),
-        sub_title=dialog._t("work_editor.spindles.sp2_jaw", "Vastakara"),
-        main_filter_placeholder=(
-            "work_editor.jaw.filter_sp1_placeholder",
-            "Suodata PÃ¤Ã¤kara-leukoja...",
-        ),
-        sub_filter_placeholder=(
-            "work_editor.jaw.filter_sp2_placeholder",
-            "Suodata Vastakara-leukoja...",
-        ),
-        main_spindle_side_filter="Main spindle",
-        sub_spindle_side_filter="Sub spindle",
+        main_title=_main_jaw_title,
+        sub_title=_sub_jaw_title,
+        main_filter_placeholder=_main_filter_ph,
+        sub_filter_placeholder=_sub_filter_ph,
+        main_spindle_side_filter=_main_side_filter,
+        sub_spindle_side_filter=_sub_side_filter,
     )
 
     host = ResponsiveColumnsHost(switch_width=860, separator_property="jawColumnSeparator")
@@ -229,13 +247,24 @@ def build_zeros_tab_ui(
 
     # Keep these on the historical main/sub attributes so payload adapters and
     # selector merge logic remain schema-compatible with existing saved works.
+    # Resolve titles from profile so single-spindle (OP) profiles get correct labels.
+    _zp_main_sp = dialog.machine_profile.spindle("main")
+    _zp_sub_sp = dialog.machine_profile.spindle("sub")
+    _zp_main_title = dialog._t(
+        _zp_main_sp.jaw_title_key if _zp_main_sp else "work_editor.jaw.main_spindle_jaws",
+        _zp_main_sp.jaw_title_default if _zp_main_sp else "Pääkaran leuat",
+    )
+    _zp_sub_title = dialog._t(
+        _zp_sub_sp.jaw_title_key if _zp_sub_sp else "work_editor.jaw.sub_spindle_jaws",
+        _zp_sub_sp.jaw_title_default if _zp_sub_sp else "Vastakaran leuat",
+    )
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
-        main_title=dialog._t("work_editor.jaw.main_spindle_jaws", "PÃ¤Ã¤karan leuat"),
-        sub_title=dialog._t("work_editor.jaw.sub_spindle_jaws", "Vastakaran leuat"),
-        main_spindle_side_filter="Main spindle",
-        sub_spindle_side_filter="Sub spindle",
+        main_title=_zp_main_title,
+        sub_title=_zp_sub_title,
+        main_spindle_side_filter=(_zp_main_sp.jaw_filter if _zp_main_sp else "Main spindle"),
+        sub_spindle_side_filter=(_zp_sub_sp.jaw_filter if _zp_sub_sp else "Sub spindle"),
     )
 
     controls_row = QHBoxLayout()

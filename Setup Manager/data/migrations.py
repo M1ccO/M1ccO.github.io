@@ -6,6 +6,52 @@ def table_columns(conn, table_name):
     return {row[1] for row in rows}
 
 
+def _ensure_app_config_table(conn):
+    """Create or upgrade the app_config key/value store.
+
+    This table holds database-bound settings that are NOT casual user
+    preferences — most importantly the machine_profile_key, which binds a
+    specific machine variant to a specific database.
+
+    Migration logic:
+    - If the table doesn't exist yet: create it.
+    - If machine_profile_key is missing from the table:
+        • Existing DB (works table already has rows) → backfill ntx_2sp_2h
+          for full backward compatibility.
+        • Fresh DB (empty works table) → insert an empty string so the
+          startup bootstrap can detect the 'needs setup' state and show the
+          Machine Setup Wizard.
+    """
+    with conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS app_config (
+                key   TEXT PRIMARY KEY,
+                value TEXT DEFAULT ''
+            )
+            """
+        )
+
+    existing = conn.execute(
+        "SELECT value FROM app_config WHERE key = 'machine_profile_key'"
+    ).fetchone()
+
+    if existing is None:
+        # Determine whether this is an existing database being upgraded or a
+        # brand-new one.  Use the works row-count as a reliable signal.
+        try:
+            works_count = conn.execute("SELECT COUNT(*) FROM works").fetchone()[0]
+        except Exception:
+            works_count = 0
+
+        default_key = "ntx_2sp_2h" if works_count > 0 else ""
+        with conn:
+            conn.execute(
+                "INSERT INTO app_config (key, value) VALUES ('machine_profile_key', ?)",
+                (default_key,),
+            )
+
+
 def _ensure_works_table(conn):
     with conn:
         conn.execute(
@@ -111,6 +157,24 @@ def _ensure_works_table(conn):
         "head1_tool_assignments": "TEXT DEFAULT '[]'",
         "head2_tool_assignments": "TEXT DEFAULT '[]'",
         "print_pots": "INTEGER DEFAULT 0",
+        # HEAD3 columns — additive, for 3-turret-head machine profiles.
+        # Existing databases are upgraded automatically; values default to
+        # empty/empty-list so there is no change to any existing work record.
+        "head3_zero": "TEXT DEFAULT ''",
+        "head3_main_coord": "TEXT DEFAULT ''",
+        "head3_sub_coord": "TEXT DEFAULT ''",
+        "head3_program": "TEXT DEFAULT ''",
+        "head3_sub_program": "TEXT DEFAULT ''",
+        "head3_main_z": "TEXT DEFAULT ''",
+        "head3_main_x": "TEXT DEFAULT ''",
+        "head3_main_y": "TEXT DEFAULT ''",
+        "head3_main_c": "TEXT DEFAULT ''",
+        "head3_sub_z": "TEXT DEFAULT ''",
+        "head3_sub_x": "TEXT DEFAULT ''",
+        "head3_sub_y": "TEXT DEFAULT ''",
+        "head3_sub_c": "TEXT DEFAULT ''",
+        "head3_tool_ids": "TEXT DEFAULT '[]'",
+        "head3_tool_assignments": "TEXT DEFAULT '[]'",
     }
     cols = table_columns(conn, "works")
     with conn:
@@ -200,6 +264,7 @@ def create_or_migrate_schema(conn):
         raise TypeError("conn must be sqlite3.Connection")
     _ensure_works_table(conn)
     _ensure_logbook_table(conn)
+    _ensure_app_config_table(conn)
 
 
 def migrate_jaws_schema(conn):

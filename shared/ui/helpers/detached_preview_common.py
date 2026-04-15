@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon, QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QPoint
+from PySide6.QtGui import QIcon, QKeySequence, QShortcut, QGuiApplication
 
 
 def bind_escape_close_shortcut(page, dialog, attr_name: str = "_close_preview_shortcut") -> None:
@@ -28,7 +28,7 @@ def set_preview_button_checked(page, checked: bool, button_attr: str = "preview_
 
 
 def apply_detached_preview_default_bounds(page, dialog_attr: str = "_detached_preview_dialog") -> None:
-    """Position detached preview dialog relative to host window geometry."""
+    """Position detached preview dialog to span from main window content top to frame bottom."""
     dialog = getattr(page, dialog_attr, None)
     if dialog is None:
         return
@@ -38,15 +38,24 @@ def apply_detached_preview_default_bounds(page, dialog_attr: str = "_detached_pr
         return
 
     host_frame = host_window.frameGeometry()
+    host_geom = host_window.geometry()
     if host_frame.width() <= 0 or host_frame.height() <= 0:
         return
 
     width = min(max(520, int(host_frame.width() * 0.37)), 700)
-    max_height = max(420, host_frame.height() - 30)
-    height = min(max(600, int(host_frame.height() * 0.86)), max_height)
-
+    # Height: from content top to frame bottom
+    height = host_frame.bottom() - host_geom.top()
     x = host_frame.right() - width + 1
-    y = max(host_frame.top() + 30, host_frame.bottom() - height + 1)
+    y = host_geom.top()  # Start at content area top
+    
+    # Clamp position to screen bounds, preserving exact height
+    probe = QPoint(x + 20, y + 20)
+    screen = QGuiApplication.screenAt(probe) or QGuiApplication.primaryScreen()
+    if screen is not None:
+        avail = screen.availableGeometry()
+        x = max(avail.left(), min(x, avail.right() - width + 1))
+        y = max(avail.top(), min(y, avail.bottom() - height + 1))
+    
     dialog.setGeometry(x, y, width, height)
 
 

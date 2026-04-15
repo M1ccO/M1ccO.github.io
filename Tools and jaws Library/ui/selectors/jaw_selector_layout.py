@@ -169,7 +169,7 @@ class JawSelectorLayoutMixin:
             self.selector_module_value_label,
         ) = build_selector_info_header(
             title_text=self._t('jaw_library.selector.header_title', 'Jaw Selector'),
-            left_badge_text='SP1',
+            left_badge_text=self._t('tool_library.nav.main_spindle', 'Main Spindle'),
             right_badge_text=self._t('tool_library.selector.jaws', 'Jaws'),
             fixed_height_policy=True,
         )
@@ -191,6 +191,8 @@ class JawSelectorLayoutMixin:
             self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'),
             translate=self._t,
         )
+        self.slot_main.setMinimumHeight(70)
+        self.slot_sub.setMinimumHeight(70)
         self.slot_main.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.slot_sub.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
         self.slot_main.jawDropped.connect(self._on_slot_dropped)

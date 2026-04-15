@@ -239,7 +239,10 @@ class MainWindow(QMainWindow):
         self._ensure_on_screen()
 
     def showEvent(self, event):
+        """Reload shared preferences when window is shown to sync with Setup Manager."""
         super().showEvent(event)
+        self.ui_preferences = self.ui_preferences_service.load()
+        self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._ensure_on_screen()
         self._position_rail_title()
 
@@ -666,6 +669,7 @@ class MainWindow(QMainWindow):
 
         old_db = self.tool_service.db
         try:
+            new_path.parent.mkdir(parents=True, exist_ok=True)
             new_db = Database(new_path)
             new_tool_service = ToolService(new_db)
 
@@ -685,8 +689,14 @@ class MainWindow(QMainWindow):
 
     def _switch_jaw_database(self, database_path: str):
         new_path = Path(database_path)
+        if not str(database_path).strip():
+            return False, 'Database path is empty.'
         old_db = self.jaw_service.db
+        current_path = getattr(old_db, 'path', None)
+        if current_path is not None and Path(current_path).resolve() == new_path.resolve():
+            return True, 'Database already in use.'
         try:
+            new_path.parent.mkdir(parents=True, exist_ok=True)
             new_db = JawDatabase(new_path)
             new_jaw_service = JawService(new_db)
             self.jaw_service = new_jaw_service
@@ -1324,6 +1334,14 @@ class MainWindow(QMainWindow):
         # IPC handoff path so it never blocks the transition animation.
         if reload_preferences:
             self._reload_shared_preferences()
+
+        # Switch tool/jaw databases if the active machine config has config-specific paths.
+        new_tools_db = str(payload.get('tools_db_path') or '').strip()
+        if new_tools_db:
+            self._switch_database(new_tools_db)
+        new_jaws_db = str(payload.get('jaws_db_path') or '').strip()
+        if new_jaws_db:
+            self._switch_jaw_database(new_jaws_db)
 
         # Clear master filter when switching back normally (no filter context).
         if payload.get('clear_master_filter'):

@@ -83,8 +83,8 @@ class PreferencesDialog(PreferencesDialogBase):
             "left",
         )
         self.detached_preview_mode_combo.addItem(
-            self._t("preferences.detached_preview.mode.current", "Keep Current Position"),
-            "current",
+            self._t("preferences.detached_preview.mode.embedded", "Embedded in Main Window"),
+            "embedded",
         )
         apply_shared_dropdown_style(self.detached_preview_mode_combo)
         add_shadow(self.detached_preview_mode_combo)
@@ -131,7 +131,10 @@ class PreferencesDialog(PreferencesDialogBase):
         self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
         policy = self._current.get("detached_preview_policy")
         mode = str((policy or {}).get("mode") if isinstance(policy, dict) else "follow_last").strip().lower()
-        if mode not in {"follow_last", "left", "right", "current"}:
+        # Support legacy 'current' mode by converting to 'embedded'
+        if mode == "current":
+            mode = "embedded"
+        if mode not in {"follow_last", "left", "right", "embedded"}:
             mode = "follow_last"
         self._set_combo_by_data(self.detached_preview_mode_combo, mode)
 

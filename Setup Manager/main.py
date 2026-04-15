@@ -216,11 +216,13 @@ def main():
         DRAWINGS_DIR,
         ENABLE_TOOL_LIBRARY_PRELOAD,
         JAW_LIBRARY_DB_PATH,
+        MACHINE_CONFIGS_PATH,
         TOOL_LIBRARY_DB_PATH,
         TOOL_LIBRARY_EXE_CANDIDATES,
         TOOL_LIBRARY_MAIN_PATH,
         TOOL_LIBRARY_PROJECT_DIR,
         TOOL_LIBRARY_SERVER_NAME,
+        RUNTIME_DIR,
         SETUP_MANAGER_SERVER_NAME,
     )
 
@@ -261,9 +263,43 @@ def main():
     from services.print_service import PrintService
     from services.work_service import WorkService
     from ui.main_window import MainWindow
+    from shared.services.machine_config_service import MachineConfigService
+    from shared.services.ui_preferences_service import UiPreferencesService
 
+    _prefs_svc = UiPreferencesService(SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True)
+    machine_config_svc = MachineConfigService(MACHINE_CONFIGS_PATH, RUNTIME_DIR)
+
+    # Backfill any existing configs that still have empty tools/jaws DB paths
+    # (created before per-config library isolation was introduced).
+    machine_config_svc.migrate_empty_db_paths(
+        str(TOOL_LIBRARY_DB_PATH),
+        str(JAW_LIBRARY_DB_PATH),
+    )
+
+    # Copy all DB files into per-config folders with machine-name filenames.
+    # Idempotent: safe to run on every startup.  Original files are kept.
+    machine_config_svc.migrate_to_config_folders()
+
+    # ----------------------------------------------------------------
+    # Determine which Setup DB to open
+    #
+    # On first ever run machine_configurations.json doesn't exist yet,
+    # so we fall back to the legacy DB_PATH from config.py and create
+    # the migration entry afterwards once we know the profile key.
+    # ----------------------------------------------------------------
     step(3, f"{loading_header}\n\n{_lt('setup_manager.loading.connect_db', 'Connecting setup database...')}")
-    db = Database(DB_PATH)
+
+    if machine_config_svc.is_empty():
+        active_setup_db_path = str(DB_PATH)
+        active_tools_db_path = str(TOOL_LIBRARY_DB_PATH)
+        active_jaws_db_path = str(JAW_LIBRARY_DB_PATH)
+    else:
+        _active_cfg = machine_config_svc.get_active_config()
+        active_setup_db_path = _active_cfg.setup_db_path or str(DB_PATH)
+        active_tools_db_path = _active_cfg.tools_db_path or str(TOOL_LIBRARY_DB_PATH)
+        active_jaws_db_path = _active_cfg.jaws_db_path or str(JAW_LIBRARY_DB_PATH)
+
+    db = Database(active_setup_db_path)
 
     step(4, f"{loading_header}\n\n{_lt('setup_manager.loading.load_work_service', 'Loading work service...')}")
     work_service = WorkService(db)
@@ -274,8 +310,8 @@ def main():
     step(6, f"{loading_header}\n\n{_lt('setup_manager.loading.load_drawing_service', 'Loading drawing service...')}")
     draw_service = DrawService(
         drawing_dir=DRAWINGS_DIR,
-        tool_db_path=TOOL_LIBRARY_DB_PATH,
-        jaw_db_path=JAW_LIBRARY_DB_PATH,
+        tool_db_path=active_tools_db_path,
+        jaw_db_path=active_jaws_db_path,
     )
 
     step(7, f"{loading_header}\n\n{_lt('setup_manager.loading.load_print_service', 'Loading print service...')}")
@@ -291,16 +327,68 @@ def main():
     except Exception:
         app._preview_warmup_widget = None
 
+    # ----------------------------------------------------------------
+    # Machine profile bootstrap
+    #
+    # 1. Read the DB-bound key from app_config.
+    # 2. For a fresh DB (empty key) → run the setup wizard.
+    # 3. Mirror the key to shared_ui_preferences.json so the Tools
+    #    Library can reflect it without a cross-app import.
+    # 4. If this is the very first run (no machine_configurations.json),
+    #    create the first named config ("NTX2500") from legacy state.
+    # ----------------------------------------------------------------
+    db_profile_key = work_service.get_machine_profile_key()
+
+    if not db_profile_key:
+        # Fresh database — show the setup wizard before opening the main window.
+        splash.close()
+
+        from ui.machine_setup_wizard import MachineSetupWizard
+
+        def _wt(key: str, default: str | None = None) -> str:
+            return str(_texts.get(key) or default or key)
+
+        wizard = MachineSetupWizard(translate=_wt)
+        if wizard.exec():
+            db_profile_key = wizard.selected_profile_key()
+        else:
+            db_profile_key = "ntx_2sp_2h"
+
+        work_service.set_machine_profile_key(db_profile_key)
+
+        # Re-show a minimal progress indicator for the remaining steps.
+        splash.reset()
+        splash.setRange(0, 10)
+        splash.show()
+        app.processEvents()
+
+    # Mirror to shared prefs so Tools Library can pick it up.
+    _prefs_svc.set_machine_profile_key(db_profile_key)
+
+    # First-run migration: create the initial named configuration.
+    # Pass the actual legacy DB paths so existing tool/jaw data is preserved.
+    if machine_config_svc.is_empty():
+        machine_config_svc.migrate_from_legacy(
+            name="NTX2500",
+            machine_profile_key=db_profile_key,
+            setup_db_path=active_setup_db_path,
+            tools_db_path=str(TOOL_LIBRARY_DB_PATH),
+            jaws_db_path=str(JAW_LIBRARY_DB_PATH),
+        )
+
     if ENABLE_TOOL_LIBRARY_PRELOAD:
         step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_tool_library', 'Tool Library warming up in background...')}")
     else:
         step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.skip_preload', 'Skipping Tool Library preload...')}")
 
     step(10, f"{loading_header}\n\n{_lt('setup_manager.loading.open_main', 'Opening Setup Manager...')}")
-    win = MainWindow(work_service, logbook_service, draw_service, print_service)
+    win = MainWindow(work_service, logbook_service, draw_service, print_service, machine_config_svc)
     if launch_geometry:
         apply_frame_geometry_string(win, launch_geometry)
 
+    # ----------------------------------------------------------------
+    # IPC server (lives on the QApplication, survives live switches)
+    # ----------------------------------------------------------------
     server = QLocalServer(app)
     if not server.listen(SETUP_MANAGER_SERVER_NAME):
         QLocalServer.removeServer(SETUP_MANAGER_SERVER_NAME)
@@ -326,8 +414,6 @@ def main():
             QTimer.singleShot(320, _apply_handoff_bounds)
         win.raise_()
         win.activateWindow()
-        # Belt-and-suspenders: use Win32 API as well, since AllowSetForegroundWindow
-        # was already called by the sender before sending the IPC "show" message.
         try:
             import ctypes
             hwnd = int(win.winId())
@@ -361,11 +447,210 @@ def main():
                 except Exception:
                     request["command"] = str(raw_payload).strip().lower()
 
-            # Empty payload is treated as show request for compatibility.
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
 
     server.newConnection.connect(process_show_requests)
+
+    # ----------------------------------------------------------------
+    # Live configuration switch
+    #
+    # Triggered by MainWindow.config_switch_requested(config_id).
+    # Closes the current window without quitting, re-creates all
+    # services with the new config's DB paths, then opens a new window.
+    # ----------------------------------------------------------------
+    def _maybe_show_shared_db_notice(target_win, active_cfg) -> None:
+        """Show a notice if shared DBs were changed since this config was last used.
+
+        Respects the ``show_shared_db_notice`` preference (default False/off).
+        """
+        prefs = _prefs_svc.load()
+        if not prefs.get("show_shared_db_notice", False):
+            return
+
+        db_attrs = [
+            ("setup_db_path", "Setup DB"),
+            ("tools_db_path", "Tools Library"),
+            ("jaws_db_path", "Jaws Library"),
+        ]
+
+        # Discover which DBs this config shares with others.
+        shared: dict[str, list[str]] = {}  # label → [other config names]
+        for attr, label in db_attrs:
+            path = getattr(active_cfg, attr, "")
+            if path:
+                others = machine_config_svc.configs_sharing_path(path, exclude_id=active_cfg.id)
+                if others:
+                    shared[label] = [o.name for o in others]
+
+        if not shared:
+            return
+
+        last_used = (active_cfg.last_used_at or "").strip()
+
+        if not last_used:
+            # First time opening this config — show an informational notice.
+            lines = [f"<b>{active_cfg.name}</b> uses shared databases:"]
+            for label, names in shared.items():
+                lines.append(f"  \u2022 {label} (shared with: {', '.join(names)})")
+            notice_text = "<br>".join(lines)
+        else:
+            # Check if any shared DB file was modified after last_used_at.
+            from datetime import datetime, timezone as _tz
+            try:
+                last_dt = datetime.fromisoformat(last_used)
+            except Exception:
+                return
+
+            changed: dict[str, list[str]] = {}
+            for attr, label in db_attrs:
+                if label not in shared:
+                    continue
+                path = getattr(active_cfg, attr, "")
+                if not path:
+                    continue
+                try:
+                    mtime = Path(path).stat().st_mtime
+                    mtime_dt = datetime.fromtimestamp(mtime, tz=_tz.utc)
+                    if mtime_dt > last_dt:
+                        changed[label] = shared[label]
+                except Exception:
+                    pass
+
+            if not changed:
+                return
+
+            lines = [f"Shared databases were modified since <b>{active_cfg.name}</b> was last used:"]
+            for label, names in changed.items():
+                lines.append(f"  \u2022 {label} (possibly by: {', '.join(names)})")
+            notice_text = "<br>".join(lines)
+
+        from PySide6.QtWidgets import QDialog as _QDialog, QVBoxLayout as _QVL, QLabel as _QL, QHBoxLayout as _QHL, QPushButton as _QPB, QCheckBox as _QCB
+        dlg = _QDialog(target_win)
+        dlg.setWindowTitle("Shared Database Notice")
+        dlg.setModal(True)
+        dlg.resize(420, 180)
+        vl = _QVL(dlg)
+        vl.setContentsMargins(16, 14, 16, 14)
+        vl.setSpacing(10)
+        lbl = _QL()
+        lbl.setTextFormat(Qt.RichText)
+        lbl.setText(notice_text)
+        lbl.setWordWrap(True)
+        vl.addWidget(lbl)
+        cb = _QCB("Don't show these notices")
+        cb.setChecked(False)
+        vl.addWidget(cb)
+        hl = _QHL()
+        hl.addStretch(1)
+        ok_btn = _QPB("OK")
+        ok_btn.setProperty("panelActionButton", True)
+        ok_btn.setProperty("primaryAction", True)
+        ok_btn.clicked.connect(dlg.accept)
+        hl.addWidget(ok_btn)
+        vl.addLayout(hl)
+        dlg.exec()
+
+        if cb.isChecked():
+            p = _prefs_svc.load()
+            p["show_shared_db_notice"] = False
+            _prefs_svc.save(p)
+
+    def _do_live_switch(new_config_id: str) -> None:
+        nonlocal win, work_service, logbook_service, draw_service
+
+        # Stamp last_used_at on the config we are LEAVING so we can later detect
+        # changes that happened while another config was active.
+        old_active_id = machine_config_svc.get_active_config_id()
+        if old_active_id and old_active_id != new_config_id:
+            machine_config_svc.update_last_used(old_active_id)
+
+        machine_config_svc.set_active_config_id(new_config_id)
+        active = machine_config_svc.get_active_config()
+        if active is None:
+            return
+
+        new_setup_db = active.setup_db_path or str(DB_PATH)
+        new_tools_db = active.tools_db_path or str(TOOL_LIBRARY_DB_PATH)
+        new_jaws_db = active.jaws_db_path or str(JAW_LIBRARY_DB_PATH)
+
+        # Close old window without triggering app.quit().
+        win._suppress_quit = True
+        win.close()
+        win.deleteLater()
+
+        # Show a brief wait cursor while services reinitialise.
+        from PySide6.QtWidgets import QApplication as _QApp
+        from PySide6.QtCore import Qt as _Qt
+        _QApp.setOverrideCursor(_Qt.WaitCursor)
+        try:
+            new_db = Database(new_setup_db)
+            new_work_service = WorkService(new_db)
+            new_logbook_service = LogbookService(new_db)
+            new_draw_service = DrawService(
+                drawing_dir=DRAWINGS_DIR,
+                tool_db_path=new_tools_db,
+                jaw_db_path=new_jaws_db,
+            )
+            print_service.set_reference_service(new_draw_service)
+
+            # Mirror new profile key to shared prefs.
+            _prefs_svc.set_machine_profile_key(active.machine_profile_key)
+        finally:
+            _QApp.restoreOverrideCursor()
+
+        new_win = MainWindow(
+            new_work_service, new_logbook_service, new_draw_service,
+            print_service, machine_config_svc,
+        )
+        new_win.config_switch_requested.connect(_do_live_switch)
+
+        # Restore geometry from the previous window's DB directory if available.
+        prev_geom_file = Path(new_setup_db).parent / ".window_geometry"
+        restore_geom = ""
+        if prev_geom_file.exists():
+            try:
+                restore_geom = prev_geom_file.read_text().strip()
+            except Exception:
+                restore_geom = ""
+        if restore_geom:
+            apply_frame_geometry_string(new_win, restore_geom)
+
+        new_win.show()
+        if restore_geom:
+            QTimer.singleShot(0, lambda g=restore_geom: apply_frame_geometry_string(new_win, g))
+            QTimer.singleShot(120, lambda g=restore_geom: apply_frame_geometry_string(new_win, g))
+        new_win.raise_()
+        new_win.activateWindow()
+        try:
+            import ctypes as _ct
+            _ct.windll.user32.SetForegroundWindow(int(new_win.winId()))
+        except Exception:
+            pass
+
+        # Silently notify the running Tool Library (if any) to switch to the
+        # new config's databases immediately, without showing its window.
+        try:
+            from ui.main_window_support.library_ipc import send_to_tool_library
+            send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, {
+                "show": False,
+                "tools_db_path": new_tools_db,
+                "jaws_db_path": new_jaws_db,
+            })
+        except Exception:
+            pass
+
+        # Update nonlocals so the IPC show_setup_manager closure uses the new window.
+        win = new_win
+        work_service = new_work_service
+        logbook_service = new_logbook_service
+        draw_service = new_draw_service
+
+        # Shared-DB notice: delay slightly so the window is fully painted first.
+        _active_snap = active  # capture for closure
+        QTimer.singleShot(500, lambda: _maybe_show_shared_db_notice(win, _active_snap))
+
+    win.config_switch_requested.connect(_do_live_switch)
 
     win.show()
     if launch_geometry:
@@ -375,6 +660,11 @@ def main():
     win.activateWindow()
 
     splash.close()
+
+    # Shared-DB notice on initial startup for the active config.
+    _startup_cfg = machine_config_svc.get_active_config()
+    if _startup_cfg is not None:
+        QTimer.singleShot(800, lambda: _maybe_show_shared_db_notice(win, _startup_cfg))
 
     if getattr(app, "_preview_warmup_widget", None) is not None:
         QTimer.singleShot(1200, app._preview_warmup_widget.deleteLater)

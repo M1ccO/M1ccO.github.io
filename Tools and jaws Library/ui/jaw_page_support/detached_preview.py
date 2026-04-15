@@ -135,7 +135,10 @@ def apply_detached_preview_default_bounds(page) -> None:
         place_dialog_near_host(dialog, page.window(), side='right')
         return
 
-    # mode == 'current': keep the dialog's current geometry.
+    # mode == 'embedded': position dialog as a floating window relative to main window
+    if mode == 'embedded':
+        _apply_detached_preview_default_bounds(page)
+        return
 
 
 def update_detached_measurement_toggle_icon(page, enabled: bool) -> None:

@@ -355,18 +355,27 @@ class ToolSelectorStateMixin:
         self._update_context_header()
 
     def _update_context_header(self) -> None:
-        self.selector_head_value_label.setText(self._current_head)
-        spindle_label = selector_spindle_label(self._current_spindle)
+        head_label = (
+            self._t('tool_library.selector.head_lower', 'Lower Turret')
+            if self._current_head == 'HEAD2'
+            else self._t('tool_library.selector.head_upper', 'Upper Spindle')
+        )
+        spindle_label = (
+            self._t('tool_library.nav.sub_spindle', 'Sub Spindle')
+            if self._current_spindle == 'sub'
+            else self._t('tool_library.nav.main_spindle', 'Main Spindle')
+        )
+        self.selector_head_value_label.setText(head_label)
         self.selector_spindle_value_label.setText(spindle_label)
-        self.head_btn.setText(self._current_head)
+        self.head_btn.setText(head_label)
         self.spindle_btn.blockSignals(True)
         self.spindle_btn.setChecked(self._current_spindle == 'sub')
         self.spindle_btn.setText(spindle_label)
         self.spindle_btn.blockSignals(False)
         self.assignment_frame.setTitle(
-            self._t('tool_library.selector.head2_tools', 'Head 2 Tools')
-            if self._current_head == 'HEAD2'
-            else self._t('tool_library.selector.head1_tools', 'Head 1 Tools')
+            self._t('tool_library.selector.spindle_sub_tools', 'Sub Spindle Tools')
+            if self._current_spindle == 'sub'
+            else self._t('tool_library.selector.spindle_main_tools', 'Main Spindle Tools')
         )
 
     def _on_catalog_double_clicked(self, _index) -> None:

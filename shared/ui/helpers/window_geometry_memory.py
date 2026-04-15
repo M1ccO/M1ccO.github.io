@@ -9,7 +9,7 @@ from PySide6.QtGui import QGuiApplication
 
 _WINDOW_MEMORY_KEY = "window_memory"
 _DETACHED_PREVIEW_POLICY_KEY = "detached_preview_policy"
-_SUPPORTED_PREVIEW_MODES = {"follow_last", "left", "right", "current"}
+_SUPPORTED_PREVIEW_MODES = {"follow_last", "left", "right", "embedded", "current"}
 
 
 def _load_preferences(path: Path) -> dict:
@@ -96,6 +96,9 @@ def get_detached_preview_open_mode(preferences_path: Path) -> str:
         return "follow_last"
 
     mode = str(policy.get("mode") or "follow_last").strip().lower()
+    # Support legacy 'current' mode by converting to 'embedded'
+    if mode == "current":
+        mode = "embedded"
     if mode not in _SUPPORTED_PREVIEW_MODES:
         return "follow_last"
     return mode
@@ -106,18 +109,26 @@ def place_dialog_near_host(dialog, host_window, *, side: str = "right") -> None:
         return
 
     host_frame = host_window.frameGeometry()
+    host_geom = host_window.geometry()
     if host_frame.width() <= 0 or host_frame.height() <= 0:
         return
 
     width = min(max(520, int(host_frame.width() * 0.37)), 700)
-    max_height = max(420, host_frame.height() - 30)
-    height = min(max(600, int(host_frame.height() * 0.86)), max_height)
+    # Height: from content top to frame bottom
+    height = host_frame.bottom() - host_geom.top()
 
     if str(side).strip().lower() == "left":
         x = host_frame.left() - width - 1
     else:
-        x = host_frame.right() - width + 1
-    y = max(host_frame.top() + 30, host_frame.bottom() - height + 1)
+        x = host_frame.right() + 1
+    y = host_geom.top()  # Start at content area top
 
-    rect = _clamp_to_available_screen(QRect(x, y, width, height))
-    dialog.setGeometry(rect)
+    # Clamp position to screen bounds, preserving exact height
+    probe = QPoint(x + 20, y + 20)
+    screen = QGuiApplication.screenAt(probe) or QGuiApplication.primaryScreen()
+    if screen is not None:
+        avail = screen.availableGeometry()
+        x = max(avail.left(), min(x, avail.right() - width + 1))
+        y = max(avail.top(), min(y, avail.bottom() - height + 1))
+    
+    dialog.setGeometry(x, y, width, height)

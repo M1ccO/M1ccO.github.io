@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSizePolicy,
     QSplitter,
     QVBoxLayout,
     QWidget,
@@ -178,8 +179,8 @@ class ToolSelectorLayoutMixin:
             self.selector_head_value_label,
         ) = build_selector_info_header(
             title_text=self._t('tool_library.selector.header_title', 'Tool Selector'),
-            left_badge_text='SP1',
-            right_badge_text='HEAD1',
+            left_badge_text=self._t('tool_library.nav.main_spindle', 'Main Spindle'),
+            right_badge_text=self._t('tool_library.selector.head_upper', 'Upper Spindle'),
             fixed_height_policy=True,
         )
         selector_layout.addWidget(self.selector_info_header, 0)
@@ -189,17 +190,17 @@ class ToolSelectorLayoutMixin:
         context_row.setSpacing(10)
         context_row.addStretch(1)
 
-        self.head_btn = QPushButton('HEAD1')
+        self.head_btn = QPushButton(self._t('tool_library.selector.head_upper', 'Upper Spindle'))
         self.head_btn.clicked.connect(self._toggle_head)
         style_selector_context_button(self.head_btn)
         context_row.addWidget(self.head_btn, 0)
 
-        self.spindle_btn = QPushButton('SP1')
+        self.spindle_btn = QPushButton(self._t('tool_library.nav.main_spindle', 'Main Spindle'))
         self.spindle_btn.clicked.connect(self._toggle_spindle)
         style_selector_context_button(self.spindle_btn, checkable=True)
         context_row.addWidget(self.spindle_btn, 0)
         context_row.addStretch(1)
-        selector_layout.addLayout(context_row)
+        selector_layout.addLayout(context_row, 0)
 
         hint = build_selector_hint_label(
             text=self._t(
@@ -222,16 +223,17 @@ class ToolSelectorLayoutMixin:
         self.assignment_list.itemSelectionChanged.connect(self._sync_card_selection_states)
         self.assignment_list.itemSelectionChanged.connect(self._update_assignment_buttons)
 
-        self.assignment_frame = create_titled_section(self._t('tool_library.selector.head1_tools', 'Head 1 Tools'))
+        self.assignment_frame = create_titled_section(self._t('tool_library.selector.spindle_main_tools', 'Main Spindle Tools'))
         self.assignment_frame.setProperty('selectorAssignmentsFrame', True)
         self.assignment_frame.setProperty('toolIdsPanel', True)
-        self.assignment_frame.setMinimumHeight(300)
+        # create_titled_section uses a fixed vertical size policy by default;
+        # override here so the drag/drop area can consume all available height.
+        self.assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         assignment_layout = QVBoxLayout(self.assignment_frame)
         assignment_layout.setContentsMargins(8, 6, 8, 8)
         assignment_layout.setSpacing(0)
         assignment_layout.addWidget(self.assignment_list, 1)
         selector_layout.addWidget(self.assignment_frame, 1)
-        selector_layout.addStretch(1)
 
         actions = build_selector_actions_row(spacing=4)
 

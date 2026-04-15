@@ -36,6 +36,8 @@ class SelectorSessionBridge(QObject):
         tool_library_main_path: Path,
         tool_library_project_dir: Path,
         tool_library_exe_candidates: list[Path],
+        tools_db_path: str = "",
+        jaws_db_path: str = "",
         parent=None,
     ):
         super().__init__(parent)
@@ -52,6 +54,8 @@ class SelectorSessionBridge(QObject):
         self._tool_library_main_path = Path(tool_library_main_path)
         self._tool_library_project_dir = Path(tool_library_project_dir)
         self._tool_library_exe_candidates = [Path(item) for item in tool_library_exe_candidates]
+        self._tools_db_path = str(tools_db_path).strip()
+        self._jaws_db_path = str(jaws_db_path).strip()
         self._callback_server: QLocalServer | None = None
         self._callback_server_name = ""
         self._pending_requests: dict[str, dict] = {}
@@ -121,6 +125,8 @@ class SelectorSessionBridge(QObject):
             "selector_mode": selector_kind,
             "selector_callback_server": self._callback_server_name,
             "selector_request_id": request_id,
+            "tools_db_path": self._tools_db_path,
+            "jaws_db_path": self._jaws_db_path,
         }
         if normalized_head:
             payload["selector_head"] = normalized_head

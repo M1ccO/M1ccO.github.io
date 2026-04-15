@@ -106,7 +106,7 @@ QFrame[launchCard="true"] QLabel {
 
 /* Bottom action bar host (Setup page) */
 QFrame[bottomBar="true"] {
-    background-color: #eceff2;
+    background-color: transparent;
     border: none;
 }
 

@@ -292,9 +292,21 @@ QFrame[subCard="true"] {
 }
 
 /* Top filter strip and bottom action strip backgrounds */
-QFrame#filterFrame,
-QFrame[bottomBar="true"] {
+QFrame#filterFrame {
     background-color: #eceff2;
+    border: none;
+}
+
+QFrame[bottomBar="true"] {
+    background-color: transparent;
+    border: none;
+    padding: 0px;
+    margin: 0px;
+}
+
+/* Selector-specific bottom bar override */
+QDialog QFrame[bottomBar="true"] {
+    background-color: transparent;
     border: none;
 }
 

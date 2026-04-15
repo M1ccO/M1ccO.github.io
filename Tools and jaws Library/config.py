@@ -80,12 +80,38 @@ def _resolve_runtime_dir() -> Path:
 RUNTIME_DIR = _resolve_runtime_dir()
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 SHARED_UI_PREFERENCES_PATH = RUNTIME_DIR / 'shared_ui_preferences.json'
-DB_PATH = DB_DIR / 'tool_library.db'
-JAWS_DB_PATH = DB_DIR / 'jaws_library.db'
 TOOL_LIBRARY_READY_PATH = RUNTIME_DIR / 'tool_library.ready'
 TOOL_LIBRARY_SHOW_REQUEST_PATH = RUNTIME_DIR / 'tool_library.show'
 TOOL_LIBRARY_SERVER_NAME = 'tool_library_single_instance'
 SETUP_MANAGER_SERVER_NAME = 'setup_manager_single_instance'
+
+
+def _resolve_active_library_db_paths() -> tuple[Path, Path]:
+    """Return (tools_db, jaws_db) from the active machine config if available.
+
+    Falls back to the local ``databases/`` files so the app can still start
+    standalone when no machine config has been created yet.
+    """
+    _default_tools = DB_DIR / 'tool_library.db'
+    _default_jaws  = DB_DIR / 'jaws_library.db'
+    try:
+        import json as _json
+        _config_json = RUNTIME_DIR / 'machine_configurations.json'
+        if _config_json.exists():
+            _data = _json.loads(_config_json.read_text(encoding='utf-8'))
+            _active_id = str(_data.get('active_config_id') or '')
+            for _entry in _data.get('configurations', []):
+                if str(_entry.get('id') or '') == _active_id:
+                    _tools = str(_entry.get('tools_db_path') or '').strip()
+                    _jaws  = str(_entry.get('jaws_db_path') or '').strip()
+                    if _tools and _jaws:
+                        return Path(_tools), Path(_jaws)
+    except Exception:
+        pass
+    return _default_tools, _default_jaws
+
+
+DB_PATH, JAWS_DB_PATH = _resolve_active_library_db_paths()
 I18N_DIR = APP_DIR / 'i18n'
 if not I18N_DIR.exists():
     I18N_DIR = SOURCE_DIR / 'i18n'

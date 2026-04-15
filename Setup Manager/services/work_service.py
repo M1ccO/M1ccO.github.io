@@ -283,3 +283,56 @@ class WorkService:
         clone["created_at"] = None
         clone["updated_at"] = None
         return self.save_work(clone)
+
+    # ------------------------------------------------------------------
+    # app_config — database-bound key/value store
+    # ------------------------------------------------------------------
+
+    def get_config_value(self, key: str, default: str = "") -> str:
+        """Return a value from the app_config table, or *default* if not found."""
+        try:
+            row = self.db.conn.execute(
+                "SELECT value FROM app_config WHERE key = ?", (str(key),)
+            ).fetchone()
+            if row is None:
+                return default
+            return str(row[0] if row[0] is not None else default)
+        except Exception:
+            logger.debug("get_config_value failed for key=%r", key, exc_info=True)
+            return default
+
+    def set_config_value(self, key: str, value: str) -> None:
+        """Upsert a value in the app_config table."""
+        try:
+            with self.db.conn:
+                self.db.conn.execute(
+                    "INSERT INTO app_config (key, value) VALUES (?, ?)"
+                    " ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                    (str(key), str(value or "")),
+                )
+        except Exception:
+            logger.debug("set_config_value failed for key=%r", key, exc_info=True)
+
+    def get_machine_profile_key(self) -> str:
+        """Return the machine profile key bound to this database.
+
+        Returns an empty string when the database is fresh and no profile
+        has been configured yet (the bootstrap wizard should be shown).
+        Returns ``'ntx_2sp_2h'`` as the safe default for upgraded existing
+        databases (backfilled by the migration).
+        """
+        return self.get_config_value("machine_profile_key", "")
+
+    def set_machine_profile_key(self, key: str) -> None:
+        """Bind a machine profile key to this database.
+
+        This is the authoritative write path.  Callers should also mirror
+        the value to ``shared_ui_preferences.json`` via
+        ``UiPreferencesService.set_machine_profile_key`` so both apps stay
+        in sync without cross-app imports.
+        """
+        from machine_profiles import DEFAULT_PROFILE_KEY, PROFILE_REGISTRY
+        normalized = str(key or "").strip().lower()
+        if not normalized or normalized not in PROFILE_REGISTRY:
+            normalized = DEFAULT_PROFILE_KEY
+        self.set_config_value("machine_profile_key", normalized)

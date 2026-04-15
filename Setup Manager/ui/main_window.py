@@ -1,6 +1,6 @@
 ﻿from pathlib import Path
 
-from PySide6.QtCore import QEvent, QTimer, QSize, Qt
+from PySide6.QtCore import QEvent, QTimer, QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -61,12 +61,21 @@ from shared.ui.main_window_helpers import (
     is_interactive_widget_click,
 )
 class MainWindow(QMainWindow):
-    def __init__(self, work_service, logbook_service, draw_service, print_service):
+    # Emitted when the user requests a live configuration switch.
+    # The argument is the target config_id string.
+    config_switch_requested = Signal(str)
+
+    def __init__(self, work_service, logbook_service, draw_service, print_service,
+                 machine_config_svc=None):
         super().__init__()
         self.work_service = work_service
         self.logbook_service = logbook_service
         self.draw_service = draw_service
         self.print_service = print_service
+        self.machine_config_svc = machine_config_svc
+        # Set True before close() during a live config switch to suppress
+        # the app.quit() call in closeEvent.
+        self._suppress_quit = False
         self.ui_preferences_service = UiPreferencesService(
             SHARED_UI_PREFERENCES_PATH,
             include_setup_db_path=True,
@@ -331,6 +340,8 @@ class MainWindow(QMainWindow):
             "show": True,
             "clear_master_filter": True,
             "module": "jaws" if module == "jaws" else "tools",
+            "tools_db_path": str(self.draw_service.tool_db_path),
+            "jaws_db_path": str(self.draw_service.jaw_db_path),
         }
         if self._send_to_tool_library(payload):
             self._fade_out_and(self._complete_tool_library_handoff)
@@ -421,6 +432,8 @@ class MainWindow(QMainWindow):
             "master_filter_jaws": safe_jaws,
             "master_filter_active": True,
             "module": selected_module,
+            "tools_db_path": str(self.draw_service.tool_db_path),
+            "jaws_db_path": str(self.draw_service.jaw_db_path),
         }
         if self._send_to_tool_library(payload):
             self._fade_out_and(self._complete_tool_library_handoff)
@@ -652,18 +665,26 @@ class MainWindow(QMainWindow):
             button.style().unpolish(button)
             button.style().polish(button)
 
+    def showEvent(self, event):
+        """Reload shared preferences when window is shown to sync with Tool Library."""
+        super().showEvent(event)
+        self.ui_preferences = self.ui_preferences_service.load()
+        self.localization.set_language(self.ui_preferences.get("language", "en"))
+
     def closeEvent(self, event):
         """Save window geometry when closing for restoration on next launch."""
-        x, y, width, height = self._current_window_rect()
-        geom_file = Path(self.work_service.db.path).parent / ".window_geometry"
-        try:
-            geom_file.write_text(f"{x},{y},{width},{height}")
-        except Exception:
-            pass
+        if not self._suppress_quit:
+            x, y, width, height = self._current_window_rect()
+            geom_file = Path(self.work_service.db.path).parent / ".window_geometry"
+            try:
+                geom_file.write_text(f"{x},{y},{width},{height}")
+            except Exception:
+                pass
         super().closeEvent(event)
-        app = QApplication.instance()
-        if app is not None:
-            app.quit()
+        if not self._suppress_quit:
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
 
     def _apply_style(self):
         try:
