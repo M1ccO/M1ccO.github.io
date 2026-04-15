@@ -44,17 +44,20 @@ from config import (
     SETUP_MANAGER_SERVER_NAME,
 )
 from data.database import Database
+from data.fixture_database import FixtureDatabase
 from data.jaw_database import JawDatabase
+from services.fixture_service import FixtureService
 from services.jaw_service import JawService
 from shared.services.localization_service import LocalizationService
 from services.tool_service import ToolService
 from shared.services.ui_preferences_service import UiPreferencesService
 from ui.export_page import ExportPage
+from ui.fixture_page import FixturePage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
 from ui.main_window_support import empty_selector_session_state, selector_session_from_payload
-from ui.selectors import JawSelectorDialog, ToolSelectorDialog
+from ui.selectors import FixtureSelectorDialog, JawSelectorDialog, ToolSelectorDialog
 from ui.tool_catalog_delegate import apply_delegate_theme
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from shared.ui.main_window_helpers import (
@@ -151,10 +154,11 @@ class PlaceholderPage(QWidget):
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, tool_service, jaw_service, export_service, settings_service, launch_master_filter=None):
+    def __init__(self, tool_service, jaw_service, fixture_service, export_service, settings_service, launch_master_filter=None):
         super().__init__()
         self.tool_service = tool_service
         self.jaw_service = jaw_service
+        self.fixture_service = fixture_service
         self.export_service = export_service
         self.settings_service = settings_service
         self.ui_preferences_service = UiPreferencesService(
@@ -193,10 +197,11 @@ class MainWindow(QMainWindow):
         self._selector_initial_assignment_buckets: dict[str, list[dict]] = {}
         self._tool_selector_dialog: ToolSelectorDialog | None = None
         self._jaw_selector_dialog: JawSelectorDialog | None = None
+        self._fixture_selector_dialog: FixtureSelectorDialog | None = None
         self._closing_selector_dialogs = False
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
-        self._build_ui(self.tool_service, self.jaw_service, self.export_service, self.settings_service)
+        self._build_ui(self.tool_service, self.jaw_service, self.fixture_service, self.export_service, self.settings_service)
         self._apply_style()
         QApplication.instance().installEventFilter(self)
 
@@ -206,10 +211,11 @@ class MainWindow(QMainWindow):
     @staticmethod
     def _resolve_machine_profile(profile_key: str | None) -> dict:
         """Resolve profile key into a lightweight profile mapping for this app."""
-        _normalized = str(profile_key or '').strip().lower()
-        # Current runtime supports one profile; keep mapping extensible.
+        normalized = str(profile_key or '').strip().lower()
+        is_mc = normalized.startswith('machining_center')
         return {
-            'key': 'ntx_2sp_2h',
+            'key': normalized or 'ntx_2sp_2h',
+            'machine_type': 'machining_center' if is_mc else 'lathe',
             'heads': [
                 {'key': 'HEAD1', 'label_key': 'tool_library.head_filter.head1', 'label_default': 'HEAD1'},
                 {'key': 'HEAD2', 'label_key': 'tool_library.head_filter.head2', 'label_default': 'HEAD2'},
@@ -219,6 +225,9 @@ class MainWindow(QMainWindow):
                 {'key': 'sub', 'label_key': 'jaw_library.filter.sub_spindle', 'label_default': 'Sub spindle'},
             ],
         }
+
+    def _is_machining_center(self) -> bool:
+        return str((self.machine_profile or {}).get('machine_type') or '').strip().lower() == 'machining_center'
 
     def _profile_head_keys(self) -> list[str]:
         heads = self.machine_profile.get('heads') if isinstance(self.machine_profile, dict) else []
@@ -391,7 +400,7 @@ class MainWindow(QMainWindow):
             btn.setIcon(self._nav_icon_for_state(icon_name, icon_size, mirror, rotation, selected))
             btn.setIconSize(icon_size)
 
-    def _build_ui(self, tool_service, jaw_service, export_service, settings_service):
+    def _build_ui(self, tool_service, jaw_service, fixture_service, export_service, settings_service):
         central = QWidget()
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
@@ -523,6 +532,12 @@ class MainWindow(QMainWindow):
             machine_profile=self.machine_profile,
             translate=self._t,
         )
+        self.fixtures_page = FixturePage(
+            fixture_service,
+            show_sidebar=False,
+            machine_profile=self.machine_profile,
+            translate=self._t,
+        )
         self.assemblies_page = HomePage(
             tool_service,
             export_service,
@@ -570,12 +585,14 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.export_page)
         self.stack.addWidget(self.jaws_page)
         self.stack.addWidget(self.jaws_export_page)
+        self.stack.addWidget(self.fixtures_page)
         root.addWidget(self.stack, 1)
 
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
             page.set_module_switch_handler(self._toggle_module)
             page.bind_external_head_filter(self.tool_head_filter_combo)
         self.jaws_page.set_module_switch_handler(self._toggle_module)
+        self.fixtures_page.set_module_switch_handler(self._toggle_module)
 
         # Apply launch-scoped master filter state only when Tool Library was opened
         # through Setup Manager viewer mode.
@@ -657,6 +674,9 @@ class MainWindow(QMainWindow):
         self.jaws_page.current_jaw_id = None
         self.jaws_page.refresh_list()
         self.jaws_page.populate_details(None)
+        self.fixtures_page.current_jaw_id = None
+        self.fixtures_page.refresh_list()
+        self.fixtures_page.populate_details(None)
 
     def _switch_database(self, database_path: str):
         new_path = Path(database_path)
@@ -717,6 +737,31 @@ class MainWindow(QMainWindow):
         self.jaws_page.refresh_list()
         self.jaws_page.populate_details(None)
 
+    def _switch_fixtures_database(self, database_path: str):
+        new_path = Path(database_path)
+        if not str(database_path).strip():
+            return False, 'Database path is empty.'
+        old_db = self.fixture_service.db
+        current_path = getattr(old_db, 'path', None)
+        if current_path is not None and Path(current_path).resolve() == new_path.resolve():
+            return True, 'Database already in use.'
+        try:
+            new_path.parent.mkdir(parents=True, exist_ok=True)
+            new_db = FixtureDatabase(new_path)
+            new_fixture_service = FixtureService(new_db)
+            self.fixture_service = new_fixture_service
+            self.fixtures_page.fixture_service = new_fixture_service
+            self._refresh_fixtures_page()
+            old_db.close()
+            return True, f'Using fixtures database: {new_path.name}'
+        except Exception as exc:
+            return False, str(exc)
+
+    def _refresh_fixtures_page(self):
+        self.fixtures_page.current_jaw_id = None
+        self.fixtures_page.refresh_list()
+        self.fixtures_page.populate_details(None)
+
     def _module_nav_items(self, module: str):
         if module == 'jaws':
             return [
@@ -724,6 +769,13 @@ class MainWindow(QMainWindow):
                 (self._t("tool_library.nav.main_spindle", "Main Spindle"), 'arrow_circle_left.svg', False, lambda: self._open_jaws_view('main')),
                 (self._t("tool_library.nav.sub_spindle", "Sub Spindle"), 'arrow_circle_right.svg', False, lambda: self._open_jaws_view('sub')),
                 (self._t("tool_library.nav.export", "Export"), 'import_export.svg', False, lambda: self._open_jaws_view('export')),
+            ]
+
+        if module == 'fixtures':
+            return [
+                (self._t("tool_library.nav.all_fixtures", "All Fixtures"), 'library.svg', False, lambda: self._open_fixtures_view('all')),
+                (self._t("tool_library.nav.fixture_parts", "Parts"), 'arrow_circle_left.svg', False, lambda: self._open_fixtures_view('parts')),
+                (self._t("tool_library.nav.fixture_assemblies", "Assemblies"), 'arrow_circle_right.svg', False, lambda: self._open_fixtures_view('assemblies')),
             ]
 
         return [
@@ -752,8 +804,17 @@ class MainWindow(QMainWindow):
         self.jaws_page.set_view_mode(jaw_view_mode)
         self.stack.setCurrentWidget(self.jaws_page)
 
+    def _open_fixtures_view(self, fixture_view_mode: str):
+        self.fixtures_page.set_view_mode(fixture_view_mode)
+        self.stack.setCurrentWidget(self.fixtures_page)
+
     def _apply_module_mode(self, module: str):
-        self._active_module = 'jaws' if module == 'jaws' else 'tools'
+        if module == 'fixtures':
+            self._active_module = 'fixtures'
+        elif module == 'jaws':
+            self._active_module = 'jaws'
+        else:
+            self._active_module = 'tools'
         self._active_nav_items = self._module_nav_items(self._active_module)
 
         for idx, btn in enumerate(self.nav_buttons):
@@ -771,18 +832,27 @@ class MainWindow(QMainWindow):
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
                 page.set_module_switch_target('TOOLS')
             self._open_jaws_view('all')
-            # Update left rail title for JAWS module
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.jaws", "Jaws Library"))
                 self._position_rail_title()
             except Exception:
                 pass
+        elif self._active_module == 'fixtures':
+            self.tool_head_filter_combo.hide()
+            for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
+                page.set_module_switch_target('TOOLS')
+            self._open_fixtures_view('all')
+            try:
+                self.rail_title.setText(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
+                self._position_rail_title()
+            except Exception:
+                pass
         else:
             self.tool_head_filter_combo.show()
+            sibling_target = 'FIXTURES' if self._is_machining_center() else 'JAWS'
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
-                page.set_module_switch_target('JAWS')
+                page.set_module_switch_target(sibling_target)
             self._open_tool_page('tools')
-            # Update left rail title for Tools module
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.tools", "Tool Library"))
                 self._position_rail_title()
@@ -795,7 +865,7 @@ class MainWindow(QMainWindow):
 
     def _toggle_module(self):
         if self._active_module == 'tools':
-            self._apply_module_mode('jaws')
+            self._apply_module_mode('fixtures' if self._is_machining_center() else 'jaws')
             return
         self._apply_module_mode('tools')
 
@@ -890,7 +960,7 @@ class MainWindow(QMainWindow):
             return
         self.ui_preferences = latest
         self.machine_profile = self._resolve_machine_profile(self.ui_preferences.get('machine_profile_key'))
-        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
+        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page, self.fixtures_page]:
             page.machine_profile = self.machine_profile
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._apply_style()
@@ -907,6 +977,8 @@ class MainWindow(QMainWindow):
                     btn.setToolTip(self._active_nav_items[idx][0])
         if self._active_module == "jaws":
             self.rail_title.setText(self._t("tool_library.rail_title.jaws", "Jaws Library"))
+        elif self._active_module == "fixtures":
+            self.rail_title.setText(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
         else:
             self.rail_title.setText(self._t("tool_library.rail_title.tools", "Tool Library"))
         if hasattr(self, "master_filter_toggle"):
@@ -933,6 +1005,8 @@ class MainWindow(QMainWindow):
                 self.inserts_page.apply_localization(self._t)
         if hasattr(self, "jaws_page") and hasattr(self.jaws_page, "apply_localization"):
             self.jaws_page.apply_localization(self._t)
+        if hasattr(self, "fixtures_page") and hasattr(self.fixtures_page, "apply_localization"):
+            self.fixtures_page.apply_localization(self._t)
 
     def _build_ui_preference_overrides(self) -> str:
         palette = get_active_theme_palette(self.ui_preferences)
@@ -1058,6 +1132,10 @@ class MainWindow(QMainWindow):
         # Selector mode is session-scoped. Clear it before handoff so the
         # hidden Tool Library instance always reopens in normal library mode
         # unless a fresh selector payload explicitly enables selector mode.
+        # Also close any standalone selector dialogs; leaving them open can
+        # make subsequent non-selector IPC requests be ignored as if selector
+        # mode were still active.
+        self._close_selector_dialogs()
         self._set_selector_session_state(empty_selector_session_state())
 
         x, y, width, height = self._current_window_rect()
@@ -1164,9 +1242,10 @@ class MainWindow(QMainWindow):
 
     def _close_selector_dialogs(self) -> None:
         self._closing_selector_dialogs = True
-        dialogs = [self._tool_selector_dialog, self._jaw_selector_dialog]
+        dialogs = [self._tool_selector_dialog, self._jaw_selector_dialog, self._fixture_selector_dialog]
         self._tool_selector_dialog = None
         self._jaw_selector_dialog = None
+        self._fixture_selector_dialog = None
         for dialog in dialogs:
             if dialog is None:
                 continue
@@ -1207,6 +1286,16 @@ class MainWindow(QMainWindow):
                 parent=self,
             )
             self._jaw_selector_dialog = dialog
+        elif self._selector_mode == 'fixtures':
+            dialog = FixtureSelectorDialog(
+                fixture_service=self.fixture_service,
+                translate=self._t,
+                initial_assignments=self._selector_initial_assignments,
+                on_submit=self._on_selector_dialog_submit,
+                on_cancel=self._on_selector_dialog_cancel,
+                parent=self,
+            )
+            self._fixture_selector_dialog = dialog
         else:
             return
 
@@ -1220,7 +1309,7 @@ class MainWindow(QMainWindow):
     def _on_selector_dialog_cancel(self) -> None:
         if self._closing_selector_dialogs:
             return
-        if self._selector_mode not in {'tools', 'jaws'}:
+        if self._selector_mode not in {'tools', 'jaws', 'fixtures'}:
             return
         self._clear_selector_session(show=False)
         self._back_to_setup_manager()
@@ -1255,7 +1344,15 @@ class MainWindow(QMainWindow):
                 self._t(
                     'tool_library.selector.no_selection.body',
                     'Select at least one {kind} before sending the selection back.',
-                    kind=self._t('tool_library.selector.tools', 'tools') if kind == 'tools' else self._t('tool_library.selector.jaws', 'jaws'),
+                    kind=(
+                        self._t('tool_library.selector.tools', 'tools')
+                        if kind == 'tools'
+                        else (
+                            self._t('tool_library.selector.fixtures', 'fixtures')
+                            if kind == 'fixtures'
+                            else self._t('tool_library.selector.jaws', 'jaws')
+                        )
+                    ),
                 ),
             )
             return
@@ -1298,10 +1395,10 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            socket.write(json.dumps(payload).encode('utf-8'))
+            bytes_written = socket.write(json.dumps(payload).encode('utf-8'))
+            if bytes_written < 0:
+                raise RuntimeError('Selection payload write failed.')
             socket.flush()
-            if not socket.waitForBytesWritten(300):
-                raise RuntimeError('Selection payload was not written to the callback socket.')
         except Exception:
             logger.exception("selector: failed to send result payload to callback server %r", self._selector_callback_server)
             QMessageBox.warning(
@@ -1313,8 +1410,12 @@ class MainWindow(QMainWindow):
                 ),
             )
             return
-        finally:
+
+        def _close_callback_socket(sock=socket):
             socket.disconnectFromServer()
+            socket.deleteLater()
+
+        QTimer.singleShot(0, _close_callback_socket)
 
         self._back_to_setup_manager()
 
@@ -1342,6 +1443,9 @@ class MainWindow(QMainWindow):
         new_jaws_db = str(payload.get('jaws_db_path') or '').strip()
         if new_jaws_db:
             self._switch_jaw_database(new_jaws_db)
+        new_fixtures_db = str(payload.get('fixtures_db_path') or '').strip()
+        if new_fixtures_db:
+            self._switch_fixtures_database(new_fixtures_db)
 
         # Clear master filter when switching back normally (no filter context).
         if payload.get('clear_master_filter'):
@@ -1372,6 +1476,7 @@ class MainWindow(QMainWindow):
         selector_dialog_open = bool(
             (self._tool_selector_dialog is not None and self._tool_selector_dialog.isVisible())
             or (self._jaw_selector_dialog is not None and self._jaw_selector_dialog.isVisible())
+            or (self._fixture_selector_dialog is not None and self._fixture_selector_dialog.isVisible())
         )
 
         # During an active selector dialog, ignore generic non-selector IPC
@@ -1396,8 +1501,8 @@ class MainWindow(QMainWindow):
                 self.show()
 
             # Switch module only when NOT in selector mode.
-            module = selector_mode if selector_mode in ('tools', 'jaws') else str(payload.get('module', '')).strip()
-            if module in ('tools', 'jaws'):
+            module = selector_mode if selector_mode in ('tools', 'jaws', 'fixtures') else str(payload.get('module', '')).strip()
+            if module in ('tools', 'jaws', 'fixtures'):
                 self._apply_module_mode(module)
 
         kind = str(payload.get('kind', '')).strip()
@@ -1423,7 +1528,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(base_style + "\n\n" + self._build_ui_preference_overrides())
         # Delegate-painted list views don't get repainted by setStyleSheet alone —
         # force a viewport repaint so the new CLR_CARD_SELECTED_BORDER takes effect.
-        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
+        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page, self.fixtures_page]:
             if hasattr(page, 'list_view') and page.list_view is not None:
                 page.list_view.viewport().update()
 

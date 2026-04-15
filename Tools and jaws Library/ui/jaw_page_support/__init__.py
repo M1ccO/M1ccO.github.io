@@ -41,7 +41,7 @@ from .selector_actions import (
 from .selector_slot_controller import SelectorSlotController
 from .selector_widgets import JawAssignmentSlot, SelectorRemoveDropButton
 from .catalog_list_widgets import JawCatalogListView
-from .topbar_builder import build_filter_toolbar, populate_jaw_type_filter, populate_spindle_filter, rebuild_filter_row, retranslate_filter_toolbar
+from .topbar_builder import build_filter_toolbar, populate_jaw_type_filter, rebuild_filter_row, retranslate_filter_toolbar
 from .detail_panel_builder import populate_detail_panel
 from .bottom_bars_builder import build_bottom_bars, retranslate_bottom_bars
 from .page_builders import build_jaw_page_layout
@@ -79,7 +79,6 @@ __all__ = [
     "on_selector_toggle_clicked",
     "populate_detail_panel",
     "populate_jaw_type_filter",
-    "populate_spindle_filter",
     "prompt_batch_cancel_behavior",
     "rebuild_filter_row",
     "retranslate_bottom_bars",

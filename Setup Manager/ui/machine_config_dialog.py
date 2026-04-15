@@ -478,6 +478,25 @@ class MachineConfigDialog(QDialog):
             self._profile_key = wizard.selected_profile_key()
             self._refresh_profile_label()
             self._update_profile_warning()
+            try:
+                overrides = wizard.selected_mc_overrides() or {}
+            except Exception:
+                overrides = {}
+            if overrides:
+                try:
+                    from config import SHARED_UI_PREFERENCES_PATH
+                    from shared.services.ui_preferences_service import UiPreferencesService
+
+                    prefs_svc = UiPreferencesService(
+                        SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True
+                    )
+                    prefs_svc.set_machining_center_overrides(
+                        fourth_axis_letter=overrides.get("mc_fourth_axis_letter"),
+                        fifth_axis_letter=overrides.get("mc_fifth_axis_letter"),
+                        has_turning_option=overrides.get("mc_has_turning_option"),
+                    )
+                except Exception:
+                    pass
 
     def _on_save(self) -> None:
         name = self.name_edit.text().strip()

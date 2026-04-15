@@ -31,6 +31,12 @@ def _base_defaults() -> dict:
         "enable_drawings_tab": True,
         "detached_preview_policy": {"mode": "follow_last"},
         "show_shared_db_notice": False,
+        "op20_jaws_default": False,
+        "op20_tools_default": False,
+        # Machining center overrides (ignored for lathe profiles)
+        "mc_fourth_axis_letter": "C",
+        "mc_fifth_axis_letter": "B",
+        "mc_has_turning_option": False,
     }
 
 
@@ -86,6 +92,14 @@ class UiPreferencesService:
         data["enable_assembly_transform"] = bool(data.get("enable_assembly_transform", False))
         data["enable_drawings_tab"] = bool(data.get("enable_drawings_tab", True))
         data["show_shared_db_notice"] = bool(data.get("show_shared_db_notice", False))
+        data["op20_jaws_default"] = bool(data.get("op20_jaws_default", False))
+        data["op20_tools_default"] = bool(data.get("op20_tools_default", False))
+
+        fourth_letter = str(data.get("mc_fourth_axis_letter") or "C").strip().upper()
+        fifth_letter = str(data.get("mc_fifth_axis_letter") or "B").strip().upper()
+        data["mc_fourth_axis_letter"] = fourth_letter[:1] if fourth_letter else "C"
+        data["mc_fifth_axis_letter"] = fifth_letter[:1] if fifth_letter else "B"
+        data["mc_has_turning_option"] = bool(data.get("mc_has_turning_option", False))
 
         policy = data.get("detached_preview_policy")
         if not isinstance(policy, dict):
@@ -131,4 +145,30 @@ class UiPreferencesService:
         """Persist machine profile key while keeping other preferences unchanged."""
         prefs = self.load()
         prefs["machine_profile_key"] = str(key or self.default_preferences["machine_profile_key"]).strip().lower()
+        return self.save(prefs)
+
+    def get_machining_center_overrides(self) -> dict:
+        """Return persisted machining center overrides with defaults applied."""
+        prefs = self.load()
+        return {
+            "mc_fourth_axis_letter": str(prefs.get("mc_fourth_axis_letter") or "C"),
+            "mc_fifth_axis_letter": str(prefs.get("mc_fifth_axis_letter") or "B"),
+            "mc_has_turning_option": bool(prefs.get("mc_has_turning_option", False)),
+        }
+
+    def set_machining_center_overrides(
+        self,
+        *,
+        fourth_axis_letter: str | None = None,
+        fifth_axis_letter: str | None = None,
+        has_turning_option: bool | None = None,
+    ) -> dict:
+        """Persist machining center overrides; unspecified args keep current values."""
+        prefs = self.load()
+        if fourth_axis_letter is not None:
+            prefs["mc_fourth_axis_letter"] = str(fourth_axis_letter or "C")
+        if fifth_axis_letter is not None:
+            prefs["mc_fifth_axis_letter"] = str(fifth_axis_letter or "B")
+        if has_turning_option is not None:
+            prefs["mc_has_turning_option"] = bool(has_turning_option)
         return self.save(prefs)

@@ -85,7 +85,9 @@ def _ensure_works_table(conn):
                 head1_main_c TEXT DEFAULT '',
                 head1_sub_z TEXT DEFAULT '',
                 head1_sub_x TEXT DEFAULT '',
-                head1_sub_y TEXT DEFAULT '',
+                head3_tool_assignments TEXT DEFAULT '[]',
+                mc_operation_count INTEGER DEFAULT 0,
+                mc_operations TEXT DEFAULT '[]',
                 head1_sub_c TEXT DEFAULT '',
                 head2_main_z TEXT DEFAULT '',
                 head2_main_x TEXT DEFAULT '',
@@ -116,6 +118,10 @@ def _ensure_works_table(conn):
         "raw_part_od": "TEXT DEFAULT ''",
         "raw_part_id": "TEXT DEFAULT ''",
         "raw_part_length": "TEXT DEFAULT ''",
+        "raw_part_kind": "TEXT DEFAULT 'bar'",
+        "raw_part_side": "TEXT DEFAULT ''",
+        "raw_part_square_length": "TEXT DEFAULT ''",
+        "raw_part_custom_fields": "TEXT DEFAULT ''",
         "main_jaw_id": "TEXT DEFAULT ''",
         "sub_jaw_id": "TEXT DEFAULT ''",
         "main_stop_screws": "TEXT DEFAULT ''",
@@ -175,6 +181,8 @@ def _ensure_works_table(conn):
         "head3_sub_c": "TEXT DEFAULT ''",
         "head3_tool_ids": "TEXT DEFAULT '[]'",
         "head3_tool_assignments": "TEXT DEFAULT '[]'",
+        "mc_operation_count": "INTEGER DEFAULT 0",
+        "mc_operations": "TEXT DEFAULT '[]'",
     }
     cols = table_columns(conn, "works")
     with conn:

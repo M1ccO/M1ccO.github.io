@@ -149,9 +149,10 @@ def main():
         app.processEvents()
 
     step(1, 'Loading modules...')
-    from config import DB_PATH, JAWS_DB_PATH, SETTINGS_PATH, TOOL_LIBRARY_READY_PATH, TOOL_LIBRARY_SERVER_NAME
+    from config import DB_PATH, FIXTURES_DB_PATH, JAWS_DB_PATH, SETTINGS_PATH, TOOL_LIBRARY_READY_PATH, TOOL_LIBRARY_SERVER_NAME
     from data.database import Database
     from services.export_service import ExportService
+    from services.fixture_service import FixtureService
     from services.jaw_service import JawService
     from services.settings_service import SettingsService
     from services.tool_service import ToolService
@@ -159,8 +160,10 @@ def main():
 
     step(2, 'Connecting database...')
     db = Database(DB_PATH)
+    from data.fixture_database import FixtureDatabase
     from data.jaw_database import JawDatabase
     jaws_db = JawDatabase(JAWS_DB_PATH)
+    fixtures_db = FixtureDatabase(FIXTURES_DB_PATH)
 
     step(3, 'Loading tool service...')
     tool_service = ToolService(db)
@@ -170,6 +173,7 @@ def main():
 
     step(5, 'Loading jaw service...')
     jaw_service = JawService(jaws_db)
+    fixture_service = FixtureService(fixtures_db)
 
     step(6, 'Loading settings...')
     settings_service = SettingsService(SETTINGS_PATH)
@@ -186,7 +190,14 @@ def main():
         "jaw_ids": _split_csv(_known_args.master_filter_jaws),
     }
 
-    win = MainWindow(tool_service, jaw_service, export_service, settings_service, launch_master_filter=launch_master_filter)
+    win = MainWindow(
+        tool_service,
+        jaw_service,
+        fixture_service,
+        export_service,
+        settings_service,
+        launch_master_filter=launch_master_filter,
+    )
 
     def warm_preview_after_startup():
         if getattr(app, '_preview_warmup_widget', None) is not None:
@@ -227,14 +238,23 @@ def main():
         QLocalServer.removeServer(TOOL_LIBRARY_SERVER_NAME)
 
     def process_external_request(payload: dict):
+        command = str((payload or {}).get('command') or '').strip().lower()
+        if command == 'shutdown':
+            app.quit()
+            return
+
         win.apply_external_request(payload)
         geometry_text = str(payload.get('geometry', '')).strip()
         selector_mode = str(payload.get('selector_mode', '')).strip().lower()
-        selector_active_request = selector_mode in {'tools', 'jaws'}
+        selector_active_request = selector_mode in {'tools', 'jaws', 'fixtures'}
         was_visible = bool(win.isVisible() and not win.isMinimized())
 
         if bool(payload.get('show', True)):
-            app.setQuitOnLastWindowClosed(True)
+            # Selector sessions run in standalone dialogs while the main window
+            # stays hidden. If quitOnLastWindowClosed is True here, closing the
+            # selector dialog can terminate the background Tool Library process,
+            # forcing a relaunch (visible flash) on the next open.
+            app.setQuitOnLastWindowClosed(not selector_active_request)
             try:
                 TOOL_LIBRARY_READY_PATH.write_text("ready", encoding="utf-8")
             except Exception:

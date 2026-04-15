@@ -4,7 +4,12 @@ from typing import Any
 
 
 def visible_tool_lists(dialog: Any) -> list:
-    return list(dialog._tool_column_lists.get(dialog._current_tools_head_value(), {}).values())
+    columns = dialog._tool_column_lists.get(dialog._current_tools_head_value(), {})
+    is_single = getattr(dialog.machine_profile, 'spindle_count', 0) == 1
+    op20_on = getattr(dialog, '_op20_tools_enabled', True)
+    if is_single and not op20_on:
+        return [v for k, v in columns.items() if k != "sub"]
+    return list(columns.values())
 
 
 def effective_active_tool_list(dialog: Any):
@@ -143,12 +148,15 @@ def refresh_tool_head_widgets(dialog: Any, head_key: str) -> None:
 
 def sync_tool_head_view(dialog: Any) -> None:
     active_head = dialog._current_tools_head_value()
+    is_single = getattr(dialog.machine_profile, 'spindle_count', 0) == 1
+    op20_on = getattr(dialog, '_op20_tools_enabled', True)
     for head_key, columns in dialog._tool_column_lists.items():
         visible = head_key == active_head
         for spindle, ordered_list in columns.items():
             ordered_list.set_current_spindle(spindle)
-            ordered_list.setVisible(visible)
-            if visible:
+            col_visible = visible and (spindle != "sub" or not is_single or op20_on)
+            ordered_list.setVisible(col_visible)
+            if col_visible:
                 ordered_list._render_current_spindle()
     active_columns = dialog._tool_column_lists.get(active_head, {})
     preferred_active = None

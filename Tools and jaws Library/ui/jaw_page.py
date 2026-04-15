@@ -173,15 +173,12 @@ class JawPage(CatalogPageBase):
         search_text = str(filters.get('search') or '').strip()
         view_mode = str(filters.get('view_mode') or self.current_view_mode or 'all').strip().lower()
         jaw_type = str(filters.get('jaw_type') or 'all').strip().lower()
-        spindle_filter = str(filters.get('spindle_filter') or 'all').strip().lower()
 
         jaws = self.jaw_service.list_jaws(
             search_text=search_text,
             view_mode=view_mode,
             jaw_type_filter=jaw_type,
         )
-        if spindle_filter != 'all':
-            jaws = [jaw for jaw in jaws if self._jaw_matches_spindle_filter(jaw, spindle_filter)]
         if self._selector_active:
             jaws = [jaw for jaw in jaws if self._jaw_matches_selector_spindle(jaw)]
         if self._master_filter_active:
@@ -295,7 +292,7 @@ class JawPage(CatalogPageBase):
             self.search_input.clear()
             self.refresh_list()
         rebuild_filter_row(self)
-        for combo in (self.jaw_type_filter, self.spindle_filter):
+        for combo in (self.jaw_type_filter,):
             combo.hidePopup()
             combo.setEnabled(False)
             QTimer.singleShot(0, lambda c=combo: c.setEnabled(True))
@@ -310,7 +307,6 @@ class JawPage(CatalogPageBase):
 
     def _clear_filters(self) -> None:
         self.jaw_type_filter.setCurrentIndex(0)
-        self.spindle_filter.setCurrentIndex(0)
 
     def _set_view_mode(self, mode: str, refresh: bool = True) -> None:
         self.current_view_mode = mode

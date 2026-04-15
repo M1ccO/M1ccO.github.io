@@ -2657,3 +2657,50 @@ ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
 2026-04-15 08:55:57,631 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
 2026-04-15 09:19:59,727 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
 2026-04-15 09:46:02,895 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 10:12:17,957 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 11:44:11,010 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD2' spindle='main' show=True
+2026-04-15 11:44:18,814 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 11:47:45,884 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 11:48:46,793 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 11:49:32,398 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 11:50:22,909 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 11:51:31,402 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 11:54:28,199 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 11:54:33,196 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD2' spindle='main' show=True
+2026-04-15 11:54:38,968 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 11:54:45,117 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD2' spindle='main' show=True
+2026-04-15 11:54:56,170 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 11:55:12,005 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD2' spindle='main' show=True
+2026-04-15 11:56:23,347 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 12:03:31,184 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 12:03:56,297 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 12:04:06,866 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:04:09,964 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD2' spindle='main' show=True
+2026-04-15 12:04:51,025 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:05:02,328 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:05:19,226 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:05:27,362 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:05:33,685 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-15 12:05:43,159 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:12:42,234 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 12:29:51,478 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-15 13:11:10,570 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True
+2026-04-15 13:11:11,015 ui.main_window ERROR selector: failed to send result payload to callback server 'setup_manager_work_editor_af4bdbfce9064e1b8f3d1147dc13bc5a'
+Traceback (most recent call last):
+  File "c:\Users\pz9079\NTX Setup Manager\Tools and jaws Library\ui\main_window.py", line 1401, in _send_selector_result_payload
+    raise RuntimeError('Selection payload was not written to the callback socket.')
+RuntimeError: Selection payload was not written to the callback socket.
+2026-04-15 13:15:17,571 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True
+2026-04-15 13:15:18,012 ui.main_window ERROR selector: failed to send result payload to callback server 'setup_manager_work_editor_84e74c51fa69450d972de406f7726e43'
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Tools and jaws Library\ui\main_window.py", line 1401, in _send_selector_result_payload
+    raise RuntimeError('Selection payload was not written to the callback socket.')
+RuntimeError: Selection payload was not written to the callback socket.
+2026-04-15 13:16:12,610 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True
+2026-04-15 13:16:13,057 ui.main_window ERROR selector: failed to send result payload to callback server 'setup_manager_work_editor_633e0a1660014b7bbade32de95d2e9b6'
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Tools and jaws Library\ui\main_window.py", line 1403, in _send_selector_result_payload
+    raise RuntimeError('Selection payload was not written to the callback socket.')
+RuntimeError: Selection payload was not written to the callback socket.
+2026-04-15 13:16:43,046 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True
+2026-04-15 13:17:14,585 ui.main_window DEBUG selector: opening 'fixtures' dialog — head='' spindle='' show=True

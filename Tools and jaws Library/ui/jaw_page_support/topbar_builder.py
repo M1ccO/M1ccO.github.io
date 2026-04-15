@@ -32,42 +32,6 @@ def populate_jaw_type_filter(page) -> None:
     page.jaw_type_filter.blockSignals(False)
 
 
-def populate_spindle_filter(page) -> None:
-    current = page.spindle_filter.currentData() if page.spindle_filter.count() else 'all'
-    profile = getattr(page, 'machine_profile', None)
-    profile_spindles = []
-    if isinstance(profile, dict):
-        profile_spindles = profile.get('spindles') or []
-    elif profile is not None:
-        profile_spindles = getattr(profile, 'spindles', ()) or ()
-
-    spindle_keys: list[str] = []
-    for spindle in profile_spindles:
-        if isinstance(spindle, dict):
-            key = str(spindle.get('key') or '').strip().lower()
-        else:
-            key = str(getattr(spindle, 'key', '') or '').strip().lower()
-        if key and key not in spindle_keys:
-            spindle_keys.append(key)
-    if not spindle_keys:
-        spindle_keys = ['main', 'sub']
-
-    page.spindle_filter.blockSignals(True)
-    page.spindle_filter.clear()
-    page.spindle_filter.addItem(page._t('jaw_library.filter.spindle_all', 'All spindles'), 'all')
-    for spindle_key in spindle_keys:
-        if spindle_key == 'main':
-            label = page._t('jaw_library.filter.main_spindle', 'Main spindle')
-        elif spindle_key == 'sub':
-            label = page._t('jaw_library.filter.sub_spindle', 'Sub spindle')
-        else:
-            label = spindle_key.upper()
-        page.spindle_filter.addItem(label, spindle_key)
-    allowed = {'all', *spindle_keys}
-    _set_combo_value(page.spindle_filter, current if current in allowed else 'all')
-    page.spindle_filter.blockSignals(False)
-
-
 def build_filter_toolbar(page) -> QFrame:
     filter_frame, page.filter_layout = build_filter_frame()
 
@@ -103,16 +67,6 @@ def build_filter_toolbar(page) -> QFrame:
     page.jaw_type_filter.installEventFilter(page)
     page.jaw_type_filter.view().installEventFilter(page)
 
-    page.spindle_filter = QComboBox()
-    page.spindle_filter.setObjectName('topSpindleFilter')
-    page.spindle_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
-    page.spindle_filter.setMinimumWidth(120)
-    page.spindle_filter.setProperty('dropdownSizeProfile', 'compact')
-    page.spindle_filter.currentIndexChanged.connect(page._on_filter_changed)
-    apply_shared_dropdown_style(page.spindle_filter)
-    page.spindle_filter.installEventFilter(page)
-    page.spindle_filter.view().installEventFilter(page)
-
     page.preview_window_btn = build_preview_toggle(
         TOOL_ICONS_DIR,
         page._t('tool_library.preview.toggle', 'Toggle detached 3D preview'),
@@ -120,13 +74,11 @@ def build_filter_toolbar(page) -> QFrame:
     )
 
     populate_jaw_type_filter(page)
-    populate_spindle_filter(page)
     rebuild_filter_row(page)
 
     filter_frame.get_filters = lambda: {
         'view_mode': page.current_view_mode,
         'jaw_type': page.jaw_type_filter.currentData() or 'all',
-        'spindle_filter': page.spindle_filter.currentData() or 'all',
     }
     return filter_frame
 
@@ -138,7 +90,7 @@ def rebuild_filter_row(page) -> None:
         page.toggle_details_btn,
         page.search_input,
         page.filter_icon,
-        [page.jaw_type_filter, page.spindle_filter],
+        [page.jaw_type_filter],
         page.preview_window_btn,
         page.detail_header_container,
     )
@@ -156,7 +108,6 @@ def retranslate_filter_toolbar(page) -> None:
     )
     page.preview_window_btn.setToolTip(page._t('tool_library.preview.toggle', 'Toggle detached 3D preview'))
     populate_jaw_type_filter(page)
-    populate_spindle_filter(page)
     _update_filter_icon(page)
     rebuild_filter_row(page)
 
@@ -171,7 +122,7 @@ def _set_combo_value(combo: QComboBox, value: str) -> None:
 
 
 def _update_filter_icon(page) -> None:
-    active = (page.jaw_type_filter.currentData() or 'all') != 'all' or (page.spindle_filter.currentData() or 'all') != 'all'
+    active = (page.jaw_type_filter.currentData() or 'all') != 'all'
     icon_name = 'filter_off.svg' if active else 'filter_arrow_right.svg'
     page.filter_icon.setIcon(QIcon(str(TOOL_ICONS_DIR / icon_name)))
 
@@ -179,7 +130,6 @@ def _update_filter_icon(page) -> None:
 __all__ = [
     'build_filter_toolbar',
     'populate_jaw_type_filter',
-    'populate_spindle_filter',
     'rebuild_filter_row',
     'retranslate_filter_toolbar',
 ]

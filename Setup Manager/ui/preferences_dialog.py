@@ -38,6 +38,7 @@ except ModuleNotFoundError:
     from shared.services.machine_config_service import MachineConfigService
 
 from ui.widgets.common import add_shadow, apply_tool_library_combo_style
+from machine_profiles import load_profile
 
 
 class PreferencesDialog(PreferencesDialogBase):
@@ -152,6 +153,39 @@ class PreferencesDialog(PreferencesDialogBase):
         self.drawings_tab_cb.setStyleSheet("QCheckBox { background: transparent; }")
         card_layout.addWidget(self.drawings_tab_cb)
 
+        self._op20_sep = QFrame()
+        self._op20_sep.setFrameShape(QFrame.HLine)
+        self._op20_sep.setStyleSheet("QFrame { color: #d0d6de; }")
+        card_layout.addWidget(self._op20_sep)
+
+        self._op20_hint = QLabel(
+            self._t(
+                "preferences.work_editor.op20_hint",
+                "Work Editor — OP20 defaults (applies to single-spindle machines only):",
+            )
+        )
+        self._op20_hint.setWordWrap(True)
+        self._op20_hint.setProperty("detailHint", True)
+        card_layout.addWidget(self._op20_hint)
+
+        self.op20_jaws_default_cb = QCheckBox(
+            self._t(
+                "preferences.work_editor.op20_jaws_default",
+                "Include OP20 jaws and zero points by default",
+            )
+        )
+        self.op20_jaws_default_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        card_layout.addWidget(self.op20_jaws_default_cb)
+
+        self.op20_tools_default_cb = QCheckBox(
+            self._t(
+                "preferences.work_editor.op20_tools_default",
+                "Include OP20 tools by default",
+            )
+        )
+        self.op20_tools_default_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        card_layout.addWidget(self.op20_tools_default_cb)
+
         self.detached_preview_mode_combo = QComboBox()
         self.detached_preview_mode_combo.addItem(
             self._t(
@@ -186,6 +220,30 @@ class PreferencesDialog(PreferencesDialogBase):
 
         layout.addStretch(1)
         return tab
+
+    def _active_profile_is_single_spindle(self) -> bool:
+        if self._machine_config_svc is None:
+            return False
+        cfg = self._machine_config_svc.get_active_config()
+        if cfg is None:
+            return False
+        try:
+            profile = load_profile(cfg.machine_profile_key)
+            return int(getattr(profile, "spindle_count", 0)) == 1
+        except Exception:
+            return False
+
+    def _update_op20_defaults_visibility(self) -> None:
+        show = self._active_profile_is_single_spindle()
+        for widget_name in (
+            "_op20_sep",
+            "_op20_hint",
+            "op20_jaws_default_cb",
+            "op20_tools_default_cb",
+        ):
+            widget = getattr(self, widget_name, None)
+            if widget is not None:
+                widget.setVisible(show)
 
     def _build_machines_tab(self) -> QWidget:
         tab = QWidget()
@@ -453,6 +511,8 @@ class PreferencesDialog(PreferencesDialogBase):
                 "mode": self.detached_preview_mode_combo.currentData() or "follow_last",
             },
             "show_shared_db_notice": self.shared_db_notice_cb.isChecked(),
+            "op20_jaws_default": self.op20_jaws_default_cb.isChecked(),
+            "op20_tools_default": self.op20_tools_default_cb.isChecked(),
         }
 
     def _load_current_values(self):
@@ -484,6 +544,13 @@ class PreferencesDialog(PreferencesDialogBase):
         self.shared_db_notice_cb.setChecked(
             bool(self._current.get("show_shared_db_notice", False))
         )
+        self.op20_jaws_default_cb.setChecked(
+            bool(self._current.get("op20_jaws_default", False))
+        )
+        self.op20_tools_default_cb.setChecked(
+            bool(self._current.get("op20_tools_default", False))
+        )
+        self._update_op20_defaults_visibility()
         policy = self._current.get("detached_preview_policy")
         mode = str(
             (policy or {}).get("mode") if isinstance(policy, dict) else "follow_last"
@@ -515,6 +582,7 @@ class PreferencesDialog(PreferencesDialogBase):
         self._machine_config_combo.setCurrentIndex(active_index)
         self._machine_config_combo.blockSignals(False)
         self._update_config_buttons()
+        self._update_op20_defaults_visibility()
 
     def _update_config_buttons(self) -> None:
         """Enable/disable Switch and Delete based on whether selected == active."""

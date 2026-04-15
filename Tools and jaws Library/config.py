@@ -63,8 +63,10 @@ else:
     _models_base_dir = PROJECTS_DIR / 'Tools and jaws Library' / 'assets' / '3d'
 TOOL_MODELS_ROOT_DEFAULT = _models_base_dir / 'tools'
 JAW_MODELS_ROOT_DEFAULT = _models_base_dir / 'jaws'
+FIXTURE_MODELS_ROOT_DEFAULT = _models_base_dir / 'fixtures'
 TOOL_MODELS_ROOT_DEFAULT.mkdir(parents=True, exist_ok=True)
 JAW_MODELS_ROOT_DEFAULT.mkdir(parents=True, exist_ok=True)
+FIXTURE_MODELS_ROOT_DEFAULT.mkdir(parents=True, exist_ok=True)
 
 
 def _resolve_runtime_dir() -> Path:
@@ -86,14 +88,17 @@ TOOL_LIBRARY_SERVER_NAME = 'tool_library_single_instance'
 SETUP_MANAGER_SERVER_NAME = 'setup_manager_single_instance'
 
 
-def _resolve_active_library_db_paths() -> tuple[Path, Path]:
-    """Return (tools_db, jaws_db) from the active machine config if available.
+def _resolve_active_library_db_paths() -> tuple[Path, Path, Path]:
+    """Return (tools_db, jaws_db, fixtures_db) from the active machine config.
 
     Falls back to the local ``databases/`` files so the app can still start
-    standalone when no machine config has been created yet.
+    standalone when no machine config has been created yet.  The fixtures DB
+    path defaults next to the jaws DB when the config entry does not specify
+    it (keeps the resolution robust against older config files).
     """
-    _default_tools = DB_DIR / 'tool_library.db'
-    _default_jaws  = DB_DIR / 'jaws_library.db'
+    _default_tools    = DB_DIR / 'tool_library.db'
+    _default_jaws     = DB_DIR / 'jaws_library.db'
+    _default_fixtures = DB_DIR / 'fixtures_library.db'
     try:
         import json as _json
         _config_json = RUNTIME_DIR / 'machine_configurations.json'
@@ -102,16 +107,24 @@ def _resolve_active_library_db_paths() -> tuple[Path, Path]:
             _active_id = str(_data.get('active_config_id') or '')
             for _entry in _data.get('configurations', []):
                 if str(_entry.get('id') or '') == _active_id:
-                    _tools = str(_entry.get('tools_db_path') or '').strip()
-                    _jaws  = str(_entry.get('jaws_db_path') or '').strip()
+                    _tools    = str(_entry.get('tools_db_path') or '').strip()
+                    _jaws     = str(_entry.get('jaws_db_path') or '').strip()
+                    _fixtures = str(_entry.get('fixtures_db_path') or '').strip()
                     if _tools and _jaws:
-                        return Path(_tools), Path(_jaws)
+                        tools_path = Path(_tools)
+                        jaws_path = Path(_jaws)
+                        fixtures_path = (
+                            Path(_fixtures)
+                            if _fixtures
+                            else jaws_path.parent / 'fixtures_library.db'
+                        )
+                        return tools_path, jaws_path, fixtures_path
     except Exception:
         pass
-    return _default_tools, _default_jaws
+    return _default_tools, _default_jaws, _default_fixtures
 
 
-DB_PATH, JAWS_DB_PATH = _resolve_active_library_db_paths()
+DB_PATH, JAWS_DB_PATH, FIXTURES_DB_PATH = _resolve_active_library_db_paths()
 I18N_DIR = APP_DIR / 'i18n'
 if not I18N_DIR.exists():
     I18N_DIR = SOURCE_DIR / 'i18n'
@@ -191,6 +204,7 @@ DEFAULT_TOOL_ICON = 'default.png'
 NAV_ITEM_TO_ICON = {
     'TOOLS': 'library.svg',
     'JAWS': 'jaw_icon.png',
+    'FIXTURES': 'jaw_icon.png',
     'ASSEMBLIES': 'assemblies_icon.svg',
     'HOLDERS': 'holders_icon.svg',
     'INSERTS': 'inserts_icon.svg',

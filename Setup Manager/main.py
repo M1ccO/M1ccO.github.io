@@ -5,6 +5,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 # Add parent directory to path so shared module can be imported
@@ -12,7 +13,7 @@ if str(Path(__file__).resolve().parent.parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtNetwork import QLocalServer
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
@@ -332,9 +333,12 @@ def main():
     #
     # 1. Read the DB-bound key from app_config.
     # 2. For a fresh DB (empty key) → run the setup wizard.
-    # 3. Mirror the key to shared_ui_preferences.json so the Tools
-    #    Library can reflect it without a cross-app import.
-    # 4. If this is the very first run (no machine_configurations.json),
+    # 3. When machine configurations exist, treat the active config profile
+    #    as authoritative and stamp it into the active setup DB so profile
+    #    bleed cannot happen between config-specific databases.
+    # 4. Mirror the key to shared_ui_preferences.json so the Tools Library
+    #    can reflect it without a cross-app import.
+    # 5. If this is the very first run (no machine_configurations.json),
     #    create the first named config ("NTX2500") from legacy state.
     # ----------------------------------------------------------------
     db_profile_key = work_service.get_machine_profile_key()
@@ -349,18 +353,43 @@ def main():
             return str(_texts.get(key) or default or key)
 
         wizard = MachineSetupWizard(translate=_wt)
+        mc_overrides: dict = {}
         if wizard.exec():
             db_profile_key = wizard.selected_profile_key()
+            try:
+                mc_overrides = wizard.selected_mc_overrides() or {}
+            except Exception:
+                mc_overrides = {}
         else:
             db_profile_key = "ntx_2sp_2h"
 
         work_service.set_machine_profile_key(db_profile_key)
+
+        if mc_overrides:
+            try:
+                _prefs_svc.set_machining_center_overrides(
+                    fourth_axis_letter=mc_overrides.get("mc_fourth_axis_letter"),
+                    fifth_axis_letter=mc_overrides.get("mc_fifth_axis_letter"),
+                    has_turning_option=mc_overrides.get("mc_has_turning_option"),
+                )
+            except Exception:
+                pass
 
         # Re-show a minimal progress indicator for the remaining steps.
         splash.reset()
         splash.setRange(0, 10)
         splash.show()
         app.processEvents()
+
+    # Config-specific setup DBs must follow the active machine configuration,
+    # not stale DB/app prefs from a previous active config.
+    if not machine_config_svc.is_empty():
+        active_cfg = machine_config_svc.get_active_config()
+        if active_cfg is not None:
+            cfg_profile_key = str(active_cfg.machine_profile_key or "").strip().lower()
+            if cfg_profile_key and cfg_profile_key != db_profile_key:
+                work_service.set_machine_profile_key(cfg_profile_key)
+                db_profile_key = cfg_profile_key
 
     # Mirror to shared prefs so Tools Library can pick it up.
     _prefs_svc.set_machine_profile_key(db_profile_key)
@@ -394,12 +423,24 @@ def main():
         QLocalServer.removeServer(SETUP_MANAGER_SERVER_NAME)
         server.listen(SETUP_MANAGER_SERVER_NAME)
 
+    _last_show_request_ts = 0.0
+    _last_show_geometry = ""
+
     def show_setup_manager(request: dict | None = None):
+        nonlocal _last_show_request_ts, _last_show_geometry
         geometry_text = str((request or {}).get("geometry", "")).strip()
+        now = time.monotonic()
+        # Debounce duplicate show requests from fast IPC bursts.
+        if (now - _last_show_request_ts) < 0.25 and geometry_text == _last_show_geometry:
+            return
+        _last_show_request_ts = now
+        _last_show_geometry = geometry_text
+
+        was_visible = bool(win.isVisible() and not win.isMinimized())
         win.setWindowOpacity(1.0)
         if win.isMinimized():
             win.showNormal()
-        else:
+        elif not win.isVisible():
             win.show()
 
         def _apply_handoff_bounds():
@@ -420,7 +461,8 @@ def main():
             ctypes.windll.user32.SetForegroundWindow(hwnd)
         except Exception:
             pass
-        win.fade_in()
+        if not was_visible:
+            win.fade_in()
 
     def process_show_requests():
         while server.hasPendingConnections():
@@ -594,6 +636,11 @@ def main():
             )
             print_service.set_reference_service(new_draw_service)
 
+            # Config profile is authoritative for this setup DB; write it to
+            # the DB immediately so Work Editor always reads the right profile
+            # for the active machine config.
+            new_work_service.set_machine_profile_key(active.machine_profile_key)
+
             # Mirror new profile key to shared prefs.
             _prefs_svc.set_machine_profile_key(active.machine_profile_key)
         finally:
@@ -672,6 +719,24 @@ def main():
     def _cleanup_server():
         QLocalServer.removeServer(SETUP_MANAGER_SERVER_NAME)
 
+    def _request_tool_library_shutdown():
+        try:
+            sock = QLocalSocket()
+            sock.connectToServer(TOOL_LIBRARY_SERVER_NAME)
+            if not sock.waitForConnected(200):
+                return
+            sock.write(json.dumps({"command": "shutdown"}).encode("utf-8"))
+            sock.flush()
+            sock.waitForBytesWritten(200)
+        except Exception:
+            pass
+        finally:
+            try:
+                sock.disconnectFromServer()
+            except Exception:
+                pass
+
+    app.aboutToQuit.connect(_request_tool_library_shutdown)
     app.aboutToQuit.connect(_cleanup_server)
 
     sys.exit(app.exec())

@@ -10,7 +10,21 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 
 from ui.tool_editor_dialog import AddEditToolDialog
 
-__all__ = ["add_tool", "copy_tool", "delete_tool", "edit_tool"]
+__all__ = ["add_tool", "copy_tool", "delete_tool", "edit_tool", "save_from_dialog"]
+
+
+def save_from_dialog(page, dlg) -> int | None:
+    """Validate + persist tool data from dialog; return saved uid on success."""
+    try:
+        data = dlg.get_tool_data()
+        saved_uid = page.tool_service.save_tool(data)
+        page.refresh_list()
+        return int(saved_uid)
+    except ValueError as exc:
+        QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
+    except Exception as exc:
+        QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
+    return None
 
 
 def add_tool(page) -> None:
@@ -22,7 +36,9 @@ def add_tool(page) -> None:
         translate=page._t,
     )
     if dlg.exec() == QDialog.Accepted:
-        page.refresh_list()
+        saved_uid = save_from_dialog(page, dlg)
+        if saved_uid:
+            page._restore_selection_by_uid(saved_uid)
 
 
 def edit_tool(page) -> None:
@@ -36,7 +52,6 @@ def edit_tool(page) -> None:
         )
         return
 
-    uid = tool.get('uid')
     dlg = AddEditToolDialog(
         parent=page,
         tool=tool,
@@ -44,9 +59,9 @@ def edit_tool(page) -> None:
         translate=page._t,
     )
     if dlg.exec() == QDialog.Accepted:
-        page.refresh_list()
-        if uid:
-            page._restore_selection_by_uid(uid)
+        saved_uid = save_from_dialog(page, dlg)
+        if saved_uid:
+            page._restore_selection_by_uid(saved_uid)
 
 
 def delete_tool(page) -> None:
@@ -99,4 +114,6 @@ def copy_tool(page) -> None:
         translate=page._t,
     )
     if dlg.exec() == QDialog.Accepted:
-        page.refresh_list()
+        saved_uid = save_from_dialog(page, dlg)
+        if saved_uid:
+            page._restore_selection_by_uid(saved_uid)

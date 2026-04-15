@@ -56,6 +56,7 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
             translate=page._t,
             batch_label=f"{idx}/{total}",
             drawings_enabled=page.drawings_enabled,
+            machine_profile_key=page.work_service.get_machine_profile_key(),
         )
         if dialog.exec() != QDialog.Accepted:
             if saved_before:
@@ -78,6 +79,7 @@ def group_edit_works(page, work_ids: list[str]) -> None:
         group_edit_mode=True,
         group_count=len(work_ids),
         drawings_enabled=page.drawings_enabled,
+        machine_profile_key=page.work_service.get_machine_profile_key(),
     )
     baseline = baseline_dialog.get_work_data()
     if baseline_dialog.exec() != QDialog.Accepted:

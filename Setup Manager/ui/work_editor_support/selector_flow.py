@@ -61,6 +61,14 @@ def open_jaw_selector_session(dialog: Any, *, initial_spindle: str | None = None
     )
 
 
+def open_fixture_selector_session(dialog: Any, *, operation_key: str, initial_assignments: list[dict] | None = None) -> bool:
+    return dialog._open_external_selector_session(
+        kind='fixtures',
+        follow_up={'target_key': operation_key},
+        initial_assignments=initial_assignments or [],
+    )
+
+
 def open_combined_tools_jaws_selector_session(dialog: Any) -> None:
     spindle = dialog._default_selector_spindle()
     default_head = dialog._default_selector_head()

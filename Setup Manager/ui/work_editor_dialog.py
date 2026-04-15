@@ -36,10 +36,13 @@ from ui.work_editor_support import (
     WorkEditorPayloadAdapter,
     WorkEditorToolRemoveDropButton,
     SelectorSessionBridge,
+    apply_fixture_selection_to_operation,
+    apply_fixture_selector_result,
     apply_jaw_selector_result,
     apply_tool_selector_result,
     build_general_tab_ui,
     build_initial_jaw_assignments,
+    build_machining_center_zeros_tab_ui,
     build_notes_tab_ui,
     build_spindles_tab_ui,
     build_tools_tab_ui,
@@ -60,6 +63,7 @@ from ui.work_editor_support import (
     on_tool_list_interaction,
     open_combined_tools_jaws_selector_session,
     open_external_selector_session_for_dialog,
+    open_fixture_selector_session,
     open_jaw_selector_session,
     open_pot_editor_dialog,
     open_tool_selector_session,
@@ -136,6 +140,8 @@ def _section_label(text: str) -> QLabel:
 
 
 class WorkEditorDialog(QDialog):
+    WORK_COORDINATES = WORK_COORDINATES
+
     def __init__(
         self,
         draw_service,
@@ -146,6 +152,7 @@ class WorkEditorDialog(QDialog):
         group_edit_mode: bool = False,
         group_count: int | None = None,
         drawings_enabled: bool = True,
+        machine_profile_key: str | None = None,
     ):
         super().__init__(parent)
         self.draw_service = draw_service
@@ -158,10 +165,27 @@ class WorkEditorDialog(QDialog):
         self._drawings_enabled = drawings_enabled
         try:
             prefs_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True)
-            profile_key = prefs_service.get_machine_profile_key()
-            self.machine_profile = load_profile(profile_key)
+            _prefs_data = prefs_service.load()
+            profile_key = str(machine_profile_key or "").strip() or str(
+                _prefs_data.get("machine_profile_key") or "ntx_2sp_2h"
+            )
+            base_profile = load_profile(profile_key)
+            try:
+                from machine_profiles import apply_machining_center_overrides
+                self.machine_profile = apply_machining_center_overrides(
+                    base_profile,
+                    fourth_axis_letter=_prefs_data.get("mc_fourth_axis_letter"),
+                    fifth_axis_letter=_prefs_data.get("mc_fifth_axis_letter"),
+                    has_turning_option=_prefs_data.get("mc_has_turning_option"),
+                )
+            except Exception:
+                self.machine_profile = base_profile
+            self._op20_jaws_enabled = bool(_prefs_data.get("op20_jaws_default", False))
+            self._op20_tools_enabled = bool(_prefs_data.get("op20_tools_default", False))
         except Exception:
             self.machine_profile = NTX_MACHINE_PROFILE
+            self._op20_jaws_enabled = False
+            self._op20_tools_enabled = False
         self._payload_adapter = WorkEditorPayloadAdapter(self.machine_profile)
         self._zero_axes = tuple(self.machine_profile.zero_axes)
         self._head_profiles = {head.key: head for head in self.machine_profile.heads}
@@ -198,6 +222,7 @@ class WorkEditorDialog(QDialog):
             normalize_spindle=self._normalize_selector_spindle,
             default_spindle=self._default_selector_spindle,
             initial_tool_assignment_buckets=self._selector_initial_tool_assignment_buckets,
+            apply_fixture_result=self._apply_fixture_selector_result,
             apply_tool_result=self._apply_tool_selector_result,
             apply_jaw_result=self._apply_jaw_selector_result,
             open_jaw_selector=self._open_jaw_selector,
@@ -335,8 +360,14 @@ class WorkEditorDialog(QDialog):
     def _apply_tool_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
         return apply_tool_selector_result(self, request, selected_items)
 
+    def _apply_fixture_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
+        return apply_fixture_selector_result(self, request, selected_items)
+
     def _apply_jaw_selector_result(self, request: dict, selected_items: list[dict]) -> bool:
         return apply_jaw_selector_result(self, request, selected_items)
+
+    def _apply_fixture_selection_to_operation(self, operation_key: str, selected_items: list[dict]) -> bool:
+        return apply_fixture_selection_to_operation(self, operation_key, selected_items)
 
     def _on_jaw_dropped_in_selector_panel(self, jaw: dict, spindle_key: str = "main") -> None:
         """Handle jaw dropped onto a selector panel from Tools library.
@@ -417,6 +448,13 @@ class WorkEditorDialog(QDialog):
         build_spindles_tab_ui(self, jaw_selector_panel_cls=WorkEditorJawSelectorPanel)
 
     def _build_zeros_tab(self):
+        if str(getattr(self.machine_profile, 'machine_type', '') or '').strip().lower() == 'machining_center':
+            build_machining_center_zeros_tab_ui(
+                self,
+                create_titled_section_fn=create_titled_section,
+                work_coordinates=self.WORK_COORDINATES,
+            )
+            return
         build_zeros_tab_ui(
             self,
             jaw_selector_panel_cls=WorkEditorJawSelectorPanel,
@@ -531,6 +569,22 @@ class WorkEditorDialog(QDialog):
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
         return open_jaw_selector_session(self, initial_spindle=initial_spindle)
 
+    def _open_fixture_selector(self, operation_key: str) -> bool:
+        op = next(
+            (
+                item
+                for item in getattr(self, '_mc_operations', [])
+                if str(item.get('op_key') or '').strip() == str(operation_key or '').strip()
+            ),
+            None,
+        )
+        initial_assignments = list((op or {}).get('fixture_items') or [])
+        return open_fixture_selector_session(
+            self,
+            operation_key=str(operation_key or '').strip(),
+            initial_assignments=initial_assignments,
+        )
+
     def _open_combined_tools_jaws_selector(self):
         open_combined_tools_jaws_selector_session(self)
 
@@ -558,6 +612,22 @@ class WorkEditorDialog(QDialog):
         if not self.work:
             return
         self._payload_adapter.populate_dialog(self, self.work)
+        # For single-spindle profiles: auto-enable OP20 sections when the saved
+        # work already contains sub jaw or sub tool data.
+        if self.machine_profile.spindle_count == 1:
+            _has_sub_jaw = bool(str(self.work.get("sub_jaw_id") or "").strip())
+            _has_sub_tools = any(
+                bool((self._ordered_tool_lists.get(hk) or None) and
+                     (self._ordered_tool_lists[hk]._assignments_by_spindle.get("sub") or []))
+                for hk in self._head_profiles
+            )
+            if _has_sub_jaw or _has_sub_tools:
+                self._op20_jaws_enabled = True
+                self._op20_tools_enabled = True
+                if hasattr(self, "op20_jaws_checkbox"):
+                    self.op20_jaws_checkbox.setChecked(True)
+                if hasattr(self, "op20_tools_checkbox"):
+                    self.op20_tools_checkbox.setChecked(True)
         for head_key in self._head_profiles.keys():
             self._refresh_tool_head_widgets(head_key)
         self._sync_tool_head_view()

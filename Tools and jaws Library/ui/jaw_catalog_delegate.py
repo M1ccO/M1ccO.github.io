@@ -67,6 +67,23 @@ def _is_sub_spindle_jaw(jaw: dict) -> bool:
     return ('sub' in spindle_side or 'vasta' in spindle_side or 'ala' in spindle_side)
 
 
+def _normalize_spindle_side_key(value: str) -> str:
+    text = str(value or '').strip().lower().replace('_', ' ')
+    if not text:
+        return ''
+    if text in {'both', 'molemmat'}:
+        return 'both'
+    if text in {'main spindle', 'main', 'head1', 'sp1'}:
+        return 'main_spindle'
+    if text in {'sub spindle', 'sub', 'counter spindle', 'head2', 'sp2'}:
+        return 'sub_spindle'
+    if 'pää' in text or 'yla' in text or 'ylä' in text:
+        return 'main_spindle'
+    if 'vasta' in text or 'ala' in text:
+        return 'sub_spindle'
+    return text.replace(' ', '_')
+
+
 class JawCatalogDelegate(CatalogDelegate):
     def __init__(self, parent=None, translate: Callable | None = None):
         super().__init__(parent)
@@ -183,8 +200,9 @@ class JawCatalogDelegate(CatalogDelegate):
             f"jaw_library.jaw_type.{(jaw.get('jaw_type') or '').strip().lower().replace(' ', '_')}",
             jaw.get('jaw_type', ''),
         )
+        spindle_key = _normalize_spindle_side_key(jaw.get('spindle_side', ''))
         spindle = self._t(
-            f"jaw_library.spindle_side.{(jaw.get('spindle_side') or '').strip().lower().replace(' ', '_')}",
+            f"jaw_library.spindle_side.{spindle_key}",
             jaw.get('spindle_side', ''),
         )
         all_columns = [

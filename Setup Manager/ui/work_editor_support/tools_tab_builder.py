@@ -42,8 +42,8 @@ def build_tools_tab_ui(
     dialog.tools_head_switch = QPushButton()
     dialog.tools_head_switch.setProperty("panelActionButton", True)
     dialog.tools_head_switch.setCheckable(True)
-    dialog.tools_head_switch.setMinimumWidth(112)
-    dialog.tools_head_switch.setMaximumWidth(146)
+    dialog.tools_head_switch.setMinimumWidth(220)
+    dialog.tools_head_switch.setMaximumWidth(320)
     dialog.tools_head_switch.setFixedHeight(30)
     dialog.tools_head_switch.clicked.connect(dialog._toggle_tools_head_view)
     dialog.tools_head_switch.setProperty("head", next(iter(dialog._head_profiles.keys()), "HEAD1"))
@@ -57,6 +57,16 @@ def build_tools_tab_ui(
     dialog.open_tool_selector_btn.setProperty("panelActionButton", True)
     dialog.open_tool_selector_btn.clicked.connect(dialog._open_tool_selector)
     toolbar.addWidget(dialog.open_tool_selector_btn)
+
+    _is_single_spindle = dialog.machine_profile.spindle_count == 1
+    dialog.op20_tools_checkbox = QCheckBox(
+        dialog._t("work_editor.tools.include_op20", "Include OP20 tools")
+    )
+    apply_shared_checkbox_style(dialog.op20_tools_checkbox, indicator_size=16, min_height=30)
+    dialog.op20_tools_checkbox.setFixedHeight(30)
+    dialog.op20_tools_checkbox.setChecked(getattr(dialog, '_op20_tools_enabled', False))
+    dialog.op20_tools_checkbox.setVisible(_is_single_spindle)
+    toolbar.addWidget(dialog.op20_tools_checkbox)
 
     toolbar.addStretch(1)
 
@@ -92,22 +102,24 @@ def build_tools_tab_ui(
     layout.addLayout(toolbar)
 
     host = ResponsiveColumnsHost(switch_width=820)
+    _is_single_sp_tools = dialog.machine_profile.spindle_count == 1
     for head in dialog.machine_profile.heads:
         # Main/sub columns of the same head must stay in lockstep with one backing
         # assignment store so drag/drop and selector callbacks stay deterministic.
         shared_assignments = {"main": [], "sub": []}
-        main_ordered = ordered_tool_list_cls(
-            dialog._spindle_label("main", "Main spindle tools"),
-            head.key,
-            translate=dialog._t,
-        )
-        sub_ordered = ordered_tool_list_cls(
-            dialog._spindle_label("sub", "Sub spindle tools"),
-            head.key,
-            translate=dialog._t,
-        )
+        if _is_single_sp_tools:
+            _main_lbl = dialog._t("work_editor.tools.op10_tools", "OP10 tools")
+            _sub_lbl  = dialog._t("work_editor.tools.op20_tools", "OP20 tools")
+        else:
+            _main_lbl = dialog._t("work_editor.tools.main_spindle_tools", "Main spindle tools")
+            _sub_lbl  = dialog._t("work_editor.tools.sub_spindle_tools", "Sub spindle tools")
+        main_ordered = ordered_tool_list_cls(_main_lbl, head.key, translate=dialog._t)
+        sub_ordered  = ordered_tool_list_cls(_sub_lbl,  head.key, translate=dialog._t)
         main_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Single-spindle: OP20 column hidden until user enables it via checkbox.
+        if _is_single_sp_tools:
+            sub_ordered.setVisible(getattr(dialog, '_op20_tools_enabled', False))
         main_ordered.spindle_selector.setVisible(False)
         sub_ordered.spindle_selector.setVisible(False)
         main_ordered.set_controls_visible(False)
@@ -201,6 +213,13 @@ def build_tools_tab_ui(
     shared_actions_layout.addWidget(dialog.shared_delete_comment_btn)
     shared_actions_layout.addStretch(1)
     layout.addWidget(dialog.shared_tool_actions, 0)
+    # Wire OP20 tools checkbox (single-spindle only) to show/hide all sub columns.
+    if _is_single_sp_tools and hasattr(dialog, 'op20_tools_checkbox'):
+        def _apply_op20_tools(checked: bool, _d=dialog):
+            _d._op20_tools_enabled = checked
+            _d._sync_tool_head_view()
+        dialog.op20_tools_checkbox.toggled.connect(_apply_op20_tools)
+
     sync_tool_head_view(dialog)
     update_shared_tool_actions(dialog)
 

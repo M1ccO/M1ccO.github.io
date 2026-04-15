@@ -14,7 +14,12 @@ from .icon_resolvers import toolbar_icon, tool_icon_for_type, tool_icon_for_type
 from .jaw_selector_panel import WorkEditorJawSelectorPanel
 from .model import WorkEditorPayloadAdapter
 from .ordered_tool_list import WorkEditorOrderedToolList
+from .machining_center import (
+    apply_fixture_selection_to_operation,
+    build_machining_center_zeros_tab_ui,
+)
 from .selectors import (
+    apply_fixture_selector_items_to_operations,
     apply_jaw_selector_items_to_selectors,
     apply_tool_selector_items_to_ordered_list,
     build_tool_selector_bucket,
@@ -37,10 +42,12 @@ from .pot_editor import open_pot_editor_dialog
 from .selector_flow import (
     build_initial_jaw_assignments,
     open_combined_tools_jaws_selector_session,
+    open_fixture_selector_session,
     open_jaw_selector_session,
     open_tool_selector_session,
 )
 from .selector_adapter import (
+    apply_fixture_selector_result,
     apply_jaw_selector_result,
     apply_tool_selector_result,
     head_label,
@@ -95,6 +102,8 @@ from .zero_points import (
 __all__ = [
     "WorkEditorPayloadAdapter",
     "WorkEditorOrderedToolList",
+    "build_machining_center_zeros_tab_ui",
+    "apply_fixture_selection_to_operation",
     "SelectorSessionBridge",
     "WorkEditorToolAssignmentListWidget",
     "WorkEditorToolRemoveDropButton",
@@ -109,6 +118,7 @@ __all__ = [
     "tool_icon_for_type_in_spindle",
     "WorkEditorJawSelectorPanel",
     "apply_jaw_selector_items_to_selectors",
+    "apply_fixture_selector_items_to_operations",
     "apply_tool_selector_items_to_ordered_list",
     "build_tool_selector_bucket",
     "jaw_ref_key",
@@ -136,12 +146,14 @@ __all__ = [
     "open_pot_editor_dialog",
     "on_tool_list_interaction",
     "open_combined_tools_jaws_selector_session",
+    "open_fixture_selector_session",
     "open_jaw_selector_session",
     "open_tool_selector_session",
     "head_label",
     "spindle_label",
     "merge_tool_refs",
     "merge_jaw_refs",
+    "apply_fixture_selector_result",
     "apply_tool_selector_result",
     "apply_jaw_selector_result",
     "show_selector_warning_for_dialog",

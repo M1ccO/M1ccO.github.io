@@ -20,6 +20,7 @@ def create_work(page) -> None:
         parent=page,
         translate=page._t,
         drawings_enabled=page.drawings_enabled,
+        machine_profile_key=page.work_service.get_machine_profile_key(),
     )
     if dialog.exec() != QDialog.Accepted:
         return
@@ -61,6 +62,7 @@ def edit_work(page) -> None:
         parent=page,
         translate=page._t,
         drawings_enabled=page.drawings_enabled,
+        machine_profile_key=page.work_service.get_machine_profile_key(),
     )
     if dialog.exec() != QDialog.Accepted:
         return

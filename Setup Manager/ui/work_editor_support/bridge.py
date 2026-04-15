@@ -31,6 +31,7 @@ class SelectorSessionBridge(QObject):
         initial_tool_assignment_buckets: Callable[[], dict[str, list[dict]]],
         apply_tool_result: Callable[[dict, list[dict]], bool],
         apply_jaw_result: Callable[[dict, list[dict]], bool],
+        apply_fixture_result: Callable[[dict, list[dict]], bool],
         open_jaw_selector: Callable[[str | None], bool | None],
         tool_library_server_name: str,
         tool_library_main_path: Path,
@@ -49,6 +50,7 @@ class SelectorSessionBridge(QObject):
         self._initial_tool_assignment_buckets = initial_tool_assignment_buckets
         self._apply_tool_result = apply_tool_result
         self._apply_jaw_result = apply_jaw_result
+        self._apply_fixture_result = apply_fixture_result
         self._open_jaw_selector = open_jaw_selector
         self._tool_library_server_name = tool_library_server_name
         self._tool_library_main_path = Path(tool_library_main_path)
@@ -112,7 +114,13 @@ class SelectorSessionBridge(QObject):
         follow_up: dict | None = None,
         initial_assignments: list[dict] | None = None,
     ) -> bool:
-        selector_kind = "jaws" if str(kind or "").strip().lower() == "jaws" else "tools"
+        raw_kind = str(kind or "").strip().lower()
+        if raw_kind == 'jaws':
+            selector_kind = 'jaws'
+        elif raw_kind == 'fixtures':
+            selector_kind = 'fixtures'
+        else:
+            selector_kind = 'tools'
         if not self.ensure_server():
             return False
 
@@ -144,6 +152,7 @@ class SelectorSessionBridge(QObject):
             "kind": selector_kind,
             "head": normalized_head,
             "spindle": normalized_spindle,
+            "target_key": str((follow_up or {}).get("target_key") or "").strip(),
             "follow_up": dict(follow_up) if isinstance(follow_up, dict) else None,
         }
 
@@ -309,6 +318,20 @@ class SelectorSessionBridge(QObject):
                 )
                 return
             handled = self._apply_jaw_result(request, selected_items)
+        elif kind == 'fixtures':
+            selected_items = payload.get('fixtures')
+            if not isinstance(selected_items, list):
+                selected_items = payload.get('selected_items')
+            if not isinstance(selected_items, list):
+                self._show_warning(
+                    self._t("work_editor.selector.malformed_callback.title", "Selection callback failed"),
+                    self._t(
+                        "work_editor.selector.malformed_callback.body",
+                        "Tool Library returned an invalid fixture selection payload.",
+                    ),
+                )
+                return
+            handled = self._apply_fixture_result(request, selected_items)
         else:
             self._show_warning(
                 self._t("work_editor.selector.malformed_callback.title", "Selection callback failed"),

@@ -16,7 +16,7 @@ def empty_selector_session_state() -> dict:
 
 def selector_session_from_payload(payload: dict) -> dict:
     mode = str((payload or {}).get("selector_mode", "") or "").strip().lower()
-    if mode not in {"tools", "jaws"}:
+    if mode not in {"tools", "jaws", "fixtures"}:
         return empty_selector_session_state()
 
     raw_assignments = (payload or {}).get("current_assignments")

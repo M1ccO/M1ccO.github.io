@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from machine_profiles import KNOWN_HEAD_KEYS, KNOWN_SPINDLE_KEYS, MachineProfile
+from .machining_center import collect_machining_center_payload, load_machining_center_payload
 
 
 class WorkEditorPayloadAdapter:
@@ -54,6 +55,14 @@ class WorkEditorPayloadAdapter:
         dialog.raw_part_od_input.setText(payload.get("raw_part_od", ""))
         dialog.raw_part_id_input.setText(payload.get("raw_part_id", ""))
         dialog.raw_part_length_input.setText(payload.get("raw_part_length", ""))
+        dialog.raw_part_side_input.setText(payload.get("raw_part_side", ""))
+        dialog.raw_part_square_length_input.setText(payload.get("raw_part_square_length", ""))
+        dialog.raw_part_custom_fields_input.setPlainText(payload.get("raw_part_custom_fields", ""))
+        _kind = str(payload.get("raw_part_kind", "bar") or "bar").strip().lower()
+        if _kind not in {"bar", "square", "custom"}:
+            _kind = "bar"
+        _kind_idx = {"bar": 0, "square": 1, "custom": 2}[_kind]
+        dialog.raw_part_kind_combo.setCurrentIndex(_kind_idx)
 
         for spindle in self.profile.spindles:
             selector = dialog._jaw_selectors.get(spindle.key)
@@ -62,7 +71,19 @@ class WorkEditorPayloadAdapter:
             selector.set_value(payload.get(self.jaw_field(spindle.key), ""))
             selector.set_stop_screws(payload.get(self.stop_screws_field(spindle.key), ""))
 
+        # For single-spindle profiles the "sub" (OP20) jaw selector is not part of
+        # profile.spindles, but it still needs to be pre-populated so that opening
+        # an existing work with OP20 data shows the correct jaw.
+        if self.profile.spindle_count == 1:
+            _sub_sel = dialog._jaw_selectors.get("sub")
+            if _sub_sel is not None:
+                _sub_sel.set_value(payload.get(self.jaw_field("sub"), ""))
+                _sub_sel.set_stop_screws(payload.get(self.stop_screws_field("sub"), ""))
+
         dialog.main_program_input.setText(payload.get("main_program", ""))
+
+        if str(getattr(self.profile, "machine_type", "") or "").strip().lower() == "machining_center":
+            load_machining_center_payload(dialog, payload)
 
         for head in self.profile.heads:
             program_input = dialog._sub_program_inputs.get(head.key)
@@ -113,15 +134,24 @@ class WorkEditorPayloadAdapter:
                     if drawings_enabled
                     else (persisted_work or {}).get("drawing_path", "")
                 ),
+                "raw_part_kind": (dialog.raw_part_kind_combo.currentData() or "bar"),
                 "raw_part_od": dialog.raw_part_od_input.text().strip(),
                 "raw_part_id": dialog.raw_part_id_input.text().strip(),
                 "raw_part_length": dialog.raw_part_length_input.text().strip(),
+                "raw_part_side": dialog.raw_part_side_input.text().strip(),
+                "raw_part_square_length": dialog.raw_part_square_length_input.text().strip(),
+                "raw_part_custom_fields": dialog.raw_part_custom_fields_input.toPlainText().strip(),
                 "main_program": dialog.main_program_input.text().strip(),
                 "robot_info": dialog.robot_info_input.toPlainText().strip(),
                 "notes": dialog.notes_input.toPlainText().strip(),
                 "print_pots": bool(getattr(dialog, "print_pots_checkbox", None) and dialog.print_pots_checkbox.isChecked()),
             }
         )
+
+        if str(getattr(self.profile, "machine_type", "") or "").strip().lower() == "machining_center":
+            mc_operation_count, mc_operations = collect_machining_center_payload(dialog)
+            payload["mc_operation_count"] = mc_operation_count
+            payload["mc_operations"] = mc_operations
 
         if hasattr(dialog, "sub_pickup_z_input"):
             payload["sub_pickup_z"] = dialog.sub_pickup_z_input.text().strip()

@@ -33,6 +33,10 @@ class MachineHeadProfile:
     # profiles should set this to False because orientation is meaningless.
     allows_dual_spindle_orientation: bool = True
 
+    # Machining center flag — true when this head represents the single
+    # milling spindle of a machining center rather than a lathe head.
+    is_machining_center_head: bool = False
+
 
 # ---------------------------------------------------------------------------
 # Spindle profile — describes one spindle / operation context
@@ -75,6 +79,16 @@ class MachineProfile:
     # Single-spindle profiles set this to True.  Drives OP10/OP20 terminology
     # wherever Main spindle / Sub spindle labels would otherwise appear.
     use_op_terminology: bool = False
+
+    # ---------------------------------------------------------------------------
+    # Machining Center fields
+    # These are only meaningful when machine_type == "machining_center".
+    # For lathe profiles they remain at default and are ignored.
+    # ---------------------------------------------------------------------------
+    axis_count: int = 3                  # 3, 4, or 5
+    fourth_axis_letter: str = "C"        # used when axis_count >= 4
+    fifth_axis_letter: str = "B"         # used when axis_count == 5
+    has_turning_option: bool = False     # enables lathe tool types in Tool Library
 
     # ---------------------------------------------------------------------------
     # Lookup helpers
@@ -402,17 +416,129 @@ LATHE_1SP_1MILL = MachineProfile(
 
 
 # ---------------------------------------------------------------------------
+# Profile 6 — Machining Center 3-Axis
+# Machining centers have no lathe-style spindles, no jaws.
+# The single milling head uses operations keyed by OP10/OP20/OP30/...
+# Fixtures (not jaws) are used to hold the workpiece.
+# ---------------------------------------------------------------------------
+MACHINING_CENTER_3AX = MachineProfile(
+    key="machining_center_3ax",
+    name="Machining Center — 3 Axis",
+    spindles=(),                        # no spindle concept
+    heads=(
+        MachineHeadProfile(
+            key="HEAD1",
+            label_key="work_editor.tools.head1",
+            label_default="Milling Spindle",
+            default_coord="G54",
+            head_type="milling",
+            allows_rotating_tools=True,
+            allows_b_axis=False,
+            allows_dual_spindle_orientation=False,
+            is_machining_center_head=True,
+        ),
+    ),
+    zero_axes=("x", "y", "z"),
+    supports_sub_pickup=False,
+    supports_print_pots=False,
+    supports_zero_xy_toggle=False,
+    default_zero_xy_visible=True,
+    default_tools_spindle="main",
+    machine_type="machining_center",
+    use_op_terminology=True,
+    axis_count=3,
+    fourth_axis_letter="C",
+    fifth_axis_letter="B",
+    has_turning_option=False,
+)
+
+
+# ---------------------------------------------------------------------------
+# Profile 7 — Machining Center 4-Axis (adds a rotary axis, default letter C)
+# ---------------------------------------------------------------------------
+MACHINING_CENTER_4AX = MachineProfile(
+    key="machining_center_4ax",
+    name="Machining Center — 4 Axis",
+    spindles=(),
+    heads=(
+        MachineHeadProfile(
+            key="HEAD1",
+            label_key="work_editor.tools.head1",
+            label_default="Milling Spindle",
+            default_coord="G54",
+            head_type="milling",
+            allows_rotating_tools=True,
+            allows_b_axis=False,
+            allows_dual_spindle_orientation=False,
+            is_machining_center_head=True,
+        ),
+    ),
+    zero_axes=("x", "y", "z", "c"),
+    supports_sub_pickup=False,
+    supports_print_pots=False,
+    supports_zero_xy_toggle=False,
+    default_zero_xy_visible=True,
+    default_tools_spindle="main",
+    machine_type="machining_center",
+    use_op_terminology=True,
+    axis_count=4,
+    fourth_axis_letter="C",
+    fifth_axis_letter="B",
+    has_turning_option=False,
+)
+
+
+# ---------------------------------------------------------------------------
+# Profile 8 — Machining Center 5-Axis (two rotary axes, defaults B + C)
+# Enables B-axis tool orientation on the milling head.
+# ---------------------------------------------------------------------------
+MACHINING_CENTER_5AX = MachineProfile(
+    key="machining_center_5ax",
+    name="Machining Center — 5 Axis",
+    spindles=(),
+    heads=(
+        MachineHeadProfile(
+            key="HEAD1",
+            label_key="work_editor.tools.head1",
+            label_default="Milling Spindle",
+            default_coord="G54",
+            head_type="milling",
+            allows_rotating_tools=True,
+            allows_b_axis=True,
+            allows_dual_spindle_orientation=False,
+            is_machining_center_head=True,
+        ),
+    ),
+    zero_axes=("x", "y", "z", "b", "c"),
+    supports_sub_pickup=False,
+    supports_print_pots=False,
+    supports_zero_xy_toggle=False,
+    default_zero_xy_visible=True,
+    default_tools_spindle="main",
+    machine_type="machining_center",
+    use_op_terminology=True,
+    axis_count=5,
+    fourth_axis_letter="C",
+    fifth_axis_letter="B",
+    has_turning_option=False,
+)
+
+
+# ---------------------------------------------------------------------------
 # Registry — all keys are lowercased for case-insensitive lookup
 # ---------------------------------------------------------------------------
 DEFAULT_PROFILE_KEY = "ntx_2sp_2h"
 
 PROFILE_REGISTRY: dict[str, MachineProfile] = {
     # canonical keys
-    "ntx_2sp_2h":       NTX_MACHINE_PROFILE,
-    "lathe_2sp_1mill":  LATHE_2SP_1MILL,
-    "lathe_2sp_3h":     LATHE_2SP_3H,
-    "lathe_1sp_1h":     LATHE_1SP_1H,
-    "lathe_1sp_1mill":  LATHE_1SP_1MILL,
+    "ntx_2sp_2h":           NTX_MACHINE_PROFILE,
+    "lathe_2sp_1mill":      LATHE_2SP_1MILL,
+    "lathe_2sp_3h":         LATHE_2SP_3H,
+    "lathe_1sp_1h":         LATHE_1SP_1H,
+    "lathe_1sp_1mill":      LATHE_1SP_1MILL,
+    "machining_center_3ax": MACHINING_CENTER_3AX,
+    "machining_center_4ax": MACHINING_CENTER_4AX,
+    "machining_center_5ax": MACHINING_CENTER_5AX,
     # legacy alias kept for any stored preference values that used the old key
     "ntx_dual_spindle_dual_head": NTX_MACHINE_PROFILE,
 }
@@ -424,7 +550,17 @@ PROFILE_DISPLAY_ORDER: list[str] = [
     "lathe_2sp_3h",
     "lathe_1sp_1h",
     "lathe_1sp_1mill",
+    "machining_center_3ax",
+    "machining_center_4ax",
+    "machining_center_5ax",
 ]
+
+
+def is_machining_center(profile: MachineProfile | None) -> bool:
+    """Return True when the profile describes a machining center."""
+    if profile is None:
+        return False
+    return str(profile.machine_type).strip().lower() == "machining_center"
 
 
 def load_profile(profile_key: str | None) -> MachineProfile:
@@ -433,3 +569,37 @@ def load_profile(profile_key: str | None) -> MachineProfile:
     if normalized and normalized in PROFILE_REGISTRY:
         return PROFILE_REGISTRY[normalized]
     return PROFILE_REGISTRY[DEFAULT_PROFILE_KEY]
+
+
+def apply_machining_center_overrides(
+    profile: MachineProfile,
+    *,
+    fourth_axis_letter: str | None = None,
+    fifth_axis_letter: str | None = None,
+    has_turning_option: bool | None = None,
+) -> MachineProfile:
+    """Return a new MachineProfile with user-configurable MC overrides applied.
+
+    Non-MC profiles are returned unchanged.  Axis-letter overrides are ignored
+    unless the profile's ``axis_count`` supports them.
+    """
+    from dataclasses import replace
+
+    if not is_machining_center(profile):
+        return profile
+
+    kwargs: dict = {}
+    if fourth_axis_letter is not None and profile.axis_count >= 4:
+        letter = str(fourth_axis_letter).strip().upper()
+        if letter:
+            kwargs["fourth_axis_letter"] = letter
+    if fifth_axis_letter is not None and profile.axis_count == 5:
+        letter = str(fifth_axis_letter).strip().upper()
+        if letter:
+            kwargs["fifth_axis_letter"] = letter
+    if has_turning_option is not None:
+        kwargs["has_turning_option"] = bool(has_turning_option)
+
+    if not kwargs:
+        return profile
+    return replace(profile, **kwargs)

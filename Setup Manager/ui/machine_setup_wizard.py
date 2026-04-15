@@ -23,6 +23,7 @@ from typing import Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup,
+    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -30,6 +31,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -80,6 +82,12 @@ class _WizardState:
     head_rotating: list[bool]          # allow rotating tools
     head_b_axis: list[bool]            # allow b_axis_angle
 
+    # Machining center state (only meaningful when machine_type == machining_center)
+    mc_axis_count: int = 3             # 3 | 4 | 5
+    mc_fourth_axis_letter: str = "C"
+    mc_fifth_axis_letter: str = "B"
+    mc_has_turning_option: bool = False
+
     def __init__(self) -> None:
         self.machine_type = "lathe"
         self.spindle_count = 2
@@ -87,6 +95,10 @@ class _WizardState:
         self.head_types = ["turret", "turret", "turret"]
         self.head_rotating = [False, False, False]
         self.head_b_axis = [False, False, False]
+        self.mc_axis_count = 3
+        self.mc_fourth_axis_letter = "C"
+        self.mc_fifth_axis_letter = "B"
+        self.mc_has_turning_option = False
 
     def resolve_profile_key(self) -> str:
         """Map the current wizard state to the closest matching preset key.
@@ -96,6 +108,13 @@ class _WizardState:
         2. Closest partial match
         3. Default fallback (ntx_2sp_2h)
         """
+        if self.machine_type == "machining_center":
+            if self.mc_axis_count == 5:
+                return "machining_center_5ax"
+            if self.mc_axis_count == 4:
+                return "machining_center_4ax"
+            return "machining_center_3ax"
+
         sc = self.spindle_count
         hc = self.head_count
         # Check head types for 'milling' presence
@@ -148,15 +167,15 @@ class _MachineTypePage(_Page):
 
         desc = QLabel(translate(
             "wizard.step1.description",
-            "Select the machine family. Machining Center support is reserved for a future release.",
+            "Select the machine family. Lathes use spindles and jaws; "
+            "machining centers use fixtures and operation-keyed zero points.",
         ))
         desc.setWordWrap(True)
         desc.setProperty("detailHint", True)
         layout.addWidget(desc)
 
         self._lathe_radio = QRadioButton(translate("wizard.machine_type.lathe", "Lathe (turning center)"))
-        self._mc_radio = QRadioButton(translate("wizard.machine_type.machining_center", "Machining Center (future)"))
-        self._mc_radio.setEnabled(False)
+        self._mc_radio = QRadioButton(translate("wizard.machine_type.machining_center", "Machining Center"))
         self._lathe_radio.setChecked(True)
 
         group_box = QGroupBox()
@@ -374,6 +393,115 @@ class _HeadConfigPage(_Page):
             self._state.head_rotating[i] = bool(widgets["rotating_combo"].currentData())
 
 
+class _MachiningCenterConfigPage(_Page):
+    """Machining center configuration — axis count, axis letters, turning option."""
+
+    def __init__(self, state, translate, parent=None):
+        super().__init__(state, translate, parent)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+
+        title = QLabel(translate("wizard.mc.title", "Machining Center Configuration"))
+        title.setProperty("sectionTitle", True)
+        layout.addWidget(title)
+
+        desc = QLabel(translate(
+            "wizard.mc.description",
+            "Configure the number of axes and optional capabilities.\n"
+            "Axis-letter defaults follow the common C (rotary) and B (tilt) convention.",
+        ))
+        desc.setWordWrap(True)
+        desc.setProperty("detailHint", True)
+        layout.addWidget(desc)
+
+        # ---- Axis count ----
+        axis_box = QGroupBox(translate("wizard.mc.axis_count", "Axis count"))
+        axis_layout = QVBoxLayout(axis_box)
+        self._ax3_radio = QRadioButton(translate("wizard.mc.ax3", "3-Axis (X / Y / Z)"))
+        self._ax4_radio = QRadioButton(translate("wizard.mc.ax4", "4-Axis (adds one rotary axis)"))
+        self._ax5_radio = QRadioButton(translate("wizard.mc.ax5", "5-Axis (adds two rotary axes)"))
+        self._ax3_radio.setChecked(True)
+        axis_layout.addWidget(self._ax3_radio)
+        axis_layout.addWidget(self._ax4_radio)
+        axis_layout.addWidget(self._ax5_radio)
+        layout.addWidget(axis_box)
+
+        # ---- Axis letters ----
+        self._letters_box = QGroupBox(translate("wizard.mc.axis_letters", "Axis letters"))
+        letters_layout = QVBoxLayout(self._letters_box)
+
+        fourth_row = QHBoxLayout()
+        self._fourth_label = QLabel(translate("wizard.mc.fourth", "Fourth axis letter:"))
+        self._fourth_label.setMinimumWidth(150)
+        self._fourth_edit = QLineEdit("C")
+        self._fourth_edit.setMaxLength(1)
+        self._fourth_edit.setFixedWidth(60)
+        fourth_row.addWidget(self._fourth_label)
+        fourth_row.addWidget(self._fourth_edit)
+        fourth_row.addStretch(1)
+        letters_layout.addLayout(fourth_row)
+
+        fifth_row = QHBoxLayout()
+        self._fifth_label = QLabel(translate("wizard.mc.fifth", "Fifth axis letter:"))
+        self._fifth_label.setMinimumWidth(150)
+        self._fifth_edit = QLineEdit("B")
+        self._fifth_edit.setMaxLength(1)
+        self._fifth_edit.setFixedWidth(60)
+        fifth_row.addWidget(self._fifth_label)
+        fifth_row.addWidget(self._fifth_edit)
+        fifth_row.addStretch(1)
+        letters_layout.addLayout(fifth_row)
+        layout.addWidget(self._letters_box)
+
+        # ---- Turning option ----
+        self._turning_check = QCheckBox(translate(
+            "wizard.mc.turning_option",
+            "Enable turning option (allows lathe tool types in Tool Library)",
+        ))
+        layout.addWidget(self._turning_check)
+
+        layout.addStretch(1)
+
+        # Wire radio buttons to update axis-letter visibility
+        self._ax3_radio.toggled.connect(self._update_letter_visibility)
+        self._ax4_radio.toggled.connect(self._update_letter_visibility)
+        self._ax5_radio.toggled.connect(self._update_letter_visibility)
+
+    def _update_letter_visibility(self) -> None:
+        ax4 = self._ax4_radio.isChecked()
+        ax5 = self._ax5_radio.isChecked()
+        self._fourth_label.setVisible(ax4 or ax5)
+        self._fourth_edit.setVisible(ax4 or ax5)
+        self._fifth_label.setVisible(ax5)
+        self._fifth_edit.setVisible(ax5)
+        self._letters_box.setVisible(ax4 or ax5)
+
+    def on_enter(self):
+        if self._state.mc_axis_count == 5:
+            self._ax5_radio.setChecked(True)
+        elif self._state.mc_axis_count == 4:
+            self._ax4_radio.setChecked(True)
+        else:
+            self._ax3_radio.setChecked(True)
+        self._fourth_edit.setText(self._state.mc_fourth_axis_letter or "C")
+        self._fifth_edit.setText(self._state.mc_fifth_axis_letter or "B")
+        self._turning_check.setChecked(bool(self._state.mc_has_turning_option))
+        self._update_letter_visibility()
+
+    def on_leave(self):
+        if self._ax5_radio.isChecked():
+            self._state.mc_axis_count = 5
+        elif self._ax4_radio.isChecked():
+            self._state.mc_axis_count = 4
+        else:
+            self._state.mc_axis_count = 3
+        fourth = self._fourth_edit.text().strip().upper() or "C"
+        fifth = self._fifth_edit.text().strip().upper() or "B"
+        self._state.mc_fourth_axis_letter = fourth
+        self._state.mc_fifth_axis_letter = fifth
+        self._state.mc_has_turning_option = self._turning_check.isChecked()
+
+
 class _SummaryPage(_Page):
     def __init__(self, state, translate, parent=None):
         super().__init__(state, translate, parent)
@@ -393,6 +521,29 @@ class _SummaryPage(_Page):
     def on_enter(self):
         key = self._state.resolve_profile_key()
         profile = load_profile(key)
+
+        if self._state.machine_type == "machining_center":
+            axis_desc = f"{self._state.mc_axis_count}-Axis"
+            letters = []
+            if self._state.mc_axis_count >= 4:
+                letters.append(f"4th = {self._state.mc_fourth_axis_letter}")
+            if self._state.mc_axis_count == 5:
+                letters.append(f"5th = {self._state.mc_fifth_axis_letter}")
+            letters_desc = ", ".join(letters) if letters else "—"
+            turning_desc = (
+                "enabled" if self._state.mc_has_turning_option else "disabled"
+            )
+            text = (
+                f"<b>{self._t('wizard.summary.profile', 'Selected profile')}:</b> "
+                f"{profile.name}<br><br>"
+                f"<b>{self._t('wizard.summary.axis_count', 'Axis count')}:</b> {axis_desc}<br>"
+                f"<b>{self._t('wizard.summary.axis_letters', 'Rotary axis letters')}:</b> {letters_desc}<br>"
+                f"<b>{self._t('wizard.summary.turning_option', 'Turning option')}:</b> {turning_desc}<br><br>"
+                f"<i>{self._t('wizard.summary.note', 'You can reconfigure this later via Preferences → Configure Machine.')}</i>"
+            )
+            self._body.setText(text)
+            return
+
         spindle_desc = (
             "1 spindle (OP10/OP20)"
             if self._state.spindle_count == 1
@@ -453,15 +604,20 @@ class MachineSetupWizard(QDialog):
         self._step_label.setProperty("sectionTitle", True)
         root.addWidget(self._step_label)
 
-        # Page stack
+        # Page stack.  Index 0 is always Machine Type; 1 is MC config (only
+        # reachable when MC is chosen); 2-4 are lathe pages; 5 is Summary.
         self._stack = QStackedWidget()
         self._pages: list[_Page] = [
-            _MachineTypePage(self._state, self._t),
-            _SpindleCountPage(self._state, self._t),
-            _HeadCountPage(self._state, self._t),
-            _HeadConfigPage(self._state, self._t),
-            _SummaryPage(self._state, self._t),
+            _MachineTypePage(self._state, self._t),           # 0
+            _MachiningCenterConfigPage(self._state, self._t), # 1 (MC only)
+            _SpindleCountPage(self._state, self._t),          # 2 (lathe only)
+            _HeadCountPage(self._state, self._t),             # 3 (lathe only)
+            _HeadConfigPage(self._state, self._t),            # 4 (lathe only)
+            _SummaryPage(self._state, self._t),               # 5
         ]
+        self._summary_index = 5
+        self._mc_config_index = 1
+        self._lathe_indices = (2, 3, 4)
         for page in self._pages:
             self._stack.addWidget(page)
         root.addWidget(self._stack, 1)
@@ -495,6 +651,20 @@ class MachineSetupWizard(QDialog):
 
     # ------------------------------------------------------------------
 
+    def _page_is_applicable(self, index: int) -> bool:
+        """Return True when a page should appear given the current machine type."""
+        if index == 0 or index == self._summary_index:
+            return True
+        is_mc = self._state.machine_type == "machining_center"
+        if index == self._mc_config_index:
+            return is_mc
+        if index in self._lathe_indices:
+            return not is_mc
+        return True
+
+    def _applicable_indices(self) -> list[int]:
+        return [i for i in range(len(self._pages)) if self._page_is_applicable(i)]
+
     def _go_to_page(self, index: int) -> None:
         if 0 <= self._current_page_index < len(self._pages):
             self._pages[self._current_page_index].on_leave()
@@ -504,8 +674,9 @@ class MachineSetupWizard(QDialog):
         page.on_enter()
         self._stack.setCurrentWidget(page)
 
-        total = len(self._pages)
-        current = self._current_page_index + 1
+        applicable = self._applicable_indices()
+        total = len(applicable)
+        current = applicable.index(self._current_page_index) + 1 if self._current_page_index in applicable else 1
         self._step_label.setText(
             self._t("wizard.step_indicator", f"Step {current} of {total}")
             .replace("{current}", str(current))
@@ -514,21 +685,49 @@ class MachineSetupWizard(QDialog):
             else f"{self._t('wizard.step', 'Step')} {current} / {total}"
         )
 
-        self._back_btn.setEnabled(self._current_page_index > 0)
-        is_last = self._current_page_index == len(self._pages) - 1
+        self._back_btn.setEnabled(current > 1)
+        is_last = self._current_page_index == self._summary_index
         self._next_btn.setText(
             self._t("wizard.finish", "Finish") if is_last else self._t("wizard.next", "Next")
         )
 
+    def _next_applicable(self, from_index: int, direction: int) -> int:
+        """Return the next applicable page index in the given direction."""
+        i = from_index + direction
+        while 0 <= i < len(self._pages):
+            if self._page_is_applicable(i):
+                return i
+            i += direction
+        return from_index
+
     def _go_back(self) -> None:
-        self._go_to_page(self._current_page_index - 1)
+        target = self._next_applicable(self._current_page_index, -1)
+        if target != self._current_page_index:
+            self._go_to_page(target)
 
     def _go_next(self) -> None:
-        if self._current_page_index >= len(self._pages) - 1:
+        if self._current_page_index == self._summary_index:
             self.accept()
-        else:
-            self._go_to_page(self._current_page_index + 1)
+            return
+        target = self._next_applicable(self._current_page_index, +1)
+        if target != self._current_page_index:
+            self._go_to_page(target)
 
     def selected_profile_key(self) -> str:
         """Return the profile key selected / derived by the wizard."""
         return self._state.resolve_profile_key()
+
+    def selected_mc_overrides(self) -> dict:
+        """Return the machining-center specific overrides chosen in the wizard.
+
+        Returns an empty dict for lathe profiles so callers can blindly merge
+        the result into preferences.
+        """
+        if self._state.machine_type != "machining_center":
+            return {}
+        return {
+            "mc_axis_count": int(self._state.mc_axis_count),
+            "mc_fourth_axis_letter": str(self._state.mc_fourth_axis_letter or "C"),
+            "mc_fifth_axis_letter": str(self._state.mc_fifth_axis_letter or "B"),
+            "mc_has_turning_option": bool(self._state.mc_has_turning_option),
+        }

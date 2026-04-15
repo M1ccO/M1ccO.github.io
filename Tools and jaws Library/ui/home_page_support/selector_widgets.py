@@ -6,7 +6,11 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QAbstractItemView, QListWidget, QPushButton
 
-from shared.ui.helpers.dragdrop_helpers import clear_selection_on_blank_click
+from shared.ui.helpers.dragdrop_helpers import (
+    build_text_drag_ghost,
+    build_widget_drag_ghost,
+    clear_selection_on_blank_click,
+)
 from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
 
 
@@ -53,6 +57,21 @@ class ToolAssignmentListWidget(QListWidget):
 
         drag = QDrag(self)
         drag.setMimeData(mime)
+
+        # Mirror jaw/work-editor behavior: show a translucent snapshot of the
+        # dragged card so reorder/drop targeting is easier to track visually.
+        preview_item = self.item(indexes[0].row())
+        preview_widget = self.itemWidget(preview_item) if preview_item is not None else None
+        ghost_applied = False
+        if preview_widget is not None:
+            ghost_applied = build_widget_drag_ghost(preview_widget, drag)
+        if not ghost_applied:
+            first_payload = payload[0] if payload else {}
+            label = str(first_payload.get('tool_id') or first_payload.get('id') or '').strip()
+            if not label:
+                label = f"{len(payload)} tool(s)"
+            build_text_drag_ghost(label, drag)
+
         drag.exec(Qt.MoveAction)
 
     def dragEnterEvent(self, event):

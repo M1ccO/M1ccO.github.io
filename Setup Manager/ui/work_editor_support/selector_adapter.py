@@ -4,6 +4,7 @@ from typing import Any
 
 from .bridge_actions import open_external_selector_session, show_selector_warning
 from .selectors import (
+    apply_fixture_selector_items_to_operations,
     apply_jaw_selector_items_to_selectors,
     apply_tool_selector_items_to_ordered_list,
     merge_jaw_refs_and_sync_selectors,
@@ -23,9 +24,11 @@ def head_label(dialog: Any, head_key: str, fallback: str | None = None) -> str:
 
 def spindle_label(dialog: Any, spindle_key: str, fallback: str | None = None) -> str:
     profile = dialog._spindle_profiles.get(normalize_selector_spindle(spindle_key))
-    default = fallback or (profile.label_default if profile is not None else spindle_key)
+    # Profile's own label_default always takes precedence; fallback is only used
+    # when the profile is completely absent (unknown spindle key).
     if profile is None:
-        return default
+        return fallback or spindle_key
+    default = profile.label_default
     return dialog._t(profile.label_key, default)
 
 
@@ -76,6 +79,14 @@ def apply_jaw_selector_result(dialog: Any, request: dict, selected_items: list[d
         selected_items,
         target_spindle=spindle,
         normalize_spindle_fn=normalize_selector_spindle,
+    )
+
+
+def apply_fixture_selector_result(dialog: Any, request: dict, selected_items: list[dict]) -> bool:
+    return apply_fixture_selector_items_to_operations(
+        dialog,
+        request=request,
+        selected_items=selected_items,
     )
 
 

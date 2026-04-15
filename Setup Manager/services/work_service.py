@@ -38,6 +38,29 @@ class WorkService:
         clean = [str(item).strip() for item in (values or []) if str(item).strip()]
         return json.dumps(clean, ensure_ascii=True)
 
+    @staticmethod
+    def _parse_json_object_list(raw_value):
+        if isinstance(raw_value, list):
+            return [item for item in raw_value if isinstance(item, dict)]
+        if not raw_value:
+            return []
+        if isinstance(raw_value, str):
+            text = raw_value.strip()
+            if not text:
+                return []
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    return [item for item in parsed if isinstance(item, dict)]
+            except Exception:
+                logger.debug("Failed to parse JSON object list", exc_info=True)
+        return []
+
+    @staticmethod
+    def _serialize_json_object_list(values):
+        clean = [item for item in (values or []) if isinstance(item, dict)]
+        return json.dumps(clean, ensure_ascii=True)
+
     @classmethod
     def _normalize_tool_assignment(cls, value, default_spindle="main"):
         if isinstance(value, dict):
@@ -141,6 +164,8 @@ class WorkService:
         )
         data["head1_tool_ids"] = self._tool_ids_from_assignments(data["head1_tool_assignments"])
         data["head2_tool_ids"] = self._tool_ids_from_assignments(data["head2_tool_assignments"])
+        data["mc_operation_count"] = int(data.get("mc_operation_count") or 0)
+        data["mc_operations"] = self._parse_json_object_list(data.get("mc_operations"))
         # Older rows only stored one zero coordinate per head. Keep deriving the
         # per-spindle view from those legacy values so the editor/profile layer
         # can evolve without forcing a schema rewrite.
@@ -240,6 +265,8 @@ class WorkService:
             "head2_tool_ids": self._serialize_json_list(
                 self._tool_ids_from_assignments(payload.get("head2_tool_assignments") or [])
             ),
+            "mc_operation_count": int(payload.get("mc_operation_count") or 0),
+            "mc_operations": self._serialize_json_object_list(payload.get("mc_operations") or []),
             "robot_info": self._normalize_optional_text(payload.get("robot_info")),
             "notes": self._normalize_optional_text(payload.get("notes")),
             "print_pots": 1 if payload.get("print_pots") else 0,

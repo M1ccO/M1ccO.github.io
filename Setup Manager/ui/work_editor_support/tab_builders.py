@@ -5,13 +5,16 @@ from typing import Any, Callable
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QFormLayout,
     QFrame,
     QHBoxLayout,
     QLineEdit,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -21,6 +24,7 @@ try:
     from shared.ui.helpers.editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 except ModuleNotFoundError:
     from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
+from .machining_center import build_machining_center_zeros_tab_ui
 from .selector_flow import open_combined_tools_jaws_selector_session
 
 
@@ -83,6 +87,15 @@ def build_general_tab_ui(
     dialog.raw_part_od_input = QLineEdit()
     dialog.raw_part_id_input = QLineEdit()
     dialog.raw_part_length_input = QLineEdit()
+    dialog.raw_part_side_input = QLineEdit()
+    dialog.raw_part_square_length_input = QLineEdit()
+    dialog.raw_part_custom_fields_input = QPlainTextEdit()
+    dialog.raw_part_custom_fields_input.setPlaceholderText("name=value\ndiameter=25.4")
+    dialog.raw_part_custom_fields_input.setFixedHeight(90)
+    dialog.raw_part_kind_combo = QComboBox()
+    dialog.raw_part_kind_combo.addItem(dialog._t("work_editor.raw_part.kind.bar", "Bar"), "bar")
+    dialog.raw_part_kind_combo.addItem(dialog._t("work_editor.raw_part.kind.square", "Square"), "square")
+    dialog.raw_part_kind_combo.addItem(dialog._t("work_editor.raw_part.kind.custom", "Custom"), "custom")
 
     drawing_row = QWidget()
     drawing_layout = QHBoxLayout(drawing_row)
@@ -110,17 +123,61 @@ def build_general_tab_ui(
     raw_form = QFormLayout(raw_part_group)
     raw_form.setSpacing(8)
     raw_form.addRow(
+        dialog._t("work_editor.general.raw_kind", "Kind"),
+        dialog.raw_part_kind_combo,
+    )
+
+    dialog._raw_part_mode_stack = QStackedWidget()
+
+    bar_page = QWidget()
+    bar_form = QFormLayout(bar_page)
+    bar_form.setContentsMargins(0, 0, 0, 0)
+    bar_form.setSpacing(8)
+    bar_form.addRow(
         dialog._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
         dialog.raw_part_od_input,
     )
-    raw_form.addRow(
+    bar_form.addRow(
         dialog._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
         dialog.raw_part_id_input,
     )
-    raw_form.addRow(
+    bar_form.addRow(
         dialog._t("work_editor.general.raw_length", "Length"),
         dialog.raw_part_length_input,
     )
+    dialog._raw_part_mode_stack.addWidget(bar_page)
+
+    square_page = QWidget()
+    square_form = QFormLayout(square_page)
+    square_form.setContentsMargins(0, 0, 0, 0)
+    square_form.setSpacing(8)
+    square_form.addRow(
+        dialog._t("work_editor.general.raw_side", "Side"),
+        dialog.raw_part_side_input,
+    )
+    square_form.addRow(
+        dialog._t("work_editor.general.raw_length", "Length"),
+        dialog.raw_part_square_length_input,
+    )
+    dialog._raw_part_mode_stack.addWidget(square_page)
+
+    custom_page = QWidget()
+    custom_form = QFormLayout(custom_page)
+    custom_form.setContentsMargins(0, 0, 0, 0)
+    custom_form.setSpacing(8)
+    custom_form.addRow(
+        dialog._t("work_editor.general.raw_custom_fields", "Custom fields"),
+        dialog.raw_part_custom_fields_input,
+    )
+    dialog._raw_part_mode_stack.addWidget(custom_page)
+
+    raw_form.addRow(dialog._raw_part_mode_stack)
+
+    def _on_raw_kind_changed(index: int) -> None:
+        dialog._raw_part_mode_stack.setCurrentIndex(max(0, index))
+
+    dialog.raw_part_kind_combo.currentIndexChanged.connect(_on_raw_kind_changed)
+    _on_raw_kind_changed(dialog.raw_part_kind_combo.currentIndex())
 
     layout.addWidget(general_group)
     layout.addWidget(raw_part_group)
@@ -210,6 +267,14 @@ def build_zeros_tab_ui(
     jaw_selector_panel_cls: type,
     create_titled_section_fn: Callable[[str], object],
 ) -> None:
+    if str(getattr(dialog.machine_profile, 'machine_type', '') or '').strip().lower() == 'machining_center':
+        build_machining_center_zeros_tab_ui(
+            dialog,
+            create_titled_section_fn=create_titled_section_fn,
+            work_coordinates=dialog.WORK_COORDINATES if hasattr(dialog, 'WORK_COORDINATES') else ('G54', 'G55', 'G56', 'G57', 'G58', 'G59'),
+        )
+        return
+
     dialog.zeros_tab.setProperty("zeroPointsSurface", True)
     layout = QVBoxLayout(dialog.zeros_tab)
     layout.setContentsMargins(18, 18, 18, 18)
@@ -254,10 +319,14 @@ def build_zeros_tab_ui(
         _zp_main_sp.jaw_title_key if _zp_main_sp else "work_editor.jaw.main_spindle_jaws",
         _zp_main_sp.jaw_title_default if _zp_main_sp else "Pääkaran leuat",
     )
-    _zp_sub_title = dialog._t(
-        _zp_sub_sp.jaw_title_key if _zp_sub_sp else "work_editor.jaw.sub_spindle_jaws",
-        _zp_sub_sp.jaw_title_default if _zp_sub_sp else "Vastakaran leuat",
-    )
+    if dialog.machine_profile.spindle_count == 1:
+        # Single-spindle machine: use OP20 terminology for the optional sub jaw panel.
+        _zp_sub_title = dialog._t("work_editor.spindles.op20_jaws", "OP20 Jaws")
+    else:
+        _zp_sub_title = dialog._t(
+            _zp_sub_sp.jaw_title_key if _zp_sub_sp else "work_editor.jaw.sub_spindle_jaws",
+            _zp_sub_sp.jaw_title_default if _zp_sub_sp else "Vastakaran leuat",
+        )
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
@@ -280,6 +349,24 @@ def build_zeros_tab_ui(
     dialog.open_jaw_selector_btn.clicked.connect(dialog._open_jaw_selector)
     controls_row.addWidget(dialog.open_jaw_selector_btn, 0)
 
+    if dialog.machine_profile.spindle_count == 1:
+        dialog.op20_jaws_checkbox = QCheckBox(
+            dialog._t("work_editor.zeros.include_op20", "Include OP20")
+        )
+        apply_shared_checkbox_style(dialog.op20_jaws_checkbox, indicator_size=16)
+        dialog.op20_jaws_checkbox.setChecked(getattr(dialog, '_op20_jaws_enabled', False))
+
+        def _apply_op20_jaws(checked: bool, _d=dialog):
+            _d._op20_jaws_enabled = checked
+            if hasattr(_d, '_op20_zero_group_widget'):
+                _d._op20_zero_group_widget.setVisible(checked)
+            _sub_sel = _d._jaw_selectors.get("sub")
+            if _sub_sel is not None:
+                _sub_sel.setVisible(checked)
+
+        dialog.op20_jaws_checkbox.toggled.connect(_apply_op20_jaws)
+        controls_row.addWidget(dialog.op20_jaws_checkbox, 0, Qt.AlignVCenter)
+
     dialog.zero_show_xy_checkbox = QCheckBox(
         dialog._t("work_editor.zeros.show_xy", "Show X/Y columns")
     )
@@ -293,19 +380,22 @@ def build_zeros_tab_ui(
 
     dialog.zero_points_host = ResponsiveColumnsHost(switch_width=1320)
     for spindle_key in dialog._spindle_profiles.keys():
-        default_title = (
-            "Main spindle"
-            if spindle_key == "main"
-            else ("Sub spindle" if spindle_key == "sub" else spindle_key.upper())
-        )
-        title = dialog._spindle_label(spindle_key, default_title)
+        # Use the profile label directly — no hardcoded English fallback so that
+        # single-spindle profiles render "OP10" and dual-spindle profiles render
+        # their own translated labels (e.g. "Main spindle" / "Sub spindle").
+        title = dialog._spindle_label(spindle_key)
         dialog.zero_points_host.add_widget(
-            dialog._build_spindle_zero_group(
-                title,
-                spindle_key,
-            ),
+            dialog._build_spindle_zero_group(title, spindle_key),
             1,
         )
+    if dialog.machine_profile.spindle_count == 1:
+        # Build OP20 zero-point group using the "sub" storage key but keep it
+        # hidden until the user enables OP20 via the checkbox.
+        _op20_zero_title = dialog._t("work_editor.zeros.op20_group", "OP20")
+        _op20_zero_grp = dialog._build_spindle_zero_group(_op20_zero_title, "sub")
+        _op20_zero_grp.setVisible(getattr(dialog, '_op20_jaws_enabled', False))
+        dialog._op20_zero_group_widget = _op20_zero_grp
+        dialog.zero_points_host.add_widget(_op20_zero_grp, 1)
     content_layout.addWidget(dialog.zero_points_host)
 
     jaw_row_host = QWidget()
@@ -316,6 +406,11 @@ def build_zeros_tab_ui(
     jaw_row.addWidget(dialog.main_jaw_selector, 1)
     if "sub" in dialog._spindle_profiles:
         dialog.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        jaw_row.addWidget(dialog.sub_jaw_selector, 1)
+    elif dialog.machine_profile.spindle_count == 1:
+        # Single-spindle: add OP20 jaw selector to the row but start it hidden.
+        dialog.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        dialog.sub_jaw_selector.setVisible(getattr(dialog, '_op20_jaws_enabled', False))
         jaw_row.addWidget(dialog.sub_jaw_selector, 1)
     else:
         jaw_row.addStretch(1)

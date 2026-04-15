@@ -296,6 +296,15 @@ def apply_jaw_selector_items_to_selectors(
     return True
 
 
+def apply_fixture_selector_items_to_operations(dialog, *, request: dict, selected_items: list[dict]) -> bool:
+    target_key = str(request.get('target_key') or '').strip()
+    if not target_key:
+        return False
+    if hasattr(dialog, '_apply_fixture_selection_to_operation'):
+        return bool(dialog._apply_fixture_selection_to_operation(target_key, selected_items))
+    return False
+
+
 def selector_initial_tool_assignments(ordered_list, spindle: str) -> list[dict]:
     target_spindle = normalize_selector_spindle(spindle or "main")
     by_key: dict[str, dict] = {}

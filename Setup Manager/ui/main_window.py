@@ -89,6 +89,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self._t("setup_manager.window_title", APP_TITLE))
         self.resize(1360, 840)
 
+        # Hidden Tool Library preload state.  This is intentionally conservative
+        # to avoid transient flashes while modal dialogs (e.g. Work Editor)
+        # are opening/closing.
+        self._tool_library_preload_completed = False
+        self._tool_library_preload_retries = 0
+        self._tool_library_preload_max_retries = 24
+        self._tool_library_preload_scheduled = False
+
         self._build_ui()
         self._apply_style()
         QApplication.instance().installEventFilter(self)
@@ -303,9 +311,31 @@ class MainWindow(QMainWindow):
 
     def _preload_tool_library_background(self):
         """Launch Tool Library hidden in background so selectors open instantly."""
+        if self._tool_library_preload_completed:
+            return
+
+        app = QApplication.instance()
+        active_modal = app.activeModalWidget() if app is not None else None
+        if active_modal is not None or not self.isVisible() or self.isMinimized():
+            # Defer while the UI is in a transition/modal state to avoid first-open
+            # flashes of hidden/preloaded windows.
+            if self._tool_library_preload_retries < self._tool_library_preload_max_retries:
+                self._tool_library_preload_retries += 1
+                if not self._tool_library_preload_scheduled:
+                    self._tool_library_preload_scheduled = True
+                    QTimer.singleShot(700, self._retry_tool_library_preload)
+            return
+
         if self._send_to_tool_library({"show": False}):
+            self._tool_library_preload_completed = True
             return  # already running
-        self._launch_tool_library(["--hidden"])
+
+        if self._launch_tool_library(["--hidden"]):
+            self._tool_library_preload_completed = True
+
+    def _retry_tool_library_preload(self):
+        self._tool_library_preload_scheduled = False
+        self._preload_tool_library_background()
 
     def _fade_out_and(self, callback):
         _shared_fade_out_and(self, callback)
