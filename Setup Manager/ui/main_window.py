@@ -3,13 +3,11 @@
 from PySide6.QtCore import QEvent, QTimer, QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
-    QAbstractItemView,
     QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QStackedWidget,
     QStatusBar,
@@ -39,12 +37,20 @@ from shared.services.ui_preferences_service import UiPreferencesService
 from shared.services.localization_service import LocalizationService
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from ui.main_window_support import (
-    allow_set_foreground,
+    clear_active_page_selection_on_background_click,
+    clear_page_selection,
+    complete_tool_library_handoff,
+    initialize_preload_state,
     launch_tool_library,
     on_setup_launch_context_changed,
+    open_tool_library_deep_link,
+    open_tool_library_module,
+    open_tool_library_with_master_filter,
     open_jaws_library_action,
     open_preferences_action,
     open_tool_library_action,
+    preload_tool_library_background,
+    retry_tool_library_preload,
     send_request_with_retry,
     send_to_tool_library,
     update_launch_actions,
@@ -56,7 +62,6 @@ from shared.ui.main_window_helpers import (
     fade_in as _shared_fade_in,
     fade_out_and as _shared_fade_out_and,
     get_active_theme_palette,
-    is_interactive_widget_click,
 )
 class MainWindow(QMainWindow):
     # Emitted when the user requests a live configuration switch.
@@ -90,10 +95,7 @@ class MainWindow(QMainWindow):
         # Hidden Tool Library preload state.  This is intentionally conservative
         # to avoid transient flashes while modal dialogs (e.g. Work Editor)
         # are opening/closing.
-        self._tool_library_preload_completed = False
-        self._tool_library_preload_retries = 0
-        self._tool_library_preload_max_retries = 24
-        self._tool_library_preload_scheduled = False
+        initialize_preload_state(self)
         self._runtime_initialized = False
 
         self._build_ui()
@@ -105,26 +107,14 @@ class MainWindow(QMainWindow):
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
-            self._clear_active_page_selection_on_background_click(obj)
+            clear_active_page_selection_on_background_click(self, obj)
         return super().eventFilter(obj, event)
 
     def _clear_active_page_selection_on_background_click(self, obj):
-        if is_interactive_widget_click(obj, self):
-            return
-        page = self.stack.currentWidget() if hasattr(self, 'stack') else None
-        if page is not None:
-            self._clear_page_selection(page)
+        clear_active_page_selection_on_background_click(self, obj)
 
     def _clear_page_selection(self, page: QWidget):
-        clear_fn = getattr(page, '_clear_selection', None) or getattr(page, 'clear_selection', None)
-        if callable(clear_fn):
-            clear_fn()
-            return
-        for view in page.findChildren(QAbstractItemView):
-            try:
-                view.clearSelection()
-            except Exception:
-                pass
+        clear_page_selection(page)
 
     def _build_ui(self):
         central = QWidget()
@@ -321,32 +311,10 @@ class MainWindow(QMainWindow):
         )
 
     def _preload_tool_library_background(self):
-        """Launch Tool Library hidden in background so selectors open instantly."""
-        if self._tool_library_preload_completed:
-            return
-
-        app = QApplication.instance()
-        active_modal = app.activeModalWidget() if app is not None else None
-        if active_modal is not None or not self.isVisible() or self.isMinimized():
-            # Defer while the UI is in a transition/modal state to avoid first-open
-            # flashes of hidden/preloaded windows.
-            if self._tool_library_preload_retries < self._tool_library_preload_max_retries:
-                self._tool_library_preload_retries += 1
-                if not self._tool_library_preload_scheduled:
-                    self._tool_library_preload_scheduled = True
-                    QTimer.singleShot(700, self._retry_tool_library_preload)
-            return
-
-        if self._send_to_tool_library({"show": False}):
-            self._tool_library_preload_completed = True
-            return  # already running
-
-        if self._launch_tool_library(["--hidden"]):
-            self._tool_library_preload_completed = True
+        preload_tool_library_background(self)
 
     def _retry_tool_library_preload(self):
-        self._tool_library_preload_scheduled = False
-        self._preload_tool_library_background()
+        retry_tool_library_preload(self)
 
     def _fade_out_and(self, callback):
         _shared_fade_out_and(self, callback)
@@ -358,9 +326,7 @@ class MainWindow(QMainWindow):
         return current_window_rect(self)
 
     def _complete_tool_library_handoff(self):
-        # Centralize hide/opacity reset so IPC and process-launch paths stay in sync.
-        self.hide()
-        self.setWindowOpacity(1.0)
+        complete_tool_library_handoff(self)
 
     def _open_tool_library_together(self):
         # Legacy external hook retained for backward compatibility.
@@ -368,45 +334,7 @@ class MainWindow(QMainWindow):
         self._open_tool_library_module("tools")
 
     def _open_tool_library_module(self, module: str):
-        """Open Tool Library with no master filter and focus the requested module."""
-        x, y, width, height = self._current_window_rect()
-
-        # Grant the Tool Library process permission to take foreground focus.
-        allow_set_foreground()
-
-        # Preferred path: IPC to the already-running (hidden) Tool Library.
-        # This is fastest and preserves an already warmed process.
-        payload = {
-            "geometry": f"{x},{y},{width},{height}",
-            "show": True,
-            "clear_master_filter": True,
-            "module": "fixtures" if module == "fixtures" else ("jaws" if module == "jaws" else "tools"),
-            "tools_db_path": str(self.draw_service.tool_db_path),
-            "jaws_db_path": str(self.draw_service.jaw_db_path),
-            "fixtures_db_path": str(getattr(self.draw_service, "fixture_db_path", self.draw_service.jaw_db_path)),
-        }
-        if self._send_to_tool_library(payload):
-            self._fade_out_and(self._complete_tool_library_handoff)
-            return
-
-        # Fallback: launch a new Tool Library process.
-        # We still retry IPC shortly after launch to push intended module/filter state.
-        args = ["--geometry", f"{x},{y},{width},{height}"]
-        if self._launch_tool_library(args):
-            self._send_request_with_retry(
-                payload,
-                on_success=lambda: self._fade_out_and(self._complete_tool_library_handoff),
-            )
-            return
-
-        QMessageBox.warning(
-            self,
-            self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
-            self._t(
-                "setup_manager.library_unavailable.body",
-                "Could not find a launchable Tool Library executable or source entry point.",
-            ),
-        )
+        open_tool_library_module(self, module)
 
     def _open_tool_library_separate(self):
         # Legacy external hook retained for backward compatibility.
@@ -414,102 +342,10 @@ class MainWindow(QMainWindow):
         self._open_tool_library_module("fixtures" if self._is_machining_center_profile() else "jaws")
 
     def _open_tool_library_deep_link(self, kind: str, item_id: str):
-        # Deep links bypass IPC filter-state setup and open directly by item ID.
-        """Open Tool Library and navigate directly to a specific jaw or tool."""
-        x, y, width, height = self._current_window_rect()
-        if kind == "jaw":
-            args = ["--geometry", f"{x},{y},{width},{height}", "--open-jaw", item_id] if item_id else []
-        else:
-            args = ["--geometry", f"{x},{y},{width},{height}", "--open-tool", item_id] if item_id else []
-        if not self._launch_tool_library(args):
-            QMessageBox.warning(
-                self,
-                self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
-                self._t(
-                    "setup_manager.library_unavailable.body",
-                    "Could not find a launchable Tool Library executable or source entry point.",
-                ),
-            )
+        open_tool_library_deep_link(self, kind, item_id)
 
     def _open_tool_library_with_master_filter(self, tool_ids, jaw_ids, module: str = "tools"):
-        """Open Tool Library in launch-scoped master filter mode."""
-        raw_tools = [str(t).strip() for t in (tool_ids or []) if str(t).strip()]
-        raw_jaws = [str(j).strip() for j in (jaw_ids or []) if str(j).strip()]
-        safe_tools = list(raw_tools)
-        safe_jaws = list(raw_jaws)
-
-        # Keep module filtering strict even when one side has no linked IDs.
-        # The Tool/Jaw pages treat empty filter lists as "show all", so we
-        # pass a guaranteed non-matching sentinel to force an empty result set.
-        no_match_id = "__NO_MATCH_LINKED_ITEMS__"
-        selected_module = "fixtures" if module == "fixtures" else ("jaws" if module == "jaws" else "tools")
-        if not safe_tools:
-            safe_tools = [no_match_id]
-        if not safe_jaws:
-            safe_jaws = [no_match_id]
-
-        # Keep the warning tied to user intent (explicitly selected module with no links).
-        if selected_module == "tools" and tool_ids is not None and not raw_tools:
-            safe_tools = [no_match_id]
-            QMessageBox.information(
-                self,
-                self._t("setup_manager.viewer.title", "Viewer"),
-                self._t("setup_manager.viewer.no_tools", "No tools selected for this work."),
-            )
-        if selected_module == "jaws" and jaw_ids is not None and not raw_jaws:
-            QMessageBox.information(
-                self,
-                self._t("setup_manager.viewer.title", "Viewer"),
-                self._t("setup_manager.viewer.no_jaws", "No jaws selected for this work."),
-            )
-        if selected_module == "fixtures" and jaw_ids is not None and not raw_jaws:
-            QMessageBox.information(
-                self,
-                self._t("setup_manager.viewer.title", "Viewer"),
-                self._t("setup_manager.viewer.no_fixtures", "No fixtures selected for this work."),
-            )
-
-        x, y, width, height = self._current_window_rect()
-        allow_set_foreground()
-
-        # Preferred path: IPC to the already-running Tool Library.
-        payload = {
-            "geometry": f"{x},{y},{width},{height}",
-            "show": True,
-            "master_filter_tools": safe_tools,
-            "master_filter_jaws": safe_jaws,
-            "master_filter_active": True,
-            "module": selected_module,
-            "tools_db_path": str(self.draw_service.tool_db_path),
-            "jaws_db_path": str(self.draw_service.jaw_db_path),
-            "fixtures_db_path": str(getattr(self.draw_service, "fixture_db_path", self.draw_service.jaw_db_path)),
-        }
-        if self._send_to_tool_library(payload):
-            self._fade_out_and(self._complete_tool_library_handoff)
-            return
-
-        # Fallback: launch a new Tool Library process.
-        args = [
-            "--geometry", f"{x},{y},{width},{height}",
-            "--master-filter-tools", ",".join(safe_tools),
-            "--master-filter-jaws", ",".join(safe_jaws),
-            "--master-filter-active", "1",
-        ]
-        if self._launch_tool_library(args):
-            self._send_request_with_retry(
-                payload,
-                on_success=lambda: self._fade_out_and(self._complete_tool_library_handoff),
-            )
-            return
-
-        QMessageBox.warning(
-            self,
-            self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
-            self._t(
-                "setup_manager.library_unavailable.body",
-                "Could not find a launchable Tool Library executable or source entry point.",
-            ),
-        )
+        open_tool_library_with_master_filter(self, tool_ids, jaw_ids, module=module)
 
     def _send_request_with_retry(
         self,

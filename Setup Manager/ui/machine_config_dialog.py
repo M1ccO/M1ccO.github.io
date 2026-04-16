@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import re
 from typing import Callable
 
 from PySide6.QtCore import Qt
@@ -37,7 +38,8 @@ except ModuleNotFoundError:
     from shared.services.machine_config_service import MachineConfig, MachineConfigService
 
 from machine_profiles import load_profile, is_machining_center
-from ui.widgets.common import add_shadow, apply_tool_library_combo_style
+from shared.ui.helpers.editor_helpers import apply_shared_checkbox_style, create_titled_section
+from ui.widgets.common import add_shadow, apply_tool_library_combo_style, repolish_widget
 
 
 # --------------------------------------------------------------------------- #
@@ -72,62 +74,60 @@ class _DbRow(QFrame):
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(4)
 
-        # ---- Top row: label + checkbox -----------------------------------
-        top = QHBoxLayout()
-        top.setContentsMargins(0, 0, 0, 0)
-        top.setSpacing(10)
+        # ---- Single row: label + path/shared + buttons + shared toggle ----
+        bottom = QHBoxLayout()
+        bottom.setContentsMargins(0, 0, 0, 0)
+        bottom.setSpacing(8)
 
         lbl = QLabel(label_text)
         lbl.setProperty("detailFieldKey", True)
         lbl.setMinimumWidth(120)
         lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        top.addWidget(lbl)
-
-        self._shared_cb = QCheckBox(
-            translate("machine_config.use_shared_db", "Use shared database")
-        )
-        self._shared_cb.toggled.connect(self._on_toggle)
-        top.addWidget(self._shared_cb)
-        top.addStretch(1)
-        outer.addLayout(top)
-
-        # ---- Bottom row: path widgets OR shared combo --------------------
-        bottom = QHBoxLayout()
-        bottom.setContentsMargins(120 + 10, 0, 0, 0)   # indent under label
-        bottom.setSpacing(6)
+        bottom.addWidget(lbl)
 
         # Custom-path widgets
         self._path_edit = QLineEdit()
-        self._path_edit.setFixedHeight(32)
+        self._path_edit.setFixedHeight(36)
         self._path_edit.setPlaceholderText(
             translate("machine_config.db_default_placeholder", "(use default)")
         )
         self._browse_btn = QPushButton(translate("preferences.models.browse", "BROWSE"))
         self._browse_btn.setProperty("panelActionButton", True)
+        self._browse_btn.setFixedHeight(36)
         self._browse_btn.clicked.connect(self._pick_path)
+        browse_sp = self._browse_btn.sizePolicy()
+        browse_sp.setRetainSizeWhenHidden(True)
+        self._browse_btn.setSizePolicy(browse_sp)
         add_shadow(self._browse_btn)
         self._clear_btn = QPushButton(translate("common.clear", "Clear"))
         self._clear_btn.setProperty("panelActionButton", True)
+        self._clear_btn.setFixedHeight(36)
         self._clear_btn.clicked.connect(lambda: self._path_edit.clear())
+        clear_sp = self._clear_btn.sizePolicy()
+        clear_sp.setRetainSizeWhenHidden(True)
+        self._clear_btn.setSizePolicy(clear_sp)
 
         bottom.addWidget(self._path_edit, 1)
         bottom.addWidget(self._browse_btn)
         bottom.addWidget(self._clear_btn)
 
-        # Shared-config dropdown (hidden initially)
-        shared_lbl = QLabel(
-            translate("machine_config.shared_with_label", "Shared with:")
-        )
-        shared_lbl.setProperty("detailFieldKey", True)
-        self._shared_label = shared_lbl
-
+        # Shared-config dropdown (hidden initially) uses the same field slot
+        # as the custom path input so both modes keep identical widths.
         self._shared_combo = QComboBox()
         apply_tool_library_combo_style(self._shared_combo)
-        self._shared_combo.setFixedHeight(32)
+        self._shared_combo.setFixedHeight(38)
         self._rebuild_shared_combo()
 
-        bottom.addWidget(shared_lbl)
+        # Shared mode toggle stays at row end and aligned with field controls.
+        self._shared_cb = QCheckBox(
+            ""
+        )
+        self._shared_cb.setToolTip(translate("machine_config.use_shared_db", "Use shared database"))
+        apply_shared_checkbox_style(self._shared_cb, min_height=24)
+        self._shared_cb.toggled.connect(self._on_toggle)
+
         bottom.addWidget(self._shared_combo, 1)
+        bottom.addWidget(self._shared_cb)
 
         outer.addLayout(bottom)
 
@@ -150,13 +150,14 @@ class _DbRow(QFrame):
             self._shared_combo.addItem(label, cfg.id)
 
     def _on_toggle(self, checked: bool) -> None:
-        # Custom-path widgets
+        # Field slot: show either custom path input or shared-config combo.
         self._path_edit.setVisible(not checked)
+        self._shared_combo.setVisible(checked)
+
+        # Hide action buttons in shared mode while retaining their layout space
+        # so dialog width remains stable.
         self._browse_btn.setVisible(not checked)
         self._clear_btn.setVisible(not checked)
-        # Shared widgets
-        self._shared_label.setVisible(checked)
-        self._shared_combo.setVisible(checked)
 
     def _pick_path(self) -> None:
         start = self._path_edit.text().strip() or str(Path.home())
@@ -277,6 +278,7 @@ class MachineConfigDialog(QDialog):
 
         self.setObjectName("appRoot")
         self.setProperty("preferencesDialog", True)
+        self.setProperty("machineConfigDialog", True)
         self.setModal(True)
         self.resize(620, 520)
 
@@ -298,6 +300,16 @@ class MachineConfigDialog(QDialog):
     def _t(self, key: str, default: str | None = None) -> str:
         return self._translate(key, default)
 
+    @staticmethod
+    def _display_profile_name(profile_name: str) -> str:
+        text = str(profile_name or "").strip()
+        # UI cleanup: hide legacy NTX prefix in profile display labels.
+        return re.sub(r"^NTX\s+", "", text, flags=re.IGNORECASE)
+
+    def _format_profile_display_lines(self, profile) -> str:
+        display_name = self._display_profile_name(getattr(profile, "name", ""))
+        return display_name
+
     # ------------------------------------------------------------------ #
     # UI construction                                                      #
     # ------------------------------------------------------------------ #
@@ -307,11 +319,12 @@ class MachineConfigDialog(QDialog):
         root.setContentsMargins(16, 16, 16, 16)
         root.setSpacing(12)
 
-        card = QFrame()
-        card.setProperty("card", True)
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(16, 14, 16, 14)
-        card_layout.setSpacing(12)
+        profile_section = create_titled_section(
+            self._t("machine_config.section.configuration", "Configuration")
+        )
+        profile_layout = QVBoxLayout(profile_section)
+        profile_layout.setContentsMargins(14, 12, 14, 12)
+        profile_layout.setSpacing(12)
 
         # ---- Name -------------------------------------------------------
         self.name_edit = QLineEdit()
@@ -319,13 +332,15 @@ class MachineConfigDialog(QDialog):
         self.name_edit.setPlaceholderText(
             self._t("machine_config.name.placeholder", "e.g. NTX2500")
         )
-        card_layout.addWidget(
+        profile_layout.addWidget(
             self._field_row(self._t("machine_config.name", "Name"), self.name_edit)
         )
 
         # ---- Machine Profile --------------------------------------------
         self.profile_label = QLabel()
         self.profile_label.setProperty("detailFieldValue", True)
+        self.profile_label.setWordWrap(True)
+        self.profile_label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
 
         self._change_profile_btn = QPushButton(
             self._t("machine_config.change_profile", "Change...")
@@ -335,16 +350,17 @@ class MachineConfigDialog(QDialog):
         add_shadow(self._change_profile_btn)
 
         profile_widget = QWidget()
-        profile_layout = QHBoxLayout(profile_widget)
-        profile_layout.setContentsMargins(0, 0, 0, 0)
-        profile_layout.setSpacing(8)
-        profile_layout.addWidget(self.profile_label, 1)
-        profile_layout.addWidget(self._change_profile_btn, 0)
+        profile_row_layout = QHBoxLayout(profile_widget)
+        profile_row_layout.setContentsMargins(0, 0, 0, 0)
+        profile_row_layout.setSpacing(8)
+        profile_row_layout.addWidget(self.profile_label, 1)
+        profile_row_layout.addWidget(self._change_profile_btn, 0)
 
-        card_layout.addWidget(
+        profile_layout.addWidget(
             self._field_row(
-                self._t("machine_config.machine_profile", "Machine Profile"),
+                self._t("machine_config.machine_profile", "Machine Profile").replace(" ", "\n", 1),
                 profile_widget,
+                multiline_label=True,
             )
         )
 
@@ -357,7 +373,26 @@ class MachineConfigDialog(QDialog):
         self.profile_warning.setProperty("warningHint", True)
         self.profile_warning.setWordWrap(True)
         self.profile_warning.setVisible(False)
-        card_layout.addWidget(self.profile_warning)
+        profile_layout.addWidget(self.profile_warning)
+
+        root.addWidget(profile_section)
+
+        shared_hint = QLabel(
+            self._t(
+                "machine_config.shared_db_hint",
+                "Use shared database by checking the box on the right side of each database row.",
+            )
+        )
+        shared_hint.setProperty("detailHint", True)
+        shared_hint.setWordWrap(True)
+        root.addWidget(shared_hint)
+
+        db_section = create_titled_section(
+            self._t("machine_config.section.databases", "Database Paths")
+        )
+        db_layout = QVBoxLayout(db_section)
+        db_layout.setContentsMargins(14, 12, 14, 12)
+        db_layout.setSpacing(12)
 
         # ---- DB rows ----------------------------------------------------
         own_id = self._config_id or ""
@@ -369,7 +404,7 @@ class MachineConfigDialog(QDialog):
             own_id,
             self._translate,
         )
-        card_layout.addWidget(self._setup_db_row)
+        db_layout.addWidget(self._setup_db_row)
 
         self._tools_db_row = _DbRow(
             self._t("machine_config.tools_db", "Tools Library"),
@@ -378,7 +413,7 @@ class MachineConfigDialog(QDialog):
             own_id,
             self._translate,
         )
-        card_layout.addWidget(self._tools_db_row)
+        db_layout.addWidget(self._tools_db_row)
 
         self._jaws_db_row = _DbRow(
             self._t("machine_config.jaws_db", "Jaws Library"),
@@ -387,7 +422,7 @@ class MachineConfigDialog(QDialog):
             own_id,
             self._translate,
         )
-        card_layout.addWidget(self._jaws_db_row)
+        db_layout.addWidget(self._jaws_db_row)
 
         self._fixtures_db_row = _DbRow(
             self._t("machine_config.fixtures_db", "Fixtures Library"),
@@ -396,7 +431,7 @@ class MachineConfigDialog(QDialog):
             own_id,
             self._translate,
         )
-        card_layout.addWidget(self._fixtures_db_row)
+        db_layout.addWidget(self._fixtures_db_row)
 
         if self._is_create:
             note = QLabel(
@@ -408,9 +443,9 @@ class MachineConfigDialog(QDialog):
             )
             note.setProperty("detailHint", True)
             note.setWordWrap(True)
-            card_layout.addWidget(note)
+            db_layout.addWidget(note)
 
-        root.addWidget(card)
+        root.addWidget(db_section)
 
         # ---- Dialog buttons --------------------------------------------
         buttons = QHBoxLayout()
@@ -433,6 +468,12 @@ class MachineConfigDialog(QDialog):
 
         root.addLayout(buttons)
 
+        # Keep combo visuals aligned with the rest of Setup Manager UI.
+        for combo in self.findChildren(QComboBox):
+            apply_tool_library_combo_style(combo)
+            combo.setProperty("hovered", False)
+            repolish_widget(combo)
+
         self._refresh_profile_label()
         self._refresh_library_rows_visibility()
 
@@ -448,7 +489,7 @@ class MachineConfigDialog(QDialog):
     # Layout helpers                                                       #
     # ------------------------------------------------------------------ #
 
-    def _field_row(self, label_text: str, widget: QWidget) -> QFrame:
+    def _field_row(self, label_text: str, widget: QWidget, multiline_label: bool = False) -> QFrame:
         row = QFrame()
         row.setProperty("editorFieldCard", True)
         layout = QHBoxLayout(row)
@@ -457,7 +498,11 @@ class MachineConfigDialog(QDialog):
         lbl = QLabel(label_text)
         lbl.setProperty("detailFieldKey", True)
         lbl.setMinimumWidth(120)
-        lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        lbl.setWordWrap(multiline_label)
+        if multiline_label:
+            lbl.setAlignment(Qt.AlignTop | Qt.AlignLeft)
+        else:
+            lbl.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         layout.addWidget(lbl)
         layout.addWidget(widget, 1)
         return row
@@ -469,7 +514,7 @@ class MachineConfigDialog(QDialog):
     def _refresh_profile_label(self) -> None:
         try:
             profile = load_profile(self._profile_key)
-            self.profile_label.setText(profile.name)
+            self.profile_label.setText(self._format_profile_display_lines(profile))
         except Exception:
             self.profile_label.setText(self._profile_key)
 

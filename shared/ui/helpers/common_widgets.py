@@ -161,11 +161,12 @@ class _ComboHoverFilter(QObject):
         self.combo = combo
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.Enter:
+        event_type = event.type()
+        if event_type in (QEvent.Enter, QEvent.HoverEnter):
             self.combo.setProperty("hovered", True)
             self.combo.style().polish(self.combo)
             self.combo.update()
-        elif event.type() == QEvent.Leave:
+        elif event_type in (QEvent.Leave, QEvent.HoverLeave, QEvent.Hide, QEvent.FocusOut):
             self.combo.setProperty("hovered", False)
             self.combo.style().polish(self.combo)
             self.combo.update()

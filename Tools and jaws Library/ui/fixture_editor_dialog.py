@@ -69,6 +69,7 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.setModal(True)
         setup_editor_dialog(self)
         self._build_ui()
+        self._install_local_event_filters()
         self._load_fixture()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:

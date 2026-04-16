@@ -257,6 +257,69 @@ LATHE_2SP_1MILL = MachineProfile(
 
 
 # ---------------------------------------------------------------------------
+# Profile 2b — 2 spindles / 2 heads (HEAD1 milling + HEAD2 turret)
+# ---------------------------------------------------------------------------
+LATHE_2SP_2H_MIXED = MachineProfile(
+    key="lathe_2sp_2h_mixed",
+    name="Lathe 2 Spindles / 2 Heads (Milling + Turret)",
+    spindles=(
+        MachineSpindleProfile(
+            key="main",
+            label_key="work_editor.spindles.sp1_jaw",
+            label_default="Main spindle",
+            short_label="SP1",
+            jaw_title_key="work_editor.spindles.sp1_jaw",
+            jaw_title_default="Pääkara",
+            jaw_filter_placeholder_key="work_editor.jaw.filter_sp1_placeholder",
+            jaw_filter_placeholder_default="Suodata Pääkara-leukoja...",
+            jaw_filter="Main spindle",
+        ),
+        MachineSpindleProfile(
+            key="sub",
+            label_key="work_editor.spindles.sp2_jaw",
+            label_default="Sub spindle",
+            short_label="SP2",
+            jaw_title_key="work_editor.spindles.sp2_jaw",
+            jaw_title_default="Vastakara",
+            jaw_filter_placeholder_key="work_editor.jaw.filter_sp2_placeholder",
+            jaw_filter_placeholder_default="Suodata Vastakara-leukoja...",
+            jaw_filter="Sub spindle",
+        ),
+    ),
+    heads=(
+        MachineHeadProfile(
+            key="HEAD1",
+            label_key="work_editor.tools.head1",
+            label_default="Milling Head",
+            default_coord="G54",
+            head_type="milling",
+            allows_rotating_tools=True,
+            allows_b_axis=True,
+            allows_dual_spindle_orientation=True,
+        ),
+        MachineHeadProfile(
+            key="HEAD2",
+            label_key="work_editor.tools.head2",
+            label_default="Turret Head",
+            default_coord="G55",
+            head_type="turret",
+            allows_rotating_tools=False,
+            allows_b_axis=False,
+            allows_dual_spindle_orientation=True,
+        ),
+    ),
+    zero_axes=("z", "x", "y", "c"),
+    supports_sub_pickup=True,
+    supports_print_pots=True,
+    supports_zero_xy_toggle=True,
+    default_zero_xy_visible=False,
+    default_tools_spindle="main",
+    machine_type="lathe",
+    use_op_terminology=False,
+)
+
+
+# ---------------------------------------------------------------------------
 # Profile 3 — 2 spindles / 3 turret heads
 # ---------------------------------------------------------------------------
 LATHE_2SP_3H = MachineProfile(
@@ -533,6 +596,7 @@ PROFILE_REGISTRY: dict[str, MachineProfile] = {
     # canonical keys
     "ntx_2sp_2h":           NTX_MACHINE_PROFILE,
     "lathe_2sp_1mill":      LATHE_2SP_1MILL,
+    "lathe_2sp_2h_mixed":   LATHE_2SP_2H_MIXED,
     "lathe_2sp_3h":         LATHE_2SP_3H,
     "lathe_1sp_1h":         LATHE_1SP_1H,
     "lathe_1sp_1mill":      LATHE_1SP_1MILL,
@@ -547,6 +611,7 @@ PROFILE_REGISTRY: dict[str, MachineProfile] = {
 PROFILE_DISPLAY_ORDER: list[str] = [
     "ntx_2sp_2h",
     "lathe_2sp_1mill",
+    "lathe_2sp_2h_mixed",
     "lathe_2sp_3h",
     "lathe_1sp_1h",
     "lathe_1sp_1mill",

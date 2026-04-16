@@ -96,6 +96,13 @@ from ui.home_page_support.filter_coordinator import (
     apply_filters as _apply_filters_impl,
     view_match as _view_match_impl,
 )
+from ui.home_page_support.lifecycle import (
+    before_refresh_catalog as _before_refresh_catalog_impl,
+    on_show_event as _on_show_event_impl,
+    perform_initial_load as _perform_initial_load_impl,
+    refresh_guard as _refresh_guard_impl,
+    schedule_initial_load as _schedule_initial_load_impl,
+)
 from ui.home_page_support.runtime_actions import (
     refresh_catalog as _refresh_catalog_impl,
     refresh_list as _refresh_list_impl,
@@ -238,31 +245,14 @@ class HomePage(CatalogPageBase):
         # startup while four HomePage instances are being constructed.
 
     def _schedule_initial_load(self) -> None:
-        """Schedule first visible catalog load once per page instance."""
-        if self._initial_load_done or self._initial_load_scheduled:
-            return
-        self._initial_load_scheduled = True
-        QTimer.singleShot(0, self._perform_initial_load)
+        _schedule_initial_load_impl(self)
 
     def _perform_initial_load(self) -> None:
-        """Perform first catalog load after the page becomes visible."""
-        self._initial_load_scheduled = False
-        if self._initial_load_done or not self.isVisible():
-            return
-        self._initial_load_done = True
-        self._deferred_refresh_needed = False
-        self.refresh_catalog()
-        from ui.home_page_support.detached_preview import warmup_preview_engine
-        warmup_preview_engine(self)
+        _perform_initial_load_impl(self)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        if not self._initial_load_done:
-            self._schedule_initial_load()
-            return
-        if self._deferred_refresh_needed:
-            self._deferred_refresh_needed = False
-            QTimer.singleShot(0, self.refresh_catalog)
+        _on_show_event_impl(self)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         """Shorthand for translation function."""
@@ -531,17 +521,14 @@ class HomePage(CatalogPageBase):
 
     def refresh_list(self) -> None:
         """Refresh catalog list (synonym for refresh_catalog)."""
-        if not self._initial_load_done and not self.isVisible():
-            self._deferred_refresh_needed = True
+        if not _refresh_guard_impl(self):
             return
         _refresh_list_impl(self)
 
     def refresh_catalog(self) -> None:
-        if not self._initial_load_done and not self.isVisible():
-            self._deferred_refresh_needed = True
+        if not _refresh_guard_impl(self):
             return
-        self._initial_load_done = True
-        self._deferred_refresh_needed = False
+        _before_refresh_catalog_impl(self)
         _refresh_catalog_impl(self)
 
     def select_tool_by_id(self, tool_id: str) -> None:

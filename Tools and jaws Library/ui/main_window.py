@@ -1,6 +1,4 @@
-﻿import json
 import logging
-import sys
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -11,9 +9,7 @@ from PySide6.QtCore import (
     Signal,
     Qt,
     QTimer,
-    QProcess,
 )
-from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QApplication,
@@ -57,7 +53,13 @@ from ui.fixture_page import FixturePage
 from ui.home_page import HomePage
 from ui.jaw_export_page import JawExportPage
 from ui.jaw_page import JawPage
-from ui.main_window_support import empty_selector_session_state, selector_session_from_payload
+from ui.main_window_support import (
+    clear_active_page_selection_on_background_click,
+    empty_selector_session_state,
+    handoff_to_setup_manager,
+    selector_session_from_payload,
+    send_selector_result_payload,
+)
 from ui.selectors import FixtureSelectorDialog, JawSelectorDialog, ToolSelectorDialog
 from ui.tool_catalog_delegate import apply_delegate_theme
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
@@ -67,7 +69,6 @@ from shared.ui.main_window_helpers import (
     fade_in as _shared_fade_in,
     fade_out_and as _shared_fade_out_and,
     get_active_theme_palette,
-    is_interactive_widget_click,
 )
 from shared.ui.helpers.icon_loader import icon_from_path
 
@@ -633,28 +634,7 @@ class MainWindow(QMainWindow):
         return super().eventFilter(obj, event)
 
     def _clear_active_page_selection_on_background_click(self, obj):
-        if is_interactive_widget_click(obj, self):
-            return
-
-        page = self.stack.currentWidget() if hasattr(self, 'stack') else None
-        if page is None:
-            return
-
-        # Identify the catalog list for the active page.
-        catalog_view = getattr(page, 'tool_list', None) or getattr(page, 'jaw_list', None)
-
-        # If the click is anywhere inside the catalog list widget tree, let
-        # the list handle its own selection â€” do NOT clear here.
-        if catalog_view is not None:
-            w = obj
-            while w is not None:
-                if w is catalog_view:
-                    return
-                w = w.parentWidget()
-
-        # All other clicks: clear the active catalog selection.
-        if hasattr(page, '_clear_selection'):
-            page._clear_selection()
+        clear_active_page_selection_on_background_click(self, obj)
 
     def _refresh_catalog_pages(self):
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
@@ -1039,9 +1019,9 @@ class MainWindow(QMainWindow):
             f"    border: 3px solid {palette['accent']};\n"
             "}\n"
             # nav rail icon buttons (QToolButton#sideNavButton)
-            # :checked  → accent gradient  (same family as primary buttons)
-            # :hover    → icon_hover_bg    (lighter tint, distinct from button hover)
-            # :checked:hover → shift gradient one step darker
+            # :checked  -> accent gradient  (same family as primary buttons)
+            # :hover    -> icon_hover_bg    (lighter tint, distinct from button hover)
+            # :checked:hover -> shift gradient one step darker
             "QToolButton#sideNavButton:hover {\n"
             f"    background-color: {palette['icon_hover_bg']};\n"
             f"    border-color: {palette['accent_light']};\n"
@@ -1114,9 +1094,6 @@ class MainWindow(QMainWindow):
 
     def _back_to_setup_manager(self):
         """Switch back to Setup Manager."""
-        import ctypes
-        import ctypes.wintypes
-
         # Selector mode is session-scoped. Clear it before handoff so the
         # hidden Tool Library instance always reopens in normal library mode
         # unless a fresh selector payload explicitly enables selector mode.
@@ -1125,83 +1102,11 @@ class MainWindow(QMainWindow):
         # mode were still active.
         self._close_selector_dialogs()
         self._set_selector_session_state(empty_selector_session_state())
-
-        x, y, width, height = self._current_window_rect()
-
-        # Grant Setup Manager permission to take foreground focus (Windows).
-        try:
-            ctypes.windll.user32.AllowSetForegroundWindow(ctypes.wintypes.DWORD(-1))
-        except Exception:
-            pass
-
-        # Preferred path: IPC to the already-running Setup Manager process.
-        socket = QLocalSocket()
-        socket.connectToServer(SETUP_MANAGER_SERVER_NAME)
-        if socket.waitForConnected(300):
-            try:
-                socket.write(json.dumps({
-                    "command": "show",
-                    "geometry": f"{x},{y},{width},{height}",
-                }).encode("utf-8"))
-                socket.flush()
-                socket.waitForBytesWritten(300)
-            except Exception:
-                pass
-            finally:
-                socket.disconnectFromServer()
-            def _finish_handoff():
-                self.hide()
-                self.setWindowOpacity(1.0)
-            self._fade_out_and(_finish_handoff)
-            return
-
-        # Fallback: launch Setup Manager from disk.
-        launched = False
-        setup_roots = [
-            SOURCE_DIR.parent / 'Setup Manager',
-            Path(sys.executable).resolve().parent.parent / 'Setup Manager',
-        ]
-        for setup_root in setup_roots:
-            setup_manager_main = setup_root / 'main.py'
-            if setup_manager_main.exists():
-                try:
-                    launched = QProcess.startDetached(
-                        str(Path(sys.executable)),
-                        [str(setup_manager_main), "--geometry", f"{x},{y},{width},{height}"],
-                        str(setup_root),
-                    )
-                except Exception:
-                    launched = False
-                if launched:
-                    break
-            for exe_name in ['Setup Manager.exe']:
-                setup_manager_exe = setup_root / exe_name
-                if not setup_manager_exe.exists():
-                    continue
-                try:
-                    launched = QProcess.startDetached(
-                        str(setup_manager_exe),
-                        ["--geometry", f"{x},{y},{width},{height}"],
-                        str(setup_root),
-                    )
-                except Exception:
-                    launched = False
-                if launched:
-                    break
-            if launched:
-                break
-
-        if launched:
-            def _finish_launch():
-                self.hide()
-                self.setWindowOpacity(1.0)
-            self._fade_out_and(_finish_launch)
-        else:
-            QMessageBox.warning(
-                self,
-                'Setup Manager unavailable',
-                'Could not locate a launchable Setup Manager instance.',
-            )
+        handoff_to_setup_manager(
+            self,
+            setup_manager_server_name=SETUP_MANAGER_SERVER_NAME,
+            source_dir=SOURCE_DIR,
+        )
 
     def _clear_selector_session(self, show: bool = True):
         self._close_selector_dialogs()
@@ -1330,92 +1235,17 @@ class MainWindow(QMainWindow):
         assignment_buckets_by_target: dict | None = None,
         target_key: str = '',
     ) -> None:
-        if kind == 'tools' and not selected_items:
-            QMessageBox.information(
-                self,
-                self._t('tool_library.selector.no_selection.title', 'Nothing selected'),
-                self._t(
-                    'tool_library.selector.no_selection.body',
-                    'Select at least one {kind} before sending the selection back.',
-                    kind=(
-                        self._t('tool_library.selector.tools', 'tools')
-                        if kind == 'tools'
-                        else (
-                            self._t('tool_library.selector.fixtures', 'fixtures')
-                            if kind == 'fixtures'
-                            else self._t('tool_library.selector.jaws', 'jaws')
-                        )
-                    ),
-                ),
-            )
-            return
-
-        if not self._selector_callback_server:
-            QMessageBox.warning(
-                self,
-                self._t('tool_library.selector.callback_missing.title', 'Selection callback unavailable'),
-                self._t(
-                    'tool_library.selector.callback_missing.body',
-                    'The selection callback server name is missing.',
-                ),
-            )
-            return
-
-        payload = {
-            'command': 'selector_result',
-            'request_id': self._selector_request_id,
-            'kind': kind,
-            'items': selected_items,
-            'selected_items': selected_items,
-        }
-        if kind == 'tools':
-            payload['selector_head'] = selector_head
-            payload['selector_spindle'] = selector_spindle
-            if assignment_buckets_by_target:
-                payload['assignment_buckets_by_target'] = assignment_buckets_by_target
-            if target_key:
-                payload['target_key'] = target_key
-
-        socket = QLocalSocket()
-        socket.connectToServer(self._selector_callback_server)
-        if not socket.waitForConnected(300):
-            QMessageBox.warning(
-                self,
-                self._t('tool_library.selector.callback_failed.title', 'Selection callback unavailable'),
-                self._t(
-                    'tool_library.selector.callback_failed.body',
-                    'Could not connect to the selection callback server.',
-                ),
-            )
-            return
-
-        try:
-            bytes_written = socket.write(json.dumps(payload).encode('utf-8'))
-            if isinstance(bytes_written, int) and bytes_written < 0:
-                raise RuntimeError('Selection payload write failed.')
-            socket.flush()
-        except Exception:
-            logger.exception("selector: failed to send result payload to callback server %r", self._selector_callback_server)
-            QMessageBox.warning(
-                self,
-                self._t('tool_library.selector.callback_failed.title', 'Selection callback unavailable'),
-                self._t(
-                    'tool_library.selector.callback_failed.body',
-                    'Could not send the selected items back to Setup Manager.',
-                ),
-            )
-            return
-
-        try:
-            socket.disconnectFromServer()
-        except Exception:
-            pass
-        try:
-            socket.deleteLater()
-        except Exception:
-            pass
-
-        self._back_to_setup_manager()
+        sent = send_selector_result_payload(
+            self,
+            kind=kind,
+            selected_items=selected_items,
+            selector_head=selector_head,
+            selector_spindle=selector_spindle,
+            assignment_buckets_by_target=assignment_buckets_by_target,
+            target_key=target_key,
+        )
+        if sent:
+            self._back_to_setup_manager()
 
     def navigate_to(self, kind: str, item_id: str = ""):
         """Deep-link: switch to jaw or tools module and select the given item."""
@@ -1540,4 +1370,3 @@ class MainWindow(QMainWindow):
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page, self.fixtures_page]:
             if hasattr(page, 'list_view') and page.list_view is not None:
                 page.list_view.viewport().update()
-

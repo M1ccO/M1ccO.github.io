@@ -230,6 +230,13 @@ class WorkEditorDialog(QDialog):
         self._load_work()
 
         finalize_ui(self)
+        self._install_local_event_filters()
+
+    def _install_local_event_filters(self) -> None:
+        """Scope event filtering to this dialog tree (no app-wide filter)."""
+        self.installEventFilter(self)
+        for widget in self.findChildren(QWidget):
+            widget.installEventFilter(self)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.ToolTip and isinstance(obj, QWidget):

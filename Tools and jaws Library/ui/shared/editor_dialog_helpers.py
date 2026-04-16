@@ -21,7 +21,6 @@ import json
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
-    QApplication,
     QDialog,
     QFrame,
     QWidget,
@@ -86,9 +85,11 @@ class EditorDialogMixin:
         finally:
             self._clamping_screen_bounds = False
 
-    def hideEvent(self, event):
-        QApplication.instance().removeEventFilter(self)
-        super().hideEvent(event)
+    def _install_local_event_filters(self) -> None:
+        """Install dialog-local event filter scope for this dialog tree."""
+        self.installEventFilter(self)
+        for widget in self.findChildren(QWidget):
+            widget.installEventFilter(self)
 
     # ------------------------------------------------------------------
     # Assembly transform preference

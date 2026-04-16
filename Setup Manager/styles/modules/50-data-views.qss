@@ -138,7 +138,13 @@ QMessageBox QPushButton:disabled {
 }
 
 QDialog[toolPickerDialog="true"],
-QDialog[workEditorDialog="true"] {
+QDialog[workEditorDialog="true"],
+QDialog[preferencesDialog="true"] {
+    background: #ffffff;
+}
+
+/* Base theme sets QWidget#appRoot to gray; keep Preferences dialog white. */
+QDialog#appRoot[preferencesDialog="true"] {
     background: #ffffff;
 }
 
@@ -354,7 +360,8 @@ QDialog[workEditorDialog="true"] QListWidget[selectorAssignmentList="true"]::ite
 
 /* Work Editor + Preferences comboboxes: unified white-shell dropdown. */
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"],
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"],
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] {
     background-color: #ffffff;
     border: 1px solid #a0b4c8;
     border-radius: 6px;
@@ -366,25 +373,29 @@ QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] {
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"]:focus,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]:focus {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]:focus,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"]:focus {
     border: 1px solid #c0c4c8;
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"],
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"] {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"],
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"] {
     background-color: #edf5fc;
     border: 1px solid #c0c4c8;
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"]::drop-down,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"]::drop-down {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"]::drop-down,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"][hovered="true"]::drop-down {
     background-color: #edf5fc;
     border-top-right-radius: 6px;
     border-bottom-right-radius: 6px;
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"]::drop-down,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]::drop-down {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]::drop-down,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"]::drop-down {
     subcontrol-origin: padding;
     subcontrol-position: center right;
     width: 28px;
@@ -393,14 +404,16 @@ QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]::drop-down 
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"]::down-arrow,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]::down-arrow {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"]::down-arrow,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"]::down-arrow {
     image: url("assets/icons/tools/menu_open.svg");
     width: 24px;
     height: 24px;
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView {
     background-color: #FCFCFC;
     color: #111111;
     border: 1px solid #c8d0d8;
@@ -414,7 +427,8 @@ QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractIt
 }
 
 QDialog[workEditorDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item {
     padding: 10px 14px;
     background-color: #FCFCFC;
     border: none;
@@ -429,7 +443,12 @@ QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractIt
 QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected,
 QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:active,
 QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:!active,
-QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:hover {
+QDialog[preferencesDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:hover,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:hover,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:active,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:!active,
+QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstractItemView::item:selected:hover {
     background-color: #F0F0F0;
     color: #000000;
     border: none;

@@ -92,6 +92,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.setModal(True)
         setup_editor_dialog(self)
         self._build_ui()
+        self._install_local_event_filters()
         self._init_spare_parts_coordinator()
         self._load_tool()
         self._update_cutting_label()

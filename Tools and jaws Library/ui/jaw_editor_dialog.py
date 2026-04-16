@@ -66,6 +66,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.setModal(True)
         setup_editor_dialog(self)
         self._build_ui()
+        self._install_local_event_filters()
         self._load_jaw()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:

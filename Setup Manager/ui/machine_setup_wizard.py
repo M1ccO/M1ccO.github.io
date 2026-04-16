@@ -52,6 +52,8 @@ from machine_profiles import (
     PROFILE_REGISTRY,
     load_profile,
 )
+from shared.ui.helpers.editor_helpers import create_titled_section
+from ui.widgets.common import apply_tool_library_combo_style, repolish_widget
 
 
 # ---------------------------------------------------------------------------
@@ -117,23 +119,35 @@ class _WizardState:
 
         sc = self.spindle_count
         hc = self.head_count
-        # Check head types for 'milling' presence
+        # Treat explicit milling head selection OR powered capabilities
+        # as intent for a milling-capable profile.
         has_mill = any(t == "milling" for t in self.head_types[:hc])
+        has_powered_capability = any(
+            bool(self.head_b_axis[i]) or bool(self.head_rotating[i])
+            for i in range(hc)
+        )
+        wants_milling_capability = has_mill or has_powered_capability
 
-        if sc == 2 and hc == 2 and not has_mill:
+        if sc == 2 and hc == 2 and not wants_milling_capability:
             return "ntx_2sp_2h"
-        if sc == 2 and hc == 1 and has_mill:
+        if sc == 2 and hc == 2 and wants_milling_capability:
+            return "lathe_2sp_2h_mixed"
+        if sc == 2 and hc == 1 and wants_milling_capability:
             return "lathe_2sp_1mill"
         if sc == 2 and hc == 3 and not has_mill:
             return "lathe_2sp_3h"
         if sc == 1 and hc == 1 and not has_mill:
             return "lathe_1sp_1h"
-        if sc == 1 and hc == 1 and has_mill:
+        if sc == 1 and hc == 1 and wants_milling_capability:
             return "lathe_1sp_1mill"
 
         # Partial fallback: match on spindle count
         if sc == 1:
+            if wants_milling_capability:
+                return "lathe_1sp_1mill"
             return "lathe_1sp_1h"
+        if wants_milling_capability:
+            return "lathe_2sp_1mill"
         return DEFAULT_PROFILE_KEY
 
 
@@ -314,7 +328,10 @@ class _HeadConfigPage(_Page):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        scroll.viewport().setStyleSheet("background: transparent;")
         self._heads_container = QWidget()
+        self._heads_container.setStyleSheet("background: transparent;")
         self._heads_layout = QVBoxLayout(self._heads_container)
         self._heads_layout.setSpacing(10)
         scroll.setWidget(self._heads_container)
@@ -331,7 +348,7 @@ class _HeadConfigPage(_Page):
 
         for i in range(self._state.head_count):
             head_key = f"HEAD{i + 1}"
-            group = QGroupBox(f"{self._t('wizard.head_label', 'Head')} {i + 1} ({head_key})")
+            group = create_titled_section(f"{self._t('wizard.head_label', 'Head')} {i + 1} ({head_key})")
             form_layout = QVBoxLayout(group)
             form_layout.setSpacing(6)
 
@@ -342,6 +359,9 @@ class _HeadConfigPage(_Page):
             type_combo = QComboBox()
             type_combo.addItem(self._t("wizard.head.type.turret", "Turret (turning/grooving)"), "turret")
             type_combo.addItem(self._t("wizard.head.type.milling", "Milling (powered tools)"), "milling")
+            apply_tool_library_combo_style(type_combo)
+            type_combo.setProperty("hovered", False)
+            repolish_widget(type_combo)
             # Pre-select from state
             if i < len(self._state.head_types) and self._state.head_types[i] == "milling":
                 type_combo.setCurrentIndex(1)
@@ -356,6 +376,9 @@ class _HeadConfigPage(_Page):
             baxis_combo = QComboBox()
             baxis_combo.addItem(self._t("wizard.head.b_axis.disabled", "Disabled"), False)
             baxis_combo.addItem(self._t("wizard.head.b_axis.enabled", "Enabled"), True)
+            apply_tool_library_combo_style(baxis_combo)
+            baxis_combo.setProperty("hovered", False)
+            repolish_widget(baxis_combo)
             if i < len(self._state.head_b_axis) and self._state.head_b_axis[i]:
                 baxis_combo.setCurrentIndex(1)
             baxis_row.addWidget(baxis_label)
@@ -369,6 +392,9 @@ class _HeadConfigPage(_Page):
             rotating_combo = QComboBox()
             rotating_combo.addItem(self._t("wizard.head.rotating_tools.disabled", "Not allowed (turret only)"), False)
             rotating_combo.addItem(self._t("wizard.head.rotating_tools.enabled", "Allowed"), True)
+            apply_tool_library_combo_style(rotating_combo)
+            rotating_combo.setProperty("hovered", False)
+            repolish_widget(rotating_combo)
             if i < len(self._state.head_rotating) and self._state.head_rotating[i]:
                 rotating_combo.setCurrentIndex(1)
             rotating_row.addWidget(rotating_label)
