@@ -170,6 +170,7 @@ def build_general_tab_ui(
     browse_btn.clicked.connect(dialog._browse_drawing)
     drawing_layout.addWidget(dialog.drawing_path_input, 1)
     drawing_layout.addWidget(browse_btn)
+    drawing_row.setVisible(dialog._drawings_enabled)
 
     general_group = create_titled_section_fn(dialog._t("work_editor.general.section.general", "General"))
     general_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -192,6 +193,7 @@ def build_general_tab_ui(
             dialog._t("work_editor.general.raw_kind", "Kind"),
             dialog.raw_part_kind_combo,
         )
+        dialog.raw_part_kind_combo.setVisible(True)
 
         dialog._raw_part_mode_stack = QStackedWidget(dialog.general_tab)
 
@@ -246,8 +248,12 @@ def build_general_tab_ui(
         _on_raw_kind_changed(dialog.raw_part_kind_combo.currentIndex())
     else:
         # Lathe profiles support bar stock only.
+        dialog.raw_part_kind_combo.setVisible(False)
         dialog.raw_part_kind_combo.setCurrentIndex(0)
         dialog.raw_part_kind_combo.setEnabled(False)
+        dialog.raw_part_side_input.setVisible(False)
+        dialog.raw_part_square_length_input.setVisible(False)
+        dialog.raw_part_custom_fields_input.setVisible(False)
         dialog._raw_part_mode_stack = None
         raw_form.addRow(
             dialog._t("work_editor.general.raw_outer_diameter", "Outer diameter"),

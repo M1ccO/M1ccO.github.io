@@ -1,5 +1,6 @@
 from .library_ipc import (
     allow_set_foreground,
+    is_tool_library_ready,
     launch_tool_library,
     send_request_with_retry,
     send_to_tool_library,
@@ -24,7 +25,11 @@ from .library_handoff_controller import (
 )
 from .preload_controller import (
     initialize_preload_state,
+    pause_tool_library_preload,
+    preload_work_editor_background,
     preload_tool_library_background,
+    retry_work_editor_preload,
+    resume_tool_library_preload,
     retry_tool_library_preload,
 )
 from .preferences_actions import open_preferences_action
@@ -44,6 +49,8 @@ __all__ = [
     "clear_page_selection",
     "complete_tool_library_handoff",
     "initialize_preload_state",
+    "pause_tool_library_preload",
+    "is_tool_library_ready",
     "launch_tool_library",
     "load_works_for_compatibility",
     "on_setup_launch_context_changed",
@@ -53,8 +60,11 @@ __all__ = [
     "open_jaws_library_action",
     "open_preferences_action",
     "open_tool_library_action",
+    "preload_work_editor_background",
     "preload_tool_library_background",
     "resolve_compatibility_target_path",
+    "retry_work_editor_preload",
+    "resume_tool_library_preload",
     "retry_tool_library_preload",
     "show_compatibility_report_dialog",
     "send_request_with_retry",

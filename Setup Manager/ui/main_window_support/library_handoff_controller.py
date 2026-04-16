@@ -21,6 +21,17 @@ def _selected_module(module: str) -> str:
     return "tools"
 
 
+def _show_library_start_timeout(window) -> None:
+    QMessageBox.warning(
+        window,
+        window._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+        window._t(
+            "setup_manager.library_unavailable.start_timeout",
+            "Tool Library started but did not become ready in time. Please try again.",
+        ),
+    )
+
+
 def _library_payload(window, *, module: str, geometry: str, clear_master_filter: bool = False, safe_tools=None, safe_jaws=None) -> dict:
     payload = {
         "geometry": geometry,
@@ -60,6 +71,7 @@ def open_tool_library_module(window, module: str) -> None:
         window._send_request_with_retry(
             payload,
             on_success=lambda: window._fade_out_and(lambda: complete_tool_library_handoff(window)),
+            on_failed=lambda: _show_library_start_timeout(window),
         )
         return
 
@@ -147,6 +159,7 @@ def open_tool_library_with_master_filter(window, tool_ids, jaw_ids, module: str 
         window._send_request_with_retry(
             payload,
             on_success=lambda: window._fade_out_and(lambda: complete_tool_library_handoff(window)),
+            on_failed=lambda: _show_library_start_timeout(window),
         )
         return
 

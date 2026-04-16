@@ -647,40 +647,51 @@ class MachineConfigDialog(QDialog):
                 ),
             )
 
-        # Seed per-config library DBs from known-good templates so Setup Manager
-        # can query them immediately even before Tool Library is opened.
-        import shutil as _shutil
-        import sqlite3 as _sqlite3
+        # Create schema-only per-config library DBs so each new machine config
+        # starts clean and never inherits data from an older library database.
         try:
-            from config import TOOL_LIBRARY_DB_PATH, JAW_LIBRARY_DB_PATH, FIXTURE_LIBRARY_DB_PATH
-            seeds: tuple[tuple[str, Path | str], ...] = (
-                (config.tools_db_path, TOOL_LIBRARY_DB_PATH),
-                (config.jaws_db_path, JAW_LIBRARY_DB_PATH),
-                (config.fixtures_db_path, FIXTURE_LIBRARY_DB_PATH),
-            )
-        except Exception:
-            seeds = (
-                (config.tools_db_path, ""),
-                (config.jaws_db_path, ""),
-                (config.fixtures_db_path, ""),
+            from tools_and_jaws_library.data.database import Database as _ToolsDatabase
+            from tools_and_jaws_library.data.fixture_database import FixtureDatabase as _FixtureDatabase
+            from tools_and_jaws_library.data.jaw_database import JawDatabase as _JawDatabase
+
+            initializers: tuple[tuple[str, object], ...] = (
+                (config.tools_db_path, _ToolsDatabase),
+                (config.jaws_db_path, _JawDatabase),
+                (config.fixtures_db_path, _FixtureDatabase),
             )
 
-        for lib_path_str, seed_path in seeds:
-            if not lib_path_str:
-                continue
-            lib_path = Path(lib_path_str)
-            try:
-                lib_path.parent.mkdir(parents=True, exist_ok=True)
+            for lib_path_str, initializer in initializers:
+                if not lib_path_str:
+                    continue
+                lib_path = Path(lib_path_str)
                 if lib_path.exists():
                     continue
-                seed = Path(str(seed_path)).expanduser()
-                if seed.exists() and seed.is_file():
-                    _shutil.copy2(seed, lib_path)
-                else:
+                lib_path.parent.mkdir(parents=True, exist_ok=True)
+                db = initializer(lib_path)
+                try:
+                    db.close()
+                except Exception:
+                    try:
+                        db.conn.close()
+                    except Exception:
+                        pass
+        except Exception:
+            # Last-resort fallback still creates per-config files but without
+            # migrating schema if Tool Library modules are unavailable.
+            import sqlite3 as _sqlite3
+
+            for lib_path_str in (config.tools_db_path, config.jaws_db_path, config.fixtures_db_path):
+                if not lib_path_str:
+                    continue
+                lib_path = Path(lib_path_str)
+                try:
+                    lib_path.parent.mkdir(parents=True, exist_ok=True)
+                    if lib_path.exists():
+                        continue
                     _conn = _sqlite3.connect(str(lib_path))
                     _conn.close()
-            except Exception:
-                pass
+                except Exception:
+                    pass
 
     # ------------------------------------------------------------------ #
     # Public result accessors                                              #

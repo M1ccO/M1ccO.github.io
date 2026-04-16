@@ -3,11 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 import traceback
 
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup
 from ui.work_editor_dialog import WorkEditorDialog
 from ui.setup_page_support.crud_dialogs import ask_delete_logbook_entries, confirm_delete_work
+from ui.setup_page_support.work_editor_launch import (
+    exec_work_editor_dialog,
+    prime_work_editor_dialog,
+    resolve_work_editor_parent,
+)
 
 try:
     from shared.ui.helpers.editor_helpers import ask_multi_edit_mode
@@ -15,15 +21,132 @@ except ModuleNotFoundError:
     from editor_helpers import ask_multi_edit_mode
 
 
-def create_work(page) -> None:
+def _dialog_cache(page) -> dict:
+    cache = getattr(page, "_work_editor_dialog_cache", None)
+    if isinstance(cache, dict):
+        return cache
+    cache = {}
+    page._work_editor_dialog_cache = cache
+    return cache
+
+
+def _create_work_editor_dialog(page, host_window, work=None):
+    return WorkEditorDialog(
+        page.draw_service,
+        work=work,
+        parent=None,
+        style_host=host_window,
+        translate=page._t,
+        drawings_enabled=page.drawings_enabled,
+        machine_profile_key=page.work_service.get_machine_profile_key(),
+    )
+
+
+def _get_or_create_shared_dialog(page, host_window):
+    cache = _dialog_cache(page)
+    dialog = cache.get("shared")
+    if isinstance(dialog, WorkEditorDialog):
+        return dialog
+    dialog = _create_work_editor_dialog(page, host_window, work=None)
+    prime_work_editor_dialog(dialog)
+    cache["shared"] = dialog
+    return dialog
+
+
+def _prepare_shared_dialog_context(dialog, work_payload: dict | None) -> None:
+    payload = dict(work_payload or {})
+    dialog.work = payload
+    dialog.is_edit = bool(payload)
     try:
-        dialog = WorkEditorDialog(
-            page.draw_service,
-            parent=page,
-            translate=page._t,
-            drawings_enabled=page.drawings_enabled,
-            machine_profile_key=page.work_service.get_machine_profile_key(),
-        )
+        dialog.setWindowTitle(dialog._dialog_title())
+    except Exception:
+        pass
+    try:
+        populate = getattr(dialog, "_payload_adapter", None)
+        if populate is not None and hasattr(populate, "populate_dialog"):
+            populate.populate_dialog(dialog, payload)
+        else:
+            load_work = getattr(dialog, "_load_work", None)
+            if callable(load_work):
+                load_work()
+    except Exception:
+        pass
+    try:
+        ensure_surface = getattr(dialog, "_ensure_normal_editor_surface_visible", None)
+        if callable(ensure_surface):
+            ensure_surface()
+        ensure_content = getattr(dialog, "_ensure_normal_editor_content_visible", None)
+        if callable(ensure_content):
+            ensure_content()
+    except Exception:
+        pass
+
+
+def _materialize_dialog_hidden(dialog) -> None:
+    # Force native window creation and first backing-store paint off-screen so the
+    # first user-visible open does not pay this cost.
+    if bool(getattr(dialog, "_startup_materialized_hidden", False)):
+        return
+    try:
+        old_pos = dialog.pos()
+    except Exception:
+        old_pos = None
+    try:
+        old_opacity = float(getattr(dialog, "windowOpacity", lambda: 1.0)())
+    except Exception:
+        old_opacity = 1.0
+
+    try:
+        dialog.setWindowOpacity(0.0)
+    except Exception:
+        pass
+    try:
+        dialog.move(-32000, -32000)
+    except Exception:
+        pass
+
+    try:
+        dialog.show()
+        QCoreApplication.processEvents()
+        QCoreApplication.processEvents()
+    finally:
+        try:
+            dialog.hide()
+        except Exception:
+            pass
+        # Startup surface already paid; skip first visible loading cover.
+        try:
+            release_cover = getattr(dialog, "_release_startup_cover", None)
+            if callable(release_cover):
+                release_cover()
+            else:
+                dialog._startup_cover_active = False
+        except Exception:
+            dialog._startup_cover_active = False
+        if old_pos is not None:
+            try:
+                dialog.move(old_pos)
+            except Exception:
+                pass
+        try:
+            dialog.setWindowOpacity(old_opacity)
+        except Exception:
+            pass
+        dialog._startup_materialized_hidden = True
+
+
+def preload_shared_work_editor_dialog(page) -> None:
+    host_window = resolve_work_editor_parent(page)
+    dialog = _get_or_create_shared_dialog(page, host_window)
+    _prepare_shared_dialog_context(dialog, None)
+    _materialize_dialog_hidden(dialog)
+
+
+def create_work(page) -> None:
+    host_window = resolve_work_editor_parent(page)
+    try:
+        dialog = _get_or_create_shared_dialog(page, host_window)
+        _prepare_shared_dialog_context(dialog, None)
     except Exception as exc:
         QMessageBox.critical(
             page,
@@ -31,7 +154,7 @@ def create_work(page) -> None:
             f"{exc}\n\n{traceback.format_exc()}",
         )
         return
-    if dialog.exec() != QDialog.Accepted:
+    if exec_work_editor_dialog(dialog) != QDialog.Accepted:
         return
     try:
         page.work_service.save_work(dialog.get_work_data())
@@ -65,15 +188,10 @@ def edit_work(page) -> None:
         page.refresh_works()
         return
 
+    host_window = resolve_work_editor_parent(page)
     try:
-        dialog = WorkEditorDialog(
-            page.draw_service,
-            work=work,
-            parent=page,
-            translate=page._t,
-            drawings_enabled=page.drawings_enabled,
-            machine_profile_key=page.work_service.get_machine_profile_key(),
-        )
+        dialog = _get_or_create_shared_dialog(page, host_window)
+        _prepare_shared_dialog_context(dialog, work)
     except Exception as exc:
         QMessageBox.critical(
             page,
@@ -81,7 +199,7 @@ def edit_work(page) -> None:
             f"{exc}\n\n{traceback.format_exc()}",
         )
         return
-    if dialog.exec() != QDialog.Accepted:
+    if exec_work_editor_dialog(dialog) != QDialog.Accepted:
         return
     try:
         page.work_service.save_work(dialog.get_work_data())

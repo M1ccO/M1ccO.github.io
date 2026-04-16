@@ -3605,3 +3605,845 @@ AttributeError: 'MachineProfile' object has no attribute 'is_machining_center'
 2026-04-16 14:09:18,087 ui.work_editor_dialog INFO work_editor.selector
 2026-04-16 14:09:18,321 ui.work_editor_dialog INFO work_editor.selector
 2026-04-16 14:09:20,049 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 15:40:14,153 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 15:40:24,500 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 15:40:26,869 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 15:40:27,054 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:11:46,769 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:11:53,231 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 16:11:55,458 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:11:55,592 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:13:17,412 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:27:03,181 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:27:28,327 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 16:27:59,447 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=machining_center_3ax
+2026-04-16 16:30:39,173 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_5ax raw_param=machining_center_5ax raw_prefs=machining_center_5ax
+2026-04-16 16:30:41,933 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_5ax raw_param=machining_center_5ax raw_prefs=machining_center_5ax
+2026-04-16 16:30:53,654 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_5ax raw_param=machining_center_5ax raw_prefs=machining_center_5ax
+2026-04-16 16:30:55,469 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:30:55,532 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:30:58,628 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:00,488 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:00,595 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:01,897 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:02,620 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:02,727 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:04,101 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:05,583 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:05,640 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:06,703 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:07,743 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:07,798 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:09,293 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:11,398 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_5ax raw_param=machining_center_5ax raw_prefs=machining_center_5ax
+2026-04-16 16:31:22,892 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_5ax raw_param=machining_center_5ax raw_prefs=machining_center_5ax
+2026-04-16 16:31:28,504 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_5ax raw_param=machining_center_5ax raw_prefs=machining_center_5ax
+2026-04-16 16:31:30,809 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:30,918 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:31:37,110 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 16:58:51,518 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp2njguqkq\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 16:58:51,519 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp2njguqkq\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 16:58:51,525 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-16 16:58:51,794 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 16:58:52,537 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 16:58:52,537 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 16:58:52,537 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-16 16:58:52,543 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 16:58:53,954 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-16 16:58:53,956 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-16 17:14:48,202 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp6jt01l9g\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 17:14:48,203 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp6jt01l9g\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 17:14:48,204 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-16 17:14:48,213 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 17:14:48,271 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-16 17:14:48,272 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-16 17:14:48,276 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 17:14:48,357 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 17:14:48,357 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 17:14:48,357 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-16 17:49:15,100 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 17:49:15,100 ui.work_editor_dialog WARNING work_editor.selector_mode ignored because no selector request is active
+2026-04-16 17:49:17,409 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 17:49:17,497 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 17:49:17,512 ui.work_editor_dialog WARNING work_editor.selector_mode ignored because no selector request is active
+2026-04-16 17:49:17,532 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 17:49:17,609 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 17:49:17,619 ui.work_editor_dialog WARNING work_editor.selector_mode ignored because no selector request is active
+2026-04-16 17:49:18,433 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 17:49:18,508 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 17:49:18,517 ui.work_editor_dialog WARNING work_editor.selector_mode ignored because no selector request is active
+2026-04-16 17:52:14,835 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 17:52:14,835 ui.work_editor_dialog WARNING work_editor.selector_mode ignored because no selector request is active
+2026-04-16 17:55:59,238 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 18:01:16,807 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 18:01:20,791 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 18:01:21,156 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 18:01:22,574 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 18:01:22,712 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 18:16:22,141 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 18:16:22,172 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'active'}
+2026-04-16 18:16:34,735 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 18:16:34,769 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'active'}
+2026-04-16 18:16:34,776 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 18:16:34,776 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 2}
+2026-04-16 18:16:34,851 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 2}
+2026-04-16 18:16:34,885 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 2, 'previous_phase': 'active'}
+2026-04-16 18:20:22,619 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 18:20:27,066 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-16 18:20:27,143 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-16 18:20:27,178 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 18:20:29,819 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 18:20:30,343 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 18:20:59,711 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 19:58:24,215 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 19:58:30,736 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-16 19:58:30,736 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 19:58:30,759 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 19:58:33,008 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 19:58:33,008 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 2}
+2026-04-16 19:58:33,098 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 2}
+2026-04-16 19:58:35,320 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 2, 'reason': 'cancel'}
+2026-04-16 19:58:35,320 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 19:58:35,337 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 2, 'previous_phase': 'closing'}
+2026-04-16 19:58:37,626 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 19:58:37,626 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 3}
+2026-04-16 19:58:37,754 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 3}
+2026-04-16 19:58:38,878 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 3, 'reason': 'cancel'}
+2026-04-16 19:58:38,878 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 19:58:38,917 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 3, 'previous_phase': 'closing'}
+2026-04-16 19:58:42,184 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 25921, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 19:59:43,858 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 19:59:45,105 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-16 19:59:45,105 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 19:59:45,126 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 19:59:47,663 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 19:59:47,663 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 2}
+2026-04-16 19:59:47,753 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 2}
+2026-04-16 19:59:48,894 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 8844, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:00:13,069 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:00:13,089 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:00:13,090 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:00:13,095 ui.main_window INFO setup_manager.modal_trace {'event': 'Hide', 'dt_ms': 0, 'visible': False, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:00:13,096 ui.main_window INFO setup_manager.modal_trace {'event': 'host_hidden', 'dt_ms': 0}
+2026-04-16 20:00:13,109 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': False, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:00:13,112 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:00:13,113 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 14, 'dialog_visible': False}
+2026-04-16 20:00:13,120 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:00:40,363 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 20:00:40,363 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-16 20:00:40,493 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:00:41,547 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 28452, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:01:57,023 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:01:58,670 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-16 20:01:58,670 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 20:01:58,692 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 20:02:00,535 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 20:02:00,536 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 2}
+2026-04-16 20:02:00,624 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 2}
+2026-04-16 20:02:01,723 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 7578, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:05:06,033 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:06,034 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:06,035 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:06,035 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:06,036 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:06,036 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 327, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:06,037 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 327, 'dialog_visible': False}
+2026-04-16 20:05:06,046 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:05:06,052 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 343, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:06,053 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:06,056 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:06,059 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:06,063 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:06,064 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:06,067 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:05:09,718 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 4000, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:05:09,719 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 4000, 'result': 0}
+2026-04-16 20:05:09,719 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4000, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:16:57,715 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:16:58,997 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-16 20:16:58,998 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 20:16:59,020 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 20:17:02,659 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 8703, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:17:02,666 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:17:02,689 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:17:04,129 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:17:04,145 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:17:04,153 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:17:04,155 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:17:04,155 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 14, 'dialog_visible': False}
+2026-04-16 20:17:04,159 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:17:04,169 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:04,169 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:04,170 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:04,173 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:04,174 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:04,177 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 46, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:07,827 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3686, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:17:07,827 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3686, 'result': 0}
+2026-04-16 20:17:07,828 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3686, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:17:09,132 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:17:09,148 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:17:09,156 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:17:09,157 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:17:09,158 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:17:09,161 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:17:09,173 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:09,174 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:09,175 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:09,178 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:09,178 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:09,182 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:17:10,344 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1188, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:17:10,345 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1188, 'result': 0}
+2026-04-16 20:17:10,345 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1188, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:17:50,831 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:17:52,222 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-16 20:17:52,222 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 20:17:52,244 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 20:17:53,267 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 5078, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:17:53,443 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:17:53,468 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:19:35,701 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:19:35,702 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:19:35,702 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:19:35,702 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:19:35,703 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:19:35,703 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:19:35,704 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 296, 'dialog_visible': False}
+2026-04-16 20:19:35,713 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:19:35,719 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 313, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:35,720 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 313, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:35,724 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:35,727 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:35,730 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:35,731 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:35,734 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:19:38,800 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 20:19:38,800 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-16 20:19:38,950 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:19:39,850 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4453, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:19:40,372 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:19:40,396 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:20:12,719 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:12,720 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:12,721 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:12,721 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:12,721 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:12,722 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:12,723 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 203, 'dialog_visible': False}
+2026-04-16 20:20:12,732 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:20:12,738 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 218, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:12,739 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 218, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:12,742 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 233, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:12,745 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 233, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:12,749 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 233, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:12,750 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 233, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:12,753 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 233, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:14,246 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1733, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:14,247 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1733, 'result': 0}
+2026-04-16 20:20:14,247 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1733, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:20:14,342 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:20:14,367 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:20:15,282 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:20:15,298 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:20:15,306 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,307 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:20:15,508 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,509 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,510 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,510 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,511 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,511 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:15,512 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 219, 'dialog_visible': False}
+2026-04-16 20:20:15,521 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:20:15,531 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:15,532 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:15,535 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:15,539 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:15,542 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:15,543 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:15,546 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:16,313 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1016, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:16,314 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1016, 'result': 0}
+2026-04-16 20:20:16,314 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1016, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:20:17,354 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:20:17,370 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:20:17,378 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,379 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:20:17,581 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,582 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,583 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,583 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,583 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,584 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:17,585 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 219, 'dialog_visible': False}
+2026-04-16 20:20:17,594 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:20:17,605 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:17,606 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:17,609 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:17,613 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 234, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:17,616 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:17,617 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:17,620 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:18,345 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 969, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:18,346 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 969, 'result': 0}
+2026-04-16 20:20:18,346 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 969, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:20:20,022 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:20:20,039 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:20:20,047 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,048 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:20:20,249 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,250 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,251 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,251 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,252 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,252 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 203, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:20,253 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 203, 'dialog_visible': False}
+2026-04-16 20:20:20,262 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:20:20,276 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:20,277 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:20,280 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:20,284 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 234, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:20,287 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:20,288 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:20,291 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 250, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:20:21,281 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1234, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:20:21,282 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1234, 'result': 0}
+2026-04-16 20:20:21,282 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1234, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:03,867 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:03,868 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:03,868 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:03,869 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:03,869 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:03,870 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:03,870 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 311, 'dialog_visible': False}
+2026-04-16 20:21:03,879 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:21:03,885 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:03,886 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:03,889 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:03,892 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:03,895 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:03,896 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:03,899 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:05,285 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1718, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:05,286 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1718, 'result': 0}
+2026-04-16 20:21:05,286 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1718, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:05,365 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:21:05,390 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:21:06,365 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:21:06,381 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:06,389 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,390 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:21:06,682 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,682 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,683 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,683 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,684 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,684 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:06,685 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 296, 'dialog_visible': False}
+2026-04-16 20:21:06,694 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:21:06,704 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:06,705 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:06,708 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:06,711 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:06,717 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:06,718 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:06,720 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:07,483 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1093, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:07,483 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1093, 'result': 0}
+2026-04-16 20:21:07,484 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1093, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:08,770 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:21:08,786 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:08,794 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:08,795 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:21:09,092 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 297, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:09,093 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 297, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:09,094 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 297, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:09,094 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 297, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:09,095 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 297, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:09,095 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 297, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:09,096 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 297, 'dialog_visible': False}
+2026-04-16 20:21:09,104 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:21:09,117 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:09,118 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:09,121 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:09,124 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:09,128 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:09,129 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:09,132 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 344, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:11,266 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2469, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:11,267 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2469, 'result': 0}
+2026-04-16 20:21:11,267 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2469, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:12,505 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:21:12,521 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:12,529 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,530 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:21:12,823 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,824 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,824 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,825 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,825 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,826 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:12,827 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 296, 'dialog_visible': False}
+2026-04-16 20:21:12,835 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:21:12,850 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:12,850 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:12,854 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:12,858 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:12,861 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:12,862 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:12,865 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:15,570 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3046, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:15,571 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3046, 'result': 1}
+2026-04-16 20:21:15,571 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3046, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:16,661 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:21:16,678 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:21:16,686 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,687 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:21:16,977 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,978 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,979 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,979 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,980 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,980 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:16,981 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 296, 'dialog_visible': False}
+2026-04-16 20:21:16,989 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:21:17,012 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:17,013 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:17,016 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:17,020 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:17,024 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:17,024 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:17,027 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:21:18,138 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1453, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:21:18,139 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1453, 'result': 0}
+2026-04-16 20:21:18,139 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1453, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:27,888 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:27,888 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:27,897 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:27,902 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:27,903 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:27,906 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:27,909 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:27,913 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:27,913 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:27,916 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:31,205 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3311, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:31,205 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3311, 'result': 0}
+2026-04-16 20:23:31,206 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3311, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:31,523 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:23:31,546 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:23:32,842 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:32,843 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:32,849 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:32,855 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:32,856 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:32,857 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:32,861 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:32,862 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:32,865 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:34,055 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1218, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:34,056 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1218, 'result': 0}
+2026-04-16 20:23:34,056 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1218, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:35,213 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:35,213 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:35,217 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:35,224 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:35,224 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:35,226 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:35,231 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:35,232 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:35,235 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:38,271 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-16 20:23:38,271 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 1}
+2026-04-16 20:23:38,380 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:23:39,596 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-16 20:23:39,596 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-16 20:23:39,611 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-16 20:23:40,515 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 5296, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:41,325 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:41,325 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:41,329 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:41,336 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:41,337 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:41,338 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:41,346 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:41,346 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:41,349 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:42,179 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 860, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:42,180 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 860, 'result': 1}
+2026-04-16 20:23:42,181 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 860, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:42,877 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:23:42,903 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:23:43,194 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:43,195 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:43,204 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:43,215 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:43,216 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:43,219 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:43,223 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:43,226 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:43,227 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:43,230 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:44,140 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 938, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:44,141 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 938, 'result': 1}
+2026-04-16 20:23:44,142 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 938, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:45,109 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:23:45,133 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:23:45,428 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:45,428 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:45,436 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:45,446 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:45,447 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:45,450 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:45,454 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:45,457 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:45,457 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:45,461 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:46,371 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 936, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:46,372 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 936, 'result': 1}
+2026-04-16 20:23:46,372 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 936, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:47,218 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:23:47,243 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:23:47,533 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:47,534 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:47,542 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:47,550 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:47,551 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:47,554 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:47,557 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:47,561 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:47,562 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:47,564 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:48,332 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 796, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:48,333 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 813, 'result': 0}
+2026-04-16 20:23:48,333 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 813, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:49,631 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:49,632 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:49,637 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:49,642 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:49,643 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:49,644 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:49,647 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:49,648 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:49,651 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:50,487 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 843, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:50,487 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 843, 'result': 0}
+2026-04-16 20:23:50,488 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 843, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:51,275 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:23:51,276 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:23:51,279 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:23:51,285 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:51,285 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:51,286 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:51,290 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:51,291 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:51,294 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:23:52,090 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 813, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:23:52,091 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 813, 'result': 0}
+2026-04-16 20:23:52,091 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 813, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:24:23,508 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:24:23,508 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:24:23,517 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:24:23,524 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:23,525 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:23,528 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:23,532 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:23,535 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:23,536 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:23,539 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:24,926 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1405, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:24:24,926 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1405, 'result': 0}
+2026-04-16 20:24:24,927 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1421, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:24:25,230 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:24:25,253 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:24:41,654 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:24:41,677 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:24:41,958 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:24:41,959 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:24:41,967 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:24:41,973 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:41,974 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:41,977 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:41,981 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:41,985 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:41,985 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:41,988 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:43,108 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1139, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:24:43,109 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1139, 'result': 0}
+2026-04-16 20:24:43,109 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1139, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:24:52,898 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:24:52,921 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:24:53,206 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:24:53,207 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:24:53,215 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:24:53,222 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:53,223 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:53,226 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:53,230 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:53,235 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:53,236 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:53,238 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:24:54,650 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1453, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:24:54,651 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1453, 'result': 0}
+2026-04-16 20:24:54,651 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1453, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:26:00,302 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-16 20:26:00,326 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:26:00,617 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:26:00,617 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:26:00,625 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:26:00,632 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:00,633 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:00,636 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:00,639 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:00,643 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:00,644 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:00,647 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:26:01,789 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1171, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:26:01,790 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1171, 'result': 0}
+2026-04-16 20:26:01,790 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1171, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:36,836 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:36,837 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:36,845 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:36,853 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:36,854 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:36,857 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:36,861 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:36,864 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:36,864 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:36,867 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:37,790 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 952, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:37,791 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 952, 'result': 0}
+2026-04-16 20:27:37,791 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 952, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:38,710 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:38,710 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:38,716 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:38,723 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:38,723 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:38,724 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:38,728 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:38,728 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:38,732 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:39,535 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 811, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:39,536 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 827, 'result': 0}
+2026-04-16 20:27:39,536 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 827, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:40,409 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:40,410 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:40,413 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:40,419 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:40,420 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:40,421 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:40,425 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:40,425 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:40,428 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:41,340 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 938, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:41,341 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 938, 'result': 0}
+2026-04-16 20:27:41,341 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 938, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:42,893 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:42,894 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:42,897 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:42,904 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:42,905 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:42,906 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:42,910 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:42,911 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:42,914 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:43,489 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 593, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:43,490 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 608, 'result': 0}
+2026-04-16 20:27:43,490 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 608, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:44,072 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:44,073 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:44,077 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:44,084 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:44,085 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:44,086 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:44,089 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:44,090 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:44,093 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:44,620 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 546, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:44,621 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 546, 'result': 0}
+2026-04-16 20:27:44,621 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 546, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:45,199 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:45,200 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:45,203 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:45,211 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:45,212 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:45,213 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:45,216 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:45,217 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:45,220 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:45,667 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 468, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:45,668 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 468, 'result': 0}
+2026-04-16 20:27:45,668 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 468, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:48,074 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:48,075 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:48,078 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:48,085 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:48,085 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:48,087 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:48,090 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:48,091 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:48,094 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:49,024 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 953, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:49,025 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 953, 'result': 0}
+2026-04-16 20:27:49,025 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 953, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:53,073 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:53,073 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:53,076 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:53,082 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:53,082 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:53,083 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:53,087 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:53,088 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:53,091 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:54,131 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1063, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:54,132 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1063, 'result': 0}
+2026-04-16 20:27:54,132 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1063, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:54,748 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:27:54,749 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:27:54,753 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:27:54,760 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:54,760 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:54,762 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:54,765 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:54,766 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:54,769 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:27:55,291 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 546, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:27:55,292 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 546, 'result': 0}
+2026-04-16 20:27:55,292 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 546, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:28:11,635 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:28:11,635 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:28:11,644 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:28:11,651 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:11,652 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:11,655 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:11,658 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:11,662 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:11,663 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:11,666 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:28:15,397 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3764, 'result': 0}
+2026-04-16 20:28:15,398 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3764, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-16 20:29:51,819 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:29:57,897 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:29:57,897 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:29:57,897 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:29:57,906 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:29:57,913 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:29:57,913 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:29:57,914 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:29:57,918 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:29:57,918 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:29:57,921 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:00,167 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2265, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:30:00,167 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2265, 'result': 0}
+2026-04-16 20:30:00,168 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2265, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:30:02,775 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:30:02,775 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:30:02,775 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:30:02,780 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:30:02,787 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:02,788 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:02,789 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:02,792 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:02,793 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:02,796 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:30:04,925 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 20:30:04,925 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-16 20:30:05,073 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:30:06,103 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3328, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-16 20:30:06,104 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3328, 'result': 0}
+2026-04-16 20:30:06,104 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3328, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:30:33,046 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:31:47,727 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:31:47,727 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-16 20:31:47,728 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-16 20:31:47,738 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:31:47,746 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:31:47,746 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:31:47,747 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:31:47,750 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:31:47,751 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:31:47,755 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-16 20:31:51,153 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-16 20:31:51,154 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-16 20:31:51,304 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-16 20:31:52,711 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4985, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-16 20:33:32,143 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:36:35,396 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:36:35,414 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:37:36,860 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:37:36,871 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True
+2026-04-16 20:43:18,750 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-16 20:43:18,761 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=True buttons_visible=True

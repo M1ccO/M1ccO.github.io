@@ -83,7 +83,8 @@ class WorkEditorPayloadAdapter:
                 _sub_sel.set_value(payload.get(self.jaw_field("sub"), ""))
                 _sub_sel.set_stop_screws(payload.get(self.stop_screws_field("sub"), ""))
 
-        dialog.main_program_input.setText(payload.get("main_program", ""))
+        if hasattr(dialog, "main_program_input"):
+            dialog.main_program_input.setText(payload.get("main_program", ""))
 
         if is_mc:
             load_machining_center_payload(dialog, payload)
@@ -145,7 +146,11 @@ class WorkEditorPayloadAdapter:
                 "raw_part_side": dialog.raw_part_side_input.text().strip(),
                 "raw_part_square_length": dialog.raw_part_square_length_input.text().strip(),
                 "raw_part_custom_fields": dialog.raw_part_custom_fields_input.toPlainText().strip(),
-                "main_program": dialog.main_program_input.text().strip(),
+                "main_program": (
+                    dialog.main_program_input.text().strip()
+                    if hasattr(dialog, "main_program_input")
+                    else (persisted_work or {}).get("main_program", "")
+                ),
                 "robot_info": dialog.robot_info_input.toPlainText().strip(),
                 "notes": dialog.notes_input.toPlainText().strip(),
                 "print_pots": bool(getattr(dialog, "print_pots_checkbox", None) and dialog.print_pots_checkbox.isChecked()),

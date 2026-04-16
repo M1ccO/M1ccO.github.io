@@ -31,6 +31,7 @@ from ui.setup_page_support.crud_actions import (
     delete_work as delete_setup_work,
     duplicate_work as duplicate_setup_work,
     edit_work as edit_setup_work,
+    preload_shared_work_editor_dialog,
 )
 from ui.setup_page_support.selection_helpers import (
     clear_selection as clear_setup_selection,
@@ -95,6 +96,7 @@ class SetupPage(QWidget):
         self._search_visible = False
         self._min_list_panel_width = 340
         self._last_mouse_button = None  # Track mouse button for double-click handling
+        self._work_editor_preload_done = False
         self._row_headers = {
             "work_id": self._t("setup_page.row.work_id", "Work ID"),
             "drawing": self._t("setup_page.row.drawing", "Drawing"),
@@ -319,4 +321,10 @@ class SetupPage(QWidget):
 
     def view_setup_card(self):
         view_setup_card_action(self)
+
+    def preload_work_editor_dialog(self):
+        if self._work_editor_preload_done:
+            return
+        preload_shared_work_editor_dialog(self)
+        self._work_editor_preload_done = True
 

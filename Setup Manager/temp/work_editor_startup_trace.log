@@ -1,0 +1,32 @@
+2026-04-16 19:58:16 {'event': 'show', 'visible': True, 'minimized': False, 'maximized': False}
+2026-04-16 19:58:16 {'event': 'startup_cover_shown'}
+2026-04-16 19:58:16 {'event': 'LayoutRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'UpdateRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'WindowActivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'LayoutRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'UpdateRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'LayoutRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'startup_cover_released', 'paint_count': 0}
+2026-04-16 19:58:16 {'event': 'LayoutRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'UpdateRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:16 {'event': 'Paint', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'zeros_tab_lazy_built'}
+2026-04-16 19:58:17 {'event': 'tools_tab_lazy_built'}
+2026-04-16 19:58:17 {'event': 'WindowDeactivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowActivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowDeactivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowActivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowDeactivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowActivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowDeactivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowActivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowDeactivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'WindowActivate', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'UpdateRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'Paint', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'UpdateRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'Paint', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'LayoutRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'LayoutRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'UpdateRequest', 'size': '960x680', 'root_index': 0}
+2026-04-16 19:58:17 {'event': 'Paint', 'size': '960x680', 'root_index': 0}

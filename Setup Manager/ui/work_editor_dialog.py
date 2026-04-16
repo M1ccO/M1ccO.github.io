@@ -1,10 +1,13 @@
-﻿import logging
+import logging
+from pathlib import Path
+import time
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QApplication,
     QBoxLayout,
     QCheckBox,
     QComboBox,
@@ -30,7 +33,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from machine_profiles import NTX_MACHINE_PROFILE, is_machining_center, load_profile
+from machine_profiles import NTX_MACHINE_PROFILE, is_machining_center, load_profile, resolve_profile_key
 from ui.work_editor_support import (
     WorkEditorJawSelectorPanel,
     WorkEditorOrderedToolList,
@@ -94,12 +97,14 @@ from ui.work_editor_support import (
     build_tool_selector_request,
     build_embedded_selector_parity_widget,
     release_tool_library_namespace_aliases,
+    warmup_embedded_selector_runtime,
     make_zero_axis_input,
     set_coord_combo,
     set_zero_xy_visibility,
 )
 from config import (
     SHARED_UI_PREFERENCES_PATH,
+    STYLE_PATH,
 )
 from shared.services.ui_preferences_service import UiPreferencesService
 from ui.work_editor_support.dialog_lifecycle import (
@@ -146,6 +151,7 @@ class WorkEditorDialog(QDialog):
         draw_service,
         work=None,
         parent=None,
+        style_host: QWidget | None = None,
         translate: Callable[[str, str | None], str] | None = None,
         batch_label: str | None = None,
         group_edit_mode: bool = False,
@@ -157,17 +163,30 @@ class WorkEditorDialog(QDialog):
         self.draw_service = draw_service
         self.work = dict(work or {})
         self.is_edit = bool(work)
+        self._explicit_style_host = style_host if isinstance(style_host, QWidget) else None
         self._translate = translate or _noop_translate
         self._batch_label = (batch_label or "").strip()
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
         self._drawings_enabled = drawings_enabled
+        self._startup_popup_guard_active = False
         try:
             prefs_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True)
             _prefs_data = prefs_service.load()
-            profile_key = str(machine_profile_key or "").strip() or str(
-                _prefs_data.get("machine_profile_key") or "ntx_2sp_2h"
-            )
+
+            raw_machine_profile_key = str(machine_profile_key or "").strip()
+            raw_prefs_profile_key = str(_prefs_data.get("machine_profile_key") or "").strip()
+
+            if raw_machine_profile_key:
+                profile_key = resolve_profile_key(raw_machine_profile_key)
+                profile_source = "parameter"
+            elif raw_prefs_profile_key:
+                profile_key = resolve_profile_key(raw_prefs_profile_key)
+                profile_source = "preferences"
+            else:
+                profile_key = "ntx_2sp_2h"
+                profile_source = "default"
+
             base_profile = load_profile(profile_key)
             try:
                 from machine_profiles import apply_machining_center_overrides
@@ -181,6 +200,13 @@ class WorkEditorDialog(QDialog):
                 self.machine_profile = base_profile
             self._op20_jaws_enabled = bool(_prefs_data.get("op20_jaws_default", False))
             self._op20_tools_enabled = bool(_prefs_data.get("op20_tools_default", False))
+            self._LOGGER.info(
+                "work_editor.profile_resolved source=%s resolved=%s raw_param=%s raw_prefs=%s",
+                profile_source,
+                profile_key,
+                raw_machine_profile_key,
+                raw_prefs_profile_key,
+            )
         except Exception:
             self.machine_profile = NTX_MACHINE_PROFILE
             self._op20_jaws_enabled = False
@@ -215,16 +241,40 @@ class WorkEditorDialog(QDialog):
         self._zero_grids_with_groups: list[tuple] = []
         self._selector_transport_mode = self._resolve_selector_transport_mode()
         self._selector_mode_active = False
+        self._selector_open_requested = False
+        self._selector_session_serial = 0
+        self._selector_session_id: int | None = None
+        self._selector_session_phase = "idle"
+        self._host_visual_style_applied = False
+        self._startup_cover_active = True
+        self._startup_cover_paint_count = 0
+        self._startup_cover_shown_at = 0.0
+        self._startup_cover_release_scheduled = False
+        self._atomic_open_requested = False
+        self._atomic_open_reveal_scheduled = False
+        self._startup_cover: QWidget | None = None
+        self._startup_cover_label: QLabel | None = None
+        self._zeros_tab_pending_build = not is_machining_center(self.machine_profile)
+        self._zeros_tab_built = False
+        self._tools_tab_pending_build = not is_machining_center(self.machine_profile)
+        self._tools_tab_built = False
+        self._interaction_surfaces_warmed = False
         self._selector_restore_state: dict | None = None
         self._embedded_selector_host: WorkEditorSelectorHost | None = None
         self._raw_part_combo_popup_allowed = False
+        self._combo_popup_windows: list[QWidget] = []
         self._raw_part_combo_popup_window: QWidget | None = None
 
         setup_tabs(self)
+        self.tabs.currentChanged.connect(self._on_tabs_current_changed)
 
         self._build_general_tab()
-        self._build_zeros_tab()
-        self._build_tools_tab()
+        if not self._zeros_tab_pending_build:
+            self._build_zeros_tab()
+            self._zeros_tab_built = True
+        if not self._tools_tab_pending_build:
+            self._build_tools_tab()
+            self._tools_tab_built = True
         self._build_notes_tab()
 
         setup_button_row(self)
@@ -233,8 +283,10 @@ class WorkEditorDialog(QDialog):
             mount_container=self._selector_mount_container,
             enter_selector_mode=self._enter_selector_mode,
             exit_selector_mode=self._exit_selector_mode,
+            auto_close_on_widget_signals=False,
             parent=self,
         )
+        self._apply_host_visual_style()
 
         # Keep dialog actions visually consistent with secondary gray buttons.
         self._set_secondary_button_theme()
@@ -243,10 +295,79 @@ class WorkEditorDialog(QDialog):
         self._load_work()
 
         finalize_ui(self)
+        self._build_startup_cover()
         self._close_transient_combo_popups()
-        self._schedule_combo_popup_stabilization()
         self._setup_raw_part_combo_popup_guard()
+        self._cache_combo_popup_windows()
         self._install_local_event_filters()
+        self._ensure_normal_editor_surface_visible()
+
+    def _build_startup_cover(self) -> None:
+        cover = QWidget(self)
+        cover.setObjectName("workEditorStartupCover")
+        cover.setAttribute(Qt.WA_StyledBackground, True)
+        cover.hide()
+
+        layout = QVBoxLayout(cover)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(12)
+        layout.addStretch(1)
+
+        label = QLabel(self._t("work_editor.loading.body", "Loading editor..."), cover)
+        label.setAlignment(Qt.AlignCenter)
+        label.setProperty("sectionTitle", True)
+        layout.addWidget(label, 0, Qt.AlignCenter)
+        layout.addStretch(1)
+
+        self._startup_cover = cover
+        self._startup_cover_label = label
+
+    def _sync_startup_cover_geometry(self) -> None:
+        cover = self._startup_cover
+        if isinstance(cover, QWidget):
+            cover.setGeometry(self.rect())
+
+    def _show_startup_cover(self) -> None:
+        cover = self._startup_cover
+        if not self._startup_cover_active or not isinstance(cover, QWidget):
+            return
+        self._startup_cover_paint_count = 0
+        self._startup_cover_shown_at = time.monotonic()
+        self._startup_cover_release_scheduled = False
+        cover.setFont(self.font())
+        palette = cover.palette()
+        palette.setColor(cover.backgroundRole(), self.palette().color(self.backgroundRole()))
+        cover.setPalette(palette)
+        cover.setAutoFillBackground(True)
+        self._sync_startup_cover_geometry()
+        cover.show()
+        cover.raise_()
+
+    def _release_startup_cover(self) -> None:
+        if not self._startup_cover_active:
+            return
+        self._startup_cover_active = False
+        self._startup_cover_release_scheduled = False
+        cover = self._startup_cover
+        if isinstance(cover, QWidget):
+            cover.hide()
+
+    def _schedule_startup_cover_release_check(self) -> None:
+        if self._startup_cover_release_scheduled:
+            return
+        self._startup_cover_release_scheduled = True
+
+        def _check_release() -> None:
+            self._startup_cover_release_scheduled = False
+            if not self._startup_cover_active:
+                return
+            elapsed_ms = int(max(0.0, time.monotonic() - float(getattr(self, "_startup_cover_shown_at", 0.0))) * 1000)
+            if self._startup_cover_paint_count >= 3 and elapsed_ms >= 420:
+                self._release_startup_cover()
+            else:
+                self._schedule_startup_cover_release_check()
+
+        QTimer.singleShot(120, _check_release)
 
     def _close_transient_combo_popups(self) -> None:
         """Defensively close any combo popups opened during startup wiring."""
@@ -256,14 +377,315 @@ class WorkEditorDialog(QDialog):
             except Exception:
                 pass
 
-    def _schedule_combo_popup_stabilization(self) -> None:
-        """Close delayed combo popups that may appear after style/polish passes."""
+    def _cache_combo_popup_windows(self) -> None:
+        windows: list[QWidget] = []
+        for combo in self.findChildren(QComboBox):
+            try:
+                popup_window = combo.view().window()
+            except Exception:
+                popup_window = None
+            if (
+                isinstance(popup_window, QWidget)
+                and self._is_true_popup_window(popup_window)
+                and popup_window not in windows
+            ):
+                windows.append(popup_window)
+                popup_window.installEventFilter(self)
+        self._combo_popup_windows = windows
 
-        def _close_again() -> None:
-            self._close_transient_combo_popups()
+    @staticmethod
+    def _is_true_popup_window(widget: QWidget | None) -> bool:
+        if not isinstance(widget, QWidget):
+            return False
+        return (widget.windowFlags() & Qt.WindowType_Mask) == Qt.Popup
 
-        for delay_ms in (0, 60, 180):
-            QTimer.singleShot(delay_ms, _close_again)
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if bool(getattr(self, "_atomic_open_requested", False)):
+            try:
+                self.setWindowOpacity(0.0)
+            except Exception:
+                pass
+            self._atomic_open_requested = False
+            if not self._atomic_open_reveal_scheduled:
+                self._atomic_open_reveal_scheduled = True
+                QTimer.singleShot(260, self._finish_atomic_open_reveal)
+        if not self._host_visual_style_applied:
+            self._apply_host_visual_style()
+        self._ensure_normal_editor_surface_visible()
+        self._ensure_normal_editor_content_visible()
+        self._show_startup_cover()
+
+    def _finish_atomic_open_reveal(self) -> None:
+        self._atomic_open_reveal_scheduled = False
+        try:
+            self.setWindowOpacity(1.0)
+        except Exception:
+            pass
+
+    def _on_tabs_current_changed(self, index: int) -> None:
+        if index == self.tabs.indexOf(self.zeros_tab):
+            self._ensure_zeros_tab_ready()
+        if index == self.tabs.indexOf(self.tools_tab):
+            self._ensure_zeros_tab_ready()
+            self._ensure_tools_tab_ready()
+
+    def _apply_work_payload_to_zeros_tab(self) -> None:
+        if not self.work:
+            return
+        payload = self.work
+        if hasattr(self, "main_program_input"):
+            self.main_program_input.setText(payload.get("main_program", ""))
+        for spindle in self.machine_profile.spindles:
+            selector = self._jaw_selectors.get(spindle.key)
+            if selector is None:
+                continue
+            selector.set_value(payload.get(self._payload_adapter.jaw_field(spindle.key), ""))
+            selector.set_stop_screws(payload.get(self._payload_adapter.stop_screws_field(spindle.key), ""))
+
+        if self.machine_profile.spindle_count == 1:
+            _sub_sel = self._jaw_selectors.get("sub")
+            if _sub_sel is not None:
+                _sub_sel.set_value(payload.get(self._payload_adapter.jaw_field("sub"), ""))
+                _sub_sel.set_stop_screws(payload.get(self._payload_adapter.stop_screws_field("sub"), ""))
+
+        for head in self.machine_profile.heads:
+            program_input = self._sub_program_inputs.get(head.key)
+            if program_input is not None:
+                program_input.setText(payload.get(self._payload_adapter.sub_program_field(head.key), ""))
+
+            for spindle in self.machine_profile.spindles:
+                combo = self._zero_coord_inputs.get((head.key, spindle.key))
+                if combo is not None:
+                    self._set_coord_combo(
+                        combo,
+                        payload.get(
+                            self._payload_adapter.coord_field(head.key, spindle.key),
+                            payload.get(self._payload_adapter.legacy_zero_field(head.key), ""),
+                        ),
+                        head.default_coord,
+                    )
+                for axis in self.machine_profile.zero_axes:
+                    widget = self._zero_axis_input_map.get((head.key, spindle.key, axis))
+                    if widget is not None:
+                        widget.setText(payload.get(self._payload_adapter.axis_field(head.key, spindle.key, axis), ""))
+
+        if hasattr(self, "sub_pickup_z_input"):
+            self.sub_pickup_z_input.setText(payload.get("sub_pickup_z", ""))
+
+        if hasattr(self, "op20_jaws_checkbox"):
+            self.op20_jaws_checkbox.setChecked(bool(self._op20_jaws_enabled))
+
+    def _ensure_zeros_tab_ready(self) -> None:
+        if self._zeros_tab_built:
+            return
+        self._build_zeros_tab()
+        self._zeros_tab_built = True
+        self._zeros_tab_pending_build = False
+        self._apply_work_payload_to_zeros_tab()
+        finalize_ui(self)
+        self._cache_combo_popup_windows()
+        self._install_local_event_filters()
+
+    def _apply_work_payload_to_tools_tab(self) -> None:
+        if not self.work:
+            return
+        for head_key in self._head_profiles.keys():
+            ordered_list = self._ordered_tool_lists.get(head_key)
+            if ordered_list is not None:
+                ordered_list.set_tool_assignments(
+                    self.work.get(self._payload_adapter.tool_assignment_field(head_key), [])
+                )
+        if hasattr(self, "print_pots_checkbox"):
+            self.print_pots_checkbox.setChecked(bool(self.work.get("print_pots", False)))
+
+    def _ensure_tools_tab_ready(self) -> None:
+        if self._tools_tab_built:
+            return
+        self._ensure_zeros_tab_ready()
+        self._build_tools_tab()
+        self._tools_tab_built = True
+        self._tools_tab_pending_build = False
+        self._apply_work_payload_to_tools_tab()
+        for head_key in self._head_profiles.keys():
+            self._refresh_tool_head_widgets(head_key)
+        self._sync_tool_head_view()
+        finalize_ui(self)
+        self._cache_combo_popup_windows()
+        self._install_local_event_filters()
+
+    def _warmup_initial_interaction_surfaces(self) -> None:
+        if self._interaction_surfaces_warmed:
+            return
+        self._interaction_surfaces_warmed = True
+        if not self._zeros_tab_built:
+            self._ensure_zeros_tab_ready()
+        if not self._tools_tab_built:
+            self._ensure_tools_tab_ready()
+        try:
+            warmup_embedded_selector_runtime(self)
+        except Exception:
+            pass
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._sync_startup_cover_geometry()
+
+    def _resolve_style_host(self) -> QWidget | None:
+        explicit_host = getattr(self, "_explicit_style_host", None)
+        if isinstance(explicit_host, QWidget):
+            return explicit_host
+
+        candidates: list[QWidget] = []
+
+        parent_widget = self.parentWidget()
+        if isinstance(parent_widget, QWidget):
+            parent_window = parent_widget.window()
+            if isinstance(parent_window, QWidget) and parent_window is not self:
+                candidates.append(parent_window)
+
+        active_window = QApplication.activeWindow()
+        if isinstance(active_window, QWidget) and active_window is not self:
+            candidates.append(active_window)
+
+        for widget in QApplication.topLevelWidgets():
+            if isinstance(widget, QWidget) and widget is not self:
+                candidates.append(widget)
+
+        unique_candidates: list[QWidget] = []
+        seen_ids: set[int] = set()
+        for widget in candidates:
+            widget_id = id(widget)
+            if widget_id in seen_ids:
+                continue
+            seen_ids.add(widget_id)
+            unique_candidates.append(widget)
+
+        styled_candidates = [widget for widget in unique_candidates if str(widget.styleSheet() or "").strip()]
+        if styled_candidates:
+            return max(styled_candidates, key=lambda widget: len(str(widget.styleSheet() or "")))
+        return unique_candidates[0] if unique_candidates else None
+
+    @staticmethod
+    def _resolve_asset_urls(qss: str) -> str:
+        assets_dir = (Path(STYLE_PATH).parent.parent / "assets").resolve().as_posix()
+        return qss.replace('url("assets/', f'url("{assets_dir}/').replace("url('assets/", f"url('{assets_dir}/")
+
+    def _load_work_editor_style_sheet_from_disk(self) -> str:
+        style_dir = Path(STYLE_PATH).parent
+        modules_dir = style_dir / "modules"
+        merged: list[str] = []
+        if modules_dir.is_dir():
+            for module_path in sorted(modules_dir.glob("*.qss")):
+                try:
+                    merged.append(self._resolve_asset_urls(module_path.read_text(encoding="utf-8")))
+                except Exception:
+                    continue
+        if merged:
+            return "\n".join(merged)
+        try:
+            return self._resolve_asset_urls(Path(STYLE_PATH).read_text(encoding="utf-8"))
+        except Exception:
+            return ""
+
+    def _apply_host_visual_style(self) -> None:
+        for widget in (self, getattr(self, "_normal_page", None), getattr(self, "_selector_page", None)):
+            if isinstance(widget, QWidget):
+                widget.setAttribute(Qt.WA_StyledBackground, True)
+
+        host = self._resolve_style_host()
+        style_sheet = ""
+        if isinstance(host, QWidget):
+            style_sheet = str(host.styleSheet() or "")
+            self.setPalette(host.palette())
+            self.setFont(host.font())
+
+        if not style_sheet.strip():
+            style_sheet = self._load_work_editor_style_sheet_from_disk()
+
+        if style_sheet.strip():
+            self.setStyleSheet(style_sheet)
+            self.style().unpolish(self)
+            self.style().polish(self)
+            self._host_visual_style_applied = True
+
+    def _ensure_normal_editor_surface_visible(self) -> None:
+        """Guard against accidental selector-page visibility without active selector widget."""
+        root_stack = getattr(self, "_root_stack", None)
+        normal_page = getattr(self, "_normal_page", None)
+        if not isinstance(root_stack, QStackedWidget) or normal_page is None:
+            return
+
+        host = self._embedded_selector_host
+        active_selector_widget = host.active_widget if host is not None else None
+        if isinstance(active_selector_widget, QWidget):
+            selector_has_content = active_selector_widget.layout() is not None or active_selector_widget.findChildren(QWidget)
+            if not selector_has_content:
+                self._LOGGER.warning("work_editor.surface_guard closing invalid embedded selector surface")
+                host.close_active_widget()
+                active_selector_widget = None
+
+        if active_selector_widget is None:
+            if self._selector_mode_active or self._selector_session_id is not None:
+                self._LOGGER.warning("work_editor.surface_guard clearing abandoned selector session")
+                self._exit_selector_mode()
+            if root_stack.currentWidget() is not normal_page:
+                self._LOGGER.warning("work_editor.surface_guard restoring normal page from unexpected selector page state")
+                root_stack.setCurrentWidget(normal_page)
+
+    def _ensure_normal_editor_content_visible(self) -> None:
+        """Self-heal missing normal-page content when selector mode is not active."""
+        root_stack = getattr(self, "_root_stack", None)
+        normal_page = getattr(self, "_normal_page", None)
+        tabs = getattr(self, "tabs", None)
+        buttons = getattr(self, "_dialog_buttons", None)
+        if not isinstance(root_stack, QStackedWidget) or normal_page is None:
+            return
+
+        host = self._embedded_selector_host
+        active_selector_widget = host.active_widget if host is not None else None
+        if active_selector_widget is not None:
+            return
+
+        if root_stack.currentWidget() is not normal_page:
+            root_stack.setCurrentWidget(normal_page)
+
+        normal_layout = normal_page.layout()
+        if normal_layout is None:
+            normal_layout = QVBoxLayout(normal_page)
+            normal_layout.setContentsMargins(0, 0, 0, 0)
+            normal_layout.setSpacing(10)
+
+        if isinstance(tabs, QTabWidget):
+            if tabs.parent() is not normal_page:
+                tabs.setParent(normal_page)
+            if normal_layout.indexOf(tabs) < 0:
+                normal_layout.insertWidget(0, tabs, 1)
+            tabs.setVisible(True)
+
+        if isinstance(buttons, QDialogButtonBox):
+            if buttons.parent() is not normal_page:
+                buttons.setParent(normal_page)
+            if normal_layout.indexOf(buttons) < 0:
+                normal_layout.addWidget(buttons)
+            buttons.setVisible(True)
+
+        normal_page.setVisible(True)
+        root_stack.setVisible(True)
+        self._LOGGER.info(
+            "work_editor.surface_state selector_mode=%s active_selector=%s root_index=%s tabs_visible=%s buttons_visible=%s",
+            self._selector_mode_active,
+            bool(active_selector_widget),
+            root_stack.currentIndex(),
+            bool(isinstance(tabs, QTabWidget) and tabs.isVisible()),
+            bool(isinstance(buttons, QDialogButtonBox) and buttons.isVisible()),
+        )
+
+    def _release_startup_popup_guard(self, *, reason: str) -> None:
+        if not self._startup_popup_guard_active:
+            return
+        self._close_transient_combo_popups()
+        self._startup_popup_guard_active = False
 
     def _setup_raw_part_combo_popup_guard(self) -> None:
         """Allow RAW PART dropdown popup only after explicit user interaction."""
@@ -274,7 +696,7 @@ class WorkEditorDialog(QDialog):
             popup_window = combo.view().window()
         except Exception:
             popup_window = None
-        if isinstance(popup_window, QWidget):
+        if isinstance(popup_window, QWidget) and self._is_true_popup_window(popup_window):
             self._raw_part_combo_popup_window = popup_window
 
     def _resolve_selector_transport_mode(self) -> str:
@@ -287,10 +709,60 @@ class WorkEditorDialog(QDialog):
             "transport": self._selector_transport_mode,
         }
         payload.update({key: value for key, value in fields.items() if value not in (None, "")})
-        self._LOGGER.info("work_editor.selector", extra={"selector": payload})
+        self._LOGGER.info("work_editor.selector %s", payload, extra={"selector": payload})
 
     def _is_embedded_selector_mode_enabled(self) -> bool:
         return True
+
+    def _begin_selector_session_request(self, *, kind: str) -> int | None:
+        host = self._embedded_selector_host
+        if self._selector_session_id is not None or self._selector_mode_active:
+            self._LOGGER.warning(
+                "work_editor.selector request ignored while session is active kind=%s session_id=%s phase=%s",
+                kind,
+                self._selector_session_id,
+                self._selector_session_phase,
+            )
+            return None
+        if host is not None and host.active_widget is not None:
+            self._LOGGER.warning("work_editor.selector request ignored because host still has an active widget kind=%s", kind)
+            return None
+
+        self._selector_session_serial += 1
+        self._selector_session_id = self._selector_session_serial
+        self._selector_session_phase = "requested"
+        self._selector_open_requested = True
+        self._log_selector_event(
+            "session.requested",
+            kind=kind,
+            session_id=self._selector_session_id,
+        )
+        return self._selector_session_id
+
+    def _mark_selector_session_phase(self, session_id: int, phase: str) -> bool:
+        if session_id != self._selector_session_id:
+            self._LOGGER.warning(
+                "work_editor.selector ignoring stale session transition session_id=%s current=%s phase=%s",
+                session_id,
+                self._selector_session_id,
+                phase,
+            )
+            return False
+        self._selector_session_phase = phase
+        return True
+
+    def _begin_selector_session_close(self, *, session_id: int, reason: str) -> bool:
+        if not self._mark_selector_session_phase(session_id, "closing"):
+            return False
+        self._log_selector_event("session.closing", session_id=session_id, reason=reason)
+        return True
+
+    def _clear_selector_session_request(self, session_id: int | None = None) -> None:
+        if session_id is not None and session_id != self._selector_session_id:
+            return
+        self._selector_session_id = None
+        self._selector_session_phase = "idle"
+        self._selector_open_requested = False
 
     def _capture_selector_restore_state(self) -> dict:
         return {
@@ -321,21 +793,30 @@ class WorkEditorDialog(QDialog):
             return
         if not isinstance(getattr(self, "_root_stack", None), QStackedWidget):
             return
+        if not getattr(self, "_selector_open_requested", True):
+            self._LOGGER.warning("work_editor.selector_mode ignored because no selector request is active")
+            return
 
         self._selector_restore_state = self._capture_selector_restore_state()
         self._selector_mode_active = True
+        if self._selector_session_id is not None:
+            self._selector_session_phase = "active"
         self._root_stack.setCurrentWidget(self._selector_page)
         self._expand_for_selector_mode()
 
     def _exit_selector_mode(self) -> None:
-        if not self._selector_mode_active:
-            return
-        if isinstance(getattr(self, "_root_stack", None), QStackedWidget):
+        session_id = self._selector_session_id
+        session_phase = self._selector_session_phase
+        if self._selector_mode_active and isinstance(getattr(self, "_root_stack", None), QStackedWidget):
             self._root_stack.setCurrentWidget(self._normal_page)
 
-        self._restore_from_selector_state()
+        if self._selector_mode_active:
+            self._restore_from_selector_state()
         self._selector_restore_state = None
         self._selector_mode_active = False
+        self._clear_selector_session_request(session_id)
+        if session_id is not None:
+            self._log_selector_event("session.closed", session_id=session_id, previous_phase=session_phase)
 
     def _expand_for_selector_mode(self) -> None:
         target_width = max(self.width() + self._SELECTOR_EXPAND_DELTA, self._SELECTOR_MIN_WIDTH)
@@ -362,12 +843,56 @@ class WorkEditorDialog(QDialog):
             widget.installEventFilter(self)
 
     def eventFilter(self, obj, event):
+        if obj is self and event.type() in (
+            QEvent.Paint,
+            QEvent.Resize,
+            QEvent.Move,
+            QEvent.LayoutRequest,
+            QEvent.UpdateRequest,
+            QEvent.PolishRequest,
+            QEvent.WindowActivate,
+            QEvent.WindowDeactivate,
+        ):
+            if event.type() == QEvent.Paint and self._startup_cover_active:
+                self._startup_cover_paint_count += 1
+                elapsed_ms = int(max(0.0, time.monotonic() - float(getattr(self, "_startup_cover_shown_at", 0.0))) * 1000)
+                if self._startup_cover_paint_count >= 3 and elapsed_ms >= 420:
+                    QTimer.singleShot(0, self._release_startup_cover)
+                else:
+                    self._schedule_startup_cover_release_check()
+        if (
+            isinstance(obj, QWidget)
+            and event.type() == QEvent.Show
+            and self._startup_popup_guard_active
+            and self._is_true_popup_window(obj)
+        ):
+            obj.hide()
+            return True
+
+        if (
+            isinstance(obj, QWidget)
+            and event.type() == QEvent.Show
+            and self._startup_popup_guard_active
+            and obj in self._combo_popup_windows
+        ):
+            obj.hide()
+            return True
+
+        if self._startup_popup_guard_active and event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress):
+            if isinstance(obj, QWidget) and (obj is self or self.isAncestorOf(obj)):
+                self._release_startup_popup_guard(reason=event.type().name)
+
         combo = getattr(self, "raw_part_kind_combo", None)
         if isinstance(combo, QComboBox):
             if obj is combo and event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress):
                 self._raw_part_combo_popup_allowed = True
             popup_window = self._raw_part_combo_popup_window
-            if popup_window is not None and obj is popup_window and event.type() == QEvent.Show:
+            if (
+                popup_window is not None
+                and obj is popup_window
+                and event.type() == QEvent.Show
+                and self._is_true_popup_window(popup_window)
+            ):
                 if not self._raw_part_combo_popup_allowed:
                     QTimer.singleShot(0, combo.hidePopup)
                     return True
@@ -580,6 +1105,8 @@ class WorkEditorDialog(QDialog):
         set_active_tool_list(self, ordered_list)
 
     def _update_shared_tool_actions(self):
+        if not self._tools_tab_built:
+            return
         update_shared_tool_actions(self)
 
     def _shared_move_tool_up(self):
@@ -601,9 +1128,13 @@ class WorkEditorDialog(QDialog):
         remove_dragged_tool_assignments(self, dropped_items)
 
     def _refresh_tool_head_widgets(self, head_key: str):
+        if not self._tools_tab_built:
+            return
         refresh_tool_head_widgets(self, head_key)
 
     def _sync_tool_head_view(self):
+        if not self._tools_tab_built:
+            return
         sync_tool_head_view(self)
 
     def _on_print_pots_toggled(self, checked: bool):
@@ -738,6 +1269,13 @@ class WorkEditorDialog(QDialog):
         if host is None:
             return False
         kind_key = str(kind or "").strip().lower()
+        if not self.isVisible():
+            self._LOGGER.warning("work_editor.selector blocked before dialog is visible kind=%s", kind_key)
+            return False
+        session_id = self._begin_selector_session_request(kind=kind_key)
+        if session_id is None:
+            return False
+
         request = {
             "kind": kind_key,
             "head": str(head or ""),
@@ -745,12 +1283,16 @@ class WorkEditorDialog(QDialog):
             "target_key": str((follow_up or {}).get("target_key") or ""),
         }
 
-        def _finalize_embedded_submit(payload: dict, req: dict = request) -> None:
+        def _finalize_embedded_submit(payload: dict, req: dict = request, current_session_id: int = session_id) -> None:
+            if not self._begin_selector_session_close(session_id=current_session_id, reason="submit"):
+                return
             self._handle_embedded_selector_submit(req, payload)
             release_tool_library_namespace_aliases(self)
             host.close_active_widget()
 
-        def _finalize_embedded_cancel() -> None:
+        def _finalize_embedded_cancel(current_session_id: int = session_id) -> None:
+            if not self._begin_selector_session_close(session_id=current_session_id, reason="cancel"):
+                return
             self._handle_embedded_selector_cancel()
             release_tool_library_namespace_aliases(self)
             host.close_active_widget()
@@ -770,6 +1312,7 @@ class WorkEditorDialog(QDialog):
             )
         except Exception as exc:
             self._LOGGER.exception("Failed to open embedded selector kind=%s", kind_key)
+            self._clear_selector_session_request(session_id)
             release_tool_library_namespace_aliases(self)
             self._show_selector_warning(
                 self._t("work_editor.selector.open_failed.title", "Selector unavailable"),
@@ -781,17 +1324,31 @@ class WorkEditorDialog(QDialog):
             )
             return False
         if container is None:
+            self._clear_selector_session_request(session_id)
             return False
         container.setProperty("selectorContext", True)
+        container.setProperty("selectorSessionId", session_id)
+        self._mark_selector_session_phase(session_id, "mounting")
 
         self._log_selector_event(
             "open.embedded",
             kind=kind,
             head=head,
             spindle=spindle,
+            session_id=session_id,
             target_key=str((follow_up or {}).get("target_key") or ""),
         )
         host.open_widget(container)
+        if not self._selector_mode_active:
+            self._LOGGER.warning(
+                "work_editor.selector failed to enter selector mode after mounting kind=%s session_id=%s",
+                kind_key,
+                session_id,
+            )
+            release_tool_library_namespace_aliases(self)
+            host.close_active_widget()
+            self._clear_selector_session_request(session_id)
+            return False
         return True
 
     def _handle_embedded_selector_submit(self, request: dict, payload: dict) -> None:
@@ -851,8 +1408,7 @@ class WorkEditorDialog(QDialog):
         if self.machine_profile.spindle_count == 1:
             _has_sub_jaw = bool(str(self.work.get("sub_jaw_id") or "").strip())
             _has_sub_tools = any(
-                bool((self._ordered_tool_lists.get(hk) or None) and
-                     (self._ordered_tool_lists[hk]._assignments_by_spindle.get("sub") or []))
+                bool(self.work.get(self._payload_adapter.tool_assignment_field(hk), []))
                 for hk in self._head_profiles
             )
             if _has_sub_jaw or _has_sub_tools:
@@ -862,11 +1418,15 @@ class WorkEditorDialog(QDialog):
                     self.op20_jaws_checkbox.setChecked(True)
                 if hasattr(self, "op20_tools_checkbox"):
                     self.op20_tools_checkbox.setChecked(True)
-        for head_key in self._head_profiles.keys():
-            self._refresh_tool_head_widgets(head_key)
-        self._sync_tool_head_view()
+        if self._tools_tab_built:
+            for head_key in self._head_profiles.keys():
+                self._refresh_tool_head_widgets(head_key)
+            self._sync_tool_head_view()
 
     def get_work_data(self) -> dict:
+        if not is_machining_center(self.machine_profile):
+            self._ensure_zeros_tab_ready()
+            self._ensure_tools_tab_ready()
         if hasattr(self, '_sync_mc_tools_operation_payload'):
             try:
                 self._sync_mc_tools_operation_payload()
@@ -908,6 +1468,10 @@ class WorkEditorDialog(QDialog):
                 return
 
         self.accept()
+
+
+
+
 
 
 

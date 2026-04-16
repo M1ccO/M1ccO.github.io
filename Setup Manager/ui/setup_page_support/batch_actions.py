@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup, prune_backups
 from ui.work_editor_dialog import WorkEditorDialog
+from ui.setup_page_support.work_editor_launch import exec_work_editor_dialog, resolve_work_editor_parent
 
 
 def _backup(page, tag: str) -> Path:
@@ -46,6 +47,7 @@ def prompt_batch_cancel_behavior(page) -> str:
 def batch_edit_works(page, work_ids: list[str]) -> None:
     saved_before: list[dict] = []
     total = len(work_ids)
+    host_window = resolve_work_editor_parent(page)
     for idx, work_id in enumerate(work_ids, 1):
         work = page.work_service.get_work(work_id)
         if not work:
@@ -54,7 +56,8 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
             dialog = WorkEditorDialog(
                 page.draw_service,
                 work=work,
-                parent=page,
+                parent=None,
+                style_host=host_window,
                 translate=page._t,
                 batch_label=f"{idx}/{total}",
                 drawings_enabled=page.drawings_enabled,
@@ -68,7 +71,7 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
             )
             page.refresh_works()
             return
-        if dialog.exec() != QDialog.Accepted:
+        if exec_work_editor_dialog(dialog) != QDialog.Accepted:
             if saved_before:
                 action = prompt_batch_cancel_behavior(page)
                 if action == "undo":
@@ -82,10 +85,12 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
 
 
 def group_edit_works(page, work_ids: list[str]) -> None:
+    host_window = resolve_work_editor_parent(page)
     try:
         baseline_dialog = WorkEditorDialog(
             page.draw_service,
-            parent=page,
+            parent=None,
+            style_host=host_window,
             translate=page._t,
             group_edit_mode=True,
             group_count=len(work_ids),
@@ -101,7 +106,7 @@ def group_edit_works(page, work_ids: list[str]) -> None:
         page.refresh_works()
         return
     baseline = baseline_dialog.get_work_data()
-    if baseline_dialog.exec() != QDialog.Accepted:
+    if exec_work_editor_dialog(baseline_dialog) != QDialog.Accepted:
         return
     edited_data = baseline_dialog.get_work_data()
     changed_fields = {

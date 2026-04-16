@@ -42,6 +42,7 @@ from .selector_provider import (
 from .selector_parity_factory import (
     build_embedded_selector_parity_widget,
     release_tool_library_namespace_aliases,
+    warmup_embedded_selector_runtime,
 )
 from .selector_adapter import (
     apply_fixture_selector_result,
@@ -142,6 +143,7 @@ __all__ = [
     "build_fixture_selector_request",
     "build_embedded_selector_parity_widget",
     "release_tool_library_namespace_aliases",
+    "warmup_embedded_selector_runtime",
     "head_label",
     "spindle_label",
     "merge_tool_refs",

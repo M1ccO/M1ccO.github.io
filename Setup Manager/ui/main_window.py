@@ -1,4 +1,6 @@
-﻿from pathlib import Path
+﻿import logging
+from pathlib import Path
+import time
 
 from PySide6.QtCore import QEvent, QTimer, QSize, Qt, Signal
 from PySide6.QtGui import QIcon
@@ -23,6 +25,7 @@ from config import (
     SHARED_UI_PREFERENCES_PATH,
     I18N_DIR,
     TOOL_ICONS_DIR,
+    TOOL_LIBRARY_READY_PATH,
     TOOL_LIBRARY_EXE_CANDIDATES,
     TOOL_LIBRARY_MAIN_PATH,
     TOOL_LIBRARY_PROJECT_DIR,
@@ -41,6 +44,7 @@ from ui.main_window_support import (
     clear_page_selection,
     complete_tool_library_handoff,
     initialize_preload_state,
+    is_tool_library_ready,
     launch_tool_library,
     on_setup_launch_context_changed,
     open_tool_library_deep_link,
@@ -49,7 +53,9 @@ from ui.main_window_support import (
     open_jaws_library_action,
     open_preferences_action,
     open_tool_library_action,
+    preload_work_editor_background,
     preload_tool_library_background,
+    retry_work_editor_preload,
     retry_tool_library_preload,
     send_request_with_retry,
     send_to_tool_library,
@@ -64,6 +70,8 @@ from shared.ui.main_window_helpers import (
     get_active_theme_palette,
 )
 class MainWindow(QMainWindow):
+    _LOGGER = logging.getLogger(__name__)
+
     # Emitted when the user requests a live configuration switch.
     # The argument is the target config_id string.
     config_switch_requested = Signal(str)
@@ -97,6 +105,10 @@ class MainWindow(QMainWindow):
         # are opening/closing.
         initialize_preload_state(self)
         self._runtime_initialized = False
+        self._modal_trace_enabled = False
+        self._modal_trace_started_at = 0.0
+        self._modal_trace_event_count = 0
+        self._modal_trace_log_path = Path(__file__).resolve().parents[1] / "temp" / "setup_manager_modal_trace.log"
 
         self._build_ui()
         self._apply_style()
@@ -104,7 +116,77 @@ class MainWindow(QMainWindow):
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self.localization.t(key, default, **kwargs)
 
+    def _begin_modal_trace(self, label: str, **fields) -> None:
+        self._modal_trace_enabled = True
+        self._modal_trace_started_at = 0.0
+        self._modal_trace_event_count = 0
+        self._trace_modal_event("modal_trace_begin", label=label, **fields)
+
+    def _end_modal_trace(self, reason: str, **fields) -> None:
+        if not self._modal_trace_enabled:
+            return
+        self._trace_modal_event("modal_trace_end", reason=reason, **fields)
+        self._modal_trace_enabled = False
+
+    def _trace_modal_event(self, name: str, **fields) -> None:
+        if not self._modal_trace_enabled and name not in ("modal_trace_begin", "modal_trace_end"):
+            return
+
+        now = time.monotonic()
+        if self._modal_trace_started_at <= 0.0:
+            self._modal_trace_started_at = now
+            self._modal_trace_event_count = 0
+        if self._modal_trace_event_count >= 120:
+            return
+        if name not in ("modal_trace_begin", "modal_trace_end") and (now - self._modal_trace_started_at) > 4.0:
+            return
+
+        self._modal_trace_event_count += 1
+        payload = {
+            "event": name,
+            "dt_ms": int((now - self._modal_trace_started_at) * 1000),
+            **{key: value for key, value in fields.items() if value not in (None, "")},
+        }
+        self._LOGGER.info("setup_manager.modal_trace %s", payload)
+        try:
+            self._modal_trace_log_path.parent.mkdir(parents=True, exist_ok=True)
+            file_mode = "w" if self._modal_trace_event_count == 1 else "a"
+            with self._modal_trace_log_path.open(file_mode, encoding="utf-8") as handle:
+                handle.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} {payload}\n")
+        except Exception:
+            pass
+
     def eventFilter(self, obj, event):
+        if self._modal_trace_enabled:
+            if obj is self and event.type() in (
+                QEvent.Show,
+                QEvent.Hide,
+                QEvent.Move,
+                QEvent.Resize,
+                QEvent.Paint,
+                QEvent.UpdateRequest,
+                QEvent.WindowActivate,
+                QEvent.WindowDeactivate,
+                QEvent.WindowStateChange,
+            ):
+                self._trace_modal_event(
+                    event.type().name,
+                    visible=self.isVisible(),
+                    active=self.isActiveWindow(),
+                    minimized=self.isMinimized(),
+                    size=f"{self.width()}x{self.height()}",
+                    modal=bool(QApplication.activeModalWidget()),
+                )
+            elif (
+                event.type() == QEvent.MouseButtonPress
+                and isinstance(obj, QWidget)
+                and obj.window() is self
+            ):
+                self._trace_modal_event(
+                    "MouseButtonPress",
+                    source=type(obj).__name__,
+                    modal=bool(QApplication.activeModalWidget()),
+                )
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
             clear_active_page_selection_on_background_click(self, obj)
@@ -308,6 +390,13 @@ class MainWindow(QMainWindow):
             TOOL_LIBRARY_EXE_CANDIDATES,
             TOOL_LIBRARY_PROJECT_DIR,
             extra_args,
+            ready_path=TOOL_LIBRARY_READY_PATH,
+        )
+
+    def _is_tool_library_ready(self) -> bool:
+        return is_tool_library_ready(
+            TOOL_LIBRARY_SERVER_NAME,
+            TOOL_LIBRARY_READY_PATH,
         )
 
     def _preload_tool_library_background(self):
@@ -315,6 +404,12 @@ class MainWindow(QMainWindow):
 
     def _retry_tool_library_preload(self):
         retry_tool_library_preload(self)
+
+    def _preload_work_editor_background(self):
+        preload_work_editor_background(self)
+
+    def _retry_work_editor_preload(self):
+        retry_work_editor_preload(self)
 
     def _fade_out_and(self, callback):
         _shared_fade_out_and(self, callback)
@@ -350,8 +445,8 @@ class MainWindow(QMainWindow):
     def _send_request_with_retry(
         self,
         payload: dict,
-        attempts: int = 36,
-        delay_ms: int = 300,
+        attempts: int = 44,
+        delay_ms: int = 150,
         on_success=None,
         on_failed=None,
     ):
@@ -367,6 +462,7 @@ class MainWindow(QMainWindow):
             delay_ms=delay_ms,
             on_success=on_success,
             on_failed=on_failed,
+            ready_check=self._is_tool_library_ready,
         )
 
     def _refresh_localized_labels(self):
@@ -523,7 +619,8 @@ class MainWindow(QMainWindow):
         if not self._runtime_initialized:
             self._runtime_initialized = True
             QApplication.instance().installEventFilter(self)
-            QTimer.singleShot(2000, self._preload_tool_library_background)
+            if hasattr(self, "setup_page") and hasattr(self.setup_page, "preload_work_editor_dialog"):
+                self.setup_page.preload_work_editor_dialog()
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
 

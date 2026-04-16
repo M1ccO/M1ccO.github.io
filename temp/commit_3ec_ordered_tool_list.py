@@ -1,0 +1,790 @@
+﻿from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Callable
+
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
+    QAbstractScrollArea,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QListWidgetItem,
+    QPushButton,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
+try:
+    from shared.ui.helpers.editor_helpers import create_titled_section
+except ModuleNotFoundError:
+    from editor_helpers import create_titled_section
+try:
+    from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
+except ModuleNotFoundError:
+    _workspace_root = Path(__file__).resolve().parents[3]
+    if str(_workspace_root) not in sys.path:
+        sys.path.insert(0, str(_workspace_root))
+    from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
+from ui.widgets.common import apply_tool_library_combo_style
+from .dragdrop_widgets import WorkEditorToolAssignmentListWidget
+from .tool_picker_dialog import WorkEditorToolPickerDialog
+
+
+def _noop_translate(_key: str, default: str | None = None, **_kwargs) -> str:
+    return default or ""
+
+
+def _noop_icon_resolver(_name: str) -> QIcon:
+    return QIcon()
+
+
+def _noop_tool_icon_for_spindle(_tool_type: str, _spindle: str) -> QIcon:
+    return QIcon()
+
+
+def _noop_default_pot_for_assignment(_ordered_list, _assignment: dict) -> str:
+    return ""
+
+
+def _noop_combo_popup_styler(_combo: QComboBox) -> None:
+    return
+
+
+class WorkEditorOrderedToolList(QWidget):
+    """Per-head tool assignment editor with separate SP1/SP2 lists."""
+
+    selectorRequested = Signal(str, str)
+
+    _SPINDLE_OPTIONS = (
+        ("SP1", "main"),
+        ("SP2", "sub"),
+    )
+
+    _toolbar_icon_resolver: Callable[[str], QIcon] = staticmethod(_noop_icon_resolver)
+    _tool_icon_for_spindle_resolver: Callable[[str, str], QIcon] = staticmethod(_noop_tool_icon_for_spindle)
+    _default_pot_for_assignment_resolver: Callable[[object, dict], str] = staticmethod(
+        _noop_default_pot_for_assignment
+    )
+    _combo_popup_styler: Callable[[QComboBox], None] = staticmethod(_noop_combo_popup_styler)
+
+    class _ToolAssignmentRowWidget(MiniAssignmentCard):
+        def __init__(
+            self,
+            icon: QIcon,
+            text: str,
+            subtitle: str = "",
+            comment: str = "",
+            pot: str = "",
+            edited: bool = False,
+            parent=None,
+        ):
+            badges: list[str] = []
+            if pot:
+                badges.append(f"P:{pot}")
+            if comment:
+                badges.append("C")
+            if edited:
+                badges.append("E")
+            super().__init__(
+                icon=icon,
+                title=text,
+                subtitle=subtitle,
+                badges=badges,
+                editable=True,
+                compact=True,
+                parent=parent,
+            )
+
+    @classmethod
+    def configure_dependencies(
+        cls,
+        *,
+        toolbar_icon_resolver: Callable[[str], QIcon],
+        tool_icon_for_spindle_resolver: Callable[[str, str], QIcon],
+        default_pot_for_assignment_resolver: Callable[[object, dict], str],
+        combo_popup_styler: Callable[[QComboBox], None] = apply_tool_library_combo_style,
+    ) -> None:
+        # Store as static callables so instance access does not bind `self`.
+        cls._toolbar_icon_resolver = staticmethod(toolbar_icon_resolver)
+        cls._tool_icon_for_spindle_resolver = staticmethod(tool_icon_for_spindle_resolver)
+        cls._default_pot_for_assignment_resolver = staticmethod(default_pot_for_assignment_resolver)
+        cls._combo_popup_styler = staticmethod(combo_popup_styler)
+
+    @classmethod
+    def _configure_icon_action(cls, btn: QPushButton, icon_name: str, tooltip: str, *, danger: bool = False):
+        btn.setText("")
+        btn.setToolTip(tooltip)
+        icon = cls._toolbar_icon_resolver(icon_name)
+        if not icon.isNull():
+            btn.setIcon(icon)
+            btn.setIconSize(QSize(18, 18))
+        btn.setFixedSize(52, 32)
+        btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        btn.setProperty("panelActionButton", True)
+        if danger:
+            btn.setProperty("dangerAction", True)
+
+    def __init__(
+        self,
+        head_label: str,
+        head_key: str,
+        parent=None,
+        translate: Callable[[str, str | None], str] | None = None,
+    ):
+        super().__init__(parent)
+        self._translate = translate or _noop_translate
+        self._head_key = (head_key or "").strip().upper()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+
+        header_row = QHBoxLayout()
+        header_row.setContentsMargins(0, 0, 0, 0)
+        header_row.setSpacing(8)
+
+        self.spindle_selector = QComboBox()
+        self.spindle_selector.setProperty("modernDropdown", True)
+        self.spindle_selector.setMinimumWidth(116)
+        self.spindle_selector.setMaximumWidth(150)
+        self._combo_popup_styler(self.spindle_selector)
+        for label, value in self._SPINDLE_OPTIONS:
+            self.spindle_selector.addItem(label, value)
+
+        self.select_btn = QPushButton(self._t("work_editor.tools.select_tools", "Select Tools..."))
+        self.select_btn.setProperty("panelActionButton", True)
+        self.select_btn.setProperty("primaryAction", True)
+        self.select_btn.setMinimumWidth(112)
+        self.select_btn.setMaximumWidth(150)
+        self.select_btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+
+        self.select_btn.setVisible(False)
+        self.select_btn.setEnabled(False)
+        header_row.addStretch(1)
+        header_row.addWidget(self.spindle_selector)
+        layout.addLayout(header_row)
+
+        list_panel = create_titled_section(head_label)
+        list_panel.setProperty("toolIdsPanel", True)
+        list_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        list_panel_layout = QVBoxLayout(list_panel)
+        list_panel_layout.setContentsMargins(8, 10, 8, 8)
+        list_panel_layout.setSpacing(0)
+
+        self.tool_list = WorkEditorToolAssignmentListWidget()
+        self.tool_list._owner = self
+        self.tool_list.setObjectName("toolIdsOrderList")
+        self.tool_list.setSortingEnabled(False)
+        # Keep a tiny right inset so card borders never clip at narrow widths.
+        self.tool_list.setViewportMargins(0, 0, 2, 0)
+        list_panel_layout.addWidget(self.tool_list, 1)
+        layout.addWidget(list_panel, 1)
+
+        self.controls_bar = QWidget()
+        btn_row = QHBoxLayout(self.controls_bar)
+        btn_row.setContentsMargins(0, 0, 0, 0)
+        btn_row.setSpacing(8)
+        self.move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "Ôû▓"))
+        self.move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "Ôû╝"))
+        self.remove_btn = QPushButton(self._t("work_editor.tools.remove", "Remove"))
+        for btn in (self.move_up_btn, self.move_down_btn, self.remove_btn):
+            btn.setProperty("panelActionButton", True)
+            btn.setMinimumWidth(64)
+            btn.setMaximumWidth(92)
+            btn.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.move_up_btn.setMinimumWidth(52)
+        self.move_up_btn.setMaximumWidth(64)
+        self.move_down_btn.setMinimumWidth(52)
+        self.move_down_btn.setMaximumWidth(64)
+        self.move_up_btn.setStyleSheet("font-size: 16px; font-weight: 700;")
+        self.move_down_btn.setStyleSheet("font-size: 16px; font-weight: 700;")
+        self.remove_btn.setProperty("dangerAction", True)
+
+        btn_row.addWidget(self.move_up_btn)
+        btn_row.addWidget(self.move_down_btn)
+        btn_row.addWidget(self.remove_btn)
+
+        self.comment_btn = QPushButton(self._t("work_editor.tools.add_comment", "Add Comment"))
+        self.delete_comment_btn = QPushButton(self._t("work_editor.tools.delete_comment", "Delete Comment"))
+        self.comment_btn.setMinimumWidth(112)
+        self.comment_btn.setMaximumWidth(150)
+        self.delete_comment_btn.setMinimumWidth(112)
+        self.delete_comment_btn.setMaximumWidth(150)
+
+        self._configure_icon_action(
+            self.select_btn,
+            "select",
+            self._t("work_editor.tools.select_tools", "Select Tools"),
+        )
+        self._configure_icon_action(
+            self.comment_btn,
+            "comment",
+            self._t("work_editor.tools.add_comment", "Add Comment"),
+        )
+        self._configure_icon_action(
+            self.delete_comment_btn,
+            "comment_delete",
+            self._t("work_editor.tools.delete_comment", "Delete Comment"),
+        )
+        self._configure_icon_action(
+            self.remove_btn,
+            "delete",
+            self._t("work_editor.tools.remove", "Remove Tool"),
+            danger=True,
+        )
+
+        btn_row.addWidget(self.comment_btn)
+        btn_row.addWidget(self.delete_comment_btn)
+        btn_row.addStretch(1)
+        layout.addWidget(self.controls_bar)
+
+        self.move_up_btn.clicked.connect(self._move_up)
+        self.move_down_btn.clicked.connect(self._move_down)
+        self.remove_btn.clicked.connect(self._remove_selected)
+        self.select_btn.clicked.connect(self._request_selector)
+        self.comment_btn.clicked.connect(self._add_or_edit_comment)
+        self.delete_comment_btn.clicked.connect(self._delete_comment)
+        self.spindle_selector.currentIndexChanged.connect(self._render_current_spindle)
+        self.tool_list.currentRowChanged.connect(self._update_action_states)
+        self.tool_list.itemSelectionChanged.connect(self._sync_row_selection_states)
+        self.tool_list.orderChanged.connect(self._sync_assignment_order)
+        self.tool_list.externalAssignmentsDropped.connect(self._on_external_assignments_dropped)
+
+        self._all_tools: list = []
+        self._show_pot: bool = False
+        self._assignments_by_spindle = {"main": [], "sub": []}
+        self._list_scrolling_enabled: bool = True
+        self._update_action_states()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        # Force list geometry refresh when parent width changes.
+        self.tool_list.doItemsLayout()
+        self.tool_list.viewport().update()
+        if not self._list_scrolling_enabled:
+            self._update_list_height_for_content()
+
+    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
+        return self._translate(key, default, **kwargs)
+
+    def _current_spindle(self) -> str:
+        return (self.spindle_selector.currentData() or "main").strip().lower()
+
+    def set_current_spindle(self, spindle: str):
+        target = (spindle or "main").strip().lower()
+        index = self.spindle_selector.findData(target)
+        if index >= 0:
+            self.spindle_selector.setCurrentIndex(index)
+
+    def _current_assignments(self) -> list:
+        spindle = self._current_spindle()
+        return self._assignments_by_spindle.setdefault(spindle, [])
+
+    def _request_selector(self):
+        self.selectorRequested.emit(self._head_key, self._current_spindle())
+
+    def set_controls_visible(self, visible: bool):
+        self.controls_bar.setVisible(bool(visible))
+
+    def set_list_scrolling_enabled(self, enabled: bool) -> None:
+        self._list_scrolling_enabled = bool(enabled)
+        if self._list_scrolling_enabled:
+            self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.tool_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
+            self.tool_list.setMinimumHeight(120)
+            self.tool_list.setMaximumHeight(16777215)
+        else:
+            self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.tool_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+            self._update_list_height_for_content()
+
+    def _update_list_height_for_content(self) -> None:
+        if self._list_scrolling_enabled:
+            return
+        row_count = self.tool_list.count()
+        if row_count <= 0:
+            self.tool_list.setFixedHeight(56)
+            return
+        total_rows_height = 0
+        fallback_row_height = 44
+        for row in range(row_count):
+            row_height = self.tool_list.sizeHintForRow(row)
+            total_rows_height += row_height if row_height > 0 else fallback_row_height
+        frame_height = self.tool_list.frameWidth() * 2
+        # Keep a small breathing space under the last card.
+        self.tool_list.setFixedHeight(total_rows_height + frame_height + 6)
+
+    @staticmethod
+    def _assignment_key(item: dict) -> str:
+        if not isinstance(item, dict):
+            return ""
+        uid = item.get("tool_uid")
+        if uid is not None and str(uid).strip():
+            return f"uid:{uid}"
+        tool_id = (item.get("tool_id") or "").strip()
+        return f"id:{tool_id}" if tool_id else ""
+
+    def _tool_label(self, assignment: dict) -> str:
+        labels = self._labels_by_tool_key()
+        key = self._assignment_key(assignment)
+        tool_id = (assignment.get("tool_id") or "").strip()
+        label = labels.get(key)
+        if label is None:
+            deleted = self._t("work_editor.tools.deleted_tool", "DELETED TOOL")
+            return f"{tool_id}  -  {deleted}" if tool_id else deleted
+        return label
+
+    def _tool_ref_for_assignment(self, assignment: dict) -> dict | None:
+        key = self._assignment_key(assignment)
+        if not key:
+            return None
+        for tool in self._all_tools or []:
+            if not isinstance(tool, dict):
+                continue
+            candidate_key = self._assignment_key(
+                {
+                    "tool_id": (tool.get("id") or "").strip(),
+                    "tool_uid": tool.get("uid"),
+                }
+            )
+            if candidate_key == key:
+                return dict(tool)
+        return None
+
+    def _tool_assignment(self, row: int | None = None) -> dict | None:
+        target_row = self.tool_list.currentRow() if row is None else row
+        if target_row < 0 or target_row >= self.tool_list.count():
+            return None
+        item = self.tool_list.item(target_row)
+        data = item.data(Qt.UserRole)
+        return dict(data) if isinstance(data, dict) else None
+
+    def _render_assignment_row(self, item: QListWidgetItem, row_index: int, assignment: dict):
+        label = self._tool_label(assignment)
+        override_id = (assignment.get("override_id") or "").strip()
+        override_desc = (assignment.get("override_description") or "").strip()
+        is_edited = bool(override_id or override_desc)
+        if is_edited:
+            lib_desc = ""
+            if "  -  " in label:
+                _, lib_desc = label.split("  -  ", 1)
+            tool_id = override_id or (assignment.get("tool_id") or "").strip()
+            desc = override_desc or lib_desc
+            label = f"{tool_id}  -  {desc}" if desc else tool_id
+        display_text = f"{row_index + 1}. {label}"
+        item.setText("")
+        pot = (assignment.get("pot") or "").strip() if self._show_pot else ""
+        subtitle = str(assignment.get("comment") or "").strip()
+        has_comment = bool(subtitle)
+        icon = QIcon()
+        ref = self._tool_ref_for_assignment(assignment)
+        if isinstance(ref, dict):
+            icon = self._tool_icon_for_spindle_resolver(ref.get("tool_type", ""), self._current_spindle())
+        widget = self._ToolAssignmentRowWidget(
+            icon=icon,
+            text=display_text,
+            subtitle=subtitle,
+            comment=assignment.get("comment", ""),
+            pot=pot,
+            edited=is_edited,
+            parent=self.tool_list,
+        )
+        # Keep assignment cards pure white regardless of surrounding panel tint.
+        widget.setStyleSheet(
+            'QFrame[miniAssignmentCard="true"] { background-color: #ffffff; }'
+            'QFrame[miniAssignmentCard="true"]:hover { background-color: #ffffff; }'
+            'QFrame[miniAssignmentCard="true"][selected="true"],'
+            'QFrame[miniAssignmentCard="true"][selected="true"]:hover { background-color: #ffffff; }'
+        )
+        widget.setProperty("hasComment", has_comment)
+        widget.editRequested.connect(lambda r=row_index: self._inline_edit_row(r))
+        row_host = QWidget(self.tool_list)
+        row_host.setAttribute(Qt.WA_StyledBackground, False)
+        row_layout = QVBoxLayout(row_host)
+        # A tiny horizontal inset prevents border clipping on very narrow widths.
+        row_layout.setContentsMargins(1, 0, 1, 7)
+        row_layout.setSpacing(0)
+        row_layout.addWidget(widget)
+        self.tool_list.setItemWidget(item, row_host)
+
+    def _render_current_spindle(self):
+        current_row = self.tool_list.currentRow()
+        self.tool_list.clear()
+        for index, assignment in enumerate(self._current_assignments()):
+            item = QListWidgetItem()
+            item.setData(Qt.UserRole, dict(assignment))
+            item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled)
+            has_comment = bool(str(assignment.get("comment") or "").strip())
+            item.setSizeHint(QSize(0, 50 if has_comment else 42))
+            self.tool_list.addItem(item)
+            self._render_assignment_row(item, index, assignment)
+        if self.tool_list.count() > 0:
+            target_row = current_row if 0 <= current_row < self.tool_list.count() else 0
+            self.tool_list.setCurrentRow(target_row)
+        # In non-scroll mode, keep rows visually anchored from the top.
+        self.tool_list.scrollToTop()
+        self._update_list_height_for_content()
+        self._sync_row_selection_states()
+        self._update_action_states()
+
+    def _sync_row_selection_states(self):
+        for row in range(self.tool_list.count()):
+            item = self.tool_list.item(row)
+            widget = self.tool_list.itemWidget(item)
+            if isinstance(widget, MiniAssignmentCard):
+                widget.set_selected(item.isSelected())
+                continue
+            card = widget.findChild(MiniAssignmentCard) if isinstance(widget, QWidget) else None
+            if isinstance(card, MiniAssignmentCard):
+                card.set_selected(item.isSelected())
+
+    def _update_action_states(self):
+        has_selection = self.tool_list.currentRow() >= 0
+        assignment = self._tool_assignment()
+        has_comment = bool((assignment or {}).get("comment"))
+        self.move_up_btn.setEnabled(has_selection and self.tool_list.currentRow() > 0)
+        self.move_down_btn.setEnabled(has_selection and self.tool_list.currentRow() < self.tool_list.count() - 1)
+        self.remove_btn.setEnabled(has_selection)
+        self.comment_btn.setEnabled(has_selection)
+        self.delete_comment_btn.setEnabled(has_comment)
+        self.delete_comment_btn.setVisible(has_comment)
+
+    def _sync_assignment_order(self):
+        ordered: list[dict] = []
+        for row in range(self.tool_list.count()):
+            item = self.tool_list.item(row)
+            assignment = item.data(Qt.UserRole) if item is not None else None
+            if isinstance(assignment, dict):
+                ordered.append(dict(assignment))
+        self._assignments_by_spindle[self._current_spindle()] = ordered
+        self._sync_row_selection_states()
+        self._update_action_states()
+
+    def _normalized_assignment_for_current_spindle(self, assignment: dict | None) -> dict | None:
+        if not isinstance(assignment, dict):
+            return None
+        tool_id = str(assignment.get("tool_id") or assignment.get("id") or "").strip()
+        if not tool_id:
+            return None
+        entry = {
+            "tool_id": tool_id,
+            "spindle": self._current_spindle(),
+            "comment": str(assignment.get("comment") or "").strip(),
+            "pot": str(assignment.get("pot") or assignment.get("default_pot") or "").strip(),
+            "override_id": str(assignment.get("override_id") or "").strip(),
+            "override_description": str(assignment.get("override_description") or "").strip(),
+        }
+        tool_uid = assignment.get("tool_uid", assignment.get("uid"))
+        try:
+            parsed_uid = int(tool_uid) if tool_uid is not None and str(tool_uid).strip() else None
+        except Exception:
+            parsed_uid = None
+        if parsed_uid is not None:
+            entry["tool_uid"] = parsed_uid
+        return entry
+
+    def _insert_assignments(self, dropped_items: list[dict], insert_row: int) -> list[str]:
+        assignments = self._current_assignments()
+        existing_keys = {self._assignment_key(item) for item in assignments if self._assignment_key(item)}
+        insert_at = insert_row if isinstance(insert_row, int) and insert_row >= 0 else len(assignments)
+        insert_at = min(insert_at, len(assignments))
+        added_keys: list[str] = []
+        for raw_item in dropped_items or []:
+            normalized = self._normalized_assignment_for_current_spindle(raw_item)
+            if normalized is None:
+                continue
+            key = self._assignment_key(normalized)
+            if not key or key in existing_keys:
+                continue
+            assignments.insert(insert_at, normalized)
+            existing_keys.add(key)
+            added_keys.append(key)
+            insert_at += 1
+        return added_keys
+
+    def _remove_assignments_by_keys(self, assignment_keys: list[str] | set[str], *, render: bool = True):
+        keys = {str(item).strip() for item in (assignment_keys or []) if str(item).strip()}
+        if not keys:
+            return
+        remaining = [item for item in self._current_assignments() if self._assignment_key(item) not in keys]
+        self._assignments_by_spindle[self._current_spindle()] = remaining
+        if render:
+            self._render_current_spindle()
+
+    def _on_external_assignments_dropped(self, dropped_items: list[dict], insert_row: int, source_widget):
+        added_keys = self._insert_assignments(dropped_items, insert_row)
+        if not added_keys:
+            return
+        source_owner = getattr(source_widget, "_owner", None)
+        if source_owner is not None and source_owner is not self:
+            source_owner._remove_assignments_by_keys(added_keys)
+        self._render_current_spindle()
+        target_row = min(insert_row, self.tool_list.count() - 1) if self.tool_list.count() else -1
+        if target_row >= 0:
+            self.tool_list.setCurrentRow(target_row)
+
+    def _move_up(self):
+        assignments = self._current_assignments()
+        row = self.tool_list.currentRow()
+        if row <= 0:
+            return
+        assignments[row - 1], assignments[row] = assignments[row], assignments[row - 1]
+        self._render_current_spindle()
+        self.tool_list.setCurrentRow(row - 1)
+
+    def _move_down(self):
+        assignments = self._current_assignments()
+        row = self.tool_list.currentRow()
+        if row < 0 or row >= len(assignments) - 1:
+            return
+        assignments[row + 1], assignments[row] = assignments[row], assignments[row + 1]
+        self._render_current_spindle()
+        self.tool_list.setCurrentRow(row + 1)
+
+    def _remove_selected(self):
+        row = self.tool_list.currentRow()
+        if row >= 0:
+            del self._current_assignments()[row]
+            self._render_current_spindle()
+
+    def _add_or_edit_comment(self):
+        row = self.tool_list.currentRow()
+        if row < 0:
+            return
+        assignments = self._current_assignments()
+        assignment = assignments[row]
+        tool_id = assignment.get("tool_id", "")
+        text, ok = QInputDialog.getText(
+            self,
+            self._t("work_editor.tools.comment_title", "Tool Comment"),
+            self._t("work_editor.tools.comment_prompt", "Comment for {tool_id}", tool_id=tool_id),
+            text=assignment.get("comment", ""),
+        )
+        if not ok:
+            return
+        assignment["comment"] = (text or "").strip()
+        self._render_current_spindle()
+        self.tool_list.setCurrentRow(row)
+
+    def _delete_comment(self):
+        row = self.tool_list.currentRow()
+        if row < 0:
+            return
+        assignments = self._current_assignments()
+        assignments[row]["comment"] = ""
+        self._render_current_spindle()
+        self.tool_list.setCurrentRow(row)
+
+    def _inline_edit_row(self, row_index: int):
+        assignments = self._current_assignments()
+        if row_index < 0 or row_index >= len(assignments):
+            return
+        assignment = assignments[row_index]
+        tool_id = (assignment.get("tool_id") or "").strip()
+        labels = self._labels_by_tool_key()
+        key = self._assignment_key(assignment)
+        lib_label = labels.get(key, tool_id)
+        lib_id = tool_id
+        lib_desc = ""
+        if "  -  " in lib_label:
+            lib_id, lib_desc = lib_label.split("  -  ", 1)
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self._t("work_editor.tools.edit_row_title", "Edit Tool Row"))
+        dlg.setModal(True)
+        dlg.resize(420, 0)
+        form = QFormLayout(dlg)
+        form.setContentsMargins(14, 14, 14, 14)
+        form.setSpacing(8)
+
+        id_input = QLineEdit()
+        id_input.setPlaceholderText(lib_id)
+        id_input.setText((assignment.get("override_id") or "").strip())
+        form.addRow(self._t("work_editor.tools.override_id", "T-code"), id_input)
+
+        desc_input = QLineEdit()
+        desc_input.setPlaceholderText(lib_desc)
+        desc_input.setText((assignment.get("override_description") or "").strip())
+        form.addRow(self._t("work_editor.tools.override_description", "Description"), desc_input)
+
+        effective_pot = (assignment.get("pot") or "").strip() or self._default_pot_for_assignment_resolver(
+            self, assignment
+        )
+        pot_input = QLineEdit()
+        pot_input.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "e.g. P1"))
+        pot_input.setText(effective_pot)
+        form.addRow(self._t("work_editor.tools.pot_number", "Pot"), pot_input)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        ok_btn = buttons.button(QDialogButtonBox.Ok)
+        cancel_btn = buttons.button(QDialogButtonBox.Cancel)
+        if ok_btn:
+            ok_btn.setProperty("panelActionButton", True)
+            ok_btn.setProperty("primaryAction", True)
+        if cancel_btn:
+            cancel_btn.setProperty("panelActionButton", True)
+            cancel_btn.setProperty("secondaryAction", True)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+
+        if dlg.exec() != QDialog.Accepted:
+            return
+        new_id = id_input.text().strip()
+        new_desc = desc_input.text().strip()
+        new_pot = pot_input.text().strip()
+        assignment["override_id"] = new_id if new_id and new_id != lib_id else ""
+        assignment["override_description"] = new_desc if new_desc and new_desc != lib_desc else ""
+        assignment["pot"] = new_pot
+        self._render_current_spindle()
+        self.tool_list.setCurrentRow(row_index)
+
+    def _open_picker(self):
+        current_keys = [self._assignment_key(item) for item in self._current_assignments() if self._assignment_key(item)]
+        spindle_filter = self._current_spindle() if self._head_key == "HEAD2" else None
+        dlg = WorkEditorToolPickerDialog(
+            self._all_tools,
+            current_keys,
+            icon_resolver=self._toolbar_icon_resolver,
+            combo_popup_styler=self._combo_popup_styler,
+            parent=self,
+            translate=self._t,
+            spindle_orientation_filter=spindle_filter,
+        )
+        if dlg.exec() != QDialog.Accepted:
+            return
+        selected_tools = dlg.get_selected_tools()
+        current_assignments = self._current_assignments()
+        selected_keys = {
+            f"uid:{tool.get('uid')}" if tool.get("uid") is not None and str(tool.get("uid")).strip() else f"id:{(tool.get('id') or '').strip()}"
+            for tool in selected_tools
+            if (tool.get("id") or "").strip()
+        }
+        kept = [item for item in current_assignments if self._assignment_key(item) in selected_keys]
+        kept_keys = {self._assignment_key(item) for item in kept}
+        added = []
+        for tool in selected_tools:
+            tool_id = (tool.get("id") or "").strip()
+            if not tool_id:
+                continue
+            key = f"uid:{tool.get('uid')}" if tool.get("uid") is not None and str(tool.get("uid")).strip() else f"id:{tool_id}"
+            if key in kept_keys:
+                continue
+            entry = {
+                "tool_id": tool_id,
+                "spindle": self._current_spindle(),
+                "comment": "",
+                "pot": (tool.get("default_pot") or "").strip(),
+                "override_id": "",
+                "override_description": "",
+            }
+            if tool.get("uid") is not None and str(tool.get("uid")).strip():
+                entry["tool_uid"] = int(tool.get("uid"))
+            added.append(entry)
+        self._assignments_by_spindle[self._current_spindle()] = kept + added
+        self._render_current_spindle()
+
+    def _labels_by_tool_key(self) -> dict:
+        key_to_label: dict = {}
+        for tool in self._all_tools:
+            tid = (tool.get("id") or "").strip()
+            if not tid:
+                continue
+            desc = (tool.get("description") or "").strip()
+            uid = tool.get("uid")
+            key = f"uid:{uid}" if uid is not None and str(uid).strip() else f"id:{tid}"
+            key_to_label[key] = f"{tid}  -  {desc}" if desc else tid
+        return key_to_label
+
+    def set_tool_assignments(self, assignments: list):
+        grouped = {"main": [], "sub": []}
+        for item in assignments or []:
+            tool_uid = None
+            if not isinstance(item, dict):
+                tool_id = str(item or "").strip()
+                spindle = "main"
+                comment = ""
+                pot = ""
+                override_id = ""
+                override_description = ""
+            else:
+                tool_id = str(item.get("tool_id") or item.get("id") or "").strip()
+                raw_uid = item.get("tool_uid", item.get("uid"))
+                try:
+                    tool_uid = int(raw_uid) if raw_uid is not None and str(raw_uid).strip() else None
+                except Exception:
+                    tool_uid = None
+                spindle = str(item.get("spindle") or "main").strip().lower()
+                comment = str(item.get("comment") or "").strip()
+                pot = str(item.get("pot") or "").strip()
+                override_id = str(item.get("override_id") or "").strip()
+                override_description = str(item.get("override_description") or "").strip()
+            if not tool_id:
+                continue
+            if spindle not in grouped:
+                spindle = "main"
+            entry = {
+                "tool_id": tool_id,
+                "spindle": spindle,
+                "comment": comment,
+                "pot": pot,
+                "override_id": override_id,
+                "override_description": override_description,
+            }
+            if tool_uid is not None:
+                entry["tool_uid"] = tool_uid
+            grouped[spindle].append(entry)
+        self._assignments_by_spindle.clear()
+        self._assignments_by_spindle.update(grouped)
+        self._render_current_spindle()
+
+    def set_tool_ids(self, tool_ids: list):
+        self.set_tool_assignments(
+            [
+                {"tool_id": str(tid).strip(), "spindle": "main", "comment": ""}
+                for tid in (tool_ids or [])
+                if str(tid).strip()
+            ]
+        )
+
+    def get_tool_ids(self) -> list:
+        ids = []
+        for spindle in ("main", "sub"):
+            for item in self._assignments_by_spindle.get(spindle, []):
+                tool_id = (item.get("tool_id") or "").strip()
+                if tool_id:
+                    ids.append(tool_id)
+        return ids
+
+    def get_tool_assignments(self) -> list:
+        assignments = []
+        for spindle in ("main", "sub"):
+            for item in self._assignments_by_spindle.get(spindle, []):
+                tool_id = (item.get("tool_id") or "").strip()
+                if not tool_id:
+                    continue
+                entry = {
+                    "tool_id": tool_id,
+                    "spindle": spindle,
+                    "comment": (item.get("comment") or "").strip(),
+                    "pot": (item.get("pot") or "").strip(),
+                    "override_id": (item.get("override_id") or "").strip(),
+                    "override_description": (item.get("override_description") or "").strip(),
+                }
+                if item.get("tool_uid") is not None:
+                    try:
+                        entry["tool_uid"] = int(item.get("tool_uid"))
+                    except Exception:
+                        pass
+                assignments.append(entry)
+        return assignments

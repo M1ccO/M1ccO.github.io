@@ -43,6 +43,12 @@ def release_tool_library_namespace_aliases(dialog: Any) -> None:
     setattr(dialog, "_embedded_selector_namespace_aliases", None)
 
 
+def warmup_embedded_selector_runtime(dialog: Any) -> None:
+    """Preload selector import aliases and service bundle for first-open smoothness."""
+    _activate_tool_library_namespace_aliases(dialog)
+    _ensure_service_bundle(dialog)
+
+
 def _ensure_service_bundle(dialog: Any) -> dict[str, Any]:
     bundle = getattr(dialog, "_embedded_selector_service_bundle", None)
     if isinstance(bundle, dict):
@@ -85,79 +91,151 @@ def _apply_embedded_selector_style(widget: Any) -> None:
     widget.setProperty("selectorContext", True)
     widget.setStyleSheet(
         """
-QWidget[selectorContext="true"] QFrame[bottomBar="true"] {
-    background: transparent;
-    border: none;
-}
-QWidget[selectorContext="true"] QWidget[selectorPanel="true"],
-QWidget[selectorContext="true"] QFrame[selectorContext="true"],
-QWidget[selectorContext="true"] QFrame[selectorScrollFrame="true"],
-QWidget[selectorContext="true"] QFrame[subCard="true"],
-QWidget[selectorContext="true"] QFrame[card="true"],
-QWidget[selectorContext="true"] QScrollArea,
-QWidget[selectorContext="true"] QScrollArea QWidget {
+QFrame[selectorContext="true"] {
     background-color: #ffffff;
-}
-QWidget[selectorContext="true"] QFrame[subCard="true"],
-QWidget[selectorContext="true"] QFrame[card="true"] {
-    border: 1px solid #b8c5d1;
+    border: none;
     border-radius: 2px;
 }
-QWidget[selectorContext="true"] QFrame[detailHeader="true"],
-QWidget[selectorContext="true"] QFrame[selectorInfoHeader="true"] {
+
+QWidget[selectorPanel="true"] {
+    background-color: #ffffff;
+    border: none;
+}
+QWidget[selectorContext="true"] QFrame[selectorAssignmentsFrame="true"],
+QWidget[selectorContext="true"] QFrame[toolIdsPanel="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #d0d8e0;
+    border-radius: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
+}
+QWidget[selectorContext="true"] QFrame[selectorScrollFrame="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #d0d8e0;
+    border-radius: 6px;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #99acbf;
+    border-radius: 8px;
+    min-height: 34px;
+    padding: 1px;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][hasComment="true"] {
+    min-height: 42px;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"]:hover {
+    background-color: #ffffff;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][selected="true"],
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][selected="true"]:hover {
+    background-color: #ffffff;
+    border: 2px solid #00C8FF;
+    padding: 0px;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"] QLabel {
     background-color: transparent;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][selected="true"] QLabel {
+    color: #24303c;
+}
+
+QWidget[selectorContext="true"] QFrame[selectorInfoHeader="true"] {
+    background-color: #ffffff;
     border: 1px solid #c8d4e0;
     border-radius: 6px;
 }
+
+QWidget[selectorContext="true"] QLabel[selectorInfoTitle="true"] {
+    font-size: 11.5pt;
+    font-weight: 700;
+    color: #13202b;
+    background: transparent;
+}
+
+QWidget[selectorContext="true"] QLabel[miniAssignmentTitle="true"] {
+    font-size: 10.8pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+QWidget[selectorContext="true"] QLabel[miniAssignmentMeta="true"] {
+    font-size: 8.4pt;
+    font-weight: 600;
+    color: #2b3136;
+}
+QWidget[selectorContext="true"] QLabel[miniAssignmentHint="true"] {
+    font-size: 8.4pt;
+    font-weight: 500;
+    color: #617180;
+}
+
 QWidget[selectorContext="true"] QLabel[selectorInlineHint="true"] {
     font-size: 8pt;
     font-style: italic;
     font-weight: 400;
     color: #5f6f7d;
+    padding-top: 2px;
 }
-QWidget[selectorContext="true"] QLabel[toolBadge="true"] {
-    background-color: #eaf1f8;
-    color: #233344;
-    border: 1px solid #b9c9d8;
-    border-radius: 12px;
-    padding: 3px 10px;
-    font-size: 9pt;
-    font-weight: 700;
-}
-QWidget[selectorContext="true"] QComboBox#topTypeFilter {
-    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
-                                      stop:0 #E2E2E2, stop:1 #FAFAFA);
-    border: 1px solid #c0c4c8;
-    border-radius: 6px;
-    min-height: 30px;
-    font-size: 9.5pt;
-    font-weight: 600;
-    color: #111111;
-    padding: 3px 8px;
-    min-width: 68px;
-}
-QWidget[selectorContext="true"] QComboBox#topTypeFilter::drop-down {
-    width: 24px;
-    border: none;
+
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList {
     background: transparent;
+    border: none;
+    border-radius: 0px;
+    outline: none;
+    padding: 0px;
 }
-QWidget[selectorContext="true"] QComboBox#topTypeFilter QAbstractItemView {
-    background-color: #FCFCFC;
-    border: 1px solid #c8d0d8;
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item {
+    background-color: transparent;
+    border: none;
+    border-radius: 0px;
+    padding: 0px;
+    margin: 0px;
+}
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:hover {
+    background-color: transparent;
+    border: none;
+}
+
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected,
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected:active,
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected:!active {
+    background-color: transparent;
+    border: none;
+    color: inherit;
+}
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::viewport {
+    background: transparent;
+    border: none;
+    border-radius: 0px;
+}
+QWidget[selectorContext="true"] QFrame[selectorAssignmentsFrame="true"][catalogDragOver="true"],
+QWidget[selectorContext="true"] QFrame[toolIdsPanel="true"][catalogDragOver="true"] {
+    border: 1px solid #00c8ff;
+}
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"],
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #00c8ff;
     border-radius: 6px;
-    color: #111111;
-    font-size: 10pt;
-    font-weight: 600;
-    selection-background-color: #F0F0F0;
-    selection-color: #000000;
+    margin-top: 10px;
+    padding-top: 8px;
 }
-QWidget[selectorContext="true"] QLabel[detailHeroTitle="true"] {
-    color: #13202b;
-    font-size: 16px;
-    font-weight: 700;
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"]::title,
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"]::title {
+    color: #0f5f8e;
 }
-QWidget[selectorContext="true"] QLabel[detailHint="true"] {
-    color: #5f6f7d;
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"] QLabel[selectorInlineHint="true"],
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"] QLabel[selectorInlineHint="true"] {
+    color: #3c7294;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] {
+    background-color: rgba(255, 255, 255, 0.28);
+    border: 1px solid #b8c7d6;
+}
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentTitle="true"],
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentHint="true"],
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentMeta="true"] {
+    color: #738391;
 }
 """
     )
@@ -199,6 +277,8 @@ def build_embedded_selector_parity_widget(
             on_cancel=on_cancel,
             parent=mount_container or dialog,
         )
+        if not hasattr(widget, "_refresh_elided_group_title"):
+            setattr(widget, "_refresh_elided_group_title", lambda *_args, **_kwargs: None)
     elif kind_key == "jaws":
         from tools_and_jaws_library.ui.selectors.jaw_selector_dialog import JawSelectorDialog
 

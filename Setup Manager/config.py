@@ -140,6 +140,7 @@ def _resolve_runtime_dir() -> Path:
 RUNTIME_DIR = _resolve_runtime_dir()
 RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
 SHARED_UI_PREFERENCES_PATH = RUNTIME_DIR / "shared_ui_preferences.json"
+TOOL_LIBRARY_READY_PATH = RUNTIME_DIR / "tool_library.ready"
 MACHINE_CONFIGS_PATH = RUNTIME_DIR / "machine_configurations.json"
 I18N_DIR = APP_DIR / "i18n"
 if not I18N_DIR.exists():

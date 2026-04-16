@@ -16,6 +16,7 @@ class WorkEditorSelectorHost(QObject):
         mount_container: QWidget,
         enter_selector_mode: Callable[[], None],
         exit_selector_mode: Callable[[], None],
+        auto_close_on_widget_signals: bool = False,
         parent: QObject | None = None,
     ):
         super().__init__(parent)
@@ -23,6 +24,7 @@ class WorkEditorSelectorHost(QObject):
         self._mount_container = mount_container
         self._enter_selector_mode = enter_selector_mode
         self._exit_selector_mode = exit_selector_mode
+        self._auto_close_on_widget_signals = bool(auto_close_on_widget_signals)
         self._active_widget: QWidget | None = None
 
         layout = mount_container.layout()
@@ -43,18 +45,21 @@ class WorkEditorSelectorHost(QObject):
         layout = self._mount_container.layout()
         layout.addWidget(widget)
 
-        self._connect_selector_signals(widget)
+        if self._auto_close_on_widget_signals:
+            self._connect_selector_signals(widget)
         self._enter_selector_mode()
         widget.setVisible(True)
 
     def close_active_widget(self) -> None:
         widget = self._active_widget
-        if widget is not None:
-            layout = self._mount_container.layout()
-            if layout is not None:
-                layout.removeWidget(widget)
-            widget.setParent(None)
-            widget.deleteLater()
+        if widget is None:
+            return
+
+        layout = self._mount_container.layout()
+        if layout is not None:
+            layout.removeWidget(widget)
+        widget.setParent(None)
+        widget.deleteLater()
         self._active_widget = None
         self._exit_selector_mode()
 
