@@ -91,6 +91,9 @@ class _DbRow(QFrame):
         self._path_edit.setPlaceholderText(
             translate("machine_config.db_default_placeholder", "(use default)")
         )
+        path_sp = self._path_edit.sizePolicy()
+        path_sp.setRetainSizeWhenHidden(True)
+        self._path_edit.setSizePolicy(path_sp)
         self._browse_btn = QPushButton(translate("preferences.models.browse", "BROWSE"))
         self._browse_btn.setProperty("panelActionButton", True)
         self._browse_btn.setFixedHeight(36)
@@ -116,6 +119,11 @@ class _DbRow(QFrame):
         self._shared_combo = QComboBox()
         apply_tool_library_combo_style(self._shared_combo)
         self._shared_combo.setFixedHeight(38)
+        self._shared_combo.setSizeAdjustPolicy(QComboBox.AdjustToMinimumContentsLengthWithIcon)
+        self._shared_combo.setMinimumContentsLength(28)
+        shared_sp = self._shared_combo.sizePolicy()
+        shared_sp.setRetainSizeWhenHidden(True)
+        self._shared_combo.setSizePolicy(shared_sp)
         self._rebuild_shared_combo()
 
         # Shared mode toggle stays at row end and aligned with field controls.
