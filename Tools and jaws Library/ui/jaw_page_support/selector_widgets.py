@@ -49,10 +49,19 @@ class JawAssignmentSlot(QGroupBox):
     jawDropped = Signal(str, dict)
     slotClicked = Signal(str, bool)
 
-    def __init__(self, slot_key: str, title: str, parent=None, translate=None):
+    def __init__(
+        self,
+        slot_key: str,
+        title: str,
+        parent=None,
+        translate=None,
+        *,
+        embedded_title: bool = True,
+    ):
         super().__init__(parent)
         self._slot_key = slot_key
         self._translate = translate or (lambda _key, default=None, **_kwargs: default or '')
+        self._embedded_title = bool(embedded_title)
         self._assignment: dict | None = None
         self._drop_placeholder = "Drop jaw here"
         self._assignment_card: MiniAssignmentCard | None = None
@@ -65,8 +74,13 @@ class JawAssignmentSlot(QGroupBox):
         self._invalid_drop_timer.timeout.connect(self._clear_invalid_drop_feedback)
         self.setAcceptDrops(True)
         self.setProperty("toolIdsPanel", True)
-        apply_titled_section_style(self)
-        self.setTitle(title)
+        self.setProperty("selectorAssignmentsFrame", True)
+        if self._embedded_title:
+            apply_titled_section_style(self)
+            self.setTitle(title)
+        else:
+            self.setTitle("")
+        self._base_style_sheet = self.styleSheet() or ""
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 10, 8, 8)
@@ -74,6 +88,7 @@ class JawAssignmentSlot(QGroupBox):
 
         self.value_label = QLabel("")
         self.value_label.setProperty("detailHint", True)
+        self.value_label.setProperty("selectorInlineHint", True)
         self.value_label.setWordWrap(False)
         self.value_label.setFixedHeight(self._content_height)
         self.value_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -81,7 +96,8 @@ class JawAssignmentSlot(QGroupBox):
         self._refresh_ui()
 
     def set_title(self, title: str):
-        self.setTitle(title)
+        if self._embedded_title:
+            self.setTitle(title)
 
     def set_drop_placeholder_text(self, text: str):
         self._drop_placeholder = str(text or "Drop jaw here")
@@ -95,11 +111,21 @@ class JawAssignmentSlot(QGroupBox):
     def flash_invalid_drop(self):
         self._invalid_drop_active = True
         self.setStyleSheet(
+            self._base_style_sheet
+            +
             "QGroupBox {"
-            " border: 2px solid #d84a4a;"
-            " border-radius: 8px;"
+            " background-color: #f0f6fc;"
+            " border: 1px solid #d84a4a;"
+            " border-radius: 6px;"
+            " margin-top: 10px;"
+            " padding-top: 8px;"
             "}"
             "QGroupBox::title {"
+            " subcontrol-origin: margin;"
+            " subcontrol-position: top left;"
+            " left: 10px;"
+            " top: -3px;"
+            " padding: 0 6px;"
             " color: #c83a3a;"
             "}"
         )
@@ -107,7 +133,7 @@ class JawAssignmentSlot(QGroupBox):
 
     def _clear_invalid_drop_feedback(self):
         self._invalid_drop_active = False
-        self.setStyleSheet("")
+        self.setStyleSheet(self._base_style_sheet)
 
     def assignment(self) -> dict | None:
         return dict(self._assignment) if isinstance(self._assignment, dict) else None

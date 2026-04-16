@@ -181,22 +181,19 @@ QWidget[selectorPanel="true"] {
     border: none;
 }
 
-QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"],
-QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"] {
+QWidget[selectorContext="true"] QFrame[selectorAssignmentsFrame="true"],
+QWidget[selectorContext="true"] QFrame[toolIdsPanel="true"] {
     background-color: #f0f6fc;
     border: 1px solid #d0d8e0;
     border-radius: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
 }
 
 QWidget[selectorContext="true"] QFrame[selectorScrollFrame="true"] {
     background-color: #f0f6fc;
     border: 1px solid #d0d8e0;
     border-radius: 6px;
-}
-
-QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"]::title,
-QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"]::title {
-    background: transparent;
 }
 
 QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"] {
@@ -304,25 +301,37 @@ QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::viewport {
     border-radius: 0px;
 }
 
-QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"],
-QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"] {
+QWidget[selectorContext="true"] QFrame[selectorAssignmentsFrame="true"][catalogDragOver="true"],
+QWidget[selectorContext="true"] QFrame[toolIdsPanel="true"][catalogDragOver="true"] {
     border: 1px solid #00c8ff;
 }
 
-QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] {
-    background-color: rgba(255, 255, 255, 0.45);
-    border: 1px solid #c7d4e1;
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"],
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #00c8ff;
+    border-radius: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
 }
 
-QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"][selected="true"],
-QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"][selected="true"]:hover {
-    background-color: rgba(255, 255, 255, 0.56);
-    border: 2px solid #9be7ff;
-    padding: 0px;
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"]::title,
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"]::title {
+    color: #0f5f8e;
+}
+
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"] QLabel[selectorInlineHint="true"],
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"] QLabel[selectorInlineHint="true"] {
+    color: #3c7294;
+}
+
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] {
+    background-color: rgba(255, 255, 255, 0.28);
+    border: 1px solid #b8c7d6;
 }
 
 QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentTitle="true"],
 QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentHint="true"],
 QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentMeta="true"] {
-    color: #7b8b9a;
+    color: #738391;
 }

@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -9,6 +9,7 @@ from PySide6.QtCore import (
     Signal,
     Qt,
     QTimer,
+    QPoint,
 )
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
@@ -1193,7 +1194,21 @@ class MainWindow(QMainWindow):
             self._fixture_selector_dialog = dialog
         else:
             return
-
+        # Ensure selector dialogs open at the same size and position as the main window
+        try:
+            # Map the main window top-left to global coordinates and move the dialog there.
+            top_left = self.mapToGlobal(QPoint(0, 0))
+            dialog.move(top_left)
+            dialog.resize(self.size())
+        except Exception:
+            # Best-effort fallback: try applying geometry directly
+            try:
+                dialog.setGeometry(self.geometry())
+            except Exception:
+                try:
+                    dialog.resize(self.size())
+                except Exception:
+                    pass
         if should_show:
             # Stay on top of the Setup Manager Work Editor (cross-process).
             dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)

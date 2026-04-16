@@ -68,6 +68,18 @@ class ToolSelectorStateMixin:
             'Sub Spindle Tools' if normalized == 'sub' else 'Main Spindle Tools',
         )
 
+    def _set_assignment_section_title(self, spindle: str, title: str) -> None:
+        key = self._normalize_spindle(spindle)
+        labels = getattr(self, 'assignment_title_labels', {}) or {}
+        label = labels.get(key)
+        if label is not None:
+            label.setText(title)
+            return
+        frames = getattr(self, 'assignment_frames', {}) or {}
+        frame = frames.get(key)
+        if frame is not None and hasattr(frame, 'setTitle'):
+            frame.setTitle(title)
+
     @staticmethod
     def _normalize_head(value: str) -> str:
         normalized = str(value or 'HEAD1').strip().upper()
@@ -615,7 +627,7 @@ class ToolSelectorStateMixin:
             if 'sub' in self.assignment_frames:
                 self.assignment_frames['sub'].setVisible(False)
             if 'main' in self.assignment_frames:
-                self.assignment_frames['main'].setTitle(self._selector_spindle_title('main'))
+                self._set_assignment_section_title('main', self._selector_spindle_title('main'))
             return
 
         head_label = (
@@ -642,9 +654,9 @@ class ToolSelectorStateMixin:
         if 'sub' in self.assignment_frames:
             self.assignment_frames['sub'].setVisible((not single_spindle) or self._normalize_spindle(self._current_spindle) == 'sub')
         if 'main' in self.assignment_frames:
-            self.assignment_frames['main'].setTitle(self._selector_spindle_title('main'))
+            self._set_assignment_section_title('main', self._selector_spindle_title('main'))
         if 'sub' in self.assignment_frames:
-            self.assignment_frames['sub'].setTitle(self._selector_spindle_title('sub'))
+            self._set_assignment_section_title('sub', self._selector_spindle_title('sub'))
 
     def _on_catalog_double_clicked(self, _index) -> None:
         indexes = selected_rows_or_current(self.list_view)

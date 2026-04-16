@@ -246,7 +246,7 @@ class ToolSelectorLayoutMixin:
             assignment_frame.setProperty('toolIdsPanel', True)
             assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             assignment_layout = QVBoxLayout(assignment_frame)
-            assignment_layout.setContentsMargins(8, 6, 8, 8)
+            assignment_layout.setContentsMargins(8, 10, 8, 8)
             assignment_layout.setSpacing(4)
             assignment_layout.addWidget(assignment_list, 0, Qt.AlignTop)
 

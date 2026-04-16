@@ -38,6 +38,7 @@ class ToolAssignmentListWidget(QListWidget):
         self._set_card_drag_state(bool(active))
         frame = self._assignment_frame()
         if frame is not None:
+            frame.setProperty('catalogDragOver', bool(active))
             base_style = frame.property('_baseStyleSheet')
             if not isinstance(base_style, str):
                 base_style = frame.styleSheet() or ''
@@ -45,11 +46,15 @@ class ToolAssignmentListWidget(QListWidget):
             if active:
                 frame.setStyleSheet(
                     base_style
-                    + 'QGroupBox { border: 1px solid #00c8ff; }'
+                    + 'QGroupBox[selectorAssignmentsFrame="true"],'
+                    + 'QGroupBox[toolIdsPanel="true"] { border: 1px solid #00c8ff; }'
                     + 'QGroupBox::title { color: #0f5f8e; }'
+                    + 'QLabel[selectorInlineHint="true"] { color: #3c7294; }'
                 )
             else:
                 frame.setStyleSheet(base_style)
+            frame.style().unpolish(frame)
+            frame.style().polish(frame)
             frame.update()
 
     def _set_card_drag_state(self, active: bool) -> None:
