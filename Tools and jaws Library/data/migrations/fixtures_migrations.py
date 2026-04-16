@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import sqlite3
 
-from data.migrations.tools_migrations import table_columns
+from .tools_migrations import table_columns
 
 __all__ = [
     "create_or_migrate_fixtures_schema",

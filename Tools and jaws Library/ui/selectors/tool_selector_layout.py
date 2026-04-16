@@ -16,7 +16,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR
+try:
+    from ...config import ALL_TOOL_TYPES, TOOL_ICONS_DIR
+except ImportError:
+    from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR
 from shared.ui.helpers.editor_helpers import (
     create_titled_section,
     style_icon_action_button,
@@ -39,21 +42,21 @@ from shared.ui.helpers.topbar_common import (
     build_search_toggle,
     rebuild_filter_row,
 )
-from ui.widgets.common import apply_shared_dropdown_style
-from ui.home_page_support.catalog_list_widgets import ToolCatalogListView
-from ui.home_page_support.selector_widgets import (
+from ..widgets.common import apply_shared_dropdown_style
+from ..home_page_support.catalog_list_widgets import ToolCatalogListView
+from ..home_page_support.selector_widgets import (
     ToolAssignmentListWidget,
     ToolSelectorRemoveDropButton,
 )
-from ui.shared.selector_panel_builders import (
+from ..shared.selector_panel_builders import (
     build_selector_actions_row,
     build_selector_card_shell,
     build_selector_hint_label,
     build_selector_info_header,
     style_selector_context_button,
 )
-from ui.selectors.common import build_selector_bottom_bar
-from ui.tool_catalog_delegate import ToolCatalogDelegate
+from .common import build_selector_bottom_bar
+from ..tool_catalog_delegate import ToolCatalogDelegate
 
 
 class ToolSelectorLayoutMixin:
@@ -62,7 +65,13 @@ class ToolSelectorLayoutMixin:
         profile: ToolLibProfileView | None = getattr(self, 'machine_profile', None)
         if profile is None:
             return False
-        return profile.is_machining_center()
+        checker = getattr(profile, 'is_machining_center', None)
+        if callable(checker):
+            try:
+                return bool(checker())
+            except Exception:
+                return False
+        return str(getattr(profile, 'machine_type', '') or '').strip().lower() == 'machining_center'
 
     def _build_toolbar(self, root: QVBoxLayout) -> None:
         """Build the shared filter toolbar matching the library style."""

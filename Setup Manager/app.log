@@ -126,3 +126,842 @@ sqlite3.OperationalError: no such table: tools
 2026-04-16 08:41:46,358 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
 2026-04-16 08:41:46,358 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
 2026-04-16 08:41:46,358 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 944
+2026-04-16 11:45:08,252 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 11:45:23,184 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 11:45:32,718 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 11:46:06,334 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:46:06,334 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:46:06,334 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-16 11:46:06,337 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:46:06,337 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:46:06,337 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 982
+2026-04-16 11:56:26,417 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:56:26,418 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:56:26,418 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-16 11:56:26,420 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:56:26,420 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:56:26,420 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 982
+2026-04-16 11:57:01,624 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:57:01,624 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:57:01,624 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-16 11:57:01,627 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:57:01,627 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:57:01,627 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 982
+2026-04-16 11:57:01,629 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:57:01,629 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:57:01,629 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 544
+2026-04-16 11:57:01,630 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 11:57:01,631 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 11:57:01,631 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 944
+2026-04-16 11:57:14,247 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:02:48,456 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:03:22,025 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 12:03:22,025 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 12:03:22,025 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-16 12:21:40,669 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpvdzg40sy\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 12:21:40,671 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpvdzg40sy\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 12:21:40,677 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-16 12:21:40,701 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 789, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+                                    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 555, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+                     (data_string, format))
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 12:21:40,720 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 789, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+                                    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 555, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+                     (data_string, format))
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 12:21:41,162 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 12:21:41,162 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 12:21:41,162 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-16 12:24:23,637 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpedpxlena\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 12:24:23,640 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpedpxlena\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 12:24:23,643 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-16 12:24:23,665 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 789, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+                                    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 555, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+                     (data_string, format))
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 12:24:23,687 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\print_service.py", line 109, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 789, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+                                    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 555, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+                     (data_string, format))
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 12:24:23,981 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 12:24:23,982 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 12:24:23,982 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-16 12:29:48,845 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpgtg4d1c4\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 12:29:48,848 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpgtg4d1c4\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-16 12:29:48,852 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-16 12:29:48,873 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 789, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+                                    ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\_strptime.py", line 555, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+                     (data_string, format))
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-16 12:50:56,334 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:50:56,335 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:51:09,773 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:51:09,773 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:51:11,537 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:51:11,538 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:51:12,961 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:51:12,961 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 12:59:31,429 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 13:00:18,103 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 13:27:14,318 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 13:32:29,303 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 13:45:59,861 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 13:52:10,119 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 13:55:48,884 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 14:00:50,286 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 14:01:31,101 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 14:07:00,310 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 14:09:12,461 ui.work_editor_dialog INFO work_editor.selector
+2026-04-16 14:39:08,483 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:39:08,484 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:39:39,897 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:39:39,897 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:27,857 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:27,858 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:27,859 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 291, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:27,860 services.draw_service DEBUG Falling back to legacy tool reference query without tool metadata columns
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:27,860 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 313, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:32,628 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:32,629 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:32,629 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 291, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:32,631 services.draw_service DEBUG Falling back to legacy tool reference query without tool metadata columns
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:32,631 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 313, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:37,493 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:37,494 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:37,494 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 291, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:37,495 services.draw_service DEBUG Falling back to legacy tool reference query without tool metadata columns
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:43:37,495 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 313, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,362 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,363 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,364 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 291, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,365 services.draw_service DEBUG Falling back to legacy tool reference query for head-filtered lookup
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,365 services.draw_service DEBUG tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,366 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 266, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC, uid DESC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools WHERE tool_head = ? COLLATE NOCASE"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        " ORDER BY id COLLATE NOCASE ASC",
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (head_filter,),
+        ^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 291, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,367 services.draw_service DEBUG Falling back to legacy tool reference query without tool metadata columns
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+2026-04-16 14:44:51,367 services.draw_service WARNING Tool reference lookup skipped because tools table is unavailable
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 302, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description, tool_type, default_pot, spindle_orientation FROM tools ORDER BY id COLLATE NOCASE ASC, uid DESC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\draw_service.py", line 313, in list_tool_refs
+    rows = conn.execute(
+           ~~~~~~~~~~~~^
+        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).fetchall()
+    ^
+sqlite3.OperationalError: no such table: tools

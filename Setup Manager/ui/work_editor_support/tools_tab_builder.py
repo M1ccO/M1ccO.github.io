@@ -76,14 +76,15 @@ def _build_machining_center_tools_tab_ui(
     toolbar.setSpacing(8)
     toolbar.addWidget(section_label_factory(dialog._t("work_editor.tools.operation", "Operation")))
 
-    dialog.mc_tools_op_combo = QComboBox()
+    dialog.mc_tools_op_combo = QComboBox(dialog.tools_tab)
     dialog.mc_tools_op_combo.setProperty("modernDropdown", True)
     apply_tool_library_combo_style(dialog.mc_tools_op_combo)
     dialog.mc_tools_op_combo.setMinimumWidth(170)
     toolbar.addWidget(dialog.mc_tools_op_combo, 0)
 
     dialog.open_tool_selector_btn = QPushButton(
-        dialog._t("work_editor.selector.tools_button", "Select Tools")
+        dialog._t("work_editor.selector.tools_button", "Select Tools"),
+        dialog.tools_tab,
     )
     dialog.open_tool_selector_btn.setProperty("panelActionButton", True)
     dialog.open_tool_selector_btn.clicked.connect(dialog._open_tool_selector)
@@ -95,6 +96,7 @@ def _build_machining_center_tools_tab_ui(
     ordered = ordered_tool_list_cls(
         dialog._t("work_editor.tools.op_tools", "Operation tools"),
         "HEAD1",
+        parent=dialog.tools_tab,
         translate=dialog._t,
     )
     ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -117,7 +119,7 @@ def _build_machining_center_tools_tab_ui(
     dialog._mc_tools_ordered = ordered
 
     host.add_widget(ordered, 1)
-    tool_ids_scroll_surface = QFrame()
+    tool_ids_scroll_surface = QFrame(dialog.tools_tab)
     tool_ids_scroll_surface.setProperty("toolIdsScrollSurface", True)
     tool_ids_scroll_surface_layout = QVBoxLayout(tool_ids_scroll_surface)
     tool_ids_scroll_surface_layout.setContentsMargins(8, 8, 8, 8)
@@ -126,13 +128,13 @@ def _build_machining_center_tools_tab_ui(
     tool_ids_scroll_surface.setMinimumHeight(280)
     layout.addWidget(tool_ids_scroll_surface, 2)
 
-    dialog.shared_tool_actions = QFrame()
+    dialog.shared_tool_actions = QFrame(dialog.tools_tab)
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)
     shared_actions_layout.setContentsMargins(8, 8, 8, 0)
     shared_actions_layout.setSpacing(8)
 
-    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"))
-    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"))
+    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"), dialog.tools_tab)
+    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"), dialog.tools_tab)
     for btn in (dialog.shared_move_up_btn, dialog.shared_move_down_btn):
         btn.setProperty("panelActionButton", True)
         btn.setMinimumWidth(52)
@@ -416,7 +418,7 @@ def build_tools_tab_ui(
 
     tools_scroll_layout.addStretch(1)
 
-    tool_ids_scroll_surface = QFrame()
+    tool_ids_scroll_surface = QFrame(dialog.tools_tab)
     tool_ids_scroll_surface.setProperty("toolIdsScrollSurface", True)
     tool_ids_scroll_surface_layout = QVBoxLayout(tool_ids_scroll_surface)
     tool_ids_scroll_surface_layout.setContentsMargins(8, 8, 8, 8)
@@ -425,7 +427,7 @@ def build_tools_tab_ui(
 
     layout.addWidget(tool_ids_scroll_surface, 2)
 
-    dialog.shared_tool_actions = QFrame()
+    dialog.shared_tool_actions = QFrame(dialog.tools_tab)
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)
     shared_actions_layout.setContentsMargins(8, 8, 8, 0)
     shared_actions_layout.setSpacing(8)

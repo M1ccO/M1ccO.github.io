@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .bridge_actions import open_external_selector_session, show_selector_warning
+from PySide6.QtWidgets import QMessageBox
 from .selectors import (
     apply_fixture_selector_items_to_operations,
     apply_jaw_selector_items_to_selectors,
@@ -91,25 +91,4 @@ def apply_fixture_selector_result(dialog: Any, request: dict, selected_items: li
 
 
 def show_selector_warning_for_dialog(dialog: Any, title: str, body: str) -> None:
-    show_selector_warning(dialog, title, body)
-
-
-def open_external_selector_session_for_dialog(
-    dialog: Any,
-    *,
-    kind: str,
-    head: str | None = None,
-    spindle: str | None = None,
-    follow_up: dict | None = None,
-    initial_assignments: list[dict] | None = None,
-    initial_assignment_buckets: dict[str, list[dict]] | None = None,
-) -> bool:
-    return open_external_selector_session(
-        dialog,
-        kind=kind,
-        head=head,
-        spindle=spindle,
-        follow_up=follow_up,
-        initial_assignments=initial_assignments,
-        initial_assignment_buckets=initial_assignment_buckets,
-    )
+    QMessageBox.warning(dialog, title, body)

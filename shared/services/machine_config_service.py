@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import shutil
 import uuid
 from dataclasses import asdict, dataclass, field, replace
 from datetime import datetime, timezone
@@ -436,21 +437,48 @@ class MachineConfigService:
         if changed:
             self._save()
 
-        # Pre-create empty SQLite files for any per-config library paths that
-        # don't exist on disk yet (so the Tool Library can connect immediately).
+        # Ensure per-config library DBs are at least schema-bearing. If a file is
+        # missing, create it from fallback template when possible. If it exists but
+        # has no tables (empty bootstrap file), reseed it from fallback template.
         import sqlite3 as _sqlite3
-        for cfg in self._configs:
-            for lib_path_str in (cfg.tools_db_path, cfg.jaws_db_path, cfg.fixtures_db_path):
-                if not lib_path_str:
-                    continue
-                lib_path = Path(lib_path_str)
+
+        def _table_count(path: Path) -> int:
+            try:
+                conn = _sqlite3.connect(str(path))
                 try:
-                    lib_path.parent.mkdir(parents=True, exist_ok=True)
-                    if not lib_path.exists():
+                    row = conn.execute(
+                        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                    ).fetchone()
+                    return int((row or [0])[0] or 0)
+                finally:
+                    conn.close()
+            except Exception:
+                return 0
+
+        def _seed_or_create(lib_path: Path, fallback_path: str) -> None:
+            try:
+                lib_path.parent.mkdir(parents=True, exist_ok=True)
+                fallback = Path(str(fallback_path or "")).expanduser()
+
+                if not lib_path.exists():
+                    if fallback.exists() and fallback.is_file():
+                        shutil.copy2(str(fallback), str(lib_path))
+                    else:
                         _conn = _sqlite3.connect(str(lib_path))
                         _conn.close()
-                except Exception as exc:
-                    _log.warning("Could not pre-create library database %s: %s", lib_path, exc)
+                    return
+
+                # Existing file: reseed only if it is effectively empty schema.
+                if _table_count(lib_path) == 0 and fallback.exists() and fallback.is_file():
+                    shutil.copy2(str(fallback), str(lib_path))
+            except Exception as exc:
+                _log.warning("Could not ensure library database %s: %s", lib_path, exc)
+
+        for cfg in self._configs:
+            _seed_or_create(Path(cfg.tools_db_path), tools_fallback)
+            if cfg.jaws_db_path:
+                _seed_or_create(Path(cfg.jaws_db_path), jaws_fallback)
+            _seed_or_create(Path(cfg.fixtures_db_path), fixtures_fallback)
 
         return changed
 

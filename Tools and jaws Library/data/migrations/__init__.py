@@ -20,15 +20,15 @@ from __future__ import annotations
 
 import sqlite3
 
-from data.migrations.fixtures_migrations import (
+from .fixtures_migrations import (
     create_or_migrate_fixtures_schema,
     migrate_fixtures_schema,
 )
-from data.migrations.jaws_migrations import (
+from .jaws_migrations import (
     create_or_migrate_jaws_schema,
     migrate_jaws_schema,
 )
-from data.migrations.tools_migrations import (
+from .tools_migrations import (
     create_or_migrate_tools_schema,
     json_loads,
     table_columns,

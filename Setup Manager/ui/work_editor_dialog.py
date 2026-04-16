@@ -1,6 +1,7 @@
-﻿from typing import Callable
+﻿import logging
+from typing import Callable
 
-from PySide6.QtCore import QEvent, QSize, Qt
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QFontMetrics, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -22,6 +23,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QTabWidget,
     QTextEdit,
     QToolButton,
@@ -33,8 +35,8 @@ from ui.work_editor_support import (
     WorkEditorJawSelectorPanel,
     WorkEditorOrderedToolList,
     WorkEditorPayloadAdapter,
+    WorkEditorSelectorHost,
     WorkEditorToolRemoveDropButton,
-    SelectorSessionBridge,
     apply_fixture_selection_to_operation,
     apply_fixture_selector_result,
     apply_jaw_selector_result,
@@ -53,18 +55,13 @@ from ui.work_editor_support import (
     default_selector_head,
     default_selector_spindle,
     effective_active_tool_list,
-    ensure_selector_callback_server,
     jaw_ref_key,
     merge_jaw_refs,
     merge_tool_refs,
     normalize_selector_head,
     normalize_selector_spindle,
     on_tool_list_interaction,
-    open_external_selector_session_for_dialog,
-    open_fixture_selector_session,
-    open_jaw_selector_session,
     open_pot_editor_dialog,
-    open_tool_selector_session,
     parse_optional_int,
     populate_default_pots,
     refresh_external_refs,
@@ -81,7 +78,6 @@ from ui.work_editor_support import (
     shared_move_tool_up,
     shared_remove_selected_tool,
     show_selector_warning_for_dialog,
-    shutdown_selector_bridge,
     sync_tool_head_view,
     toggle_tools_head_view,
     tool_icon_for_type_in_spindle,
@@ -93,16 +89,17 @@ from ui.work_editor_support import (
     update_tools_head_switch_text,
     visible_tool_lists,
     build_spindle_zero_group,
+    build_fixture_selector_request,
+    build_jaw_selector_request,
+    build_tool_selector_request,
+    build_embedded_selector_parity_widget,
+    release_tool_library_namespace_aliases,
     make_zero_axis_input,
     set_coord_combo,
     set_zero_xy_visibility,
 )
 from config import (
     SHARED_UI_PREFERENCES_PATH,
-    TOOL_LIBRARY_EXE_CANDIDATES,
-    TOOL_LIBRARY_MAIN_PATH,
-    TOOL_LIBRARY_PROJECT_DIR,
-    TOOL_LIBRARY_SERVER_NAME,
 )
 from shared.services.ui_preferences_service import UiPreferencesService
 from ui.work_editor_support.dialog_lifecycle import (
@@ -139,6 +136,10 @@ def _section_label(text: str) -> QLabel:
 
 class WorkEditorDialog(QDialog):
     WORK_COORDINATES = WORK_COORDINATES
+    _SELECTOR_MIN_WIDTH = 1100
+    _SELECTOR_EXPAND_DELTA = 480
+    _LOGGER = logging.getLogger(__name__)
+    _SELECTORS_TEMPORARILY_DISABLED = False
 
     def __init__(
         self,
@@ -212,7 +213,12 @@ class WorkEditorDialog(QDialog):
         self._zero_coord_combos: list[QComboBox] = []
         self._zero_row_spacers: list[QLabel] = []
         self._zero_grids_with_groups: list[tuple] = []
-        self._selector_bridge: SelectorSessionBridge | None = None
+        self._selector_transport_mode = self._resolve_selector_transport_mode()
+        self._selector_mode_active = False
+        self._selector_restore_state: dict | None = None
+        self._embedded_selector_host: WorkEditorSelectorHost | None = None
+        self._raw_part_combo_popup_allowed = False
+        self._raw_part_combo_popup_window: QWidget | None = None
 
         setup_tabs(self)
 
@@ -222,6 +228,13 @@ class WorkEditorDialog(QDialog):
         self._build_notes_tab()
 
         setup_button_row(self)
+        self._embedded_selector_host = WorkEditorSelectorHost(
+            dialog=self,
+            mount_container=self._selector_mount_container,
+            enter_selector_mode=self._enter_selector_mode,
+            exit_selector_mode=self._exit_selector_mode,
+            parent=self,
+        )
 
         # Keep dialog actions visually consistent with secondary gray buttons.
         self._set_secondary_button_theme()
@@ -230,7 +243,117 @@ class WorkEditorDialog(QDialog):
         self._load_work()
 
         finalize_ui(self)
+        self._close_transient_combo_popups()
+        self._schedule_combo_popup_stabilization()
+        self._setup_raw_part_combo_popup_guard()
         self._install_local_event_filters()
+
+    def _close_transient_combo_popups(self) -> None:
+        """Defensively close any combo popups opened during startup wiring."""
+        for combo in self.findChildren(QComboBox):
+            try:
+                combo.hidePopup()
+            except Exception:
+                pass
+
+    def _schedule_combo_popup_stabilization(self) -> None:
+        """Close delayed combo popups that may appear after style/polish passes."""
+
+        def _close_again() -> None:
+            self._close_transient_combo_popups()
+
+        for delay_ms in (0, 60, 180):
+            QTimer.singleShot(delay_ms, _close_again)
+
+    def _setup_raw_part_combo_popup_guard(self) -> None:
+        """Allow RAW PART dropdown popup only after explicit user interaction."""
+        combo = getattr(self, "raw_part_kind_combo", None)
+        if not isinstance(combo, QComboBox):
+            return
+        try:
+            popup_window = combo.view().window()
+        except Exception:
+            popup_window = None
+        if isinstance(popup_window, QWidget):
+            self._raw_part_combo_popup_window = popup_window
+
+    def _resolve_selector_transport_mode(self) -> str:
+        """Selectors are embedded-only after parity migration completion."""
+        return "embedded"
+
+    def _log_selector_event(self, event: str, **fields) -> None:
+        payload = {
+            "event": event,
+            "transport": self._selector_transport_mode,
+        }
+        payload.update({key: value for key, value in fields.items() if value not in (None, "")})
+        self._LOGGER.info("work_editor.selector", extra={"selector": payload})
+
+    def _is_embedded_selector_mode_enabled(self) -> bool:
+        return True
+
+    def _capture_selector_restore_state(self) -> dict:
+        return {
+            "geometry": self.geometry(),
+            "minimum_size": self.minimumSize(),
+            "maximum_size": self.maximumSize(),
+        }
+
+    def _restore_from_selector_state(self) -> None:
+        state = self._selector_restore_state
+        if not isinstance(state, dict):
+            return
+
+        min_size = state.get("minimum_size")
+        if isinstance(min_size, QSize):
+            self.setMinimumSize(min_size)
+
+        max_size = state.get("maximum_size")
+        if isinstance(max_size, QSize):
+            self.setMaximumSize(max_size)
+
+        geometry = state.get("geometry")
+        if geometry is not None:
+            self.setGeometry(geometry)
+
+    def _enter_selector_mode(self) -> None:
+        if self._selector_mode_active:
+            return
+        if not isinstance(getattr(self, "_root_stack", None), QStackedWidget):
+            return
+
+        self._selector_restore_state = self._capture_selector_restore_state()
+        self._selector_mode_active = True
+        self._root_stack.setCurrentWidget(self._selector_page)
+        self._expand_for_selector_mode()
+
+    def _exit_selector_mode(self) -> None:
+        if not self._selector_mode_active:
+            return
+        if isinstance(getattr(self, "_root_stack", None), QStackedWidget):
+            self._root_stack.setCurrentWidget(self._normal_page)
+
+        self._restore_from_selector_state()
+        self._selector_restore_state = None
+        self._selector_mode_active = False
+
+    def _expand_for_selector_mode(self) -> None:
+        target_width = max(self.width() + self._SELECTOR_EXPAND_DELTA, self._SELECTOR_MIN_WIDTH)
+        screen = self.screen()
+        available = screen.availableGeometry() if screen is not None else None
+        if available is not None:
+            target_width = min(target_width, available.width())
+
+        target_height = self.height()
+        if available is not None:
+            target_height = min(target_height, available.height())
+
+        self.resize(target_width, target_height)
+        if available is not None:
+            geom = self.geometry()
+            x = min(max(geom.x(), available.left()), available.right() - geom.width() + 1)
+            y = min(max(geom.y(), available.top()), available.bottom() - geom.height() + 1)
+            self.move(x, y)
 
     def _install_local_event_filters(self) -> None:
         """Scope event filtering to this dialog tree (no app-wide filter)."""
@@ -239,6 +362,16 @@ class WorkEditorDialog(QDialog):
             widget.installEventFilter(self)
 
     def eventFilter(self, obj, event):
+        combo = getattr(self, "raw_part_kind_combo", None)
+        if isinstance(combo, QComboBox):
+            if obj is combo and event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress):
+                self._raw_part_combo_popup_allowed = True
+            popup_window = self._raw_part_combo_popup_window
+            if popup_window is not None and obj is popup_window and event.type() == QEvent.Show:
+                if not self._raw_part_combo_popup_allowed:
+                    QTimer.singleShot(0, combo.hidePopup)
+                    return True
+
         if event.type() == QEvent.ToolTip and isinstance(obj, QWidget):
             if obj is self or self.isAncestorOf(obj):
                 return True
@@ -247,7 +380,7 @@ class WorkEditorDialog(QDialog):
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
-        self._shutdown_selector_bridge()
+        release_tool_library_namespace_aliases(self)
         super().closeEvent(event)
 
     # ------------------------------------------------------------------
@@ -297,56 +430,6 @@ class WorkEditorDialog(QDialog):
 
     def _show_selector_warning(self, title: str, body: str):
         show_selector_warning_for_dialog(self, title, body)
-
-    def _ensure_selector_bridge(self):
-        """Create selector runtime bridge lazily on first selector-related use."""
-        if self._selector_bridge is None:
-            self._selector_bridge = SelectorSessionBridge(
-                parent=self,
-                translate=self._t,
-                show_warning=self._show_selector_warning,
-                normalize_head=self._normalize_selector_head,
-                normalize_spindle=self._normalize_selector_spindle,
-                default_spindle=self._default_selector_spindle,
-                initial_tool_assignment_buckets=self._selector_initial_tool_assignment_buckets,
-                apply_fixture_result=self._apply_fixture_selector_result,
-                apply_tool_result=self._apply_tool_selector_result,
-                apply_jaw_result=self._apply_jaw_selector_result,
-                open_jaw_selector=self._open_jaw_selector,
-                tool_library_server_name=TOOL_LIBRARY_SERVER_NAME,
-                tool_library_main_path=TOOL_LIBRARY_MAIN_PATH,
-                tool_library_project_dir=TOOL_LIBRARY_PROJECT_DIR,
-                tool_library_exe_candidates=TOOL_LIBRARY_EXE_CANDIDATES,
-                machine_profile_key=str(getattr(self.machine_profile, 'key', '') or ''),
-                tools_db_path=str(self.draw_service.tool_db_path),
-                jaws_db_path=str(self.draw_service.jaw_db_path),
-                fixtures_db_path=str(getattr(self.draw_service, 'fixture_db_path', self.draw_service.jaw_db_path)),
-            )
-        return self._selector_bridge
-
-    def _ensure_selector_callback_server(self) -> bool:
-        return ensure_selector_callback_server(self)
-
-    def _shutdown_selector_bridge(self):
-        shutdown_selector_bridge(self)
-
-    def _open_external_selector_session(
-        self,
-        *,
-        kind: str,
-        head: str | None = None,
-        spindle: str | None = None,
-        follow_up: dict | None = None,
-        initial_assignments: list[dict] | None = None,
-    ) -> bool:
-        return open_external_selector_session_for_dialog(
-            self,
-            kind=kind,
-            head=head,
-            spindle=spindle,
-            follow_up=follow_up,
-            initial_assignments=initial_assignments,
-        )
 
     @staticmethod
     def _parse_optional_int(value) -> int | None:
@@ -565,50 +648,179 @@ class WorkEditorDialog(QDialog):
         initial_spindle: str | None = None,
         initial_assignments: list[dict] | None = None,
     ) -> bool:
+        if self._SELECTORS_TEMPORARILY_DISABLED:
+            self._show_selector_warning(
+                self._t("work_editor.selector.disabled.title", "Selectors temporarily disabled"),
+                self._t(
+                    "work_editor.selector.disabled.body",
+                    "Tool/Jaw/Fixture selectors are temporarily disabled for troubleshooting.",
+                ),
+            )
+            return False
         if hasattr(self, '_sync_mc_tools_operation_payload'):
             try:
                 self._sync_mc_tools_operation_payload()
             except Exception:
                 pass
-        return open_tool_selector_session(
+        request = build_tool_selector_request(
             self,
             initial_head=initial_head,
             initial_spindle=initial_spindle,
             initial_assignments=initial_assignments,
+        )
+        self._log_selector_event(
+            "open",
+            kind="tools",
+            head=request.get("head"),
+            spindle=request.get("spindle"),
+        )
+        return self._open_embedded_selector_session(
+            kind=str(request.get("kind") or "tools"),
+            head=str(request.get("head") or ""),
+            spindle=str(request.get("spindle") or ""),
+            initial_assignments=list(request.get("initial_assignments") or []),
+            initial_assignment_buckets=dict(request.get("initial_assignment_buckets") or {}),
         )
 
     def _selector_initial_jaw_assignments(self) -> list[dict]:
         return build_initial_jaw_assignments(self)
 
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
-        return open_jaw_selector_session(self, initial_spindle=initial_spindle)
+        if self._SELECTORS_TEMPORARILY_DISABLED:
+            self._show_selector_warning(
+                self._t("work_editor.selector.disabled.title", "Selectors temporarily disabled"),
+                self._t(
+                    "work_editor.selector.disabled.body",
+                    "Tool/Jaw/Fixture selectors are temporarily disabled for troubleshooting.",
+                ),
+            )
+            return False
+        request = build_jaw_selector_request(self, initial_spindle=initial_spindle)
+        self._log_selector_event("open", kind="jaws", spindle=request.get("spindle"))
+        return self._open_embedded_selector_session(
+            kind=str(request.get("kind") or "jaws"),
+            spindle=str(request.get("spindle") or ""),
+            initial_assignments=list(request.get("initial_assignments") or []),
+        )
 
     def _open_fixture_selector(self, operation_key: str | None = None) -> bool:
-        resolved_key = str(operation_key or '').strip()
-        if not resolved_key:
-            first_op = next(
-                (
-                    item
-                    for item in getattr(self, '_mc_operations', [])
-                    if isinstance(item, dict) and str(item.get('op_key') or '').strip()
+        if self._SELECTORS_TEMPORARILY_DISABLED:
+            self._show_selector_warning(
+                self._t("work_editor.selector.disabled.title", "Selectors temporarily disabled"),
+                self._t(
+                    "work_editor.selector.disabled.body",
+                    "Tool/Jaw/Fixture selectors are temporarily disabled for troubleshooting.",
                 ),
-                None,
             )
-            resolved_key = str((first_op or {}).get('op_key') or '').strip()
-        op = next(
-            (
-                item
-                for item in getattr(self, '_mc_operations', [])
-                if str(item.get('op_key') or '').strip() == resolved_key
-            ),
-            None,
+            return False
+        request = build_fixture_selector_request(self, operation_key=operation_key)
+        target_key = str((request.get("follow_up") or {}).get("target_key") or "").strip()
+        self._log_selector_event("open", kind="fixtures", target_key=target_key)
+        return self._open_embedded_selector_session(
+            kind=str(request.get("kind") or "fixtures"),
+            follow_up=dict(request.get("follow_up") or {}),
+            initial_assignments=list(request.get("initial_assignments") or []),
+            initial_assignment_buckets=dict(request.get("initial_assignment_buckets") or {}),
         )
-        initial_assignments = list((op or {}).get('fixture_items') or [])
-        return open_fixture_selector_session(
-            self,
-            operation_key=resolved_key,
-            initial_assignments=initial_assignments,
+
+    def _open_embedded_selector_session(
+        self,
+        *,
+        kind: str,
+        head: str | None = None,
+        spindle: str | None = None,
+        follow_up: dict | None = None,
+        initial_assignments: list[dict] | None = None,
+        initial_assignment_buckets: dict[str, list[dict]] | None = None,
+    ) -> bool:
+        """Phase-3 shared-widget embedded path to validate mode and geometry flow."""
+        host = self._embedded_selector_host
+        if host is None:
+            return False
+        kind_key = str(kind or "").strip().lower()
+        request = {
+            "kind": kind_key,
+            "head": str(head or ""),
+            "spindle": str(spindle or ""),
+            "target_key": str((follow_up or {}).get("target_key") or ""),
+        }
+
+        def _finalize_embedded_submit(payload: dict, req: dict = request) -> None:
+            self._handle_embedded_selector_submit(req, payload)
+            release_tool_library_namespace_aliases(self)
+            host.close_active_widget()
+
+        def _finalize_embedded_cancel() -> None:
+            self._handle_embedded_selector_cancel()
+            release_tool_library_namespace_aliases(self)
+            host.close_active_widget()
+
+        try:
+            container = build_embedded_selector_parity_widget(
+                self,
+                mount_container=self._selector_mount_container,
+                kind=kind_key,
+                head=head,
+                spindle=spindle,
+                follow_up=follow_up,
+                initial_assignments=initial_assignments,
+                initial_assignment_buckets=initial_assignment_buckets,
+                on_submit=_finalize_embedded_submit,
+                on_cancel=_finalize_embedded_cancel,
+            )
+        except Exception as exc:
+            self._LOGGER.exception("Failed to open embedded selector kind=%s", kind_key)
+            release_tool_library_namespace_aliases(self)
+            self._show_selector_warning(
+                self._t("work_editor.selector.open_failed.title", "Selector unavailable"),
+                self._t(
+                    "work_editor.selector.open_failed.body",
+                    "Could not open embedded selector: {error}",
+                    error=str(exc),
+                ),
+            )
+            return False
+        if container is None:
+            return False
+        container.setProperty("selectorContext", True)
+
+        self._log_selector_event(
+            "open.embedded",
+            kind=kind,
+            head=head,
+            spindle=spindle,
+            target_key=str((follow_up or {}).get("target_key") or ""),
         )
+        host.open_widget(container)
+        return True
+
+    def _handle_embedded_selector_submit(self, request: dict, payload: dict) -> None:
+        kind = str((payload or {}).get("kind") or request.get("kind") or "").strip().lower()
+        selected_items = list((payload or {}).get("selected_items") or [])
+
+        selector_request = {
+            "head": request.get("head") or (payload or {}).get("selector_head") or "",
+            "spindle": request.get("spindle") or (payload or {}).get("selector_spindle") or "",
+            "target_key": request.get("target_key") or (payload or {}).get("target_key") or "",
+        }
+
+        applied = False
+        if kind == "tools":
+            applied = self._apply_tool_selector_result(selector_request, selected_items)
+        elif kind == "jaws":
+            applied = self._apply_jaw_selector_result(selector_request, selected_items)
+        elif kind == "fixtures":
+            applied = self._apply_fixture_selector_result(selector_request, selected_items)
+
+        self._log_selector_event(
+            "submit.embedded.applied",
+            kind=kind,
+            applied=bool(applied),
+            selected_count=len(selected_items),
+        )
+
+    def _handle_embedded_selector_cancel(self) -> None:
+        self._log_selector_event("cancel.embedded.request")
 
     def _build_notes_tab(self):
         build_notes_tab_ui(self, create_titled_section_fn=create_titled_section)

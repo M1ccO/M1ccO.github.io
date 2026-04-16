@@ -151,7 +151,7 @@ class WorkEditorOrderedToolList(QWidget):
         header_row.setContentsMargins(0, 0, 0, 0)
         header_row.setSpacing(8)
 
-        self.spindle_selector = QComboBox()
+        self.spindle_selector = QComboBox(self)
         self.spindle_selector.setProperty("modernDropdown", True)
         self.spindle_selector.setMinimumWidth(116)
         self.spindle_selector.setMaximumWidth(150)
@@ -159,7 +159,7 @@ class WorkEditorOrderedToolList(QWidget):
         for label, value in self._SPINDLE_OPTIONS:
             self.spindle_selector.addItem(label, value)
 
-        self.select_btn = QPushButton(self._t("work_editor.tools.select_tools", "Select Tools..."))
+        self.select_btn = QPushButton(self._t("work_editor.tools.select_tools", "Select Tools..."), self)
         self.select_btn.setProperty("panelActionButton", True)
         self.select_btn.setProperty("primaryAction", True)
         self.select_btn.setMinimumWidth(112)
@@ -212,8 +212,8 @@ class WorkEditorOrderedToolList(QWidget):
         btn_row.addWidget(self.move_down_btn)
         btn_row.addWidget(self.remove_btn)
 
-        self.comment_btn = QPushButton(self._t("work_editor.tools.add_comment", "Add Comment"))
-        self.delete_comment_btn = QPushButton(self._t("work_editor.tools.delete_comment", "Delete Comment"))
+        self.comment_btn = QPushButton(self._t("work_editor.tools.add_comment", "Add Comment"), self)
+        self.delete_comment_btn = QPushButton(self._t("work_editor.tools.delete_comment", "Delete Comment"), self)
         self.comment_btn.setMinimumWidth(112)
         self.comment_btn.setMaximumWidth(150)
         self.delete_comment_btn.setMinimumWidth(112)

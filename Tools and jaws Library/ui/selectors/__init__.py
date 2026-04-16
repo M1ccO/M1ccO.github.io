@@ -1,5 +1,7 @@
-from .tool_selector_dialog import ToolSelectorDialog
-from .jaw_selector_dialog import JawSelectorDialog
-from .fixture_selector_dialog import FixtureSelectorDialog
+"""Selector dialog package.
+
+Keep this module import-light so importing one selector module does not force
+loading all selector dialogs and their dependency trees.
+"""
 
 __all__ = ["ToolSelectorDialog", "JawSelectorDialog", "FixtureSelectorDialog"]

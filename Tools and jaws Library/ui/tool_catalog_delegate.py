@@ -38,13 +38,22 @@ from shared.ui.platforms.catalog_page_base import (
     CATALOG_ROLE_UID,
 )
 
-from config import (
-    DEFAULT_TOOL_ICON,
-    MILLING_TOOL_TYPES,
-    TOOL_ICONS_DIR,
-    TOOL_TYPE_TO_ICON,
-    TURNING_TOOL_TYPES,
-)
+try:
+    from ..config import (
+        DEFAULT_TOOL_ICON,
+        MILLING_TOOL_TYPES,
+        TOOL_ICONS_DIR,
+        TOOL_TYPE_TO_ICON,
+        TURNING_TOOL_TYPES,
+    )
+except ImportError:
+    from config import (
+        DEFAULT_TOOL_ICON,
+        MILLING_TOOL_TYPES,
+        TOOL_ICONS_DIR,
+        TOOL_TYPE_TO_ICON,
+        TURNING_TOOL_TYPES,
+    )
 
 # ── Data roles stored in the model ──────────────────────────────────────
 # Keep roles aligned with CatalogPageBase so delegates and pages agree on

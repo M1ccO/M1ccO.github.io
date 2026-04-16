@@ -544,7 +544,7 @@ def build_machining_center_zeros_tab_ui(
     def _create_coord_combo(coords: list[str] | tuple[str, ...]):
         from PySide6.QtWidgets import QComboBox
 
-        combo = QComboBox()
+        combo = QComboBox(dialog)
         combo.addItems(list(coords))
         combo.setProperty('modernDropdown', True)
         dialog._apply_coord_combo_popup_style(combo)

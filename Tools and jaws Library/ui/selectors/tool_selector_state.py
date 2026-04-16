@@ -8,9 +8,9 @@ from PySide6.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
 
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.topbar_common import rebuild_filter_row
-from ui.selector_ui_helpers import selector_spindle_label
-from ui.selectors.common import selected_rows_or_current
-from ui.tool_catalog_delegate import (
+from ..selector_ui_helpers import selector_spindle_label
+from .common import selected_rows_or_current
+from ..tool_catalog_delegate import (
     ROLE_TOOL_DATA,
     ROLE_TOOL_ID,
     ROLE_TOOL_ICON,
@@ -816,7 +816,8 @@ class ToolSelectorStateMixin:
 
     def _populate_tool_detail(self, tool: dict | None) -> None:
         """Clear and rebuild the detail panel content using DetailPanelBuilder."""
-        from ui.home_page_support.detail_panel_builder import DetailPanelBuilder
+        from ..home_page_support.detail_panel_builder import DetailPanelBuilder
+        
         # Clear existing content
         while self.detail_layout.count():
             item = self.detail_layout.takeAt(0)

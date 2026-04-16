@@ -1,14 +1,8 @@
-from .bridge import SelectorSessionBridge
-from .bridge_actions import (
-    ensure_selector_callback_server,
-    open_external_selector_session,
-    show_selector_warning,
-    shutdown_selector_bridge,
-)
 from .dragdrop_widgets import (
     WorkEditorToolAssignmentListWidget,
     WorkEditorToolRemoveDropButton,
 )
+from .embedded_selector_host import WorkEditorSelectorHost
 from .io_validation import collect_unresolved_reference_messages, refresh_external_refs
 from .icon_resolvers import toolbar_icon, tool_icon_for_type, tool_icon_for_type_in_spindle
 from .jaw_selector_panel import WorkEditorJawSelectorPanel
@@ -39,11 +33,15 @@ from .selectors import (
     unique_selected_jaw_ids,
 )
 from .pot_editor import open_pot_editor_dialog
-from .selector_flow import (
+from .selector_provider import (
     build_initial_jaw_assignments,
-    open_fixture_selector_session,
-    open_jaw_selector_session,
-    open_tool_selector_session,
+    build_fixture_selector_request,
+    build_jaw_selector_request,
+    build_tool_selector_request,
+)
+from .selector_parity_factory import (
+    build_embedded_selector_parity_widget,
+    release_tool_library_namespace_aliases,
 )
 from .selector_adapter import (
     apply_fixture_selector_result,
@@ -52,7 +50,6 @@ from .selector_adapter import (
     head_label,
     merge_jaw_refs,
     merge_tool_refs,
-    open_external_selector_session_for_dialog,
     show_selector_warning_for_dialog,
     spindle_label,
 )
@@ -103,13 +100,9 @@ __all__ = [
     "WorkEditorOrderedToolList",
     "build_machining_center_zeros_tab_ui",
     "apply_fixture_selection_to_operation",
-    "SelectorSessionBridge",
     "WorkEditorToolAssignmentListWidget",
     "WorkEditorToolRemoveDropButton",
-    "ensure_selector_callback_server",
-    "open_external_selector_session",
-    "show_selector_warning",
-    "shutdown_selector_bridge",
+    "WorkEditorSelectorHost",
     "collect_unresolved_reference_messages",
     "refresh_external_refs",
     "toolbar_icon",
@@ -144,9 +137,11 @@ __all__ = [
     "effective_active_tool_list",
     "open_pot_editor_dialog",
     "on_tool_list_interaction",
-    "open_fixture_selector_session",
-    "open_jaw_selector_session",
-    "open_tool_selector_session",
+    "build_tool_selector_request",
+    "build_jaw_selector_request",
+    "build_fixture_selector_request",
+    "build_embedded_selector_parity_widget",
+    "release_tool_library_namespace_aliases",
     "head_label",
     "spindle_label",
     "merge_tool_refs",
@@ -155,7 +150,6 @@ __all__ = [
     "apply_tool_selector_result",
     "apply_jaw_selector_result",
     "show_selector_warning_for_dialog",
-    "open_external_selector_session_for_dialog",
     "current_tools_head_value",
     "default_jaw_selector_spindle",
     "default_selector_head",

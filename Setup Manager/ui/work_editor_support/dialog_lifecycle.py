@@ -5,7 +5,9 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QComboBox,
     QDialogButtonBox,
+    QHBoxLayout,
     QPushButton,
+    QStackedWidget,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -28,15 +30,38 @@ def setup_tabs(dialog) -> None:
 
 
 def setup_button_row(dialog) -> None:
-    """Create the save/cancel button row and main layout."""
+    """Create the root stack with normal editor and selector host pages."""
     root = QVBoxLayout(dialog)
-    root.addWidget(dialog.tabs, 1)
+
+    dialog._root_stack = QStackedWidget(dialog)
+    dialog._normal_page = QWidget(dialog._root_stack)
+    dialog._selector_page = QWidget(dialog._root_stack)
+    dialog._selector_mount_container = QWidget(dialog._selector_page)
+
+    dialog._root_stack.addWidget(dialog._normal_page)
+    dialog._root_stack.addWidget(dialog._selector_page)
+    root.addWidget(dialog._root_stack, 1)
+
+    normal_layout = QVBoxLayout(dialog._normal_page)
+    normal_layout.setContentsMargins(0, 0, 0, 0)
+    normal_layout.setSpacing(10)
+    normal_layout.addWidget(dialog.tabs, 1)
 
     buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
     buttons.accepted.connect(dialog._on_save)
     buttons.rejected.connect(dialog.reject)
     dialog._dialog_buttons = buttons
-    root.addWidget(buttons)
+    normal_layout.addWidget(buttons)
+
+    selector_layout = QVBoxLayout(dialog._selector_page)
+    selector_layout.setContentsMargins(0, 0, 0, 0)
+    selector_layout.setSpacing(0)
+
+    selector_mount_layout = QHBoxLayout(dialog._selector_mount_container)
+    selector_mount_layout.setContentsMargins(0, 0, 0, 0)
+    selector_mount_layout.setSpacing(0)
+
+    selector_layout.addWidget(dialog._selector_mount_container, 1)
 
 
 def finalize_ui(dialog) -> None:

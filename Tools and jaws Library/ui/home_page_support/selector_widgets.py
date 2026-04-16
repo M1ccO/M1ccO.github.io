@@ -12,7 +12,10 @@ from shared.ui.helpers.dragdrop_helpers import (
     build_widget_drag_ghost,
     clear_selection_on_blank_click,
 )
-from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
+try:
+    from ..selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
+except ImportError:
+    from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload, encode_selector_payload, tool_payload_keys
 
 
 class ToolAssignmentListWidget(QListWidget):

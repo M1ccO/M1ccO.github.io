@@ -8,7 +8,10 @@ from PySide6.QtCore import QRect, QSize, Qt
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QIcon, QPainter, QPen, QPixmap, QTransform
 from PySide6.QtWidgets import QStyle, QStyleOptionViewItem
 
-from config import TOOL_ICONS_DIR
+try:
+    from ..config import TOOL_ICONS_DIR
+except ImportError:
+    from config import TOOL_ICONS_DIR
 from shared.ui.platforms.catalog_delegate import CatalogDelegate
 from shared.ui.platforms.catalog_page_base import (
     CATALOG_ROLE_DATA,

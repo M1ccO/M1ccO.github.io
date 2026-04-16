@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from typing import Callable
 
 from PySide6.QtCore import QMimeData, QSize, Qt, Signal
@@ -23,7 +24,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import SHARED_UI_PREFERENCES_PATH, TOOL_ICONS_DIR
+try:
+    from ...config import SHARED_UI_PREFERENCES_PATH, TOOL_ICONS_DIR
+except ImportError:
+    from config import SHARED_UI_PREFERENCES_PATH, TOOL_ICONS_DIR
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.dragdrop_helpers import (
     build_text_drag_ghost,
@@ -51,21 +55,22 @@ from shared.ui.helpers.topbar_common import (
     rebuild_filter_row,
 )
 from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
-from ui.fixture_catalog_delegate import (
+from shared.ui.selectors import FixtureSelectorWidget
+from ..fixture_catalog_delegate import (
     ROLE_FIXTURE_DATA,
     ROLE_FIXTURE_ICON,
     ROLE_FIXTURE_ID,
     FixtureCatalogDelegate,
     fixture_icon_for_row,
 )
-from ui.selector_mime import (
+from ..selector_mime import (
     SELECTOR_JAW_MIME,
     decode_jaw_payload,
     encode_selector_payload,
     jaw_payload_ids,
 )
-from ui.selectors.common import SelectorDialogBase, build_selector_bottom_bar, selected_rows_or_current
-from ui.shared.selector_panel_builders import (
+from .common import SelectorDialogBase, build_selector_bottom_bar, selected_rows_or_current
+from ..shared.selector_panel_builders import (
     build_selector_actions_row,
     build_selector_card_shell,
     build_selector_hint_label,
@@ -268,6 +273,14 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self.fixture_service = fixture_service
         self._on_submit = on_submit
 
+        if self._use_shared_selector_wrapper():
+            self._init_shared_widget_wrapper(
+                initial_assignments=initial_assignments,
+                initial_assignment_buckets=initial_assignment_buckets,
+                initial_target_key=initial_target_key,
+            )
+            return
+
         self._selected_items: list[dict] = []
         self._selected_ids: set[str] = set()
         self._assignment_buckets_by_target: dict[str, list[dict]] = {}
@@ -334,6 +347,38 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self._refresh_catalog()
         self._rebuild_assignment_list()
         self._update_assignment_buttons()
+
+    @staticmethod
+    def _use_shared_selector_wrapper() -> bool:
+        mode = str(os.environ.get('NTX_SELECTOR_DIALOG_WRAPPER_MODE', 'legacy') or '').strip().lower()
+        return mode in {'shared', 'widget', 'wrapper'}
+
+    def _init_shared_widget_wrapper(
+        self,
+        *,
+        initial_assignments: list[dict] | None,
+        initial_assignment_buckets: dict[str, list[dict]] | None,
+        initial_target_key: str,
+    ) -> None:
+        self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self.resize(1180, 720)
+        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(8, 8, 8, 8)
+        root.setSpacing(8)
+
+        widget = FixtureSelectorWidget(
+            translate=self._t,
+            target_key=str(initial_target_key or '').strip(),
+            initial_assignments=initial_assignments,
+            assignment_buckets_by_target=initial_assignment_buckets,
+            parent=self,
+        )
+        widget.submitted.connect(lambda payload: self._finish_submit(self._on_submit, payload))
+        widget.canceled.connect(self._cancel_dialog)
+        root.addWidget(widget, 1)
 
     def closeEvent(self, event) -> None:
         save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')

@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import os
 from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QVBoxLayout
 
-from config import SHARED_UI_PREFERENCES_PATH
+try:
+    from ...config import SHARED_UI_PREFERENCES_PATH
+except ImportError:
+    from config import SHARED_UI_PREFERENCES_PATH
 from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
-from ui.selector_ui_helpers import normalize_selector_spindle
-from ui.selectors.common import SelectorDialogBase
-from ui.selectors.jaw_selector_layout import JawSelectorLayoutMixin
-from ui.selectors.jaw_selector_payload import JawSelectorPayloadMixin
-from ui.selectors.jaw_selector_state import JawSelectorStateMixin
+from shared.ui.selectors import JawSelectorWidget
+from ..selector_ui_helpers import normalize_selector_spindle
+from .common import SelectorDialogBase
+from .jaw_selector_layout import JawSelectorLayoutMixin
+from .jaw_selector_payload import JawSelectorPayloadMixin
+from .jaw_selector_state import JawSelectorStateMixin
 
 
 class JawSelectorDialog(
@@ -56,6 +61,13 @@ class JawSelectorDialog(
         self._measurement_toggle_btn = None
         self._close_preview_shortcut = None
 
+        if self._use_shared_selector_wrapper():
+            self._init_shared_widget_wrapper(
+                selector_spindle=selector_spindle,
+                initial_assignments=initial_assignments,
+            )
+            return
+
         self._load_initial_assignments(initial_assignments)
 
         self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
@@ -77,6 +89,36 @@ class JawSelectorDialog(
         self._update_remove_button()
         self._prime_detail_panel_cache()
 
+    @staticmethod
+    def _use_shared_selector_wrapper() -> bool:
+        mode = str(os.environ.get('NTX_SELECTOR_DIALOG_WRAPPER_MODE', 'legacy') or '').strip().lower()
+        return mode in {'shared', 'widget', 'wrapper'}
+
+    def _init_shared_widget_wrapper(
+        self,
+        *,
+        selector_spindle: str,
+        initial_assignments: list[dict] | None,
+    ) -> None:
+        self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
+        self.resize(1180, 720)
+        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(8, 8, 8, 8)
+        root.setSpacing(8)
+
+        widget = JawSelectorWidget(
+            translate=self._t,
+            selector_spindle=normalize_selector_spindle(selector_spindle),
+            initial_assignments=initial_assignments,
+            parent=self,
+        )
+        widget.submitted.connect(lambda payload: self._finish_submit(self._on_submit, payload))
+        widget.canceled.connect(self._cancel_dialog)
+        root.addWidget(widget, 1)
+
     # ── Interface required by populate_detail_panel (jaw detail builder) ─
 
     def _localized_spindle_side(self, raw_side: str) -> str:
@@ -89,7 +131,7 @@ class JawSelectorDialog(
 
     def _load_preview_content(self, viewer, jaw: dict, *, label: str | None = None) -> bool:
         """Delegate to the jaw-specific preview loader (signature: page, viewer, jaw_dict)."""
-        from ui.jaw_page_support.detached_preview import load_preview_content
+        from ..jaw_page_support.detached_preview import load_preview_content
         return load_preview_content(self, viewer, jaw, label=label)
 
     def _preview_model_key(self, jaw: dict) -> str | None:
@@ -99,19 +141,19 @@ class JawSelectorDialog(
     # ── Detached preview parity with JawPage toolbar ───────────────────
 
     def _on_detached_measurements_toggled(self, checked: bool) -> None:
-        from ui.jaw_page_support.detached_preview import on_detached_measurements_toggled
+        from ..jaw_page_support.detached_preview import on_detached_measurements_toggled
         on_detached_measurements_toggled(self, checked)
 
     def _on_detached_preview_closed(self, result) -> None:
-        from ui.jaw_page_support.detached_preview import on_detached_preview_closed
+        from ..jaw_page_support.detached_preview import on_detached_preview_closed
         on_detached_preview_closed(self, result)
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
-        from ui.jaw_page_support.detached_preview import sync_detached_preview
+        from ..jaw_page_support.detached_preview import sync_detached_preview
         return sync_detached_preview(self, show_errors)
 
     def toggle_preview_window(self) -> None:
-        from ui.jaw_page_support.detached_preview import toggle_preview_window
+        from ..jaw_page_support.detached_preview import toggle_preview_window
         toggle_preview_window(self)
 
     def closeEvent(self, event) -> None:

@@ -14,7 +14,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import TOOL_ICONS_DIR
+try:
+    from ...config import TOOL_ICONS_DIR
+except ImportError:
+    from config import TOOL_ICONS_DIR
 from shared.ui.helpers.editor_helpers import style_icon_action_button, style_panel_action_button
 from shared.ui.helpers.icon_loader import icon_from_path
 from shared.ui.helpers.page_scaffold_common import (
@@ -31,17 +34,17 @@ from shared.ui.helpers.topbar_common import (
     build_search_toggle,
     rebuild_filter_row,
 )
-from ui.widgets.common import apply_shared_dropdown_style
-from ui.jaw_catalog_delegate import JawCatalogDelegate
-from ui.jaw_page_support.catalog_list_widgets import JawCatalogListView
-from ui.jaw_page_support.selector_widgets import JawAssignmentSlot, SelectorRemoveDropButton
-from ui.shared.selector_panel_builders import (
+from ..widgets.common import apply_shared_dropdown_style
+from ..jaw_catalog_delegate import JawCatalogDelegate
+from ..jaw_page_support.catalog_list_widgets import JawCatalogListView
+from ..jaw_page_support.selector_widgets import JawAssignmentSlot, SelectorRemoveDropButton
+from ..shared.selector_panel_builders import (
     build_selector_actions_row,
     build_selector_card_shell,
     build_selector_hint_label,
     build_selector_info_header,
 )
-from ui.selectors.common import build_selector_bottom_bar
+from .common import build_selector_bottom_bar
 
 
 class JawSelectorLayoutMixin:

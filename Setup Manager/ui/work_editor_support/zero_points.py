@@ -116,7 +116,7 @@ def build_spindle_zero_group(
         grid.addWidget(head_label, row, 0)
 
         combo_attr_name = f"{head_prefix}_{spindle_key}_coord_combo"
-        coord_combo = QComboBox()
+        coord_combo = QComboBox(dialog)
         coord_combo.addItems(list(work_coordinates))
         coord_combo.setProperty("modernDropdown", True)
         coord_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

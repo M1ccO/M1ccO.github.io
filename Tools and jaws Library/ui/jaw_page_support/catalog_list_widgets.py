@@ -7,8 +7,12 @@ from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QListView
 
 from shared.ui.helpers.dragdrop_helpers import build_text_drag_ghost
-from ui.jaw_catalog_delegate import ROLE_JAW_DATA, ROLE_JAW_ID
-from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload
+try:
+    from ..jaw_catalog_delegate import ROLE_JAW_DATA, ROLE_JAW_ID
+    from ..selector_mime import SELECTOR_JAW_MIME, encode_selector_payload
+except ImportError:
+    from ui.jaw_catalog_delegate import ROLE_JAW_DATA, ROLE_JAW_ID
+    from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload
 
 
 class JawCatalogListView(QListView):

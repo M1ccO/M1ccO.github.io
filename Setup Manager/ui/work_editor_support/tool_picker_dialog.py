@@ -73,14 +73,14 @@ class WorkEditorToolPickerDialog(QDialog):
         self.search_toggle_btn.clicked.connect(self._toggle_search)
         controls.addWidget(self.search_toggle_btn)
 
-        self.search = QLineEdit()
+        self.search = QLineEdit(self)
         self.search.setPlaceholderText(self._t("work_editor.tool_picker.search_placeholder", "Search tools..."))
         self.search.setVisible(False)
         self.search.textChanged.connect(self._build_list)
         self.search.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         controls.addWidget(self.search, 1)
 
-        self.type_filter = QComboBox()
+        self.type_filter = QComboBox(self)
         self.type_filter.setObjectName("topTypeFilter")
         self.type_filter.setProperty("modernDropdown", True)
         self.type_filter.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)

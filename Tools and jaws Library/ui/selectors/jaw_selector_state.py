@@ -3,9 +3,9 @@ from __future__ import annotations
 from PySide6.QtGui import QStandardItem
 
 from shared.ui.helpers.topbar_common import rebuild_filter_row
-from ui.jaw_catalog_delegate import ROLE_JAW_DATA, ROLE_JAW_ID
-from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
-from ui.selectors.common import selected_rows_or_current
+from ..jaw_catalog_delegate import ROLE_JAW_DATA, ROLE_JAW_ID
+from ..selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
+from .common import selected_rows_or_current
 
 
 class JawSelectorStateMixin:
@@ -278,7 +278,7 @@ class JawSelectorStateMixin:
 
     def _populate_jaw_detail(self, jaw: dict | None) -> None:
         """Clear and rebuild the detail panel content using jaw detail builder."""
-        from ui.jaw_page_support.detail_panel_builder import populate_detail_panel
+        from ..jaw_page_support.detail_panel_builder import populate_detail_panel
         # Clear existing content
         while self.detail_layout.count():
             item = self.detail_layout.takeAt(0)

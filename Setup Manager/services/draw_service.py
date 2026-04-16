@@ -287,9 +287,16 @@ class DrawService:
                             "tool_head column unavailable during tool reference lookup; returning unfiltered legacy rows",
                             exc_info=True,
                         )
-                        rows = conn.execute(
-                            "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
-                        ).fetchall()
+                        try:
+                            rows = conn.execute(
+                                "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+                            ).fetchall()
+                        except sqlite3.OperationalError:
+                            logger.warning(
+                                "Tool reference lookup skipped because tools table is unavailable",
+                                exc_info=True,
+                            )
+                            rows = []
             else:
                 try:
                     rows = conn.execute(
@@ -302,9 +309,16 @@ class DrawService:
                     )
                     includes_tool_type = False
                     includes_spindle_orientation = False
-                    rows = conn.execute(
-                        "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
-                    ).fetchall()
+                    try:
+                        rows = conn.execute(
+                            "SELECT uid, id, description FROM tools ORDER BY id COLLATE NOCASE ASC"
+                        ).fetchall()
+                    except sqlite3.OperationalError:
+                        logger.warning(
+                            "Tool reference lookup skipped because tools table is unavailable",
+                            exc_info=True,
+                        )
+                        rows = []
             seen_ids = set()
             for row in rows:
                 tool_id = (row["id"] or "").strip()
@@ -361,9 +375,27 @@ class DrawService:
             return refs
         conn.row_factory = sqlite3.Row
         try:
-            rows = conn.execute(
-                "SELECT jaw_id, jaw_type, clamping_diameter_text, spindle_side FROM jaws ORDER BY jaw_id COLLATE NOCASE ASC"
-            ).fetchall()
+            includes_spindle_side = True
+            try:
+                rows = conn.execute(
+                    "SELECT jaw_id, jaw_type, clamping_diameter_text, spindle_side FROM jaws ORDER BY jaw_id COLLATE NOCASE ASC"
+                ).fetchall()
+            except Exception:
+                logger.debug(
+                    "Falling back to legacy jaw reference query without spindle_side",
+                    exc_info=True,
+                )
+                includes_spindle_side = False
+                try:
+                    rows = conn.execute(
+                        "SELECT jaw_id, jaw_type, clamping_diameter_text FROM jaws ORDER BY jaw_id COLLATE NOCASE ASC"
+                    ).fetchall()
+                except sqlite3.OperationalError:
+                    logger.warning(
+                        "Jaw reference lookup skipped because jaws table is unavailable",
+                        exc_info=True,
+                    )
+                    rows = []
             for row in rows:
                 jaw_type = (row["jaw_type"] or "").strip()
                 details = " ".join(
@@ -377,7 +409,7 @@ class DrawService:
                         "id": (row["jaw_id"] or "").strip(),
                         "description": details,
                         "jaw_type": jaw_type,
-                        "spindle_side": (row["spindle_side"] or "").strip(),
+                        "spindle_side": ((row["spindle_side"] or "").strip() if includes_spindle_side else ""),
                     }
                 )
         finally:
@@ -427,9 +459,13 @@ class DrawService:
             return None
         conn.row_factory = sqlite3.Row
         try:
-            row = conn.execute(
-                "SELECT * FROM jaws WHERE jaw_id = ? COLLATE NOCASE", (jaw_id,)
-            ).fetchone()
+            try:
+                row = conn.execute(
+                    "SELECT * FROM jaws WHERE jaw_id = ? COLLATE NOCASE", (jaw_id,)
+                ).fetchone()
+            except sqlite3.OperationalError:
+                logger.warning("Could not fetch jaw '%s': jaws table unavailable", jaw_id, exc_info=True)
+                return None
             return dict(row) if row else None
         finally:
             conn.close()
@@ -445,9 +481,13 @@ class DrawService:
             return None
         conn.row_factory = sqlite3.Row
         try:
-            row = conn.execute(
-                "SELECT * FROM tools WHERE id = ? COLLATE NOCASE ORDER BY uid DESC LIMIT 1", (tool_id,)
-            ).fetchone()
+            try:
+                row = conn.execute(
+                    "SELECT * FROM tools WHERE id = ? COLLATE NOCASE ORDER BY uid DESC LIMIT 1", (tool_id,)
+                ).fetchone()
+            except sqlite3.OperationalError:
+                logger.warning("Could not fetch tool '%s': tools table unavailable", tool_id, exc_info=True)
+                return None
             return dict(row) if row else None
         finally:
             conn.close()

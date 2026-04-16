@@ -496,7 +496,6 @@ Risk R5: Boundary violations between apps.
 ---
 
 ## 10. Acceptance Criteria
-
 Functional acceptance:
 1. Embedded selector mode completes tool/jaw/fixture selection without external process.
 2. DONE and CANCEL semantics match current behavior.

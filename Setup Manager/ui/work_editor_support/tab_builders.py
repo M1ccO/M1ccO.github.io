@@ -47,6 +47,40 @@ class _ElidingLabel(QLabel):
         self.setToolTip(self._full_text if self.text() != self._full_text else '')
 
 
+class _UserTriggeredPopupCombo(QComboBox):
+    """Only allow popup opening from direct user interaction events."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._allow_next_popup = False
+
+    def showPopup(self) -> None:
+        if not self._allow_next_popup:
+            return
+        self._allow_next_popup = False
+        super().showPopup()
+
+    def hidePopup(self) -> None:
+        self._allow_next_popup = False
+        super().hidePopup()
+
+    def mousePressEvent(self, event) -> None:
+        self._allow_next_popup = True
+        super().mousePressEvent(event)
+
+    def keyPressEvent(self, event) -> None:
+        if event.key() in (
+            Qt.Key_Space,
+            Qt.Key_Return,
+            Qt.Key_Enter,
+            Qt.Key_Down,
+            Qt.Key_Up,
+            Qt.Key_F4,
+        ):
+            self._allow_next_popup = True
+        super().keyPressEvent(event)
+
+
 def _build_eliding_checkbox(checkbox: QCheckBox, text: str) -> QWidget:
     checkbox.setText('')
     row = QWidget()
@@ -112,27 +146,27 @@ def build_general_tab_ui(
     layout.setContentsMargins(18, 18, 18, 18)
     layout.setSpacing(12)
 
-    dialog.work_id_input = QLineEdit()
-    dialog.drawing_id_input = QLineEdit()
-    dialog.description_input = QLineEdit()
-    dialog.raw_part_od_input = QLineEdit()
-    dialog.raw_part_id_input = QLineEdit()
-    dialog.raw_part_length_input = QLineEdit()
-    dialog.raw_part_side_input = QLineEdit()
-    dialog.raw_part_square_length_input = QLineEdit()
-    dialog.raw_part_custom_fields_input = QPlainTextEdit()
+    dialog.work_id_input = QLineEdit(dialog.general_tab)
+    dialog.drawing_id_input = QLineEdit(dialog.general_tab)
+    dialog.description_input = QLineEdit(dialog.general_tab)
+    dialog.raw_part_od_input = QLineEdit(dialog.general_tab)
+    dialog.raw_part_id_input = QLineEdit(dialog.general_tab)
+    dialog.raw_part_length_input = QLineEdit(dialog.general_tab)
+    dialog.raw_part_side_input = QLineEdit(dialog.general_tab)
+    dialog.raw_part_square_length_input = QLineEdit(dialog.general_tab)
+    dialog.raw_part_custom_fields_input = QPlainTextEdit(dialog.general_tab)
     dialog.raw_part_custom_fields_input.setPlaceholderText("name=value\ndiameter=25.4")
     dialog.raw_part_custom_fields_input.setFixedHeight(90)
-    dialog.raw_part_kind_combo = QComboBox()
+    dialog.raw_part_kind_combo = _UserTriggeredPopupCombo(dialog.general_tab)
     dialog.raw_part_kind_combo.addItem(dialog._t("work_editor.raw_part.kind.bar", "Bar"), "bar")
     dialog.raw_part_kind_combo.addItem(dialog._t("work_editor.raw_part.kind.square", "Square"), "square")
     dialog.raw_part_kind_combo.addItem(dialog._t("work_editor.raw_part.kind.custom", "Custom"), "custom")
 
-    drawing_row = QWidget()
+    drawing_row = QWidget(dialog.general_tab)
     drawing_layout = QHBoxLayout(drawing_row)
     drawing_layout.setContentsMargins(0, 0, 0, 0)
-    dialog.drawing_path_input = QLineEdit()
-    browse_btn = QPushButton(dialog._t("work_editor.action.browse", "Browse"))
+    dialog.drawing_path_input = QLineEdit(drawing_row)
+    browse_btn = QPushButton(dialog._t("work_editor.action.browse", "Browse"), drawing_row)
     browse_btn.clicked.connect(dialog._browse_drawing)
     drawing_layout.addWidget(dialog.drawing_path_input, 1)
     drawing_layout.addWidget(browse_btn)
@@ -159,9 +193,9 @@ def build_general_tab_ui(
             dialog.raw_part_kind_combo,
         )
 
-        dialog._raw_part_mode_stack = QStackedWidget()
+        dialog._raw_part_mode_stack = QStackedWidget(dialog.general_tab)
 
-        bar_page = QWidget()
+        bar_page = QWidget(dialog._raw_part_mode_stack)
         bar_form = QFormLayout(bar_page)
         bar_form.setContentsMargins(0, 0, 0, 0)
         bar_form.setSpacing(8)
@@ -179,7 +213,7 @@ def build_general_tab_ui(
         )
         dialog._raw_part_mode_stack.addWidget(bar_page)
 
-        square_page = QWidget()
+        square_page = QWidget(dialog._raw_part_mode_stack)
         square_form = QFormLayout(square_page)
         square_form.setContentsMargins(0, 0, 0, 0)
         square_form.setSpacing(8)
@@ -193,7 +227,7 @@ def build_general_tab_ui(
         )
         dialog._raw_part_mode_stack.addWidget(square_page)
 
-        custom_page = QWidget()
+        custom_page = QWidget(dialog._raw_part_mode_stack)
         custom_form = QFormLayout(custom_page)
         custom_form.setContentsMargins(0, 0, 0, 0)
         custom_form.setSpacing(8)

@@ -33,10 +33,37 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 _HERE = Path(__file__).resolve().parent
 _WORKSPACE = _HERE.parent
 _SETUP_MANAGER_ROOT = _WORKSPACE / "Setup Manager"
+_TOOLS_LIBRARY_ROOT = _WORKSPACE / "Tools and jaws Library"
 for _candidate in (_WORKSPACE / "Tools and jaws Library", _WORKSPACE):
     candidate_str = str(_candidate)
     if candidate_str not in sys.path:
         sys.path.insert(0, candidate_str)
+
+
+def _prefer_tools_library_namespace() -> None:
+    """Ensure Tool Library packages win for ambiguous top-level imports.
+
+    The monorepo has two apps with same top-level package names (ui/data/services/config).
+    When unittest discovery imports modules in different order, Setup Manager modules can
+    shadow Tool Library modules and break these tests.
+    """
+    tools_root = str(_TOOLS_LIBRARY_ROOT)
+    setup_root = str(_SETUP_MANAGER_ROOT)
+
+    if tools_root in sys.path:
+        sys.path.remove(tools_root)
+    sys.path.insert(0, tools_root)
+
+    prefixed_roots = ("ui", "data", "services", "models")
+    for mod_name in list(sys.modules.keys()):
+        if mod_name == "config" or mod_name.startswith(tuple(f"{root}." for root in prefixed_roots)) or mod_name in prefixed_roots:
+            mod = sys.modules.get(mod_name)
+            mod_file = str(getattr(mod, "__file__", "") or "")
+            if setup_root and setup_root in mod_file:
+                sys.modules.pop(mod_name, None)
+
+
+_prefer_tools_library_namespace()
 
 
 def _load_module_from_path(module_name: str, module_path: Path):
@@ -67,6 +94,7 @@ _SETUP_DRAW_SERVICE = _load_module_from_path(
 
 
 def _load_tool_library_main_window_module():
+    _prefer_tools_library_namespace()
     return _load_module_from_path(
         "tool_library_main_window_for_tests",
         _WORKSPACE / "Tools and jaws Library" / "ui" / "main_window.py",
@@ -435,6 +463,9 @@ class TestSelectorMime(unittest.TestCase):
 # ===========================================================================
 
 class TestFilterCoordinator(unittest.TestCase):
+
+    def setUp(self):
+        _prefer_tools_library_namespace()
     """Tests apply_filters using a lightweight mock page object."""
 
     def _make_page(self, tools_in_db: list[dict], *, master_filter_active=False,
@@ -846,6 +877,9 @@ class TestDrawService(unittest.TestCase):
 
 class TestDetailPanelBuilders(unittest.TestCase):
 
+    def setUp(self):
+        _prefer_tools_library_namespace()
+
     def test_normalized_component_items_filters_invalid_entries_and_sorts_order(self):
         from ui.home_page_support.detail_panel_builder import DetailPanelBuilder
 
@@ -886,6 +920,9 @@ class TestDetailPanelBuilders(unittest.TestCase):
 
 
 class TestJawPreviewRules(unittest.TestCase):
+
+    def setUp(self):
+        _prefer_tools_library_namespace()
 
     def test_parts_payload_parses_json_list_and_filters_non_dict_items(self):
         from ui.jaw_page_support.preview_rules import jaw_preview_parts_payload
@@ -931,6 +968,9 @@ class TestJawPreviewRules(unittest.TestCase):
 
 class TestSelectorMixins(unittest.TestCase):
 
+    def setUp(self):
+        _prefer_tools_library_namespace()
+
     def test_build_initial_buckets_normalizes_keys_and_deduplicates(self):
         from ui.selectors.tool_selector_state import ToolSelectorStateMixin
 
@@ -971,6 +1011,10 @@ class TestSelectorMixins(unittest.TestCase):
 
             def _sync_assignment_order(self):
                 return None
+
+            @staticmethod
+            def _target_key(head: str, spindle: str) -> str:
+                return f"{str(head or '').upper()}:{str(spindle or '').lower()}"
 
             def _finish_submit(self, callback, payload):
                 self.captured = (callback, payload)
@@ -1085,6 +1129,7 @@ class TestSelectorUiWiring(unittest.TestCase):
 class TestMainWindowSelectorSessionFlow(unittest.TestCase):
 
     def setUp(self):
+        _prefer_tools_library_namespace()
         self.main_window_module = _load_tool_library_main_window_module()
         self.MainWindow = self.main_window_module.MainWindow
 
@@ -1214,26 +1259,6 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
     def test_send_selector_result_payload_sends_and_handoffs_on_success(self):
         events: list[str] = []
 
-        class _FakeSocket:
-            def connectToServer(self, _name):
-                events.append("connect")
-
-            def waitForConnected(self, _timeout):
-                return True
-
-            def write(self, payload):
-                decoded = json.loads(payload.decode("utf-8"))
-                events.append(f"kind:{decoded.get('kind')}")
-
-            def flush(self):
-                events.append("flush")
-
-            def waitForBytesWritten(self, _timeout):
-                return True
-
-            def disconnectFromServer(self):
-                events.append("disconnect")
-
         dummy = types.SimpleNamespace(
             _selector_callback_server="selector-callback",
             _selector_request_id="REQ-2",
@@ -1241,7 +1266,15 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
             _back_to_setup_manager=lambda: events.append("back"),
         )
 
-        with mock.patch.object(self.main_window_module, "QLocalSocket", _FakeSocket):
+        def _fake_send_selector_result_payload(_host, **kwargs):
+            events.append(f"kind:{kwargs.get('kind')}")
+            return True
+
+        with mock.patch.object(
+            self.main_window_module,
+            "send_selector_result_payload",
+            _fake_send_selector_result_payload,
+        ):
             self.MainWindow._send_selector_result_payload(
                 dummy,
                 kind="tools",
@@ -1251,9 +1284,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
                 assignment_buckets_by_target={"HEAD1:main": [{"tool_id": "T001"}]},
             )
 
-        self.assertIn("connect", events)
         self.assertIn("kind:tools", events)
-        self.assertIn("disconnect", events)
         self.assertIn("back", events)
 
 
