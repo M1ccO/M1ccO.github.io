@@ -3,6 +3,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QStandardItemModel
 from PySide6.QtWidgets import (
+    QAbstractScrollArea,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -203,53 +204,76 @@ class ToolSelectorLayoutMixin:
         context_row.addStretch(1)
 
         self.head_btn = QPushButton(self._t('tool_library.selector.head_upper', 'Upper Spindle'))
-        self.head_btn.clicked.connect(self._toggle_head)
         style_selector_context_button(self.head_btn)
+        self.head_btn.setMinimumWidth(280)
+        self.head_btn.setMaximumWidth(420)
+        self.head_btn.clicked.connect(self._toggle_head)
         context_row.addWidget(self.head_btn, 0)
-
-        self.spindle_btn = QPushButton(self._t('tool_library.nav.main_spindle', 'Main Spindle'))
-        self.spindle_btn.clicked.connect(self._toggle_spindle)
-        style_selector_context_button(self.spindle_btn, checkable=True)
-        context_row.addWidget(self.spindle_btn, 0)
         context_row.addStretch(1)
         if self._is_machining_center_selector_mode:
             self.head_btn.setVisible(False)
-            self.spindle_btn.setVisible(False)
             context_row.setSpacing(0)
         selector_layout.addLayout(context_row, 0)
 
-        hint = build_selector_hint_label(
-            text=self._t(
-                'tool_library.selector.drop_hint',
-                'Drag tools from the catalog to this list and reorder them by dragging.',
-            ),
-            multiline=False,
-        )
-        selector_layout.addWidget(hint, 0)
+        self.assignment_lists: dict[str, ToolAssignmentListWidget] = {}
+        self.assignment_frames: dict[str, QWidget] = {}
+        self.assignment_hints: dict[str, QLabel] = {}
+        for spindle in ('main', 'sub'):
+            assignment_list = ToolAssignmentListWidget()
+            assignment_list.setObjectName('toolIdsOrderList')
+            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            assignment_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            assignment_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            assignment_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+            assignment_list.setProperty('selectorAssignmentList', True)
+            assignment_list.setViewportMargins(0, 0, 2, 0)
+            assignment_list.externalToolsDropped.connect(
+                lambda dropped, row, target_spindle=spindle: self._on_tools_dropped_for_spindle(target_spindle, dropped, row)
+            )
+            assignment_list.orderChanged.connect(
+                lambda target_spindle=spindle: self._sync_assignment_order_for_spindle(target_spindle)
+            )
+            assignment_list.itemSelectionChanged.connect(
+                lambda target_spindle=spindle: self._on_assignment_selection_changed(target_spindle)
+            )
 
-        self.assignment_list = ToolAssignmentListWidget()
-        self.assignment_list.setObjectName('toolIdsOrderList')
-        self.assignment_list.setStyleSheet(
-            '#toolIdsOrderList { background: transparent; border: none; }'
-            '#toolIdsOrderList::viewport { background: transparent; border: none; }'
-            '#toolIdsOrderList::item { background: transparent; border: none; }'
-        )
-        self.assignment_list.externalToolsDropped.connect(self._on_tools_dropped)
-        self.assignment_list.orderChanged.connect(self._sync_assignment_order)
-        self.assignment_list.itemSelectionChanged.connect(self._sync_card_selection_states)
-        self.assignment_list.itemSelectionChanged.connect(self._update_assignment_buttons)
+            assignment_frame = create_titled_section(
+                self._t('tool_library.selector.spindle_sub_tools', 'Sub Spindle Tools')
+                if spindle == 'sub'
+                else self._t('tool_library.selector.spindle_main_tools', 'Main Spindle Tools')
+            )
+            assignment_frame.setProperty('selectorAssignmentsFrame', True)
+            assignment_frame.setProperty('toolIdsPanel', True)
+            assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            assignment_layout = QVBoxLayout(assignment_frame)
+            assignment_layout.setContentsMargins(8, 6, 8, 8)
+            assignment_layout.setSpacing(4)
+            assignment_layout.addWidget(assignment_list, 0, Qt.AlignTop)
 
-        self.assignment_frame = create_titled_section(self._t('tool_library.selector.spindle_main_tools', 'Main Spindle Tools'))
-        self.assignment_frame.setProperty('selectorAssignmentsFrame', True)
-        self.assignment_frame.setProperty('toolIdsPanel', True)
-        # create_titled_section uses a fixed vertical size policy by default;
-        # override here so the drag/drop area can consume all available height.
-        self.assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
-        assignment_layout = QVBoxLayout(self.assignment_frame)
-        assignment_layout.setContentsMargins(8, 6, 8, 8)
-        assignment_layout.setSpacing(0)
-        assignment_layout.addWidget(self.assignment_list, 1)
-        selector_layout.addWidget(self.assignment_frame, 1)
+            empty_hint = build_selector_hint_label(
+                text=self._t(
+                    'tool_library.selector.drop_hint_inline',
+                    'Drag tools here from the catalog. Reorder by dragging inside this list.',
+                ),
+                multiline=True,
+            )
+            empty_hint.setProperty('detailHint', True)
+            empty_hint.setProperty('selectorInlineHint', True)
+            empty_hint.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+            empty_hint.setWordWrap(True)
+            empty_hint.setContentsMargins(2, 0, 2, 0)
+            assignment_layout.addWidget(empty_hint, 0, Qt.AlignTop)
+
+            selector_layout.addWidget(assignment_frame, 0, Qt.AlignTop)
+
+            self.assignment_lists[spindle] = assignment_list
+            self.assignment_frames[spindle] = assignment_frame
+            self.assignment_hints[spindle] = empty_hint
+
+        # Compatibility alias for existing call sites that still read assignment_list/frame.
+        self.assignment_list = self.assignment_lists['main']
+        self.assignment_frame = self.assignment_frames['main']
+        selector_layout.addStretch(1)
 
         actions = build_selector_actions_row(spacing=4)
 
@@ -279,11 +303,24 @@ class ToolSelectorLayoutMixin:
         self.delete_comment_btn.clicked.connect(self._delete_comment)
         actions.addWidget(self.delete_comment_btn)
 
-        actions.addStretch(1)
-        selector_layout.addLayout(actions)
+        actions_host = QWidget()
+        actions_host_layout = QHBoxLayout(actions_host)
+        actions_host_layout.setContentsMargins(8, 6, 8, 6)
+        actions_host_layout.setSpacing(0)
+        actions_host_layout.addStretch(1)
+        actions_host_layout.addLayout(actions)
+        actions_host_layout.addStretch(1)
 
         selector_scroll.setWidget(selector_panel)
-        selector_card_layout.addWidget(selector_scroll, 1)
+        scroll_frame = QFrame()
+        scroll_frame.setProperty('selectorScrollFrame', True)
+        scroll_frame_layout = QVBoxLayout(scroll_frame)
+        scroll_frame_layout.setContentsMargins(1, 1, 1, 1)
+        scroll_frame_layout.setSpacing(0)
+        scroll_frame_layout.addWidget(selector_scroll, 1)
+
+        selector_card_layout.addWidget(scroll_frame, 1)
+        selector_card_layout.addWidget(actions_host, 0)
         return selector_card
 
     def _build_bottom_bar(self, root: QVBoxLayout) -> None:

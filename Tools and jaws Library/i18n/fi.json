@@ -502,6 +502,7 @@
   "tool_library.selector.spindle_main_tools": "Pääkaran työkalut",
   "tool_library.selector.spindle_sub_tools": "Vastakaran työkalut",
   "tool_library.selector.drop_hint": "Vedä työkaluja luettelosta tähän listaan ja järjestä vetämällä.",
+  "tool_library.selector.drop_hint_inline": "Vedä työkaluja tähän luettelosta. Järjestä vetämällä listan sisällä.",
   "tool_library.selector.clear": "Tyhjennä",
   "tool_library.selector.done": "VALMIS",
   "tool_library.selector.target_context": "Kohde: {head} / {spindle}",

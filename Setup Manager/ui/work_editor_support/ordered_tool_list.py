@@ -7,6 +7,7 @@ from typing import Callable
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
+    QAbstractScrollArea,
     QComboBox,
     QDialog,
     QDialogButtonBox,
@@ -182,6 +183,8 @@ class WorkEditorOrderedToolList(QWidget):
         self.tool_list._owner = self
         self.tool_list.setObjectName("toolIdsOrderList")
         self.tool_list.setSortingEnabled(False)
+        # Keep a tiny right inset so card borders never clip at narrow widths.
+        self.tool_list.setViewportMargins(0, 0, 2, 0)
         list_panel_layout.addWidget(self.tool_list, 1)
         layout.addWidget(list_panel, 1)
 
@@ -258,7 +261,16 @@ class WorkEditorOrderedToolList(QWidget):
         self._all_tools: list = []
         self._show_pot: bool = False
         self._assignments_by_spindle = {"main": [], "sub": []}
+        self._list_scrolling_enabled: bool = True
         self._update_action_states()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        # Force list geometry refresh when parent width changes.
+        self.tool_list.doItemsLayout()
+        self.tool_list.viewport().update()
+        if not self._list_scrolling_enabled:
+            self._update_list_height_for_content()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
@@ -281,6 +293,36 @@ class WorkEditorOrderedToolList(QWidget):
 
     def set_controls_visible(self, visible: bool):
         self.controls_bar.setVisible(bool(visible))
+
+    def set_list_scrolling_enabled(self, enabled: bool) -> None:
+        self._list_scrolling_enabled = bool(enabled)
+        if self._list_scrolling_enabled:
+            self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.tool_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
+            self.tool_list.setMinimumHeight(120)
+            self.tool_list.setMaximumHeight(16777215)
+        else:
+            self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.tool_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+            self._update_list_height_for_content()
+
+    def _update_list_height_for_content(self) -> None:
+        if self._list_scrolling_enabled:
+            return
+        row_count = self.tool_list.count()
+        if row_count <= 0:
+            self.tool_list.setFixedHeight(56)
+            return
+        total_rows_height = 0
+        fallback_row_height = 44
+        for row in range(row_count):
+            row_height = self.tool_list.sizeHintForRow(row)
+            total_rows_height += row_height if row_height > 0 else fallback_row_height
+        frame_height = self.tool_list.frameWidth() * 2
+        # Keep a small breathing space under the last card.
+        self.tool_list.setFixedHeight(total_rows_height + frame_height + 6)
 
     @staticmethod
     def _assignment_key(item: dict) -> str:
@@ -357,12 +399,20 @@ class WorkEditorOrderedToolList(QWidget):
             edited=is_edited,
             parent=self.tool_list,
         )
+        # Keep assignment cards pure white regardless of surrounding panel tint.
+        widget.setStyleSheet(
+            'QFrame[miniAssignmentCard="true"] { background-color: #ffffff; }'
+            'QFrame[miniAssignmentCard="true"]:hover { background-color: #ffffff; }'
+            'QFrame[miniAssignmentCard="true"][selected="true"],'
+            'QFrame[miniAssignmentCard="true"][selected="true"]:hover { background-color: #ffffff; }'
+        )
         widget.setProperty("hasComment", has_comment)
         widget.editRequested.connect(lambda r=row_index: self._inline_edit_row(r))
         row_host = QWidget(self.tool_list)
         row_host.setAttribute(Qt.WA_StyledBackground, False)
         row_layout = QVBoxLayout(row_host)
-        row_layout.setContentsMargins(0, 0, 0, 7)
+        # A tiny horizontal inset prevents border clipping on very narrow widths.
+        row_layout.setContentsMargins(1, 0, 1, 7)
         row_layout.setSpacing(0)
         row_layout.addWidget(widget)
         self.tool_list.setItemWidget(item, row_host)
@@ -381,6 +431,9 @@ class WorkEditorOrderedToolList(QWidget):
         if self.tool_list.count() > 0:
             target_row = current_row if 0 <= current_row < self.tool_list.count() else 0
             self.tool_list.setCurrentRow(target_row)
+        # In non-scroll mode, keep rows visually anchored from the top.
+        self.tool_list.scrollToTop()
+        self._update_list_height_for_content()
         self._sync_row_selection_states()
         self._update_action_states()
 

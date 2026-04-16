@@ -62,6 +62,8 @@ class WorkEditorPayloadAdapter:
         _kind = str(payload.get("raw_part_kind", "bar") or "bar").strip().lower()
         if _kind not in {"bar", "square", "custom"}:
             _kind = "bar"
+        if not is_mc:
+            _kind = "bar"
         _kind_idx = {"bar": 0, "square": 1, "custom": 2}[_kind]
         dialog.raw_part_kind_combo.setCurrentIndex(_kind_idx)
 
@@ -149,6 +151,12 @@ class WorkEditorPayloadAdapter:
                 "print_pots": bool(getattr(dialog, "print_pots_checkbox", None) and dialog.print_pots_checkbox.isChecked()),
             }
         )
+
+        if not is_mc:
+            payload["raw_part_kind"] = "bar"
+            payload["raw_part_side"] = ""
+            payload["raw_part_square_length"] = ""
+            payload["raw_part_custom_fields"] = ""
 
         if is_mc:
             mc_operation_count, mc_operations = collect_machining_center_payload(dialog)

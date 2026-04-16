@@ -502,6 +502,7 @@
   "tool_library.selector.spindle_main_tools": "Main Spindle Tools",
   "tool_library.selector.spindle_sub_tools": "Sub Spindle Tools",
   "tool_library.selector.drop_hint": "Drag tools from the catalog to this list and reorder them by dragging.",
+  "tool_library.selector.drop_hint_inline": "Drag tools here from the catalog. Reorder by dragging inside this list.",
   "tool_library.selector.clear": "Clear",
   "tool_library.selector.done": "DONE",
   "tool_library.selector.target_context": "Target: {head} / {spindle}",

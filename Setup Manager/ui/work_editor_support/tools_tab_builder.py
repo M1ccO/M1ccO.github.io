@@ -2,8 +2,9 @@
 
 from typing import Any, Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontMetrics
-from PySide6.QtWidgets import QCheckBox, QComboBox, QFrame, QHBoxLayout, QPushButton, QSizePolicy, QVBoxLayout
+from PySide6.QtWidgets import QCheckBox, QComboBox, QFrame, QHBoxLayout, QLabel, QPushButton, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 from ui.widgets.common import apply_tool_library_combo_style
 
 try:
@@ -22,6 +23,41 @@ from .tool_actions import (
     sync_tool_head_view,
     update_shared_tool_actions,
 )
+
+
+class _ElidingLabel(QLabel):
+    def __init__(self, text: str, parent=None):
+        super().__init__(parent)
+        self._full_text = str(text or '')
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.setMinimumWidth(24)
+        self._apply_elided_text()
+
+    def set_full_text(self, text: str) -> None:
+        self._full_text = str(text or '')
+        self._apply_elided_text()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_elided_text()
+
+    def _apply_elided_text(self) -> None:
+        metrics = self.fontMetrics()
+        self.setText(metrics.elidedText(self._full_text, Qt.ElideRight, max(0, self.width())))
+        self.setToolTip(self._full_text if self.text() != self._full_text else '')
+
+
+def _build_eliding_checkbox(checkbox: QCheckBox, text: str) -> QWidget:
+    checkbox.setText('')
+    row = QWidget()
+    row_layout = QHBoxLayout(row)
+    row_layout.setContentsMargins(0, 0, 0, 0)
+    row_layout.setSpacing(6)
+    row_layout.addWidget(checkbox, 0, Qt.AlignVCenter)
+    label = _ElidingLabel(text)
+    row_layout.addWidget(label, 1)
+    row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    return row
 
 
 def _build_machining_center_tools_tab_ui(
@@ -81,13 +117,14 @@ def _build_machining_center_tools_tab_ui(
     dialog._mc_tools_ordered = ordered
 
     host.add_widget(ordered, 1)
-    host_surface = QFrame()
-    host_surface.setProperty("toolIdsHostSurface", True)
-    host_surface_layout = QVBoxLayout(host_surface)
-    host_surface_layout.setContentsMargins(8, 8, 8, 8)
-    host_surface_layout.setSpacing(0)
-    host_surface_layout.addWidget(host, 1)
-    layout.addWidget(host_surface, 1)
+    tool_ids_scroll_surface = QFrame()
+    tool_ids_scroll_surface.setProperty("toolIdsScrollSurface", True)
+    tool_ids_scroll_surface_layout = QVBoxLayout(tool_ids_scroll_surface)
+    tool_ids_scroll_surface_layout.setContentsMargins(8, 8, 8, 8)
+    tool_ids_scroll_surface_layout.setSpacing(0)
+    tool_ids_scroll_surface_layout.addWidget(host, 1)
+    tool_ids_scroll_surface.setMinimumHeight(280)
+    layout.addWidget(tool_ids_scroll_surface, 2)
 
     dialog.shared_tool_actions = QFrame()
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)
@@ -218,29 +255,18 @@ def build_tools_tab_ui(
     layout.setContentsMargins(18, 18, 18, 18)
     layout.setSpacing(12)
 
-    toolbar = QHBoxLayout()
-    toolbar.setContentsMargins(0, 0, 0, 0)
-    toolbar.setSpacing(8)
-    toolbar.addWidget(section_label_factory(dialog._t("work_editor.tools.head_view", "View")))
-
-    dialog.tools_head_switch = QPushButton()
-    dialog.tools_head_switch.setProperty("panelActionButton", True)
-    dialog.tools_head_switch.setCheckable(True)
-    dialog.tools_head_switch.setMinimumWidth(220)
-    dialog.tools_head_switch.setMaximumWidth(320)
-    dialog.tools_head_switch.setFixedHeight(30)
-    dialog.tools_head_switch.clicked.connect(dialog._toggle_tools_head_view)
-    dialog.tools_head_switch.setProperty("head", next(iter(dialog._head_profiles.keys()), "HEAD1"))
-    dialog._update_tools_head_switch_text()
-    dialog.tools_head_switch.setVisible(len(dialog.machine_profile.heads) > 1)
-    toolbar.addWidget(dialog.tools_head_switch)
-
     dialog.open_tool_selector_btn = QPushButton(
         dialog._t("work_editor.selector.tools_button", "Select Tools")
     )
     dialog.open_tool_selector_btn.setProperty("panelActionButton", True)
+    dialog.open_tool_selector_btn.setMinimumWidth(280)
+    dialog.open_tool_selector_btn.setMaximumWidth(380)
+    dialog.open_tool_selector_btn.setFixedHeight(34)
     dialog.open_tool_selector_btn.clicked.connect(dialog._open_tool_selector)
-    toolbar.addWidget(dialog.open_tool_selector_btn)
+
+    toolbar = QHBoxLayout()
+    toolbar.setContentsMargins(0, 0, 0, 0)
+    toolbar.setSpacing(8)
 
     _is_single_spindle = dialog.machine_profile.spindle_count == 1
     dialog.op20_tools_checkbox = QCheckBox(
@@ -250,9 +276,13 @@ def build_tools_tab_ui(
     dialog.op20_tools_checkbox.setFixedHeight(30)
     dialog.op20_tools_checkbox.setChecked(getattr(dialog, '_op20_tools_enabled', False))
     dialog.op20_tools_checkbox.setVisible(_is_single_spindle)
-    toolbar.addWidget(dialog.op20_tools_checkbox)
+    left_controls = QWidget()
+    left_controls_layout = QHBoxLayout(left_controls)
+    left_controls_layout.setContentsMargins(0, 0, 0, 0)
+    left_controls_layout.setSpacing(10)
+    left_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-    toolbar.addStretch(1)
+    left_controls_layout.addWidget(dialog.op20_tools_checkbox, 0)
 
     dialog.print_pots_checkbox = QCheckBox(
         dialog._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers")
@@ -260,6 +290,23 @@ def build_tools_tab_ui(
     apply_shared_checkbox_style(dialog.print_pots_checkbox, indicator_size=16, min_height=30)
     dialog.print_pots_checkbox.setFixedHeight(30)
     dialog.print_pots_checkbox.setVisible(dialog.machine_profile.supports_print_pots)
+    print_pots_row = _build_eliding_checkbox(
+        dialog.print_pots_checkbox,
+        dialog._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"),
+    )
+    print_pots_row.setVisible(dialog.machine_profile.supports_print_pots)
+    left_controls_layout.addWidget(print_pots_row, 1)
+
+    toolbar.addWidget(left_controls, 1)
+    toolbar.addWidget(dialog.open_tool_selector_btn, 0, Qt.AlignHCenter)
+
+    right_controls = QWidget()
+    right_controls_layout = QHBoxLayout(right_controls)
+    right_controls_layout.setContentsMargins(0, 0, 0, 0)
+    right_controls_layout.setSpacing(0)
+    right_controls_layout.addStretch(1)
+    right_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    toolbar.addWidget(right_controls, 1)
 
     dialog.edit_pots_btn = QPushButton(dialog._t("work_editor.tools.edit_pots", "Edit Pots"))
     dialog.edit_pots_btn.setProperty("secondaryButton", True)
@@ -273,8 +320,7 @@ def build_tools_tab_ui(
     dialog.edit_pots_btn.setSizePolicy(edit_pots_size_policy)
     dialog.edit_pots_btn.setVisible(False)
     dialog.edit_pots_btn.clicked.connect(dialog._open_pot_editor)
-    toolbar.addWidget(dialog.edit_pots_btn)
-    toolbar.addWidget(dialog.print_pots_checkbox)
+    right_controls_layout.addWidget(dialog.edit_pots_btn, 0)
 
     dialog.print_pots_checkbox.toggled.connect(
         lambda checked: dialog.edit_pots_btn.setVisible(
@@ -285,7 +331,20 @@ def build_tools_tab_ui(
 
     layout.addLayout(toolbar)
 
-    host = ResponsiveColumnsHost(switch_width=820)
+    tools_scroll = QScrollArea()
+    tools_scroll.setProperty("toolIdsScrollArea", True)
+    tools_scroll.setWidgetResizable(True)
+    tools_scroll.setFrameShape(QFrame.NoFrame)
+    tools_scroll.setMinimumHeight(360)
+    tools_scroll_content = QWidget()
+    tools_scroll_content.setObjectName("toolIdsScrollContent")
+    tools_scroll_content.setAttribute(Qt.WA_StyledBackground, False)
+    tools_scroll.viewport().setAutoFillBackground(False)
+    tools_scroll_layout = QVBoxLayout(tools_scroll_content)
+    tools_scroll_layout.setContentsMargins(0, 0, 0, 0)
+    tools_scroll_layout.setSpacing(10)
+    tools_scroll.setWidget(tools_scroll_content)
+
     _is_single_sp_tools = dialog.machine_profile.spindle_count == 1
     for head in dialog.machine_profile.heads:
         # Main/sub columns of the same head must stay in lockstep with one backing
@@ -299,8 +358,10 @@ def build_tools_tab_ui(
             _sub_lbl  = dialog._t("work_editor.tools.sub_spindle_tools", "Sub spindle tools")
         main_ordered = ordered_tool_list_cls(_main_lbl, head.key, translate=dialog._t)
         sub_ordered  = ordered_tool_list_cls(_sub_lbl,  head.key, translate=dialog._t)
-        main_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        main_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        main_ordered.set_list_scrolling_enabled(False)
+        sub_ordered.set_list_scrolling_enabled(False)
         # Single-spindle: OP20 column hidden until user enables it via checkbox.
         if _is_single_sp_tools:
             sub_ordered.setVisible(getattr(dialog, '_op20_tools_enabled', False))
@@ -333,16 +394,36 @@ def build_tools_tab_ui(
             dialog.head1_ordered = main_ordered
         elif head.key == "HEAD2":
             dialog.head2_ordered = main_ordered
-        host.add_widget(main_ordered, 1)
-        host.add_widget(sub_ordered, 1)
 
-    host_surface = QFrame()
-    host_surface.setProperty("toolIdsHostSurface", True)
-    host_surface_layout = QVBoxLayout(host_surface)
-    host_surface_layout.setContentsMargins(8, 8, 8, 8)
-    host_surface_layout.setSpacing(0)
-    host_surface_layout.addWidget(host, 1)
-    layout.addWidget(host_surface, 1)
+        head_title = dialog._head_label(head.key, head.label_default)
+        head_block = QWidget()
+        head_block.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        head_block_layout = QVBoxLayout(head_block)
+        head_block_layout.setContentsMargins(0, 0, 0, 0)
+        head_block_layout.setSpacing(4)
+
+        head_label = QLabel(head_title)
+        head_label.setStyleSheet("font-size: 20px; font-weight: 700; padding-left: 2px;")
+        head_block_layout.addWidget(head_label)
+
+        columns_row = QHBoxLayout()
+        columns_row.setContentsMargins(0, 0, 0, 0)
+        columns_row.setSpacing(10)
+        columns_row.addWidget(main_ordered, 1, Qt.AlignTop)
+        columns_row.addWidget(sub_ordered, 1, Qt.AlignTop)
+        head_block_layout.addLayout(columns_row)
+        tools_scroll_layout.addWidget(head_block)
+
+    tools_scroll_layout.addStretch(1)
+
+    tool_ids_scroll_surface = QFrame()
+    tool_ids_scroll_surface.setProperty("toolIdsScrollSurface", True)
+    tool_ids_scroll_surface_layout = QVBoxLayout(tool_ids_scroll_surface)
+    tool_ids_scroll_surface_layout.setContentsMargins(8, 8, 8, 8)
+    tool_ids_scroll_surface_layout.setSpacing(0)
+    tool_ids_scroll_surface_layout.addWidget(tools_scroll, 1)
+
+    layout.addWidget(tool_ids_scroll_surface, 2)
 
     dialog.shared_tool_actions = QFrame()
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)

@@ -2980,3 +2980,43 @@ ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
 2026-04-15 20:23:19,994 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
 2026-04-15 20:23:19,994 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
 2026-04-15 20:23:19,994 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-16 06:53:10,528 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-16 06:53:14,587 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 06:53:23,639 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-16 06:56:39,382 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-16 06:56:46,757 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 06:56:51,784 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-16 06:58:14,771 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 07:01:10,695 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 07:22:34,142 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 07:30:05,217 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 07:46:45,702 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 07:56:33,741 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:00:24,119 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:02:24,363 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:05:07,149 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:09:42,296 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:15:03,933 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:16:24,192 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:16:31,461 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:16:46,603 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:17:45,541 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:19:39,205 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:20:11,150 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:21:35,115 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-16 08:21:39,900 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:23:41,124 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:25:35,768 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:28:36,214 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:28:47,380 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:34:37,999 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:37:29,220 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:41:10,729 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:44:32,771 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:46:11,675 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:50:59,129 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:52:34,317 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:53:13,262 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:53:30,366 ui.main_window DEBUG selector: opening 'jaws' dialog — head='' spindle='main' show=True
+2026-04-16 08:55:24,804 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-16 08:57:59,103 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True

@@ -4,12 +4,20 @@ from typing import Any
 
 
 def visible_tool_lists(dialog: Any) -> list:
-    columns = dialog._tool_column_lists.get(dialog._current_tools_head_value(), {})
     is_single = getattr(dialog.machine_profile, 'spindle_count', 0) == 1
     op20_on = getattr(dialog, '_op20_tools_enabled', True)
-    if is_single and not op20_on:
-        return [v for k, v in columns.items() if k != "sub"]
-    return list(columns.values())
+    visible: list = []
+    seen_widget_ids: set[int] = set()
+    for columns in dialog._tool_column_lists.values():
+        for spindle, ordered in columns.items():
+            if is_single and not op20_on and spindle == "sub":
+                continue
+            obj_id = id(ordered)
+            if obj_id in seen_widget_ids:
+                continue
+            seen_widget_ids.add(obj_id)
+            visible.append(ordered)
+    return visible
 
 
 def effective_active_tool_list(dialog: Any):
@@ -114,25 +122,28 @@ def shared_delete_tool_comment(dialog: Any) -> None:
 
 
 def remove_dragged_tool_assignments(dialog: Any, dropped_items: list[dict]) -> None:
-    active_head = dialog._current_tools_head_value()
-    columns = dialog._tool_column_lists.get(active_head, {})
     affected_list = None
-    for spindle in ("main", "sub"):
-        target_list = columns.get(spindle)
-        if target_list is None:
-            continue
-        keys = [
-            target_list._assignment_key(item)
-            for item in (dropped_items or [])
-            if isinstance(item, dict)
-            and dialog._normalize_selector_spindle(item.get("spindle")) == spindle
-            and target_list._assignment_key(item)
-        ]
-        if keys:
-            # Drop payload can contain both spindles; remove only matching keys
-            # from the corresponding visible spindle list.
-            target_list._remove_assignments_by_keys(keys)
-            affected_list = target_list
+    for head_key, columns in dialog._tool_column_lists.items():
+        for spindle in ("main", "sub"):
+            target_list = columns.get(spindle)
+            if target_list is None:
+                continue
+            keys = []
+            for item in (dropped_items or []):
+                if not isinstance(item, dict):
+                    continue
+                item_spindle = dialog._normalize_selector_spindle(item.get("spindle"))
+                if item_spindle != spindle:
+                    continue
+                item_head = dialog._normalize_selector_head(item.get("head") or item.get("head_key") or "")
+                if item_head and item_head != head_key:
+                    continue
+                key = target_list._assignment_key(item)
+                if key:
+                    keys.append(key)
+            if keys:
+                target_list._remove_assignments_by_keys(keys)
+                affected_list = target_list
     if affected_list is not None:
         set_active_tool_list(dialog, affected_list)
     else:
@@ -147,26 +158,29 @@ def refresh_tool_head_widgets(dialog: Any, head_key: str) -> None:
 
 
 def sync_tool_head_view(dialog: Any) -> None:
-    active_head = dialog._current_tools_head_value()
     is_single = getattr(dialog.machine_profile, 'spindle_count', 0) == 1
     op20_on = getattr(dialog, '_op20_tools_enabled', True)
-    for head_key, columns in dialog._tool_column_lists.items():
-        visible = head_key == active_head
+    processed_widget_ids: set[int] = set()
+    for _head_key, columns in dialog._tool_column_lists.items():
         for spindle, ordered_list in columns.items():
+            obj_id = id(ordered_list)
+            if obj_id in processed_widget_ids:
+                continue
+            processed_widget_ids.add(obj_id)
             ordered_list.set_current_spindle(spindle)
-            col_visible = visible and (spindle != "sub" or not is_single or op20_on)
+            col_visible = spindle != "sub" or not is_single or op20_on
             ordered_list.setVisible(col_visible)
             if col_visible:
                 ordered_list._render_current_spindle()
-    active_columns = dialog._tool_column_lists.get(active_head, {})
+
+    visible_lists = visible_tool_lists(dialog)
     preferred_active = None
-    for spindle in ("main", "sub"):
-        candidate = active_columns.get(spindle)
-        if candidate is not None and candidate.tool_list.currentRow() >= 0:
+    for candidate in visible_lists:
+        if candidate.tool_list.currentRow() >= 0:
             preferred_active = candidate
             break
-    if preferred_active is None:
-        preferred_active = active_columns.get("main") or next(iter(active_columns.values()), None)
+    if preferred_active is None and visible_lists:
+        preferred_active = visible_lists[0]
     if preferred_active is not None:
         set_active_tool_list(dialog, preferred_active)
     else:

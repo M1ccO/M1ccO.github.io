@@ -172,7 +172,7 @@ QLabel[catalogRowIcon="true"] {
 /* Selector panel parity with Setup Manager Work Editor cards */
 QFrame[selectorContext="true"] {
     background-color: #ffffff;
-    border: 1px solid #b8c5d1;
+    border: none;
     border-radius: 2px;
 }
 
@@ -183,6 +183,12 @@ QWidget[selectorPanel="true"] {
 
 QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"],
 QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"] {
+    background-color: #f0f6fc;
+    border: 1px solid #d0d8e0;
+    border-radius: 6px;
+}
+
+QWidget[selectorContext="true"] QFrame[selectorScrollFrame="true"] {
     background-color: #f0f6fc;
     border: 1px solid #d0d8e0;
     border-radius: 6px;
@@ -255,6 +261,14 @@ QWidget[selectorContext="true"] QLabel[miniAssignmentHint="true"] {
     color: #617180;
 }
 
+QWidget[selectorContext="true"] QLabel[selectorInlineHint="true"] {
+    font-size: 8pt;
+    font-style: italic;
+    font-weight: 400;
+    color: #5f6f7d;
+    padding-top: 2px;
+}
+
 QWidget[selectorContext="true"] QListWidget#toolIdsOrderList {
     background: transparent;
     border: none;
@@ -288,4 +302,27 @@ QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::viewport {
     background: transparent;
     border: none;
     border-radius: 0px;
+}
+
+QWidget[selectorContext="true"] QGroupBox[selectorAssignmentsFrame="true"][catalogDragOver="true"],
+QWidget[selectorContext="true"] QGroupBox[toolIdsPanel="true"][catalogDragOver="true"] {
+    border: 1px solid #00c8ff;
+}
+
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] {
+    background-color: rgba(255, 255, 255, 0.45);
+    border: 1px solid #c7d4e1;
+}
+
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"][selected="true"],
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"][selected="true"]:hover {
+    background-color: rgba(255, 255, 255, 0.56);
+    border: 2px solid #9be7ff;
+    padding: 0px;
+}
+
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentTitle="true"],
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentHint="true"],
+QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOver="true"] QLabel[miniAssignmentMeta="true"] {
+    color: #7b8b9a;
 }

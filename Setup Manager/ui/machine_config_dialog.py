@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMessageBox,
     QPushButton,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -110,12 +111,7 @@ class _DbRow(QFrame):
         clear_sp.setRetainSizeWhenHidden(True)
         self._clear_btn.setSizePolicy(clear_sp)
 
-        bottom.addWidget(self._path_edit, 1)
-        bottom.addWidget(self._browse_btn)
-        bottom.addWidget(self._clear_btn)
-
-        # Shared-config dropdown (hidden initially) uses the same field slot
-        # as the custom path input so both modes keep identical widths.
+        # Shared-config dropdown uses the same field slot as path input.
         self._shared_combo = QComboBox()
         apply_tool_library_combo_style(self._shared_combo)
         self._shared_combo.setFixedHeight(38)
@@ -126,6 +122,15 @@ class _DbRow(QFrame):
         self._shared_combo.setSizePolicy(shared_sp)
         self._rebuild_shared_combo()
 
+        self._field_stack = QStackedWidget()
+        self._field_stack.addWidget(self._path_edit)
+        self._field_stack.addWidget(self._shared_combo)
+        self._field_stack.setCurrentWidget(self._path_edit)
+
+        bottom.addWidget(self._field_stack, 1)
+        bottom.addWidget(self._browse_btn)
+        bottom.addWidget(self._clear_btn)
+
         # Shared mode toggle stays at row end and aligned with field controls.
         self._shared_cb = QCheckBox(
             ""
@@ -134,7 +139,6 @@ class _DbRow(QFrame):
         apply_shared_checkbox_style(self._shared_cb, min_height=24)
         self._shared_cb.toggled.connect(self._on_toggle)
 
-        bottom.addWidget(self._shared_combo, 1)
         bottom.addWidget(self._shared_cb)
 
         outer.addLayout(bottom)
@@ -159,8 +163,7 @@ class _DbRow(QFrame):
 
     def _on_toggle(self, checked: bool) -> None:
         # Field slot: show either custom path input or shared-config combo.
-        self._path_edit.setVisible(not checked)
-        self._shared_combo.setVisible(checked)
+        self._field_stack.setCurrentWidget(self._shared_combo if checked else self._path_edit)
 
         # Hide action buttons in shared mode while retaining their layout space
         # so dialog width remains stable.

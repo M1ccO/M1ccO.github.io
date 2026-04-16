@@ -10,6 +10,7 @@ needs a new piece of profile data.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -26,6 +27,9 @@ class HeadView:
 class ToolLibProfileView:
     key: str = "ntx_2sp_2h"
     machine_type: str = "lathe"
+    spindle_keys: tuple[str, ...] = ("main", "sub")
+    default_tools_spindle: str = "main"
+    use_op_terminology: bool = False
     heads: tuple[HeadView, ...] = (
         HeadView("HEAD1", "tool_library.head_filter.head1", "HEAD1"),
         HeadView("HEAD2", "tool_library.head_filter.head2", "HEAD2"),
@@ -37,11 +41,69 @@ class ToolLibProfileView:
     def head_keys(self) -> list[str]:
         return [head.key for head in self.heads]
 
+    def spindle_count(self) -> int:
+        return len(self.spindle_keys)
+
+    def has_multiple_spindles(self) -> bool:
+        return self.spindle_count() > 1
+
+    def has_multiple_heads(self) -> bool:
+        return len(self.heads) > 1
+
 
 _DEFAULT_HEADS: tuple[HeadView, ...] = (
     HeadView("HEAD1", "tool_library.head_filter.head1", "HEAD1"),
     HeadView("HEAD2", "tool_library.head_filter.head2", "HEAD2"),
+    HeadView("HEAD3", "tool_library.head_filter.head3", "HEAD3"),
 )
+
+
+def _extract_int_group(pattern: str, text: str) -> int | None:
+    match = re.search(pattern, text)
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except Exception:
+        return None
+
+
+def _infer_spindle_count(key: str, is_machining_center: bool) -> int:
+    if is_machining_center:
+        return 1
+    parsed = _extract_int_group(r"(\d+)sp", key)
+    if parsed in {1, 2}:
+        return parsed
+    return 2
+
+
+def _infer_head_count(key: str, is_machining_center: bool) -> int:
+    if is_machining_center:
+        return 1
+    parsed_h = _extract_int_group(r"(\d+)h", key)
+    if parsed_h is not None and parsed_h > 0:
+        return parsed_h
+    parsed_mill = _extract_int_group(r"(\d+)mill", key)
+    if parsed_mill is not None and parsed_mill > 0:
+        return parsed_mill
+    return 2
+
+
+def _build_heads(count: int) -> tuple[HeadView, ...]:
+    if count <= 0:
+        return (HeadView("HEAD1", "tool_library.head_filter.head1", "HEAD1"),)
+    if count <= len(_DEFAULT_HEADS):
+        return tuple(_DEFAULT_HEADS[:count])
+    generated = list(_DEFAULT_HEADS)
+    for idx in range(len(_DEFAULT_HEADS) + 1, count + 1):
+        generated.append(
+            HeadView(
+                f"HEAD{idx}",
+                f"tool_library.head_filter.head{idx}",
+                f"HEAD{idx}",
+            )
+        )
+    return tuple(generated)
 
 
 def profile_view_from_key(raw_key: str | None) -> ToolLibProfileView:
@@ -55,8 +117,14 @@ def profile_view_from_key(raw_key: str | None) -> ToolLibProfileView:
 
     key = str(raw_key or "").strip().lower() or "ntx_2sp_2h"
     is_machining_center = key.startswith("machining_center")
+    spindle_count = _infer_spindle_count(key, is_machining_center)
+    head_count = _infer_head_count(key, is_machining_center)
+    use_op_terminology = bool(is_machining_center or spindle_count == 1)
     return ToolLibProfileView(
         key=key,
         machine_type="machining_center" if is_machining_center else "lathe",
-        heads=_DEFAULT_HEADS,
+        spindle_keys=("main", "sub") if spindle_count > 1 else ("main",),
+        default_tools_spindle="main",
+        use_op_terminology=use_op_terminology,
+        heads=_build_heads(head_count),
     )

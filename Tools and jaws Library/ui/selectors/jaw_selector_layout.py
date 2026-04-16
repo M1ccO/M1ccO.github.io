@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon, QStandardItemModel
 from PySide6.QtWidgets import (
     QComboBox,
@@ -180,6 +180,7 @@ class JawSelectorLayoutMixin:
             text=self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.'),
             multiline=False,
         )
+        hint.setProperty('selectorInlineHint', True)
         selector_layout.addWidget(hint, 0)
 
         self.slot_main = JawAssignmentSlot(

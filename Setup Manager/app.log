@@ -111,3 +111,18 @@ Traceback (most recent call last):
   File "c:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\draw_service.py", line 280, in list_tool_refs
     rows = conn.execute(
 sqlite3.OperationalError: no such table: tools
+2026-04-16 06:53:58,143 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 06:53:58,143 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 06:53:58,143 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-16 08:41:46,351 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 08:41:46,351 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 08:41:46,351 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1160
+2026-04-16 08:41:46,354 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 08:41:46,354 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 08:41:46,354 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 982
+2026-04-16 08:41:46,356 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 08:41:46,356 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 08:41:46,356 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 544
+2026-04-16 08:41:46,358 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-16 08:41:46,358 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-16 08:41:46,358 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 944

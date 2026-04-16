@@ -72,13 +72,26 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
 
         mime = self.model().mimeData(indexes) or QMimeData()
         payload: list[dict] = []
+        owner = getattr(self, "_owner", None)
+        owner_head = str(getattr(owner, "_head_key", "") or "").strip().upper()
+        owner_spindle = ""
+        if owner is not None and hasattr(owner, "_current_spindle"):
+            try:
+                owner_spindle = str(owner._current_spindle() or "").strip().lower()
+            except Exception:
+                owner_spindle = ""
         for index in indexes:
             item = self.item(index.row())
             if item is None:
                 continue
             assignment = item.data(Qt.UserRole)
             if isinstance(assignment, dict):
-                payload.append(dict(assignment))
+                enriched = dict(assignment)
+                if owner_head and not str(enriched.get("head") or enriched.get("head_key") or "").strip():
+                    enriched["head"] = owner_head
+                if owner_spindle and not str(enriched.get("spindle") or "").strip():
+                    enriched["spindle"] = owner_spindle
+                payload.append(enriched)
         _encode_work_editor_tool_payload(mime, payload)
 
         drag = QDrag(self)

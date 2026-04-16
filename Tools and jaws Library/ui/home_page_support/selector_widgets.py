@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDrag
-from PySide6.QtWidgets import QAbstractItemView, QListWidget, QPushButton
+from PySide6.QtWidgets import QAbstractItemView, QListWidget, QPushButton, QWidget
 
+from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.dragdrop_helpers import (
     build_text_drag_ghost,
     build_widget_drag_ghost,
@@ -27,6 +28,53 @@ class ToolAssignmentListWidget(QListWidget):
         self.setAcceptDrops(True)
         self.setDragDropMode(QAbstractItemView.DragDrop)
         self.setDefaultDropAction(Qt.MoveAction)
+        self._set_external_drag_state(False)
+
+    def _set_external_drag_state(self, active: bool) -> None:
+        self.setProperty('catalogDragOver', bool(active))
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.viewport().update()
+        self._set_card_drag_state(bool(active))
+        frame = self._assignment_frame()
+        if frame is not None:
+            base_style = frame.property('_baseStyleSheet')
+            if not isinstance(base_style, str):
+                base_style = frame.styleSheet() or ''
+                frame.setProperty('_baseStyleSheet', base_style)
+            if active:
+                frame.setStyleSheet(
+                    base_style
+                    + 'QGroupBox { border: 1px solid #00c8ff; }'
+                    + 'QGroupBox::title { color: #0f5f8e; }'
+                )
+            else:
+                frame.setStyleSheet(base_style)
+            frame.update()
+
+    def _set_card_drag_state(self, active: bool) -> None:
+        for row in range(self.count()):
+            item = self.item(row)
+            host = self.itemWidget(item) if item is not None else None
+            if isinstance(host, MiniAssignmentCard):
+                card = host
+            elif isinstance(host, QWidget):
+                card = host.findChild(MiniAssignmentCard)
+            else:
+                card = None
+            if isinstance(card, MiniAssignmentCard):
+                card.setProperty('catalogDragOver', bool(active))
+                card.style().unpolish(card)
+                card.style().polish(card)
+                card.update()
+
+    def _assignment_frame(self):
+        parent = self.parentWidget()
+        while parent is not None:
+            if bool(parent.property('selectorAssignmentsFrame')):
+                return parent
+            parent = parent.parentWidget()
+        return None
 
     def startDrag(self, supportedActions):
         indexes = sorted(self.selectedIndexes(), key=lambda idx: idx.row())
@@ -76,24 +124,37 @@ class ToolAssignmentListWidget(QListWidget):
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
+            if event.source() is not self:
+                self._set_external_drag_state(True)
             event.acceptProposedAction()
             return
         if event.source() is self:
+            self._set_external_drag_state(False)
             super().dragEnterEvent(event)
             return
+        self._set_external_drag_state(False)
         event.ignore()
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
+            if event.source() is not self:
+                self._set_external_drag_state(True)
             event.acceptProposedAction()
             return
         if event.source() is self:
+            self._set_external_drag_state(False)
             super().dragMoveEvent(event)
             return
+        self._set_external_drag_state(False)
         event.ignore()
+
+    def dragLeaveEvent(self, event):
+        self._set_external_drag_state(False)
+        super().dragLeaveEvent(event)
 
     def dropEvent(self, event):
         if event.mimeData().hasFormat(SELECTOR_TOOL_MIME) and event.source() is not self:
+            self._set_external_drag_state(False)
             dropped = decode_tool_payload(event.mimeData())
             point = event.position().toPoint() if hasattr(event, 'position') else event.pos()
             row = self.indexAt(point).row()
@@ -103,6 +164,7 @@ class ToolAssignmentListWidget(QListWidget):
             event.acceptProposedAction()
             return
 
+        self._set_external_drag_state(False)
         super().dropEvent(event)
         if event.source() is self:
             self.orderChanged.emit()

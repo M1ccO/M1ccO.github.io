@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QSizePolicy,
     QVBoxLayout,
 )
 
@@ -31,6 +32,8 @@ class MiniAssignmentCard(QFrame):
         super().__init__(parent)
         self._editable = bool(editable)
         self._compact = bool(compact)
+        self._full_title = (title or "").strip()
+        self._full_subtitle = (subtitle or "").strip()
         self.setProperty("toolListCard", True)
         self.setProperty("miniAssignmentCard", True)
         self.setProperty("selected", False)
@@ -60,13 +63,17 @@ class MiniAssignmentCard(QFrame):
         text_col = QVBoxLayout()
         text_col.setContentsMargins(0, 0, 0, 0)
         text_col.setSpacing(0)
-        self.title_label = QLabel((title or "").strip())
+        self.title_label = QLabel(self._full_title)
         self.title_label.setProperty("miniAssignmentTitle", True)
+        self.title_label.setWordWrap(False)
+        self.title_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         text_col.addWidget(self.title_label)
 
-        self.subtitle_label = QLabel((subtitle or "").strip())
+        self.subtitle_label = QLabel(self._full_subtitle)
         self.subtitle_label.setProperty("miniAssignmentHint", True)
-        self.subtitle_label.setVisible(bool((subtitle or "").strip()))
+        self.subtitle_label.setWordWrap(False)
+        self.subtitle_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.subtitle_label.setVisible(bool(self._full_subtitle))
         text_col.addWidget(self.subtitle_label)
         root.addLayout(text_col, 1)
 
@@ -76,6 +83,7 @@ class MiniAssignmentCard(QFrame):
         self.meta_label.setVisible(False)
         root.addWidget(self.meta_label, 0, Qt.AlignVCenter)
         self.set_badges(badges or [])
+        self._apply_elision()
 
     def set_selected(self, selected: bool):
         self.setProperty("selected", bool(selected))
@@ -86,6 +94,35 @@ class MiniAssignmentCard(QFrame):
         clean = [str(item).strip() for item in (badges or []) if str(item).strip()]
         self.meta_label.setVisible(bool(clean))
         self.meta_label.setText("   ".join(clean))
+        self._apply_elision()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._apply_elision()
+
+    def _apply_elision(self) -> None:
+        title_width = max(0, self.title_label.width())
+        subtitle_width = max(0, self.subtitle_label.width())
+
+        if title_width > 0:
+            title_text = self.title_label.fontMetrics().elidedText(
+                self._full_title,
+                Qt.ElideRight,
+                title_width,
+            )
+            self.title_label.setText(title_text)
+        else:
+            self.title_label.setText(self._full_title)
+
+        if self._full_subtitle and subtitle_width > 0:
+            subtitle_text = self.subtitle_label.fontMetrics().elidedText(
+                self._full_subtitle,
+                Qt.ElideRight,
+                subtitle_width,
+            )
+            self.subtitle_label.setText(subtitle_text)
+        else:
+            self.subtitle_label.setText(self._full_subtitle)
 
     def mouseDoubleClickEvent(self, event):
         if self._editable:

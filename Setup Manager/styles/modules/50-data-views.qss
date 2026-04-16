@@ -154,6 +154,28 @@ QDialog[workEditorDialog="true"] QFrame[toolIdsHostSurface="true"] {
     border-radius: 0px;
 }
 
+QDialog[workEditorDialog="true"] QFrame[toolIdsScrollSurface="true"] {
+    background: transparent;
+    border: 1px solid #c8d4e0;
+    border-radius: 0px;
+}
+
+QDialog[workEditorDialog="true"] QScrollArea[toolIdsScrollArea="true"] {
+    background: transparent;
+    border: none;
+}
+
+QDialog[workEditorDialog="true"] QScrollArea[toolIdsScrollArea="true"]::viewport {
+    background: transparent;
+    border: none;
+}
+
+QDialog[workEditorDialog="true"] QWidget#toolIdsScrollContent,
+QDialog[workEditorDialog="true"] QWidget#potEditorScrollContent {
+    background: transparent;
+    border: none;
+}
+
 QDialog[workEditorDialog="true"] QWidget[editorPageSurface="true"] {
     background: #ffffff;
 }

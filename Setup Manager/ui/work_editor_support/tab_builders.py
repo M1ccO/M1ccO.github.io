@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QFrame,
     QHBoxLayout,
+    QLabel,
     QLineEdit,
     QPlainTextEdit,
     QPushButton,
@@ -26,6 +27,36 @@ except ModuleNotFoundError:
     from editor_helpers import ResponsiveColumnsHost, apply_shared_checkbox_style
 from machine_profiles import is_machining_center
 from .machining_center import build_machining_center_zeros_tab_ui
+
+
+class _ElidingLabel(QLabel):
+    def __init__(self, text: str, parent=None):
+        super().__init__(parent)
+        self._full_text = str(text or '')
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.setMinimumWidth(24)
+        self._apply_elided_text()
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self._apply_elided_text()
+
+    def _apply_elided_text(self) -> None:
+        metrics = self.fontMetrics()
+        self.setText(metrics.elidedText(self._full_text, Qt.ElideRight, max(0, self.width())))
+        self.setToolTip(self._full_text if self.text() != self._full_text else '')
+
+
+def _build_eliding_checkbox(checkbox: QCheckBox, text: str) -> QWidget:
+    checkbox.setText('')
+    row = QWidget()
+    row_layout = QHBoxLayout(row)
+    row_layout.setContentsMargins(0, 0, 0, 0)
+    row_layout.setSpacing(6)
+    row_layout.addWidget(checkbox, 0, Qt.AlignVCenter)
+    row_layout.addWidget(_ElidingLabel(text), 1)
+    row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    return row
 
 
 def _setup_jaw_selectors(
@@ -122,62 +153,80 @@ def build_general_tab_ui(
     raw_part_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     raw_form = QFormLayout(raw_part_group)
     raw_form.setSpacing(8)
-    raw_form.addRow(
-        dialog._t("work_editor.general.raw_kind", "Kind"),
-        dialog.raw_part_kind_combo,
-    )
+    if is_machining_center(dialog.machine_profile):
+        raw_form.addRow(
+            dialog._t("work_editor.general.raw_kind", "Kind"),
+            dialog.raw_part_kind_combo,
+        )
 
-    dialog._raw_part_mode_stack = QStackedWidget()
+        dialog._raw_part_mode_stack = QStackedWidget()
 
-    bar_page = QWidget()
-    bar_form = QFormLayout(bar_page)
-    bar_form.setContentsMargins(0, 0, 0, 0)
-    bar_form.setSpacing(8)
-    bar_form.addRow(
-        dialog._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
-        dialog.raw_part_od_input,
-    )
-    bar_form.addRow(
-        dialog._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
-        dialog.raw_part_id_input,
-    )
-    bar_form.addRow(
-        dialog._t("work_editor.general.raw_length", "Length"),
-        dialog.raw_part_length_input,
-    )
-    dialog._raw_part_mode_stack.addWidget(bar_page)
+        bar_page = QWidget()
+        bar_form = QFormLayout(bar_page)
+        bar_form.setContentsMargins(0, 0, 0, 0)
+        bar_form.setSpacing(8)
+        bar_form.addRow(
+            dialog._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
+            dialog.raw_part_od_input,
+        )
+        bar_form.addRow(
+            dialog._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
+            dialog.raw_part_id_input,
+        )
+        bar_form.addRow(
+            dialog._t("work_editor.general.raw_length", "Length"),
+            dialog.raw_part_length_input,
+        )
+        dialog._raw_part_mode_stack.addWidget(bar_page)
 
-    square_page = QWidget()
-    square_form = QFormLayout(square_page)
-    square_form.setContentsMargins(0, 0, 0, 0)
-    square_form.setSpacing(8)
-    square_form.addRow(
-        dialog._t("work_editor.general.raw_side", "Side"),
-        dialog.raw_part_side_input,
-    )
-    square_form.addRow(
-        dialog._t("work_editor.general.raw_length", "Length"),
-        dialog.raw_part_square_length_input,
-    )
-    dialog._raw_part_mode_stack.addWidget(square_page)
+        square_page = QWidget()
+        square_form = QFormLayout(square_page)
+        square_form.setContentsMargins(0, 0, 0, 0)
+        square_form.setSpacing(8)
+        square_form.addRow(
+            dialog._t("work_editor.general.raw_side", "Side"),
+            dialog.raw_part_side_input,
+        )
+        square_form.addRow(
+            dialog._t("work_editor.general.raw_length", "Length"),
+            dialog.raw_part_square_length_input,
+        )
+        dialog._raw_part_mode_stack.addWidget(square_page)
 
-    custom_page = QWidget()
-    custom_form = QFormLayout(custom_page)
-    custom_form.setContentsMargins(0, 0, 0, 0)
-    custom_form.setSpacing(8)
-    custom_form.addRow(
-        dialog._t("work_editor.general.raw_custom_fields", "Custom fields"),
-        dialog.raw_part_custom_fields_input,
-    )
-    dialog._raw_part_mode_stack.addWidget(custom_page)
+        custom_page = QWidget()
+        custom_form = QFormLayout(custom_page)
+        custom_form.setContentsMargins(0, 0, 0, 0)
+        custom_form.setSpacing(8)
+        custom_form.addRow(
+            dialog._t("work_editor.general.raw_custom_fields", "Custom fields"),
+            dialog.raw_part_custom_fields_input,
+        )
+        dialog._raw_part_mode_stack.addWidget(custom_page)
 
-    raw_form.addRow(dialog._raw_part_mode_stack)
+        raw_form.addRow(dialog._raw_part_mode_stack)
 
-    def _on_raw_kind_changed(index: int) -> None:
-        dialog._raw_part_mode_stack.setCurrentIndex(max(0, index))
+        def _on_raw_kind_changed(index: int) -> None:
+            dialog._raw_part_mode_stack.setCurrentIndex(max(0, index))
 
-    dialog.raw_part_kind_combo.currentIndexChanged.connect(_on_raw_kind_changed)
-    _on_raw_kind_changed(dialog.raw_part_kind_combo.currentIndex())
+        dialog.raw_part_kind_combo.currentIndexChanged.connect(_on_raw_kind_changed)
+        _on_raw_kind_changed(dialog.raw_part_kind_combo.currentIndex())
+    else:
+        # Lathe profiles support bar stock only.
+        dialog.raw_part_kind_combo.setCurrentIndex(0)
+        dialog.raw_part_kind_combo.setEnabled(False)
+        dialog._raw_part_mode_stack = None
+        raw_form.addRow(
+            dialog._t("work_editor.general.raw_outer_diameter", "Outer diameter"),
+            dialog.raw_part_od_input,
+        )
+        raw_form.addRow(
+            dialog._t("work_editor.general.raw_inner_diameter", "Inner diameter"),
+            dialog.raw_part_id_input,
+        )
+        raw_form.addRow(
+            dialog._t("work_editor.general.raw_length", "Length"),
+            dialog.raw_part_length_input,
+        )
 
     layout.addWidget(general_group)
     layout.addWidget(raw_part_group)
@@ -201,7 +250,11 @@ def build_spindles_tab_ui(
         dialog._t("work_editor.selector.jaws_button", "Select Jaws")
     )
     dialog.open_jaw_selector_btn.setProperty("panelActionButton", True)
+    dialog.open_jaw_selector_btn.setMinimumWidth(240)
+    dialog.open_jaw_selector_btn.setMaximumWidth(320)
+    dialog.open_jaw_selector_btn.setFixedHeight(34)
     dialog.open_jaw_selector_btn.clicked.connect(dialog._open_jaw_selector)
+    selector_row.addStretch(1)
     selector_row.addWidget(dialog.open_jaw_selector_btn, 0)
     selector_row.addStretch(1)
     layout.addLayout(selector_row)
@@ -326,15 +379,21 @@ def build_zeros_tab_ui(
     controls_row = QHBoxLayout()
     controls_row.setContentsMargins(2, 0, 2, 0)
     controls_row.setSpacing(10)
+
     dialog.open_jaw_selector_btn = QPushButton(
         dialog._t("work_editor.selector.jaws_button", "Select Jaws")
     )
     dialog.open_jaw_selector_btn.setProperty("panelActionButton", True)
-    dialog.open_jaw_selector_btn.setMinimumWidth(176)
-    dialog.open_jaw_selector_btn.setMaximumWidth(220)
-    dialog.open_jaw_selector_btn.setFixedHeight(32)
+    dialog.open_jaw_selector_btn.setMinimumWidth(280)
+    dialog.open_jaw_selector_btn.setMaximumWidth(380)
+    dialog.open_jaw_selector_btn.setFixedHeight(34)
     dialog.open_jaw_selector_btn.clicked.connect(dialog._open_jaw_selector)
-    controls_row.addWidget(dialog.open_jaw_selector_btn, 0)
+
+    left_controls = QWidget()
+    left_controls_layout = QHBoxLayout(left_controls)
+    left_controls_layout.setContentsMargins(0, 0, 0, 0)
+    left_controls_layout.setSpacing(10)
+    left_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     if dialog.machine_profile.spindle_count == 1:
         dialog.op20_jaws_checkbox = QCheckBox(
@@ -352,7 +411,7 @@ def build_zeros_tab_ui(
                 _sub_sel.setVisible(checked)
 
         dialog.op20_jaws_checkbox.toggled.connect(_apply_op20_jaws)
-        controls_row.addWidget(dialog.op20_jaws_checkbox, 0, Qt.AlignVCenter)
+        left_controls_layout.addWidget(dialog.op20_jaws_checkbox, 0, Qt.AlignVCenter)
 
     dialog.zero_show_xy_checkbox = QCheckBox(
         dialog._t("work_editor.zeros.show_xy", "Show X/Y columns")
@@ -361,8 +420,18 @@ def build_zeros_tab_ui(
     dialog.zero_show_xy_checkbox.setChecked(dialog.machine_profile.default_zero_xy_visible)
     dialog.zero_show_xy_checkbox.toggled.connect(dialog._set_zero_xy_visibility)
     dialog.zero_show_xy_checkbox.setVisible(dialog.machine_profile.supports_zero_xy_toggle)
-    controls_row.addWidget(dialog.zero_show_xy_checkbox, 0, Qt.AlignVCenter)
-    controls_row.addStretch(1)
+    zero_show_xy_row = _build_eliding_checkbox(
+        dialog.zero_show_xy_checkbox,
+        dialog._t("work_editor.zeros.show_xy", "Show X/Y columns"),
+    )
+    zero_show_xy_row.setVisible(dialog.machine_profile.supports_zero_xy_toggle)
+    left_controls_layout.addWidget(zero_show_xy_row, 1)
+
+    controls_row.addWidget(left_controls, 1)
+    controls_row.addWidget(dialog.open_jaw_selector_btn, 0, Qt.AlignHCenter)
+    right_controls = QWidget()
+    right_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    controls_row.addWidget(right_controls, 1)
     content_layout.addLayout(controls_row)
 
     dialog.zero_points_host = ResponsiveColumnsHost(switch_width=1320)
