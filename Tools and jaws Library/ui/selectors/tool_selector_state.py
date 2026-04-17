@@ -61,11 +61,11 @@ class ToolSelectorStateMixin:
         if self._uses_op_terminology():
             return self._t(
                 'tool_library.selector.spindle_op20_tools' if normalized == 'sub' else 'tool_library.selector.spindle_op10_tools',
-                'OP20 Tools' if normalized == 'sub' else 'OP10 Tools',
+                'OP20-työkalut' if normalized == 'sub' else 'OP10-työkalut',
             )
         return self._t(
             'tool_library.selector.spindle_sub_tools' if normalized == 'sub' else 'tool_library.selector.spindle_main_tools',
-            'Sub Spindle Tools' if normalized == 'sub' else 'Main Spindle Tools',
+            'Vastakaran työkalut' if normalized == 'sub' else 'Pääkaran työkalut',
         )
 
     def _set_assignment_section_title(self, spindle: str, title: str) -> None:
@@ -575,8 +575,8 @@ class ToolSelectorStateMixin:
         current = str(target_assignments[row].get('comment') or '').strip()
         text, ok = QInputDialog.getText(
             self,
-            self._t('tool_library.selector.add_comment', 'Add Comment'),
-            self._t('tool_library.selector.comment_prompt', 'Comment:'),
+            self._t('tool_library.selector.add_comment', 'Lisää kommentti'),
+            self._t('tool_library.selector.comment_prompt', 'Kommentti:'),
             text=current,
         )
         if not ok:
@@ -631,9 +631,9 @@ class ToolSelectorStateMixin:
             return
 
         head_label = (
-            self._t('tool_library.selector.head_lower', 'Lower Turret')
+            self._t('tool_library.selector.head_lower', 'Alarevolveri')
             if self._current_head == 'HEAD2'
-            else self._t('tool_library.selector.head_upper', 'Upper Spindle')
+            else self._t('tool_library.selector.head_upper', 'Yläkara')
         )
         self.selector_head_value_label.setText(head_label)
         if single_spindle and self._uses_op_terminology():
@@ -644,7 +644,9 @@ class ToolSelectorStateMixin:
                 )
             )
         else:
-            self.selector_spindle_value_label.setText(self._t('tool_library.selector.main_sub', 'Main / Sub Spindle'))
+            self.selector_spindle_value_label.setText(
+                self._t('tool_library.selector.main_sub', 'Pääkara / Vastakara')
+            )
         self.head_btn.setText(head_label)
         self.selector_spindle_value_label.setVisible(True)
         self.selector_head_value_label.setVisible(not single_head)

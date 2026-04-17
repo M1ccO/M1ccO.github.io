@@ -90,7 +90,10 @@ class ToolSelectorLayoutMixin:
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(
-            self._t('tool_library.search.placeholder', 'Search tool ID, name, dimensions, holder, insert, notes...')
+            self._t(
+                'work_editor.tool_picker.search_placeholder',
+                'Hae työkalun ID:tä, nimeä, mittoja, pidintä, inserttiä tai huomioita...',
+            )
         )
         self.search_input.textChanged.connect(self._refresh_catalog)
         self.search_input.setVisible(False)
@@ -99,7 +102,7 @@ class ToolSelectorLayoutMixin:
 
         self.type_filter = QComboBox()
         self.type_filter.setObjectName('topTypeFilter')
-        self.type_filter.addItem(self._t('tool_library.filter.all', 'All'), 'All')
+        self.type_filter.addItem(self._t('work_editor.tool_picker.all_types', 'Kaikki tyypit'), 'All')
         for tool_type in ALL_TOOL_TYPES:
             self.type_filter.addItem(tool_type, tool_type)
         self.type_filter.currentIndexChanged.connect(self._refresh_catalog)
@@ -108,7 +111,7 @@ class ToolSelectorLayoutMixin:
         # Preview toggle: hidden by default — no detached window in selector yet
         self.preview_window_btn = build_preview_toggle(
             TOOL_ICONS_DIR,
-            self._t('tool_library.preview.toggle', 'Toggle detached 3D preview'),
+            self._t('tool_library.preview.toggle', 'Näytä irrotettava 3D-esikatselu'),
             self.toggle_preview_window,
         )
         self.preview_window_btn.setVisible(True)
@@ -117,7 +120,7 @@ class ToolSelectorLayoutMixin:
         self.detail_header_container, self.detail_section_label, self.detail_close_btn = \
             build_detail_header(
                 self._close_icon,
-                self._t('tool_library.section.tool_details', 'Tool details'),
+                self._t('work_editor.selector.assignment.details_title', 'Työkalun tiedot'),
                 self._switch_to_selector_panel,
             )
         self.detail_header_container.setVisible(False)
@@ -196,9 +199,9 @@ class ToolSelectorLayoutMixin:
             self.selector_spindle_value_label,
             self.selector_head_value_label,
         ) = build_selector_info_header(
-            title_text=self._t('tool_library.selector.header_title', 'Tool Selector'),
-            left_badge_text=self._t('tool_library.nav.main_spindle', 'Main Spindle'),
-            right_badge_text=self._t('tool_library.selector.head_upper', 'Upper Spindle'),
+            title_text=self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'),
+            left_badge_text=f"{self._t('work_editor.selector.sp1', 'Pääkara')} / {self._t('work_editor.selector.sp2', 'Vastakara')}",
+            right_badge_text=self._t('work_editor.selector.head1', 'Yläkara'),
             fixed_height_policy=True,
         )
         self._is_machining_center_selector_mode = self._selector_is_machining_center()
@@ -212,7 +215,7 @@ class ToolSelectorLayoutMixin:
         context_row.setSpacing(10)
         context_row.addStretch(1)
 
-        self.head_btn = QPushButton(self._t('tool_library.selector.head_upper', 'Upper Spindle'))
+        self.head_btn = QPushButton(self._t('work_editor.selector.head1', 'Yläkara'))
         style_selector_context_button(self.head_btn)
         self.head_btn.setMinimumWidth(280)
         self.head_btn.setMaximumWidth(420)
@@ -247,9 +250,9 @@ class ToolSelectorLayoutMixin:
             )
 
             assignment_frame = create_titled_section(
-                self._t('tool_library.selector.spindle_sub_tools', 'Sub Spindle Tools')
+                self._t('work_editor.tools.sub_spindle_tools', 'Vastakaran työkalut')
                 if spindle == 'sub'
-                else self._t('tool_library.selector.spindle_main_tools', 'Main Spindle Tools')
+                else self._t('work_editor.tools.main_spindle_tools', 'Pääkaran työkalut')
             )
             assignment_frame.setProperty('selectorAssignmentsFrame', True)
             assignment_frame.setProperty('toolIdsPanel', True)
@@ -261,8 +264,8 @@ class ToolSelectorLayoutMixin:
 
             empty_hint = build_selector_hint_label(
                 text=self._t(
-                    'tool_library.selector.drop_hint_inline',
-                    'Drag tools here from the catalog. Reorder by dragging inside this list.',
+                    'work_editor.selector.action.drag_hint',
+                    'Vedä työkalut tähän kirjastosta. Järjestä ne uudelleen vetämällä listassa.',
                 ),
                 multiline=True,
             )
@@ -287,28 +290,28 @@ class ToolSelectorLayoutMixin:
         actions = build_selector_actions_row(spacing=4)
 
         self.move_up_btn = QPushButton('▲')
-        style_move_arrow_button(self.move_up_btn, '▲', self._t('tool_library.selector.move_up', 'Move Up'))
+        style_move_arrow_button(self.move_up_btn, '▲', self._t('work_editor.selector.action.move_up', 'Siirrä ylös'))
         self.move_up_btn.clicked.connect(self._move_up)
         actions.addWidget(self.move_up_btn)
 
         self.move_down_btn = QPushButton('▼')
-        style_move_arrow_button(self.move_down_btn, '▼', self._t('tool_library.selector.move_down', 'Move Down'))
+        style_move_arrow_button(self.move_down_btn, '▼', self._t('work_editor.selector.action.move_down', 'Siirrä alas'))
         self.move_down_btn.clicked.connect(self._move_down)
         actions.addWidget(self.move_down_btn)
 
         self.remove_btn = ToolSelectorRemoveDropButton()
-        style_icon_action_button(self.remove_btn, TOOL_ICONS_DIR / 'delete.svg', self._t('tool_library.selector.remove', 'Remove'), danger=True)
+        style_icon_action_button(self.remove_btn, TOOL_ICONS_DIR / 'delete.svg', self._t('work_editor.selector.action.remove', 'Poista'), danger=True)
         self.remove_btn.clicked.connect(self._remove_selected)
         self.remove_btn.toolsDropped.connect(self._remove_by_drop)
         actions.addWidget(self.remove_btn)
 
         self.comment_btn = QPushButton()
-        style_icon_action_button(self.comment_btn, TOOL_ICONS_DIR / 'comment.svg', self._t('tool_library.selector.add_comment', 'Add Comment'))
+        style_icon_action_button(self.comment_btn, TOOL_ICONS_DIR / 'comment.svg', self._t('tool_library.selector.add_comment', 'Lisää kommentti'))
         self.comment_btn.clicked.connect(self._add_comment)
         actions.addWidget(self.comment_btn)
 
         self.delete_comment_btn = QPushButton()
-        style_icon_action_button(self.delete_comment_btn, TOOL_ICONS_DIR / 'comment_disable.svg', self._t('tool_library.selector.delete_comment', 'Delete Comment'))
+        style_icon_action_button(self.delete_comment_btn, TOOL_ICONS_DIR / 'comment_disable.svg', self._t('tool_library.selector.delete_comment', 'Poista kommentti'))
         self.delete_comment_btn.clicked.connect(self._delete_comment)
         actions.addWidget(self.delete_comment_btn)
 

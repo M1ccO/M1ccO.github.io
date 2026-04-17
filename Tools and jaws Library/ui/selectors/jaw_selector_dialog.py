@@ -73,7 +73,7 @@ class JawSelectorDialog(
         self._load_initial_assignments(initial_assignments)
 
         if not self._embedded_mode:
-            self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+            self.setWindowTitle(self._t('work_editor.selector.jaws_dialog_title', 'Leukavalitsin'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
             self.resize(1180, 720)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
@@ -104,7 +104,7 @@ class JawSelectorDialog(
         initial_assignments: list[dict] | None,
     ) -> None:
         if not self._embedded_mode:
-            self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+            self.setWindowTitle(self._t('work_editor.selector.jaws_dialog_title', 'Leukavalitsin'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
             self.resize(1180, 720)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')

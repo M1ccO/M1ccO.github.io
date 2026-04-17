@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QComboBox
+
+from shared.ui.helpers.common_widgets import apply_shared_dropdown_style
 
 
 def _activate_tool_library_namespace_aliases(dialog: Any) -> None:
@@ -91,6 +94,12 @@ def _apply_embedded_selector_style(widget: Any) -> None:
     widget.setProperty("selectorContext", True)
     widget.setStyleSheet(
         """
+QWidget[selectorContext="true"] {
+    background-color: #ffffff;
+    border: none;
+    border-radius: 2px;
+}
+
 QFrame[selectorContext="true"] {
     background-color: #ffffff;
     border: none;
@@ -113,6 +122,10 @@ QWidget[selectorContext="true"] QFrame[selectorScrollFrame="true"] {
     background-color: #f0f6fc;
     border: 1px solid #d0d8e0;
     border-radius: 6px;
+}
+QWidget[selectorContext="true"] QFrame[bottomBar="true"] {
+    background-color: transparent;
+    border: none;
 }
 QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"] {
     background-color: #ffffff;
@@ -144,6 +157,16 @@ QWidget[selectorContext="true"] QFrame[selectorInfoHeader="true"] {
     background-color: #ffffff;
     border: 1px solid #c8d4e0;
     border-radius: 6px;
+}
+QWidget[selectorContext="true"] QLabel[toolBadge="true"] {
+    background-color: #e7f1fb;
+    color: #1d5f9d;
+    border: 1px solid #c2d9ee;
+    border-radius: 10px;
+    padding: 2px 10px;
+    font-size: 9pt;
+    font-weight: 600;
+    min-height: 18px;
 }
 
 QWidget[selectorContext="true"] QLabel[selectorInfoTitle="true"] {
@@ -239,6 +262,11 @@ QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOve
 }
 """
     )
+    for combo in widget.findChildren(QComboBox):
+        if combo.objectName() == "topTypeFilter":
+            combo.setProperty("modernDropdown", True)
+            combo.setProperty("dropdownSizeProfile", "compact")
+            apply_shared_dropdown_style(combo)
     style = widget.style()
     if style is not None:
         style.unpolish(widget)

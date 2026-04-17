@@ -81,12 +81,12 @@ def build_selector_bottom_bar(
     layout.setSpacing(8)
     layout.addStretch(1)
 
-    cancel_btn = QPushButton(_t('tool_library.selector.cancel', 'CANCEL'))
+    cancel_btn = QPushButton(_t('work_editor.selector.action.cancel', 'Peruuta'))
     cancel_btn.setProperty('panelActionButton', True)
     cancel_btn.clicked.connect(on_cancel)
     layout.addWidget(cancel_btn)
 
-    done_btn = QPushButton(_t('tool_library.selector.done', 'DONE'))
+    done_btn = QPushButton(_t('work_editor.selector.action.complete', 'Valmis'))
     done_btn.setProperty('panelActionButton', True)
     done_btn.setProperty('primaryAction', True)
     done_btn.clicked.connect(on_done)

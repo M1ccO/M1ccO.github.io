@@ -4646,3 +4646,113 @@ ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
 2026-04-17 18:30:22,044 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
 2026-04-17 18:30:22,067 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
 2026-04-17 18:30:23,622 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 6500, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-17 18:45:09,956 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 18:45:15,552 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 18:45:15,604 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 18:45:15,629 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 18:45:16,510 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 9047, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-17 18:45:50,743 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 18:47:59,840 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 18:47:59,904 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-17 18:47:59,928 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 18:48:04,321 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 18:48:04,321 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 2}
+2026-04-17 18:48:04,431 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 2}
+2026-04-17 18:48:09,850 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 140875, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-17 18:55:32,480 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 18:55:38,078 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 8922, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-17 18:55:59,355 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'cancel'}
+2026-04-17 18:55:59,355 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-17 18:55:59,377 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 18:56:01,157 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-17 18:56:01,157 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 2}
+2026-04-17 18:56:01,240 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 2}
+2026-04-17 18:56:26,269 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 2, 'reason': 'cancel'}
+2026-04-17 18:56:26,269 ui.work_editor_dialog INFO work_editor.selector {'event': 'cancel.embedded.request', 'transport': 'embedded'}
+2026-04-17 18:56:26,285 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 2, 'previous_phase': 'closing'}
+2026-04-17 18:59:36,677 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 18:59:41,950 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 18:59:42,001 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 18:59:42,025 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 18:59:43,352 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 9015, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-17 19:05:47,188 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 19:05:47,196 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2640, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:05:47,197 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 2640, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:05:47,198 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2640, 'result': 0}
+2026-04-17 19:05:47,199 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2640, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-17 19:05:55,628 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 19:05:55,679 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:05:55,705 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 19:05:58,460 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 19:05:58,460 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 2}
+2026-04-17 19:05:58,571 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 2}
+2026-04-17 19:05:59,817 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 2, 'reason': 'submit'}
+2026-04-17 19:05:59,870 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:05:59,894 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 2, 'previous_phase': 'closing'}
+2026-04-17 19:06:01,034 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 19:06:01,034 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 3}
+2026-04-17 19:06:01,143 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 3}
+2026-04-17 19:06:02,246 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 3, 'reason': 'submit'}
+2026-04-17 19:06:02,299 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:06:02,324 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 3, 'previous_phase': 'closing'}
+2026-04-17 19:06:03,414 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 19:06:03,414 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 4}
+2026-04-17 19:06:03,528 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 4}
+2026-04-17 19:06:05,074 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 4, 'reason': 'submit'}
+2026-04-17 19:06:05,128 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:06:05,157 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 4, 'previous_phase': 'closing'}
+2026-04-17 19:06:06,820 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-17 19:06:06,820 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 5}
+2026-04-17 19:06:06,913 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 5}
+2026-04-17 19:06:07,916 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 5, 'reason': 'submit'}
+2026-04-17 19:06:07,942 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'jaws', 'applied': True, 'selected_count': 2}
+2026-04-17 19:06:07,959 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 5, 'previous_phase': 'closing'}
+2026-04-17 19:06:59,406 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 19:06:59,414 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3093, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:06:59,415 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 3093, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:06:59,416 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3093, 'result': 0}
+2026-04-17 19:06:59,416 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3093, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-17 19:07:01,514 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 19:07:01,565 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:07:01,589 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 19:07:03,557 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-17 19:07:03,557 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 2}
+2026-04-17 19:07:03,642 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main', 'session_id': 2}
+2026-04-17 19:07:04,784 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 2, 'reason': 'submit'}
+2026-04-17 19:07:04,810 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'jaws', 'applied': True, 'selected_count': 2}
+2026-04-17 19:07:04,826 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 2, 'previous_phase': 'closing'}
+2026-04-17 19:07:39,080 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 19:07:39,091 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4077, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-17 19:07:40,382 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 19:07:40,432 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:07:40,456 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 19:08:03,780 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 19:08:03,787 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2343, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:08:03,788 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 2343, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:08:03,789 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2343, 'result': 0}
+2026-04-17 19:08:03,790 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2343, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-17 19:08:05,235 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 19:08:05,285 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:08:05,308 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 19:10:04,639 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 1}
+2026-04-17 19:10:06,029 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 1, 'reason': 'submit'}
+2026-04-17 19:10:06,081 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:10:06,106 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 1, 'previous_phase': 'closing'}
+2026-04-17 19:10:07,260 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 6937, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-17 19:10:10,273 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-17 19:10:10,273 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-17 19:10:10,288 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:10:10,289 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:10:10,290 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:10:10,295 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:10:10,295 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:10:10,298 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 19:10:11,226 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 19:10:11,226 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 2}
+2026-04-17 19:10:11,332 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main', 'session_id': 2}
+2026-04-17 19:10:12,434 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closing', 'transport': 'embedded', 'session_id': 2, 'reason': 'submit'}
+2026-04-17 19:10:12,487 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 3}
+2026-04-17 19:10:12,511 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.closed', 'transport': 'embedded', 'session_id': 2, 'previous_phase': 'closing'}
+2026-04-17 19:10:13,347 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3062, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-17 19:10:13,348 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3062, 'result': 1}
+2026-04-17 19:10:13,349 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3078, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}

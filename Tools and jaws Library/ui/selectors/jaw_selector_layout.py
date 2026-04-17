@@ -66,7 +66,10 @@ class JawSelectorLayoutMixin:
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(
-            self._t('jaw_library.search.placeholder', 'Search jaw ID, type, spindle side, diameter...')
+            self._t(
+                'work_editor.jaw.filter_placeholder',
+                'Hae leukien ID:tä, tyyppiä, karaa tai halkaisijaa...',
+            )
         )
         self.search_input.textChanged.connect(self._refresh_catalog)
         self.search_input.setVisible(False)
@@ -75,18 +78,18 @@ class JawSelectorLayoutMixin:
 
         self.view_filter = QComboBox()
         self.view_filter.setObjectName('topTypeFilter')
-        self.view_filter.addItem(self._t('jaw_library.nav.all_jaws', 'All Jaws'), 'all')
-        self.view_filter.addItem(self._t('jaw_library.nav.main_spindle', 'Main Spindle'), 'main')
-        self.view_filter.addItem(self._t('jaw_library.nav.sub_spindle', 'Sub Spindle'), 'sub')
-        self.view_filter.addItem(self._t('jaw_library.nav.soft_jaws', 'Soft Jaws'), 'soft')
-        self.view_filter.addItem(self._t('jaw_library.nav.hard_group', 'Hard / Spiked / Special'), 'hard_group')
+        self.view_filter.addItem(self._t('tool_library.nav.all_jaws', 'Kaikki leuat'), 'all')
+        self.view_filter.addItem(self._t('work_editor.selector.sp1', 'Pääkara'), 'main')
+        self.view_filter.addItem(self._t('work_editor.selector.sp2', 'Vastakara'), 'sub')
+        self.view_filter.addItem(self._t('jaw_library.nav.soft_jaws', 'Pehmeät leuat'), 'soft')
+        self.view_filter.addItem(self._t('jaw_library.nav.hard_group', 'Kovat / teräkäs / erikois'), 'hard_group')
         self.view_filter.currentIndexChanged.connect(self._refresh_catalog)
         apply_shared_dropdown_style(self.view_filter)
 
         # Preview toggle: hidden — no detached window in selector yet
         self.preview_window_btn = build_preview_toggle(
             TOOL_ICONS_DIR,
-            self._t('tool_library.preview.toggle', 'Toggle detached 3D preview'),
+            self._t('tool_library.preview.toggle', 'Näytä irrotettava 3D-esikatselu'),
             self.toggle_preview_window,
         )
         self.preview_window_btn.setVisible(True)
@@ -95,7 +98,7 @@ class JawSelectorLayoutMixin:
         self.detail_header_container, self.detail_section_label, self.detail_close_btn = \
             build_detail_header(
                 self._close_icon,
-                self._t('jaw_library.section.jaw_details', 'Jaw details'),
+                self._t('work_editor.selector.assignment.details_title', 'Leukojen tiedot'),
                 self._switch_to_selector_panel,
             )
         self.detail_header_container.setVisible(False)
@@ -172,15 +175,15 @@ class JawSelectorLayoutMixin:
             self.selector_spindle_value_label,
             self.selector_module_value_label,
         ) = build_selector_info_header(
-            title_text=self._t('jaw_library.selector.header_title', 'Jaw Selector'),
-            left_badge_text=self._t('tool_library.nav.main_spindle', 'Main Spindle'),
-            right_badge_text=self._t('tool_library.selector.jaws', 'Jaws'),
+            title_text=self._t('work_editor.selector.jaws_dialog_title', 'Leukavalitsin'),
+            left_badge_text=self._t('work_editor.selector.sp1', 'Pääkara'),
+            right_badge_text=self._t('work_editor.jaw.main_spindle_jaws', 'Leuat'),
             fixed_height_policy=True,
         )
         selector_layout.addWidget(self.selector_info_header, 0)
 
         hint = build_selector_hint_label(
-            text=self._t('tool_library.selector.jaw_hint', 'Drag jaws from the catalog to SP1 or SP2.'),
+            text=self._t('work_editor.selector.action.drag_hint', 'Vedä leuat kirjastosta SP1- tai SP2-paikkaan.'),
             multiline=False,
         )
         hint.setProperty('selectorInlineHint', True)
@@ -188,18 +191,18 @@ class JawSelectorLayoutMixin:
 
         self.slot_main = JawAssignmentSlot(
             'main',
-            self._t('jaw_library.selector.sp1_slot', 'SP1 jaw'),
+            self._t('work_editor.selector.slot.main_jaw', 'SP1-leuka'),
             translate=self._t,
         )
         self.slot_sub = JawAssignmentSlot(
             'sub',
-            self._t('jaw_library.selector.sp2_slot', 'SP2 jaw'),
+            self._t('work_editor.selector.slot.sub_jaw', 'SP2-leuka'),
             translate=self._t,
         )
         self.slot_main.setMinimumHeight(70)
         self.slot_sub.setMinimumHeight(70)
-        self.slot_main.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
-        self.slot_sub.set_drop_placeholder_text(self._t('jaw_library.selector.drop_here', 'Drop jaw here'))
+        self.slot_main.set_drop_placeholder_text(self._t('work_editor.selector.action.drop_hint', 'Pudota leuka tähän'))
+        self.slot_sub.set_drop_placeholder_text(self._t('work_editor.selector.action.drop_hint', 'Pudota leuka tähän'))
         self.slot_main.jawDropped.connect(self._on_slot_dropped)
         self.slot_sub.jawDropped.connect(self._on_slot_dropped)
         self.slot_main.slotClicked.connect(self._on_slot_clicked)
@@ -212,7 +215,7 @@ class JawSelectorLayoutMixin:
         style_icon_action_button(
             self.remove_btn,
             TOOL_ICONS_DIR / 'delete.svg',
-            self._t('tool_library.selector.remove', 'Remove'),
+            self._t('work_editor.selector.action.remove', 'Poista'),
             danger=True,
         )
         self.remove_btn.clicked.connect(self._remove_selected)

@@ -89,7 +89,7 @@ class ToolSelectorDialog(
             return
 
         if not self._embedded_mode:
-            self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
+            self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
             self.resize(1180, 720)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
@@ -123,7 +123,7 @@ class ToolSelectorDialog(
         initial_assignment_buckets: dict[str, list[dict]] | None,
     ) -> None:
         if not self._embedded_mode:
-            self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
+            self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
             self.resize(1180, 720)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
