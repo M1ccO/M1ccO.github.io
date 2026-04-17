@@ -18,10 +18,10 @@ def setup_tabs(dialog) -> None:
     """Create and register all dialog tabs."""
     dialog.tabs = QTabWidget(dialog)
 
-    dialog.general_tab = QWidget()
-    dialog.zeros_tab = QWidget()
-    dialog.tools_tab = QWidget()
-    dialog.notes_tab = QWidget()
+    dialog.general_tab = QWidget(dialog.tabs)
+    dialog.zeros_tab = QWidget(dialog.tabs)
+    dialog.tools_tab = QWidget(dialog.tabs)
+    dialog.notes_tab = QWidget(dialog.tabs)
 
     dialog.tabs.addTab(dialog.general_tab, dialog._t("work_editor.tab.general", "General"))
     dialog.tabs.addTab(dialog.zeros_tab, dialog._t("work_editor.tab.zero_points", "Zero Points"))

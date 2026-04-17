@@ -360,7 +360,7 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         coord_combo.setFixedHeight(38)
         coord_combo.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
 
-        work_offset_label = QLabel(dialog._t('work_editor.mc.work_offset', 'Work offset'))
+        work_offset_label = QLabel(dialog._t('work_editor.mc.work_offset', 'Work offset'), card)
         work_offset_label.setProperty('detailFieldKey', True)
         card_layout.addWidget(work_offset_label, 0)
 
@@ -387,11 +387,11 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
             section_grid.addWidget(axis_label, 0, col + 2)
 
             if col == 0:
-                zero_row_label = QLabel(dialog._t('work_editor.mc.zero_points', 'Zero Points'))
+                zero_row_label = QLabel(dialog._t('work_editor.mc.zero_points', 'Zero Points'), card)
                 zero_row_label.setWordWrap(False)
                 section_grid.addWidget(zero_row_label, 1, 0)
 
-            axis_input = QLineEdit(str((op.get('axes') or {}).get(axis, '') or '').strip())
+            axis_input = QLineEdit(str((op.get('axes') or {}).get(axis, '') or '').strip(), card)
             axis_input.setPlaceholderText(_axis_display_label(dialog, axis))
             axis_input.setMinimumWidth(88)
             axis_input.setMaximumWidth(150)
@@ -402,7 +402,7 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
 
         section_grid.addWidget(coord_combo, 1, 1)
 
-        fixtures_row_label = QLabel(dialog._t('work_editor.mc.fixtures', 'Fixtures'))
+        fixtures_row_label = QLabel(dialog._t('work_editor.mc.fixtures', 'Fixtures'), card)
         fixtures_row_label.setWordWrap(False)
         section_grid.addWidget(fixtures_row_label, 2, 0)
 
@@ -425,7 +425,7 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         fixtures_assembly_layout.setSpacing(0)
         fixtures_controls_layout.addWidget(fixtures_assembly_host, 0)
 
-        fixtures_placeholder = QLabel(dialog._t('work_editor.mc.no_fixtures', 'No fixtures selected'))
+        fixtures_placeholder = QLabel(dialog._t('work_editor.mc.no_fixtures', 'No fixtures selected'), fixtures_controls_host)
         fixtures_placeholder.setProperty('detailHint', True)
         fixtures_placeholder.setStyleSheet('font-style: italic; font-weight: 400;')
         fixtures_placeholder.setWordWrap(True)
@@ -498,9 +498,9 @@ def build_machining_center_zeros_tab_ui(
     programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     programs_layout = QFormLayout(programs_group)
     programs_layout.setSpacing(8)
-    dialog.main_program_input = QLineEdit()
+    dialog.main_program_input = QLineEdit(programs_group)
     programs_layout.addRow(dialog._t('setup_page.field.main_program', 'Main program'), dialog.main_program_input)
-    dialog.mc_sub_program_input = QLineEdit()
+    dialog.mc_sub_program_input = QLineEdit(programs_group)
     programs_layout.addRow(dialog._t('work_editor.mc.sub_program', 'Sub-program'), dialog.mc_sub_program_input)
     dialog.mc_operation_count_spin = QSpinBox()
     dialog.mc_operation_count_spin.setMinimum(1)
@@ -508,7 +508,7 @@ def build_machining_center_zeros_tab_ui(
     dialog.mc_operation_count_spin.setValue(1)
     programs_layout.addRow(dialog._t('work_editor.mc.operation_count', 'Operations'), dialog.mc_operation_count_spin)
 
-    dialog.mc_select_fixtures_btn = QPushButton(dialog._t('work_editor.mc.select_fixtures', 'SELECT FIXTURES'))
+    dialog.mc_select_fixtures_btn = QPushButton(dialog._t('work_editor.mc.select_fixtures', 'SELECT FIXTURES'), programs_group)
     dialog.mc_select_fixtures_btn.setProperty('panelActionButton', True)
     dialog.mc_select_fixtures_btn.setMinimumHeight(34)
     dialog.mc_select_fixtures_btn.clicked.connect(lambda _checked=False: dialog._open_fixture_selector())
@@ -518,14 +518,14 @@ def build_machining_center_zeros_tab_ui(
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QScrollArea.NoFrame)
 
-    content = QWidget()
+    content = QWidget(scroll)
     content.setProperty('zeroPointsSurface', True)
     content_layout = QVBoxLayout(content)
     content_layout.setContentsMargins(0, 0, 0, 0)
     content_layout.setSpacing(12)
     content_layout.addWidget(programs_group, 0)
 
-    host = QWidget()
+    host = QWidget(content)
     dialog._mc_operations_layout = QVBoxLayout(host)
     dialog._mc_operations_layout.setContentsMargins(0, 0, 0, 0)
     dialog._mc_operations_layout.setSpacing(10)
@@ -655,3 +655,5 @@ def apply_fixture_selection_to_operation(dialog: Any, operation_key: str, select
     op['selected_fixture_part'] = current_selected if current_selected in part_options else (part_options[0] if part_options else '')
     _refresh_operation_fixture_summary(dialog, target_key)
     return True
+
+

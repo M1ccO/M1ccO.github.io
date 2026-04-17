@@ -132,16 +132,17 @@ def _build_machining_center_tools_tab_ui(
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)
     shared_actions_layout.setContentsMargins(8, 8, 8, 0)
     shared_actions_layout.setSpacing(8)
+    _sa = dialog.shared_tool_actions
 
-    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"), dialog.tools_tab)
-    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"), dialog.tools_tab)
+    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"), _sa)
+    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"), _sa)
     for btn in (dialog.shared_move_up_btn, dialog.shared_move_down_btn):
         btn.setProperty("panelActionButton", True)
         btn.setMinimumWidth(52)
         btn.setMaximumWidth(64)
         btn.setStyleSheet("font-size: 16px; font-weight: 700;")
 
-    dialog.shared_remove_btn = remove_drop_button_cls()
+    dialog.shared_remove_btn = remove_drop_button_cls(_sa)
     ordered_tool_list_cls._configure_icon_action(
         dialog.shared_remove_btn,
         "delete",
@@ -149,14 +150,14 @@ def _build_machining_center_tools_tab_ui(
         danger=True,
     )
 
-    dialog.shared_comment_btn = QPushButton()
+    dialog.shared_comment_btn = QPushButton(_sa)
     ordered_tool_list_cls._configure_icon_action(
         dialog.shared_comment_btn,
         "comment",
         dialog._t("work_editor.tools.add_comment", "Add Comment"),
     )
 
-    dialog.shared_delete_comment_btn = QPushButton()
+    dialog.shared_delete_comment_btn = QPushButton(_sa)
     ordered_tool_list_cls._configure_icon_action(
         dialog.shared_delete_comment_btn,
         "comment_delete",
@@ -253,12 +254,14 @@ def build_tools_tab_ui(
         )
         return
 
+    _tools_parent = dialog.tools_tab
     layout = QVBoxLayout(dialog.tools_tab)
     layout.setContentsMargins(18, 18, 18, 18)
     layout.setSpacing(12)
 
     dialog.open_tool_selector_btn = QPushButton(
-        dialog._t("work_editor.selector.tools_button", "Select Tools")
+        dialog._t("work_editor.selector.tools_button", "Select Tools"),
+        _tools_parent,
     )
     dialog.open_tool_selector_btn.setProperty("panelActionButton", True)
     dialog.open_tool_selector_btn.setMinimumWidth(280)
@@ -271,23 +274,26 @@ def build_tools_tab_ui(
     toolbar.setSpacing(8)
 
     _is_single_spindle = dialog.machine_profile.spindle_count == 1
-    dialog.op20_tools_checkbox = QCheckBox(
-        dialog._t("work_editor.tools.include_op20", "Include OP20 tools")
-    )
-    apply_shared_checkbox_style(dialog.op20_tools_checkbox, indicator_size=16, min_height=30)
-    dialog.op20_tools_checkbox.setFixedHeight(30)
-    dialog.op20_tools_checkbox.setChecked(getattr(dialog, '_op20_tools_enabled', False))
-    dialog.op20_tools_checkbox.setVisible(_is_single_spindle)
-    left_controls = QWidget()
+    left_controls = QWidget(_tools_parent)
     left_controls_layout = QHBoxLayout(left_controls)
     left_controls_layout.setContentsMargins(0, 0, 0, 0)
     left_controls_layout.setSpacing(10)
     left_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
+    dialog.op20_tools_checkbox = QCheckBox(
+        dialog._t("work_editor.tools.include_op20", "Include OP20 tools"),
+        left_controls,
+    )
+    apply_shared_checkbox_style(dialog.op20_tools_checkbox, indicator_size=16, min_height=30)
+    dialog.op20_tools_checkbox.setFixedHeight(30)
+    dialog.op20_tools_checkbox.setChecked(getattr(dialog, '_op20_tools_enabled', False))
+    dialog.op20_tools_checkbox.setVisible(_is_single_spindle)
+
     left_controls_layout.addWidget(dialog.op20_tools_checkbox, 0)
 
     dialog.print_pots_checkbox = QCheckBox(
-        dialog._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers")
+        dialog._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"),
+        left_controls,
     )
     apply_shared_checkbox_style(dialog.print_pots_checkbox, indicator_size=16, min_height=30)
     dialog.print_pots_checkbox.setFixedHeight(30)
@@ -302,7 +308,7 @@ def build_tools_tab_ui(
     toolbar.addWidget(left_controls, 1)
     toolbar.addWidget(dialog.open_tool_selector_btn, 0, Qt.AlignHCenter)
 
-    right_controls = QWidget()
+    right_controls = QWidget(_tools_parent)
     right_controls_layout = QHBoxLayout(right_controls)
     right_controls_layout.setContentsMargins(0, 0, 0, 0)
     right_controls_layout.setSpacing(0)
@@ -310,7 +316,10 @@ def build_tools_tab_ui(
     right_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     toolbar.addWidget(right_controls, 1)
 
-    dialog.edit_pots_btn = QPushButton(dialog._t("work_editor.tools.edit_pots", "Edit Pots"))
+    dialog.edit_pots_btn = QPushButton(
+        dialog._t("work_editor.tools.edit_pots", "Edit Pots"),
+        right_controls,
+    )
     dialog.edit_pots_btn.setProperty("secondaryButton", True)
     dialog.edit_pots_btn.setFixedHeight(30)
     button_metrics = QFontMetrics(dialog.edit_pots_btn.font())
@@ -333,12 +342,12 @@ def build_tools_tab_ui(
 
     layout.addLayout(toolbar)
 
-    tools_scroll = QScrollArea()
+    tools_scroll = QScrollArea(_tools_parent)
     tools_scroll.setProperty("toolIdsScrollArea", True)
     tools_scroll.setWidgetResizable(True)
     tools_scroll.setFrameShape(QFrame.NoFrame)
     tools_scroll.setMinimumHeight(360)
-    tools_scroll_content = QWidget()
+    tools_scroll_content = QWidget(tools_scroll)
     tools_scroll_content.setObjectName("toolIdsScrollContent")
     tools_scroll_content.setAttribute(Qt.WA_StyledBackground, False)
     tools_scroll.viewport().setAutoFillBackground(False)
@@ -358,8 +367,8 @@ def build_tools_tab_ui(
         else:
             _main_lbl = dialog._t("work_editor.tools.main_spindle_tools", "Main spindle tools")
             _sub_lbl  = dialog._t("work_editor.tools.sub_spindle_tools", "Sub spindle tools")
-        main_ordered = ordered_tool_list_cls(_main_lbl, head.key, translate=dialog._t)
-        sub_ordered  = ordered_tool_list_cls(_sub_lbl,  head.key, translate=dialog._t)
+        main_ordered = ordered_tool_list_cls(_main_lbl, head.key, parent=tools_scroll_content, translate=dialog._t)
+        sub_ordered  = ordered_tool_list_cls(_sub_lbl,  head.key, parent=tools_scroll_content, translate=dialog._t)
         main_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         main_ordered.set_list_scrolling_enabled(False)
@@ -398,13 +407,13 @@ def build_tools_tab_ui(
             dialog.head2_ordered = main_ordered
 
         head_title = dialog._head_label(head.key, head.label_default)
-        head_block = QWidget()
+        head_block = QWidget(tools_scroll_content)
         head_block.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         head_block_layout = QVBoxLayout(head_block)
         head_block_layout.setContentsMargins(0, 0, 0, 0)
         head_block_layout.setSpacing(4)
 
-        head_label = QLabel(head_title)
+        head_label = QLabel(head_title, head_block)
         head_label.setStyleSheet("font-size: 20px; font-weight: 700; padding-left: 2px;")
         head_block_layout.addWidget(head_label)
 
@@ -432,15 +441,16 @@ def build_tools_tab_ui(
     shared_actions_layout.setContentsMargins(8, 8, 8, 0)
     shared_actions_layout.setSpacing(8)
 
-    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"))
-    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"))
+    _sa = dialog.shared_tool_actions
+    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"), _sa)
+    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"), _sa)
     for btn in (dialog.shared_move_up_btn, dialog.shared_move_down_btn):
         btn.setProperty("panelActionButton", True)
         btn.setMinimumWidth(52)
         btn.setMaximumWidth(64)
         btn.setStyleSheet("font-size: 16px; font-weight: 700;")
 
-    dialog.shared_remove_btn = remove_drop_button_cls()
+    dialog.shared_remove_btn = remove_drop_button_cls(_sa)
     ordered_tool_list_cls._configure_icon_action(
         dialog.shared_remove_btn,
         "delete",
@@ -448,14 +458,14 @@ def build_tools_tab_ui(
         danger=True,
     )
 
-    dialog.shared_comment_btn = QPushButton()
+    dialog.shared_comment_btn = QPushButton(_sa)
     ordered_tool_list_cls._configure_icon_action(
         dialog.shared_comment_btn,
         "comment",
         dialog._t("work_editor.tools.add_comment", "Add Comment"),
     )
 
-    dialog.shared_delete_comment_btn = QPushButton()
+    dialog.shared_delete_comment_btn = QPushButton(_sa)
     ordered_tool_list_cls._configure_icon_action(
         dialog.shared_delete_comment_btn,
         "comment_delete",

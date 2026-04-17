@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import traceback
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup
@@ -87,24 +87,12 @@ def _materialize_dialog_hidden(dialog) -> None:
     # first user-visible open does not pay this cost.
     if bool(getattr(dialog, "_startup_materialized_hidden", False)):
         return
-    try:
-        old_pos = dialog.pos()
-    except Exception:
-        old_pos = None
-    try:
-        old_opacity = float(getattr(dialog, "windowOpacity", lambda: 1.0)())
-    except Exception:
-        old_opacity = 1.0
 
-    try:
-        dialog.setWindowOpacity(0.0)
-    except Exception:
-        pass
-    try:
-        dialog.move(-32000, -32000)
-    except Exception:
-        pass
-
+    # Use WA_DontShowOnScreen + WA_ShowWithoutActivating to avoid the focus-stealing
+    # flash that opacity-0 + off-screen positioning still causes on Windows.
+    dialog.setAttribute(Qt.WA_DontShowOnScreen, True)
+    dialog.setAttribute(Qt.WA_ShowWithoutActivating, True)
+    dialog.setUpdatesEnabled(False)
     try:
         dialog.show()
         QCoreApplication.processEvents()
@@ -114,6 +102,9 @@ def _materialize_dialog_hidden(dialog) -> None:
             dialog.hide()
         except Exception:
             pass
+        dialog.setAttribute(Qt.WA_DontShowOnScreen, False)
+        dialog.setAttribute(Qt.WA_ShowWithoutActivating, False)
+        dialog.setUpdatesEnabled(True)
         # Startup surface already paid; skip first visible loading cover.
         try:
             release_cover = getattr(dialog, "_release_startup_cover", None)
@@ -123,15 +114,6 @@ def _materialize_dialog_hidden(dialog) -> None:
                 dialog._startup_cover_active = False
         except Exception:
             dialog._startup_cover_active = False
-        if old_pos is not None:
-            try:
-                dialog.move(old_pos)
-            except Exception:
-                pass
-        try:
-            dialog.setWindowOpacity(old_opacity)
-        except Exception:
-            pass
         dialog._startup_materialized_hidden = True
 
 

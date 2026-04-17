@@ -47,8 +47,10 @@ class ToolSelectorDialog(
         on_submit: Callable[[dict], None],
         on_cancel: Callable[[], None],
         parent=None,
+        embedded_mode: bool = False,
     ):
         super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
+        self._embedded_mode = bool(embedded_mode)
         self.tool_service = tool_service
         self.machine_profile = machine_profile
         self._on_submit = on_submit
@@ -77,7 +79,7 @@ class ToolSelectorDialog(
         self._detached_measurement_filter = None
         self._detached_preview_last_model_key = None
 
-        if self._use_shared_selector_wrapper():
+        if not self._embedded_mode and self._use_shared_selector_wrapper():
             self._init_shared_widget_wrapper(
                 selector_head=selector_head,
                 selector_spindle=selector_spindle,
@@ -86,10 +88,11 @@ class ToolSelectorDialog(
             )
             return
 
-        self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.resize(1180, 720)
-        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
+        if not self._embedded_mode:
+            self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
+            self.setAttribute(Qt.WA_DeleteOnClose, True)
+            self.resize(1180, 720)
+            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -119,10 +122,11 @@ class ToolSelectorDialog(
         initial_assignments: list[dict] | None,
         initial_assignment_buckets: dict[str, list[dict]] | None,
     ) -> None:
-        self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.resize(1180, 720)
-        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
+        if not self._embedded_mode:
+            self.setWindowTitle(self._t('tool_library.selector.header_title', 'Tool Selector'))
+            self.setAttribute(Qt.WA_DeleteOnClose, True)
+            self.resize(1180, 720)
+            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -188,6 +192,7 @@ class ToolSelectorDialog(
         toggle_preview_window(self)
 
     def closeEvent(self, event) -> None:
-        save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
+        if not getattr(self, '_embedded_mode', False):
+            save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
         super().closeEvent(event)
 

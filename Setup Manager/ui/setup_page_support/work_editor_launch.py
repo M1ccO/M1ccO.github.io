@@ -34,29 +34,15 @@ def prime_work_editor_dialog(dialog) -> None:
     if app is not None:
         app.processEvents()
 
-    activate_layout = getattr(dialog.layout(), "activate", None)
-    if callable(activate_layout):
-        activate_layout()
-
-    ensure_surface = getattr(dialog, "_ensure_normal_editor_surface_visible", None)
-    if callable(ensure_surface):
-        ensure_surface()
-
-    ensure_content = getattr(dialog, "_ensure_normal_editor_content_visible", None)
-    if callable(ensure_content):
-        ensure_content()
-
-    warmup_surfaces = getattr(dialog, "_warmup_initial_interaction_surfaces", None)
-    if callable(warmup_surfaces):
-        warmup_surfaces()
-
-    close_popups = getattr(dialog, "_close_transient_combo_popups", None)
-    if callable(close_popups):
-        close_popups()
-
-    update_geometry = getattr(dialog, "updateGeometry", None)
-    if callable(update_geometry):
-        update_geometry()
+    # Build lazy tabs with updates disabled to avoid focus-stealing flashes
+    # on Windows during widget construction.
+    dialog.setUpdatesEnabled(False)
+    try:
+        close_popups = getattr(dialog, "_close_transient_combo_popups", None)
+        if callable(close_popups):
+            close_popups()
+    finally:
+        dialog.setUpdatesEnabled(True)
 
     if app is not None:
         app.processEvents()
@@ -102,10 +88,6 @@ def exec_work_editor_dialog(dialog) -> int:
     if callable(pause_tool_library_preload) and isinstance(preload_host, QWidget):
         pause_tool_library_preload(preload_host)
     trace_event = getattr(preload_host, "_trace_modal_event", None)
-    try:
-        setattr(dialog, "_atomic_open_requested", True)
-    except Exception:
-        pass
     prime_work_editor_dialog(dialog)
     if isinstance(host_geometry, QRect):
         _position_dialog_from_geometry(dialog, host_geometry)

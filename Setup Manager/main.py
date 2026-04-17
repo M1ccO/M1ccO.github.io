@@ -709,14 +709,16 @@ def main():
 
     win.config_switch_requested.connect(_do_live_switch)
 
+    # Close splash before showing main window — an application-modal splash
+    # blocks repaint of the main window and causes a visible startup glitch.
+    splash.close()
+
     win.show()
     if launch_geometry:
         QTimer.singleShot(0, lambda text=launch_geometry: apply_frame_geometry_string(win, text))
         QTimer.singleShot(120, lambda text=launch_geometry: apply_frame_geometry_string(win, text))
     win.raise_()
     win.activateWindow()
-
-    splash.close()
 
     # Shared-DB notice on initial startup for the active config.
     _startup_cfg = machine_config_svc.get_active_config()

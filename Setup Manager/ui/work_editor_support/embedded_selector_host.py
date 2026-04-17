@@ -43,11 +43,21 @@ class WorkEditorSelectorHost(QObject):
 
         widget.setVisible(False)
         layout = self._mount_container.layout()
-        layout.addWidget(widget)
 
-        if self._auto_close_on_widget_signals:
-            self._connect_selector_signals(widget)
-        self._enter_selector_mode()
+        # Suppress updates while mounting to avoid focus-stealing flashes.
+        dialog = self._dialog
+        had_updates = True
+        if hasattr(dialog, "setUpdatesEnabled"):
+            had_updates = dialog.updatesEnabled()
+            dialog.setUpdatesEnabled(False)
+        try:
+            layout.addWidget(widget)
+            if self._auto_close_on_widget_signals:
+                self._connect_selector_signals(widget)
+            self._enter_selector_mode()
+        finally:
+            if hasattr(dialog, "setUpdatesEnabled"):
+                dialog.setUpdatesEnabled(had_updates)
         widget.setVisible(True)
 
     def close_active_widget(self) -> None:
@@ -55,13 +65,23 @@ class WorkEditorSelectorHost(QObject):
         if widget is None:
             return
 
-        layout = self._mount_container.layout()
-        if layout is not None:
-            layout.removeWidget(widget)
-        widget.setParent(None)
-        widget.deleteLater()
-        self._active_widget = None
-        self._exit_selector_mode()
+        dialog = self._dialog
+        had_updates = True
+        if hasattr(dialog, "setUpdatesEnabled"):
+            had_updates = dialog.updatesEnabled()
+            dialog.setUpdatesEnabled(False)
+        try:
+            layout = self._mount_container.layout()
+            if layout is not None:
+                layout.removeWidget(widget)
+            widget.setVisible(False)
+            widget.setParent(None)
+            widget.deleteLater()
+            self._active_widget = None
+            self._exit_selector_mode()
+        finally:
+            if hasattr(dialog, "setUpdatesEnabled"):
+                dialog.setUpdatesEnabled(had_updates)
 
     def _connect_selector_signals(self, widget: QWidget) -> None:
         submitted = getattr(widget, "submitted", None)

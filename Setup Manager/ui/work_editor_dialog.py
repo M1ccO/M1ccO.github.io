@@ -1,6 +1,5 @@
 import logging
 from pathlib import Path
-import time
 from typing import Callable
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer
@@ -97,7 +96,6 @@ from ui.work_editor_support import (
     build_tool_selector_request,
     build_embedded_selector_parity_widget,
     release_tool_library_namespace_aliases,
-    warmup_embedded_selector_runtime,
     make_zero_axis_input,
     set_coord_combo,
     set_zero_xy_visibility,
@@ -169,7 +167,6 @@ class WorkEditorDialog(QDialog):
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
         self._drawings_enabled = drawings_enabled
-        self._startup_popup_guard_active = False
         try:
             prefs_service = UiPreferencesService(SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True)
             _prefs_data = prefs_service.load()
@@ -246,35 +243,19 @@ class WorkEditorDialog(QDialog):
         self._selector_session_id: int | None = None
         self._selector_session_phase = "idle"
         self._host_visual_style_applied = False
-        self._startup_cover_active = True
-        self._startup_cover_paint_count = 0
-        self._startup_cover_shown_at = 0.0
-        self._startup_cover_release_scheduled = False
-        self._atomic_open_requested = False
-        self._atomic_open_reveal_scheduled = False
-        self._startup_cover: QWidget | None = None
-        self._startup_cover_label: QLabel | None = None
-        self._zeros_tab_pending_build = not is_machining_center(self.machine_profile)
+        self._zeros_tab_pending_build = True
         self._zeros_tab_built = False
-        self._tools_tab_pending_build = not is_machining_center(self.machine_profile)
+        self._tools_tab_pending_build = True
         self._tools_tab_built = False
-        self._interaction_surfaces_warmed = False
         self._selector_restore_state: dict | None = None
         self._embedded_selector_host: WorkEditorSelectorHost | None = None
         self._raw_part_combo_popup_allowed = False
-        self._combo_popup_windows: list[QWidget] = []
         self._raw_part_combo_popup_window: QWidget | None = None
 
         setup_tabs(self)
         self.tabs.currentChanged.connect(self._on_tabs_current_changed)
 
         self._build_general_tab()
-        if not self._zeros_tab_pending_build:
-            self._build_zeros_tab()
-            self._zeros_tab_built = True
-        if not self._tools_tab_pending_build:
-            self._build_tools_tab()
-            self._tools_tab_built = True
         self._build_notes_tab()
 
         setup_button_row(self)
@@ -295,79 +276,9 @@ class WorkEditorDialog(QDialog):
         self._load_work()
 
         finalize_ui(self)
-        self._build_startup_cover()
         self._close_transient_combo_popups()
         self._setup_raw_part_combo_popup_guard()
-        self._cache_combo_popup_windows()
         self._install_local_event_filters()
-        self._ensure_normal_editor_surface_visible()
-
-    def _build_startup_cover(self) -> None:
-        cover = QWidget(self)
-        cover.setObjectName("workEditorStartupCover")
-        cover.setAttribute(Qt.WA_StyledBackground, True)
-        cover.hide()
-
-        layout = QVBoxLayout(cover)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(12)
-        layout.addStretch(1)
-
-        label = QLabel(self._t("work_editor.loading.body", "Loading editor..."), cover)
-        label.setAlignment(Qt.AlignCenter)
-        label.setProperty("sectionTitle", True)
-        layout.addWidget(label, 0, Qt.AlignCenter)
-        layout.addStretch(1)
-
-        self._startup_cover = cover
-        self._startup_cover_label = label
-
-    def _sync_startup_cover_geometry(self) -> None:
-        cover = self._startup_cover
-        if isinstance(cover, QWidget):
-            cover.setGeometry(self.rect())
-
-    def _show_startup_cover(self) -> None:
-        cover = self._startup_cover
-        if not self._startup_cover_active or not isinstance(cover, QWidget):
-            return
-        self._startup_cover_paint_count = 0
-        self._startup_cover_shown_at = time.monotonic()
-        self._startup_cover_release_scheduled = False
-        cover.setFont(self.font())
-        palette = cover.palette()
-        palette.setColor(cover.backgroundRole(), self.palette().color(self.backgroundRole()))
-        cover.setPalette(palette)
-        cover.setAutoFillBackground(True)
-        self._sync_startup_cover_geometry()
-        cover.show()
-        cover.raise_()
-
-    def _release_startup_cover(self) -> None:
-        if not self._startup_cover_active:
-            return
-        self._startup_cover_active = False
-        self._startup_cover_release_scheduled = False
-        cover = self._startup_cover
-        if isinstance(cover, QWidget):
-            cover.hide()
-
-    def _schedule_startup_cover_release_check(self) -> None:
-        if self._startup_cover_release_scheduled:
-            return
-        self._startup_cover_release_scheduled = True
-
-        def _check_release() -> None:
-            self._startup_cover_release_scheduled = False
-            if not self._startup_cover_active:
-                return
-            elapsed_ms = int(max(0.0, time.monotonic() - float(getattr(self, "_startup_cover_shown_at", 0.0))) * 1000)
-            if self._startup_cover_paint_count >= 3 and elapsed_ms >= 420:
-                self._release_startup_cover()
-            else:
-                self._schedule_startup_cover_release_check()
-
-        QTimer.singleShot(120, _check_release)
 
     def _close_transient_combo_popups(self) -> None:
         """Defensively close any combo popups opened during startup wiring."""
@@ -377,22 +288,6 @@ class WorkEditorDialog(QDialog):
             except Exception:
                 pass
 
-    def _cache_combo_popup_windows(self) -> None:
-        windows: list[QWidget] = []
-        for combo in self.findChildren(QComboBox):
-            try:
-                popup_window = combo.view().window()
-            except Exception:
-                popup_window = None
-            if (
-                isinstance(popup_window, QWidget)
-                and self._is_true_popup_window(popup_window)
-                and popup_window not in windows
-            ):
-                windows.append(popup_window)
-                popup_window.installEventFilter(self)
-        self._combo_popup_windows = windows
-
     @staticmethod
     def _is_true_popup_window(widget: QWidget | None) -> bool:
         if not isinstance(widget, QWidget):
@@ -401,27 +296,8 @@ class WorkEditorDialog(QDialog):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        if bool(getattr(self, "_atomic_open_requested", False)):
-            try:
-                self.setWindowOpacity(0.0)
-            except Exception:
-                pass
-            self._atomic_open_requested = False
-            if not self._atomic_open_reveal_scheduled:
-                self._atomic_open_reveal_scheduled = True
-                QTimer.singleShot(260, self._finish_atomic_open_reveal)
         if not self._host_visual_style_applied:
             self._apply_host_visual_style()
-        self._ensure_normal_editor_surface_visible()
-        self._ensure_normal_editor_content_visible()
-        self._show_startup_cover()
-
-    def _finish_atomic_open_reveal(self) -> None:
-        self._atomic_open_reveal_scheduled = False
-        try:
-            self.setWindowOpacity(1.0)
-        except Exception:
-            pass
 
     def _on_tabs_current_changed(self, index: int) -> None:
         if index == self.tabs.indexOf(self.zeros_tab):
@@ -479,13 +355,19 @@ class WorkEditorDialog(QDialog):
     def _ensure_zeros_tab_ready(self) -> None:
         if self._zeros_tab_built:
             return
-        self._build_zeros_tab()
-        self._zeros_tab_built = True
-        self._zeros_tab_pending_build = False
-        self._apply_work_payload_to_zeros_tab()
-        finalize_ui(self)
-        self._cache_combo_popup_windows()
-        self._install_local_event_filters()
+        was_enabled = self.updatesEnabled()
+        if was_enabled:
+            self.setUpdatesEnabled(False)
+        try:
+            self._build_zeros_tab()
+            self._zeros_tab_built = True
+            self._zeros_tab_pending_build = False
+            self._apply_work_payload_to_zeros_tab()
+            finalize_ui(self)
+            self._install_local_event_filters()
+        finally:
+            if was_enabled:
+                self.setUpdatesEnabled(True)
 
     def _apply_work_payload_to_tools_tab(self) -> None:
         if not self.work:
@@ -503,33 +385,25 @@ class WorkEditorDialog(QDialog):
         if self._tools_tab_built:
             return
         self._ensure_zeros_tab_ready()
-        self._build_tools_tab()
-        self._tools_tab_built = True
-        self._tools_tab_pending_build = False
-        self._apply_work_payload_to_tools_tab()
-        for head_key in self._head_profiles.keys():
-            self._refresh_tool_head_widgets(head_key)
-        self._sync_tool_head_view()
-        finalize_ui(self)
-        self._cache_combo_popup_windows()
-        self._install_local_event_filters()
-
-    def _warmup_initial_interaction_surfaces(self) -> None:
-        if self._interaction_surfaces_warmed:
-            return
-        self._interaction_surfaces_warmed = True
-        if not self._zeros_tab_built:
-            self._ensure_zeros_tab_ready()
-        if not self._tools_tab_built:
-            self._ensure_tools_tab_ready()
+        was_enabled = self.updatesEnabled()
+        if was_enabled:
+            self.setUpdatesEnabled(False)
         try:
-            warmup_embedded_selector_runtime(self)
-        except Exception:
-            pass
+            self._build_tools_tab()
+            self._tools_tab_built = True
+            self._tools_tab_pending_build = False
+            self._apply_work_payload_to_tools_tab()
+            for head_key in self._head_profiles.keys():
+                self._refresh_tool_head_widgets(head_key)
+            self._sync_tool_head_view()
+            finalize_ui(self)
+            self._install_local_event_filters()
+        finally:
+            if was_enabled:
+                self.setUpdatesEnabled(True)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._sync_startup_cover_geometry()
 
     def _resolve_style_host(self) -> QWidget | None:
         explicit_host = getattr(self, "_explicit_style_host", None)
@@ -609,84 +483,6 @@ class WorkEditorDialog(QDialog):
             self.style().polish(self)
             self._host_visual_style_applied = True
 
-    def _ensure_normal_editor_surface_visible(self) -> None:
-        """Guard against accidental selector-page visibility without active selector widget."""
-        root_stack = getattr(self, "_root_stack", None)
-        normal_page = getattr(self, "_normal_page", None)
-        if not isinstance(root_stack, QStackedWidget) or normal_page is None:
-            return
-
-        host = self._embedded_selector_host
-        active_selector_widget = host.active_widget if host is not None else None
-        if isinstance(active_selector_widget, QWidget):
-            selector_has_content = active_selector_widget.layout() is not None or active_selector_widget.findChildren(QWidget)
-            if not selector_has_content:
-                self._LOGGER.warning("work_editor.surface_guard closing invalid embedded selector surface")
-                host.close_active_widget()
-                active_selector_widget = None
-
-        if active_selector_widget is None:
-            if self._selector_mode_active or self._selector_session_id is not None:
-                self._LOGGER.warning("work_editor.surface_guard clearing abandoned selector session")
-                self._exit_selector_mode()
-            if root_stack.currentWidget() is not normal_page:
-                self._LOGGER.warning("work_editor.surface_guard restoring normal page from unexpected selector page state")
-                root_stack.setCurrentWidget(normal_page)
-
-    def _ensure_normal_editor_content_visible(self) -> None:
-        """Self-heal missing normal-page content when selector mode is not active."""
-        root_stack = getattr(self, "_root_stack", None)
-        normal_page = getattr(self, "_normal_page", None)
-        tabs = getattr(self, "tabs", None)
-        buttons = getattr(self, "_dialog_buttons", None)
-        if not isinstance(root_stack, QStackedWidget) or normal_page is None:
-            return
-
-        host = self._embedded_selector_host
-        active_selector_widget = host.active_widget if host is not None else None
-        if active_selector_widget is not None:
-            return
-
-        if root_stack.currentWidget() is not normal_page:
-            root_stack.setCurrentWidget(normal_page)
-
-        normal_layout = normal_page.layout()
-        if normal_layout is None:
-            normal_layout = QVBoxLayout(normal_page)
-            normal_layout.setContentsMargins(0, 0, 0, 0)
-            normal_layout.setSpacing(10)
-
-        if isinstance(tabs, QTabWidget):
-            if tabs.parent() is not normal_page:
-                tabs.setParent(normal_page)
-            if normal_layout.indexOf(tabs) < 0:
-                normal_layout.insertWidget(0, tabs, 1)
-            tabs.setVisible(True)
-
-        if isinstance(buttons, QDialogButtonBox):
-            if buttons.parent() is not normal_page:
-                buttons.setParent(normal_page)
-            if normal_layout.indexOf(buttons) < 0:
-                normal_layout.addWidget(buttons)
-            buttons.setVisible(True)
-
-        normal_page.setVisible(True)
-        root_stack.setVisible(True)
-        self._LOGGER.info(
-            "work_editor.surface_state selector_mode=%s active_selector=%s root_index=%s tabs_visible=%s buttons_visible=%s",
-            self._selector_mode_active,
-            bool(active_selector_widget),
-            root_stack.currentIndex(),
-            bool(isinstance(tabs, QTabWidget) and tabs.isVisible()),
-            bool(isinstance(buttons, QDialogButtonBox) and buttons.isVisible()),
-        )
-
-    def _release_startup_popup_guard(self, *, reason: str) -> None:
-        if not self._startup_popup_guard_active:
-            return
-        self._close_transient_combo_popups()
-        self._startup_popup_guard_active = False
-
     def _setup_raw_part_combo_popup_guard(self) -> None:
         """Allow RAW PART dropdown popup only after explicit user interaction."""
         combo = getattr(self, "raw_part_kind_combo", None)
@@ -698,6 +494,7 @@ class WorkEditorDialog(QDialog):
             popup_window = None
         if isinstance(popup_window, QWidget) and self._is_true_popup_window(popup_window):
             self._raw_part_combo_popup_window = popup_window
+            popup_window.installEventFilter(self)
 
     def _resolve_selector_transport_mode(self) -> str:
         """Selectors are embedded-only after parity migration completion."""
@@ -797,24 +594,40 @@ class WorkEditorDialog(QDialog):
             self._LOGGER.warning("work_editor.selector_mode ignored because no selector request is active")
             return
 
-        self._selector_restore_state = self._capture_selector_restore_state()
-        self._selector_mode_active = True
-        if self._selector_session_id is not None:
-            self._selector_session_phase = "active"
-        self._root_stack.setCurrentWidget(self._selector_page)
-        self._expand_for_selector_mode()
+        # Batch page switch + resize to avoid intermediate repaint flash.
+        was_enabled = self.updatesEnabled()
+        if was_enabled:
+            self.setUpdatesEnabled(False)
+        try:
+            self._selector_restore_state = self._capture_selector_restore_state()
+            self._selector_mode_active = True
+            if self._selector_session_id is not None:
+                self._selector_session_phase = "active"
+            self._root_stack.setCurrentWidget(self._selector_page)
+            self._expand_for_selector_mode()
+        finally:
+            if was_enabled:
+                self.setUpdatesEnabled(True)
 
     def _exit_selector_mode(self) -> None:
         session_id = self._selector_session_id
         session_phase = self._selector_session_phase
-        if self._selector_mode_active and isinstance(getattr(self, "_root_stack", None), QStackedWidget):
-            self._root_stack.setCurrentWidget(self._normal_page)
 
-        if self._selector_mode_active:
-            self._restore_from_selector_state()
-        self._selector_restore_state = None
-        self._selector_mode_active = False
-        self._clear_selector_session_request(session_id)
+        was_enabled = self.updatesEnabled()
+        if was_enabled:
+            self.setUpdatesEnabled(False)
+        try:
+            if self._selector_mode_active and isinstance(getattr(self, "_root_stack", None), QStackedWidget):
+                self._root_stack.setCurrentWidget(self._normal_page)
+
+            if self._selector_mode_active:
+                self._restore_from_selector_state()
+            self._selector_restore_state = None
+            self._selector_mode_active = False
+            self._clear_selector_session_request(session_id)
+        finally:
+            if was_enabled:
+                self.setUpdatesEnabled(True)
         if session_id is not None:
             self._log_selector_event("session.closed", session_id=session_id, previous_phase=session_phase)
 
@@ -843,45 +656,6 @@ class WorkEditorDialog(QDialog):
             widget.installEventFilter(self)
 
     def eventFilter(self, obj, event):
-        if obj is self and event.type() in (
-            QEvent.Paint,
-            QEvent.Resize,
-            QEvent.Move,
-            QEvent.LayoutRequest,
-            QEvent.UpdateRequest,
-            QEvent.PolishRequest,
-            QEvent.WindowActivate,
-            QEvent.WindowDeactivate,
-        ):
-            if event.type() == QEvent.Paint and self._startup_cover_active:
-                self._startup_cover_paint_count += 1
-                elapsed_ms = int(max(0.0, time.monotonic() - float(getattr(self, "_startup_cover_shown_at", 0.0))) * 1000)
-                if self._startup_cover_paint_count >= 3 and elapsed_ms >= 420:
-                    QTimer.singleShot(0, self._release_startup_cover)
-                else:
-                    self._schedule_startup_cover_release_check()
-        if (
-            isinstance(obj, QWidget)
-            and event.type() == QEvent.Show
-            and self._startup_popup_guard_active
-            and self._is_true_popup_window(obj)
-        ):
-            obj.hide()
-            return True
-
-        if (
-            isinstance(obj, QWidget)
-            and event.type() == QEvent.Show
-            and self._startup_popup_guard_active
-            and obj in self._combo_popup_windows
-        ):
-            obj.hide()
-            return True
-
-        if self._startup_popup_guard_active and event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress):
-            if isinstance(obj, QWidget) and (obj is self or self.isAncestorOf(obj)):
-                self._release_startup_popup_guard(reason=event.type().name)
-
         combo = getattr(self, "raw_part_kind_combo", None)
         if isinstance(combo, QComboBox):
             if obj is combo and event.type() in (QEvent.MouseButtonPress, QEvent.KeyPress):

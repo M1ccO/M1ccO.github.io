@@ -268,12 +268,14 @@ class FixtureSelectorDialog(SelectorDialogBase):
         on_submit: Callable[[dict], None],
         on_cancel: Callable[[], None],
         parent=None,
+        embedded_mode: bool = False,
     ):
         super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
+        self._embedded_mode = bool(embedded_mode)
         self.fixture_service = fixture_service
         self._on_submit = on_submit
 
-        if self._use_shared_selector_wrapper():
+        if not self._embedded_mode and self._use_shared_selector_wrapper():
             self._init_shared_widget_wrapper(
                 initial_assignments=initial_assignments,
                 initial_assignment_buckets=initial_assignment_buckets,
@@ -330,10 +332,11 @@ class FixtureSelectorDialog(SelectorDialogBase):
         ]
         self._selected_ids = {self._fixture_key(item) for item in self._selected_items if self._fixture_key(item)}
 
-        self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.resize(1180, 720)
-        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
+        if not self._embedded_mode:
+            self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
+            self.setAttribute(Qt.WA_DeleteOnClose, True)
+            self.resize(1180, 720)
+            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -360,10 +363,11 @@ class FixtureSelectorDialog(SelectorDialogBase):
         initial_assignment_buckets: dict[str, list[dict]] | None,
         initial_target_key: str,
     ) -> None:
-        self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.resize(1180, 720)
-        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
+        if not self._embedded_mode:
+            self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
+            self.setAttribute(Qt.WA_DeleteOnClose, True)
+            self.resize(1180, 720)
+            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -381,7 +385,8 @@ class FixtureSelectorDialog(SelectorDialogBase):
         root.addWidget(widget, 1)
 
     def closeEvent(self, event) -> None:
-        save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
+        if not getattr(self, '_embedded_mode', False):
+            save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
         super().closeEvent(event)
 
     def _build_toolbar(self, root: QVBoxLayout) -> None:

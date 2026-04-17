@@ -2873,3 +2873,72 @@ sqlite3.OperationalError: no such table: tools
 2026-04-16 20:38:42,979 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
 2026-04-16 20:43:18,514 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
 2026-04-16 20:43:18,554 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:24:54,719 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:24:54,764 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:32:19,202 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:32:19,248 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:38:04,595 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:38:04,634 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:41:15,179 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:41:15,205 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:43:31,303 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:43:31,331 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:50:03,461 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:50:03,488 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 17:55:13,353 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 17:55:13,378 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:02:20,113 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:02:29,092 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:02:37,140 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:02:54,008 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:03:51,654 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:03:51,681 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:09:19,072 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:09:19,098 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:11:10,053 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:11:10,079 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:14:02,968 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:14:02,994 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:15:57,635 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:15:57,662 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:17:15,466 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:21:46,177 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:21:46,203 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:21:46,203 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-17 18:21:46,203 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-17 18:21:46,214 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:21:46,215 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:21:46,216 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:21:46,220 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:21:46,221 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:21:46,224 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:21:50,448 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 18:21:50,449 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-17 18:23:30,677 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:26:21,439 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:26:38,438 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:27:39,416 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:27:39,442 ui.work_editor_dialog INFO work_editor.surface_state selector_mode=False active_selector=False root_index=0 tabs_visible=False buttons_visible=False
+2026-04-17 18:27:39,442 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-17 18:27:39,443 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 15, 'dialog_visible': False}
+2026-04-17 18:27:39,455 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:27:39,456 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:27:39,457 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:27:39,461 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:27:39,462 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:27:39,465 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:27:42,681 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 18:27:42,681 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-17 18:29:29,709 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-17 18:30:17,097 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-17 18:30:17,122 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-17 18:30:17,122 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-17 18:30:17,134 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:30:17,134 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:30:17,135 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:30:17,140 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:30:17,141 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:30:17,144 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-17 18:30:20,658 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-17 18:30:20,658 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-17 18:38:38,901 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested

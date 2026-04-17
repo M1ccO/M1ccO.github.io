@@ -38,8 +38,10 @@ class JawSelectorDialog(
         on_submit: Callable[[dict], None],
         on_cancel: Callable[[], None],
         parent=None,
+        embedded_mode: bool = False,
     ):
         super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
+        self._embedded_mode = bool(embedded_mode)
         self.jaw_service = jaw_service
         self._on_submit = on_submit
         self.machine_profile = machine_profile
@@ -61,7 +63,7 @@ class JawSelectorDialog(
         self._measurement_toggle_btn = None
         self._close_preview_shortcut = None
 
-        if self._use_shared_selector_wrapper():
+        if not self._embedded_mode and self._use_shared_selector_wrapper():
             self._init_shared_widget_wrapper(
                 selector_spindle=selector_spindle,
                 initial_assignments=initial_assignments,
@@ -70,10 +72,11 @@ class JawSelectorDialog(
 
         self._load_initial_assignments(initial_assignments)
 
-        self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.resize(1180, 720)
-        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
+        if not self._embedded_mode:
+            self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+            self.setAttribute(Qt.WA_DeleteOnClose, True)
+            self.resize(1180, 720)
+            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -100,10 +103,11 @@ class JawSelectorDialog(
         selector_spindle: str,
         initial_assignments: list[dict] | None,
     ) -> None:
-        self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
-        self.setAttribute(Qt.WA_DeleteOnClose, True)
-        self.resize(1180, 720)
-        restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
+        if not self._embedded_mode:
+            self.setWindowTitle(self._t('jaw_library.selector.header_title', 'Jaw Selector'))
+            self.setAttribute(Qt.WA_DeleteOnClose, True)
+            self.resize(1180, 720)
+            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
         root = QVBoxLayout(self)
         root.setContentsMargins(8, 8, 8, 8)
@@ -157,6 +161,7 @@ class JawSelectorDialog(
         toggle_preview_window(self)
 
     def closeEvent(self, event) -> None:
-        save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
+        if not getattr(self, '_embedded_mode', False):
+            save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
         super().closeEvent(event)
 

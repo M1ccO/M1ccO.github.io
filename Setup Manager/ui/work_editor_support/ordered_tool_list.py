@@ -188,13 +188,13 @@ class WorkEditorOrderedToolList(QWidget):
         list_panel_layout.addWidget(self.tool_list, 1)
         layout.addWidget(list_panel, 1)
 
-        self.controls_bar = QWidget()
+        self.controls_bar = QWidget(self)
         btn_row = QHBoxLayout(self.controls_bar)
         btn_row.setContentsMargins(0, 0, 0, 0)
         btn_row.setSpacing(8)
-        self.move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "▲"))
-        self.move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "▼"))
-        self.remove_btn = QPushButton(self._t("work_editor.tools.remove", "Remove"))
+        self.move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "▲"), self)
+        self.move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "▼"), self)
+        self.remove_btn = QPushButton(self._t("work_editor.tools.remove", "Remove"), self)
         for btn in (self.move_up_btn, self.move_down_btn, self.remove_btn):
             btn.setProperty("panelActionButton", True)
             btn.setMinimumWidth(64)
@@ -788,3 +788,4 @@ class WorkEditorOrderedToolList(QWidget):
                         pass
                 assignments.append(entry)
         return assignments
+

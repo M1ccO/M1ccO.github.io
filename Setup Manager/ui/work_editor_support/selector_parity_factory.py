@@ -275,7 +275,8 @@ def build_embedded_selector_parity_widget(
             initial_assignment_buckets=initial_assignment_buckets,
             on_submit=on_submit,
             on_cancel=on_cancel,
-            parent=mount_container or dialog,
+            parent=None,
+            embedded_mode=True,
         )
         if not hasattr(widget, "_refresh_elided_group_title"):
             setattr(widget, "_refresh_elided_group_title", lambda *_args, **_kwargs: None)
@@ -290,7 +291,8 @@ def build_embedded_selector_parity_widget(
             initial_assignments=initial_assignments,
             on_submit=on_submit,
             on_cancel=on_cancel,
-            parent=mount_container or dialog,
+            parent=None,
+            embedded_mode=True,
         )
     else:
         from tools_and_jaws_library.ui.selectors.fixture_selector_dialog import FixtureSelectorDialog
@@ -303,17 +305,19 @@ def build_embedded_selector_parity_widget(
             initial_target_key=str((follow_up or {}).get("target_key") or ""),
             on_submit=on_submit,
             on_cancel=on_cancel,
-            parent=mount_container or dialog,
+            parent=None,
+            embedded_mode=True,
         )
 
     # Force child-widget hosting to avoid transient top-level QDialog flashes.
-    widget.setParent(mount_container or dialog, Qt.Widget)
-    widget.setWindowFlag(Qt.Dialog, False)
-    widget.setWindowFlag(Qt.Window, False)
-    widget.setWindowFlag(Qt.Popup, False)
-    widget.setWindowFlag(Qt.SubWindow, False)
+    # Use a single setWindowFlags call — individual setWindowFlag calls each
+    # trigger a re-parent cycle that can briefly flash a top-level window.
+    parent_widget = mount_container or dialog
     widget.setWindowFlags(Qt.Widget)
+    widget.setParent(parent_widget)
     widget.setWindowModality(Qt.NonModal)
+    widget.setAttribute(Qt.WA_DontShowOnScreen, True)
     widget.setVisible(False)
+    widget.setAttribute(Qt.WA_DontShowOnScreen, False)
     _apply_embedded_selector_style(widget)
     return widget

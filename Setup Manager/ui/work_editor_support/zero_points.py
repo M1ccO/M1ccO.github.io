@@ -6,8 +6,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QBoxLayout, QComboBox, QGridLayout, QGroupBox, QLabel, QLineEdit, QSizePolicy, QVBoxLayout, QWidget
 
 
-def make_zero_axis_input(dialog: Any, value_attr_name: str, axis: str) -> QLineEdit:
-    value_input = QLineEdit()
+def make_zero_axis_input(dialog: Any, value_attr_name: str, axis: str, parent=None) -> QLineEdit:
+    value_input = QLineEdit(parent)
     value_input.setPlaceholderText(axis.upper())
     value_input.setMinimumWidth(88)
     setattr(dialog, value_attr_name, value_input)
@@ -91,18 +91,18 @@ def build_spindle_zero_group(
     dialog._zero_point_grids.append(grid)
     dialog._zero_grids_with_groups.append((grid, group))
 
-    spacer = QLabel("")
+    spacer = QLabel("", grid_host)
     spacer.setMinimumWidth(56)
     grid.addWidget(spacer, 0, 0)
     dialog._zero_row_spacers.append(spacer)
 
-    coord_header = QLabel("WCS")
+    coord_header = QLabel("WCS", grid_host)
     coord_header.setProperty("detailFieldKey", True)
     coord_header.setAlignment(Qt.AlignCenter)
     grid.addWidget(coord_header, 0, 1)
 
     for col, axis in enumerate(dialog._zero_axes, start=2):
-        axis_header = QLabel(axis.upper())
+        axis_header = QLabel(axis.upper(), grid_host)
         axis_header.setProperty("detailFieldKey", True)
         axis_header.setAlignment(Qt.AlignCenter)
         grid.addWidget(axis_header, 0, col)
@@ -111,12 +111,12 @@ def build_spindle_zero_group(
     for row, head in enumerate(dialog.machine_profile.heads, start=1):
         head_key = head.key
         head_prefix = head_key.lower()
-        head_label = QLabel(dialog._t(f"setup_page.section.{head_key.lower()}", head_key))
+        head_label = QLabel(dialog._t(f"setup_page.section.{head_key.lower()}", head_key), grid_host)
         head_label.setWordWrap(False)
         grid.addWidget(head_label, row, 0)
 
         combo_attr_name = f"{head_prefix}_{spindle_key}_coord_combo"
-        coord_combo = QComboBox(dialog)
+        coord_combo = QComboBox(grid_host)
         coord_combo.addItems(list(work_coordinates))
         coord_combo.setProperty("modernDropdown", True)
         coord_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -129,7 +129,7 @@ def build_spindle_zero_group(
 
         for col, axis in enumerate(dialog._zero_axes, start=2):
             value_attr_name = f"{head_prefix}_{spindle_key}_{axis}_input"
-            value_input = make_zero_axis_input(dialog, value_attr_name, axis)
+            value_input = make_zero_axis_input(dialog, value_attr_name, axis, parent=grid_host)
             grid.addWidget(value_input, row, col)
             dialog._zero_axis_widgets[axis].append(value_input)
             dialog._zero_axis_inputs[axis].append(value_input)

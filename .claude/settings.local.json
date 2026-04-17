@@ -32,7 +32,15 @@
       "Bash(.venv/Scripts/python.exe tests/test_shared_regressions.py)",
       "Bash(.venv/Scripts/python.exe -c ':*)",
       "Bash(PYTHONPATH=\".:Setup Manager\" .venv/Scripts/python.exe tests/test_shared_regressions.py)",
-      "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, '.'\\); from shared.services.localization_service import LocalizationService; print\\('ok'\\)\")"
+      "Bash(.venv/Scripts/python.exe -c \"import sys; sys.path.insert\\(0, '.'\\); from shared.services.localization_service import LocalizationService; print\\('ok'\\)\")",
+      "Bash(grep -n \"class SelectorDialogBase\" \"Tools and jaws Library/ui/selectors/\"*.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('ui/work_editor_dialog.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('ui/work_editor_support/selector_parity_factory.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('ui/work_editor_support/embedded_selector_host.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('ui/setup_page_support/work_editor_launch.py', encoding='utf-8'\\).read\\(\\)\\); print\\('OK'\\)\")",
+      "Bash(grep -n \"def build_tools_tab_ui\" \"Setup Manager/ui/work_editor_support/\"*.py)",
+      "Bash(grep -n \"def build_spindle_zero_group\\\\|def make_zero_axis_input\" \"Setup Manager/ui/work_editor_support/\"*.py)",
+      "Bash(grep -n \"class WorkEditorJawSelectorPanel\\\\|class WorkEditorOrderedToolList\" \"Setup Manager/ui/work_editor_support/\"*.py)"
     ]
   }
 }

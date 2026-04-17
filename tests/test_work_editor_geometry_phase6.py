@@ -162,25 +162,5 @@ class TestWorkEditorGeometryPhase6(unittest.TestCase):
         self.assertIn("workEditorDialog", dlg.styleSheet())
         self.assertTrue(dlg._host_visual_style_applied)
 
-    def test_release_startup_popup_guard_noops_when_guard_inactive(self):
-        dlg = _GeometryDialog()
-
-        WorkEditorDialog._release_startup_popup_guard(dlg, reason="MouseButtonPress")
-
-        self.assertFalse(dlg._startup_popup_guard_active)
-        self.assertEqual(0, dlg.closed_popup_count)
-        self.assertNotIn("popup_guard_released", [event for event, _fields in dlg.logged_events])
-
-    def test_release_startup_popup_guard_is_idempotent(self):
-        dlg = _GeometryDialog()
-
-        WorkEditorDialog._release_startup_popup_guard(dlg, reason="KeyPress")
-        first_close_count = dlg.closed_popup_count
-        WorkEditorDialog._release_startup_popup_guard(dlg, reason="KeyPress")
-
-        self.assertFalse(dlg._startup_popup_guard_active)
-        self.assertEqual(first_close_count, dlg.closed_popup_count)
-
-
 if __name__ == "__main__":
     unittest.main()

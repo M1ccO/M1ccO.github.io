@@ -39,6 +39,19 @@ class _WidgetWithSignals(QWidget):
     submitted = Signal(dict)
     canceled = Signal()
 
+    def __init__(self):
+        super().__init__()
+        self.show_events = 0
+        self.hide_events = 0
+
+    def showEvent(self, event):
+        self.show_events += 1
+        super().showEvent(event)
+
+    def hideEvent(self, event):
+        self.hide_events += 1
+        super().hideEvent(event)
+
 
 class TestSelectorHostPhase6(unittest.TestCase):
     def test_open_and_close_calls_mode_hooks(self):
@@ -46,11 +59,12 @@ class TestSelectorHostPhase6(unittest.TestCase):
         mount = QWidget()
         enter_calls = []
         exit_calls = []
+        enter_show_counts = []
 
         host = WorkEditorSelectorHost(
             dialog=dialog,
             mount_container=mount,
-            enter_selector_mode=lambda: enter_calls.append("enter"),
+            enter_selector_mode=lambda: (enter_calls.append("enter"), enter_show_counts.append(widget.show_events)),
             exit_selector_mode=lambda: exit_calls.append("exit"),
         )
 
@@ -58,10 +72,14 @@ class TestSelectorHostPhase6(unittest.TestCase):
         host.open_widget(widget)
 
         self.assertIs(host.active_widget, widget)
+        self.assertIs(widget.parent(), mount)
+        self.assertEqual([0], enter_show_counts)
         self.assertEqual(["enter"], enter_calls)
 
         host.close_active_widget()
         self.assertIsNone(host.active_widget)
+        self.assertIsNone(widget.parent())
+        self.assertGreaterEqual(widget.hide_events, 1)
         self.assertEqual(["exit", "enter"], [exit_calls[0], enter_calls[0]])
 
     def test_submit_signal_ignored_by_default(self):

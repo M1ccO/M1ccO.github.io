@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QApplication
 
 _LOGGER = logging.getLogger(__name__)
@@ -131,39 +131,49 @@ def preload_work_editor_background(window) -> None:
             machine_profile_key=machine_profile_key,
         )
 
-        ensure_polished = getattr(dialog, "ensurePolished", None)
-        if callable(ensure_polished):
-            ensure_polished()
+        # Prevent focus-stealing flash during background preload.
+        dialog.setAttribute(Qt.WA_DontShowOnScreen, True)
+        dialog.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        dialog.setUpdatesEnabled(False)
 
-        if app is not None:
-            app.processEvents()
+        try:
+            ensure_polished = getattr(dialog, "ensurePolished", None)
+            if callable(ensure_polished):
+                ensure_polished()
 
-        activate_layout = getattr(dialog.layout(), "activate", None)
-        if callable(activate_layout):
-            activate_layout()
+            if app is not None:
+                app.processEvents()
 
-        ensure_surface = getattr(dialog, "_ensure_normal_editor_surface_visible", None)
-        if callable(ensure_surface):
-            ensure_surface()
+            activate_layout = getattr(dialog.layout(), "activate", None)
+            if callable(activate_layout):
+                activate_layout()
 
-        ensure_content = getattr(dialog, "_ensure_normal_editor_content_visible", None)
-        if callable(ensure_content):
-            ensure_content()
+            ensure_surface = getattr(dialog, "_ensure_normal_editor_surface_visible", None)
+            if callable(ensure_surface):
+                ensure_surface()
 
-        warmup_surfaces = getattr(dialog, "_warmup_initial_interaction_surfaces", None)
-        if callable(warmup_surfaces):
-            warmup_surfaces()
+            ensure_content = getattr(dialog, "_ensure_normal_editor_content_visible", None)
+            if callable(ensure_content):
+                ensure_content()
 
-        close_popups = getattr(dialog, "_close_transient_combo_popups", None)
-        if callable(close_popups):
-            close_popups()
+            warmup_surfaces = getattr(dialog, "_warmup_initial_interaction_surfaces", None)
+            if callable(warmup_surfaces):
+                warmup_surfaces()
 
-        update_geometry = getattr(dialog, "updateGeometry", None)
-        if callable(update_geometry):
-            update_geometry()
+            close_popups = getattr(dialog, "_close_transient_combo_popups", None)
+            if callable(close_popups):
+                close_popups()
 
-        if app is not None:
-            app.processEvents()
+            update_geometry = getattr(dialog, "updateGeometry", None)
+            if callable(update_geometry):
+                update_geometry()
+
+            if app is not None:
+                app.processEvents()
+        finally:
+            dialog.setAttribute(Qt.WA_DontShowOnScreen, False)
+            dialog.setAttribute(Qt.WA_ShowWithoutActivating, False)
+            dialog.setUpdatesEnabled(True)
 
         dialog.hide()
         window._work_editor_preload_dialog = dialog

@@ -118,8 +118,8 @@ def _setup_jaw_selectors(
     if sub_spindle_side_filter:
         sub_kwargs["spindle_side_filter"] = sub_spindle_side_filter
 
-    dialog.main_jaw_selector = jaw_selector_panel_cls(main_title, **main_kwargs)
-    dialog.sub_jaw_selector = jaw_selector_panel_cls(sub_title, **sub_kwargs)
+    dialog.main_jaw_selector = jaw_selector_panel_cls(main_title, parent=dialog, **main_kwargs)
+    dialog.sub_jaw_selector = jaw_selector_panel_cls(sub_title, parent=dialog, **sub_kwargs)
     dialog.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     dialog.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     dialog._jaw_selectors["main"] = dialog.main_jaw_selector
@@ -355,15 +355,16 @@ def build_zeros_tab_ui(
         )
         return
 
+    _zeros_parent = dialog.zeros_tab
     dialog.zeros_tab.setProperty("zeroPointsSurface", True)
     layout = QVBoxLayout(dialog.zeros_tab)
     layout.setContentsMargins(18, 18, 18, 18)
     layout.setSpacing(0)
 
-    scroll = QScrollArea()
+    scroll = QScrollArea(_zeros_parent)
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QFrame.NoFrame)
-    content = QWidget()
+    content = QWidget(scroll)
     content.setProperty("zeroPointsSurface", True)
     content_layout = QVBoxLayout(content)
     content_layout.setContentsMargins(0, 0, 0, 0)
@@ -375,10 +376,10 @@ def build_zeros_tab_ui(
     programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     programs_form = QFormLayout(programs_group)
     programs_form.setSpacing(8)
-    dialog.main_program_input = QLineEdit()
+    dialog.main_program_input = QLineEdit(programs_group)
     programs_form.addRow(dialog._t("setup_page.field.main_program", "Main program"), dialog.main_program_input)
     for head in dialog.machine_profile.heads:
-        sub_program_input = QLineEdit()
+        sub_program_input = QLineEdit(programs_group)
         dialog._sub_program_inputs[head.key] = sub_program_input
         setattr(dialog, f"{head.key.lower()}_sub_program_input", sub_program_input)
         programs_form.addRow(
@@ -421,7 +422,8 @@ def build_zeros_tab_ui(
     controls_row.setSpacing(10)
 
     dialog.open_jaw_selector_btn = QPushButton(
-        dialog._t("work_editor.selector.jaws_button", "Select Jaws")
+        dialog._t("work_editor.selector.jaws_button", "Select Jaws"),
+        content,
     )
     dialog.open_jaw_selector_btn.setProperty("panelActionButton", True)
     dialog.open_jaw_selector_btn.setMinimumWidth(280)
@@ -429,7 +431,7 @@ def build_zeros_tab_ui(
     dialog.open_jaw_selector_btn.setFixedHeight(34)
     dialog.open_jaw_selector_btn.clicked.connect(dialog._open_jaw_selector)
 
-    left_controls = QWidget()
+    left_controls = QWidget(content)
     left_controls_layout = QHBoxLayout(left_controls)
     left_controls_layout.setContentsMargins(0, 0, 0, 0)
     left_controls_layout.setSpacing(10)
@@ -437,7 +439,8 @@ def build_zeros_tab_ui(
 
     if dialog.machine_profile.spindle_count == 1:
         dialog.op20_jaws_checkbox = QCheckBox(
-            dialog._t("work_editor.zeros.include_op20", "Include OP20")
+            dialog._t("work_editor.zeros.include_op20", "Include OP20"),
+            left_controls,
         )
         apply_shared_checkbox_style(dialog.op20_jaws_checkbox, indicator_size=16)
         dialog.op20_jaws_checkbox.setChecked(getattr(dialog, '_op20_jaws_enabled', False))
@@ -454,7 +457,8 @@ def build_zeros_tab_ui(
         left_controls_layout.addWidget(dialog.op20_jaws_checkbox, 0, Qt.AlignVCenter)
 
     dialog.zero_show_xy_checkbox = QCheckBox(
-        dialog._t("work_editor.zeros.show_xy", "Show X/Y columns")
+        dialog._t("work_editor.zeros.show_xy", "Show X/Y columns"),
+        left_controls,
     )
     apply_shared_checkbox_style(dialog.zero_show_xy_checkbox, indicator_size=16)
     dialog.zero_show_xy_checkbox.setChecked(dialog.machine_profile.default_zero_xy_visible)
@@ -469,12 +473,12 @@ def build_zeros_tab_ui(
 
     controls_row.addWidget(left_controls, 1)
     controls_row.addWidget(dialog.open_jaw_selector_btn, 0, Qt.AlignHCenter)
-    right_controls = QWidget()
+    right_controls = QWidget(content)
     right_controls.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     controls_row.addWidget(right_controls, 1)
     content_layout.addLayout(controls_row)
 
-    dialog.zero_points_host = ResponsiveColumnsHost(switch_width=1320)
+    dialog.zero_points_host = ResponsiveColumnsHost(switch_width=1320, parent=content)
     for spindle_key in dialog._spindle_profiles.keys():
         # Use the profile label directly — no hardcoded English fallback so that
         # single-spindle profiles render "OP10" and dual-spindle profiles render
@@ -494,7 +498,7 @@ def build_zeros_tab_ui(
         dialog.zero_points_host.add_widget(_op20_zero_grp, 1)
     content_layout.addWidget(dialog.zero_points_host)
 
-    jaw_row_host = QWidget()
+    jaw_row_host = QWidget(content)
     jaw_row = QHBoxLayout(jaw_row_host)
     jaw_row.setContentsMargins(0, 0, 0, 0)
     jaw_row.setSpacing(12)
@@ -519,7 +523,7 @@ def build_zeros_tab_ui(
         sub_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sub_form = QFormLayout(sub_group)
         sub_form.setSpacing(8)
-        dialog.sub_pickup_z_input = QLineEdit()
+        dialog.sub_pickup_z_input = QLineEdit(sub_group)
         sub_form.addRow(dialog._t("setup_page.field.sub_pickup_z", "Pickup Z"), dialog.sub_pickup_z_input)
         content_layout.addWidget(sub_group)
     content_layout.addStretch(1)
@@ -533,8 +537,8 @@ def build_notes_tab_ui(
     layout = QVBoxLayout(dialog.notes_tab)
     layout.setContentsMargins(18, 18, 18, 18)
     layout.setSpacing(8)
-    dialog.notes_input = QTextEdit()
-    dialog.robot_info_input = QTextEdit()
+    dialog.notes_input = QTextEdit(dialog.notes_tab)
+    dialog.robot_info_input = QTextEdit(dialog.notes_tab)
     dialog.notes_input.setMinimumHeight(150)
     dialog.robot_info_input.setMaximumHeight(96)
 

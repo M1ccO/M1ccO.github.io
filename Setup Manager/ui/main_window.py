@@ -619,8 +619,8 @@ class MainWindow(QMainWindow):
         if not self._runtime_initialized:
             self._runtime_initialized = True
             QApplication.instance().installEventFilter(self)
-            if hasattr(self, "setup_page") and hasattr(self.setup_page, "preload_work_editor_dialog"):
-                self.setup_page.preload_work_editor_dialog()
+            # Keep first show free of hidden dialog warmups; the old Work Editor
+            # preload was the source of the launch-time hide/show flash.
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
 
