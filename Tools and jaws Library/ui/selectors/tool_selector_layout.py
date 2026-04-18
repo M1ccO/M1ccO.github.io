@@ -61,6 +61,8 @@ from ..tool_catalog_delegate import ToolCatalogDelegate
 
 class ToolSelectorLayoutMixin:
 
+    _EMBEDDED_ASSIGNMENT_LIST_MIN_HEIGHT = 120
+
     def _selector_is_machining_center(self) -> bool:
         profile: ToolLibProfileView | None = getattr(self, 'machine_profile', None)
         if profile is None:
@@ -75,7 +77,7 @@ class ToolSelectorLayoutMixin:
 
     def _build_toolbar(self, root: QVBoxLayout) -> None:
         """Build the shared filter toolbar matching the library style."""
-        frame, self._filter_layout = build_filter_frame()
+        frame, self._filter_layout = build_filter_frame(parent=self)
         # Dialog has no left rail — clear the page-specific objectName and margins
         frame.setObjectName('')
         self._filter_layout.setContentsMargins(8, 6, 8, 6)
@@ -122,6 +124,7 @@ class ToolSelectorLayoutMixin:
                 self._close_icon,
                 self._t('work_editor.selector.assignment.details_title', 'Työkalun tiedot'),
                 self._switch_to_selector_panel,
+                parent=frame,
             )
         self.detail_header_container.setVisible(False)
 
@@ -147,7 +150,7 @@ class ToolSelectorLayoutMixin:
         splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(False)
 
-        list_card, list_layout = build_catalog_list_shell()
+        list_card, list_layout = build_catalog_list_shell(parent=splitter)
         self.list_view = ToolCatalogListView()
         apply_catalog_list_view_defaults(self.list_view)
         self._model = QStandardItemModel(self.list_view)
@@ -165,25 +168,38 @@ class ToolSelectorLayoutMixin:
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
         right_layout.addWidget(self._build_selector_card(parent=right_panel), 1)
-        right_layout.addWidget(self._build_detail_card(), 1)
+        right_layout.addWidget(self._build_detail_card(parent=right_panel), 1)
         splitter.addWidget(right_panel)
 
-        splitter.setSizes([int(self.width() * 0.58), int(self.width() * 0.42)])
+        splitter.setStretchFactor(0, 58)
+        splitter.setStretchFactor(1, 42)
         root.addWidget(splitter, 1)
 
-    def _build_detail_card(self) -> QWidget:
-        """Build the switchable detail panel using the shared container shell."""
+    def _build_detail_card(self, parent: QWidget | None = None) -> QWidget:
+        """Create the hidden detail host and defer the heavy shell until first use."""
+        detail_container = QWidget(parent)
+        detail_container.setMinimumWidth(300)
+        self._detail_container_host_layout = QVBoxLayout(detail_container)
+        self._detail_container_host_layout.setContentsMargins(0, 0, 0, 0)
+        self._detail_container_host_layout.setSpacing(0)
+        self.detail_layout = None
+        self.detail_card = detail_container
+        self.detail_card.setVisible(False)
+        return self.detail_card
+
+    def _ensure_detail_card_built(self) -> None:
+        if getattr(self, 'detail_layout', None) is not None:
+            return
         (
-            detail_container,
+            detail_shell,
             _outer_layout,
             _card,
             _scroll,
             _panel,
-            self.detail_layout,
-        ) = build_detail_container_shell(min_width=300)
-        self.detail_card = detail_container
-        self.detail_card.setVisible(False)
-        return self.detail_card
+            detail_layout,
+        ) = build_detail_container_shell(min_width=300, parent=self.detail_card)
+        self._detail_container_host_layout.addWidget(detail_shell, 1)
+        self.detail_layout = detail_layout
 
     def _build_selector_card(self, parent: QWidget | None = None) -> QWidget:
         selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(
@@ -237,8 +253,8 @@ class ToolSelectorLayoutMixin:
         for spindle in ('main', 'sub'):
             assignment_list = ToolAssignmentListWidget()
             assignment_list.setObjectName('toolIdsOrderList')
-            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            assignment_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            assignment_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
             assignment_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             assignment_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
             assignment_list.setProperty('selectorAssignmentList', True)
@@ -257,14 +273,15 @@ class ToolSelectorLayoutMixin:
                 self._t('work_editor.tools.sub_spindle_tools', 'Vastakaran työkalut')
                 if spindle == 'sub'
                 else self._t('work_editor.tools.main_spindle_tools', 'Pääkaran työkalut')
+                , parent=selector_panel
             )
             assignment_frame.setProperty('selectorAssignmentsFrame', True)
             assignment_frame.setProperty('toolIdsPanel', True)
-            assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+            assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
             assignment_layout = QVBoxLayout(assignment_frame)
             assignment_layout.setContentsMargins(8, 10, 8, 8)
             assignment_layout.setSpacing(4)
-            assignment_layout.addWidget(assignment_list, 0, Qt.AlignTop)
+            assignment_layout.addWidget(assignment_list, 1)
 
             empty_hint = build_selector_hint_label(
                 text=self._t(
@@ -272,6 +289,7 @@ class ToolSelectorLayoutMixin:
                     'Vedä työkalut tähän kirjastosta. Järjestä ne uudelleen vetämällä listassa.',
                 ),
                 multiline=True,
+                parent=assignment_frame,
             )
             empty_hint.setProperty('detailHint', True)
             empty_hint.setProperty('selectorInlineHint', True)
@@ -279,8 +297,9 @@ class ToolSelectorLayoutMixin:
             empty_hint.setWordWrap(True)
             empty_hint.setContentsMargins(2, 0, 2, 0)
             assignment_layout.addWidget(empty_hint, 0, Qt.AlignTop)
+            assignment_layout.setStretch(0, 1)
 
-            selector_layout.addWidget(assignment_frame, 0, Qt.AlignTop)
+            selector_layout.addWidget(assignment_frame, 1)
 
             self.assignment_lists[spindle] = assignment_list
             self.assignment_frames[spindle] = assignment_frame
@@ -289,7 +308,7 @@ class ToolSelectorLayoutMixin:
         # Compatibility alias for existing call sites that still read assignment_list/frame.
         self.assignment_list = self.assignment_lists['main']
         self.assignment_frame = self.assignment_frames['main']
-        selector_layout.addStretch(1)
+        selector_layout.setStretch(selector_layout.count() - 1, 1)
 
         actions = build_selector_actions_row(spacing=4)
 
@@ -327,7 +346,6 @@ class ToolSelectorLayoutMixin:
         actions_host_layout.addLayout(actions)
         actions_host_layout.addStretch(1)
 
-        selector_scroll.setWidget(selector_panel)
         scroll_frame = QFrame(selector_card)
         scroll_frame.setProperty('selectorScrollFrame', True)
         scroll_frame_layout = QVBoxLayout(scroll_frame)
@@ -345,4 +363,5 @@ class ToolSelectorLayoutMixin:
             translate=self._translate,
             on_cancel=self._cancel,
             on_done=self._send_selector_selection,
+            parent=self,
         )

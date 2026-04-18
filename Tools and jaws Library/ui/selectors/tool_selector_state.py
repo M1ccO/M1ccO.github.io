@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import re
+from time import perf_counter
 
 from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QIcon, QStandardItem, QTransform
@@ -19,8 +21,19 @@ from ..tool_catalog_delegate import (
 )
 
 
+_LOGGER = logging.getLogger(__name__)
+
+
 class ToolSelectorStateMixin:
     _ASSIGNMENT_TAIL_DROP_ZONE_PX = 0
+
+    def _trace_selector_state(self, event: str, **fields) -> None:
+        payload = {
+            'event': event,
+            'embedded_mode': bool(getattr(self, '_embedded_mode', False)),
+        }
+        payload.update(fields)
+        _LOGGER.info('tool_selector.trace %s', payload)
 
     def _profile_head_keys(self) -> list[str]:
         profile = getattr(self, 'machine_profile', None)
@@ -167,7 +180,56 @@ class ToolSelectorStateMixin:
         normalized['tool_head'] = head
         normalized['spindle'] = spindle
         normalized['spindle_orientation'] = spindle
+        self._enrich_tool_metadata(normalized)
         return normalized
+
+    def _resolve_tool_reference(self, item: dict | None) -> dict | None:
+        if not isinstance(item, dict):
+            return None
+        service = getattr(self, 'tool_service', None)
+        if service is None:
+            return None
+
+        uid_value = item.get('uid', item.get('tool_uid'))
+        try:
+            uid = int(uid_value) if uid_value is not None and str(uid_value).strip() else None
+        except Exception:
+            uid = None
+        if uid is not None and hasattr(service, 'get_tool_by_uid'):
+            try:
+                ref = service.get_tool_by_uid(uid)
+            except Exception:
+                ref = None
+            if isinstance(ref, dict):
+                return dict(ref)
+
+        tool_id = str(item.get('tool_id') or item.get('id') or '').strip()
+        if tool_id and hasattr(service, 'get_tool'):
+            try:
+                ref = service.get_tool(tool_id)
+            except Exception:
+                ref = None
+            if isinstance(ref, dict):
+                return dict(ref)
+        return None
+
+    def _enrich_tool_metadata(self, item: dict | None) -> dict | None:
+        if not isinstance(item, dict):
+            return None
+        needs_ref = not any(
+            str(item.get(field) or '').strip()
+            for field in ('description', 'tool_type', 'default_pot')
+        )
+        if not needs_ref:
+            return item
+        ref = self._resolve_tool_reference(item)
+        if not isinstance(ref, dict):
+            return item
+        for field in ('description', 'tool_type', 'default_pot'):
+            value = str(ref.get(field) or '').strip()
+            if value and not str(item.get(field) or '').strip():
+                item[field] = value
+        return item
 
     def _normalize_tool_for_target(self, item: dict | None, head: str, spindle: str) -> dict | None:
         normalized = self._normalize_tool(item)
@@ -291,6 +353,8 @@ class ToolSelectorStateMixin:
 
     def _update_assignment_list_height(self, spindle: str) -> None:
         assignment_list = self._assignment_list_for_spindle(spindle)
+        if bool(getattr(self, '_embedded_mode', False)):
+            return
         row_count = assignment_list.count()
         if row_count <= 0:
             assignment_list.setFixedHeight(56 + self._ASSIGNMENT_TAIL_DROP_ZONE_PX)
@@ -339,8 +403,10 @@ class ToolSelectorStateMixin:
         return spindle in {'sub', 'both', 'all'}
 
     def _refresh_catalog(self) -> None:
+        started = perf_counter()
         search_text = self.search_input.text().strip()
         tool_type = self.type_filter.currentData() or 'All'
+        delegate = self.list_view.itemDelegate()
 
         tools = self.tool_service.list_tools(
             search_text=search_text,
@@ -355,20 +421,39 @@ class ToolSelectorStateMixin:
             item = QStandardItem()
             tool_id = str(tool.get('id') or '').strip()
             uid = int(tool.get('uid') or 0)
+            icon = tool_icon_for_type(str(tool.get('tool_type') or '').strip())
             item.setData(tool_id, ROLE_TOOL_ID)
             item.setData(uid, ROLE_TOOL_UID)
             item.setData(dict(tool), ROLE_TOOL_DATA)
-            item.setData(tool_icon_for_type(str(tool.get('tool_type') or '').strip()), ROLE_TOOL_ICON)
+            item.setData(icon, ROLE_TOOL_ICON)
+            prewarm_icon = getattr(delegate, 'prewarm_icon_pixmap', None)
+            if callable(prewarm_icon):
+                prewarm_icon(
+                    icon,
+                    str(tool.get('tool_type') or '').strip(),
+                    mirrored=self._normalize_spindle(tool.get('spindle_orientation') or tool.get('spindle') or 'main') == 'sub',
+                )
             self._model.appendRow(item)
+        self._trace_selector_state(
+            'catalog.refresh',
+            search_text=search_text,
+            tool_type=tool_type,
+            head=self._current_head,
+            row_count=self._model.rowCount(),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _rebuild_assignment_list(self, spindle: str | None = None) -> None:
+        started = perf_counter()
         targets = ('main', 'sub') if spindle is None else (self._normalize_spindle(spindle),)
+        row_counts: dict[str, int] = {}
         for target_spindle in targets:
             assignment_list = self._assignment_list_for_spindle(target_spindle)
             current_row = assignment_list.currentRow()
             assignment_list.blockSignals(True)
             assignment_list.clear()
             assignments = self._assigned_tools_for_spindle(target_spindle)
+            row_counts[target_spindle] = len(assignments)
 
             for row, assignment in enumerate(assignments):
                 tool_id = str(assignment.get('tool_id') or assignment.get('id') or '').strip()
@@ -391,6 +476,12 @@ class ToolSelectorStateMixin:
                 item.setSizeHint(QSize(0, 50 if comment else 42))
                 assignment_list.addItem(item)
 
+                row_host = QWidget(assignment_list)
+                row_host.setAttribute(Qt.WA_StyledBackground, False)
+                row_layout = QVBoxLayout(row_host)
+                row_layout.setContentsMargins(0, 0, 2, 7)
+                row_layout.setSpacing(0)
+
                 card = MiniAssignmentCard(
                     icon=self._assignment_icon_for_spindle(
                         str(assignment.get('tool_type') or '').strip(),
@@ -401,13 +492,8 @@ class ToolSelectorStateMixin:
                     badges=badges,
                     editable=False,
                     compact=True,
-                    parent=assignment_list,
+                    parent=row_host,
                 )
-                row_host = QWidget(assignment_list)
-                row_host.setAttribute(Qt.WA_StyledBackground, False)
-                row_layout = QVBoxLayout(row_host)
-                row_layout.setContentsMargins(0, 0, 2, 7)
-                row_layout.setSpacing(0)
                 row_layout.addWidget(card)
                 assignment_list.setItemWidget(item, row_host)
 
@@ -419,6 +505,12 @@ class ToolSelectorStateMixin:
             self._update_assignment_empty_hint(target_spindle)
         self._sync_card_selection_states()
         self._update_assignment_buttons()
+        self._trace_selector_state(
+            'assignment_list.rebuild',
+            targets=list(targets),
+            row_counts=row_counts,
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _sync_card_selection_states(self) -> None:
         for assignment_list in self.assignment_lists.values():
@@ -731,6 +823,9 @@ class ToolSelectorStateMixin:
     def _switch_to_detail_panel(self, tool_data: dict | None = None) -> None:
         """Show the detail card and populate it with tool_data."""
         self.setUpdatesEnabled(False)
+        ensure_detail_card_built = getattr(self, '_ensure_detail_card_built', None)
+        if callable(ensure_detail_card_built):
+            ensure_detail_card_built()
         self.selector_card.setVisible(False)
         self.detail_card.setVisible(True)
         self.detail_header_container.setVisible(True)
@@ -794,6 +889,7 @@ class ToolSelectorStateMixin:
 
     def _prime_detail_panel_cache(self) -> None:
         """Pre-render first detail payload so first open is smooth and non-jarring."""
+        started = perf_counter()
         indexes = selected_rows_or_current(self.list_view)
         if not indexes and self._model.rowCount() > 0:
             first_index = self._model.index(0, 0)
@@ -810,6 +906,11 @@ class ToolSelectorStateMixin:
             except Exception:
                 self.current_tool_uid = None
             self._populate_tool_detail(tool_data)
+        self._trace_selector_state(
+            'detail.prime_cache',
+            has_index=bool(indexes),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _sync_preview_if_open(self) -> None:
         preview_btn = getattr(self, 'preview_window_btn', None)
@@ -818,6 +919,10 @@ class ToolSelectorStateMixin:
 
     def _populate_tool_detail(self, tool: dict | None) -> None:
         """Clear and rebuild the detail panel content using DetailPanelBuilder."""
+        started = perf_counter()
+        ensure_detail_card_built = getattr(self, '_ensure_detail_card_built', None)
+        if callable(ensure_detail_card_built):
+            ensure_detail_card_built()
         from ..home_page_support.detail_panel_builder import DetailPanelBuilder
         
         # Clear existing content
@@ -828,3 +933,9 @@ class ToolSelectorStateMixin:
                 widget.deleteLater()
         builder = DetailPanelBuilder(self)
         builder.populate_details(tool)
+        self._trace_selector_state(
+            'detail.populate',
+            tool_id=str((tool or {}).get('id') or '').strip() or None,
+            has_tool=bool(tool),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )

@@ -7,7 +7,7 @@ and Jaws Library drag-drop widgets.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtGui import QColor, QDrag, QPainter, QPixmap
 from PySide6.QtWidgets import QWidget
 
@@ -60,9 +60,24 @@ def clear_selection_on_blank_click(list_widget, event) -> None:
     forwarding the event to ``super()``.
     """
     point = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-    if list_widget.itemAt(point) is None:
+    target = None
+    item_at = getattr(list_widget, "itemAt", None)
+    if callable(item_at):
+        target = item_at(point)
+    else:
+        index_at = getattr(list_widget, "indexAt", None)
+        if callable(index_at):
+            index = index_at(point)
+            target = index if index.isValid() else None
+    if target is None:
         list_widget.clearSelection()
-        list_widget.setCurrentRow(-1)
+        set_current_row = getattr(list_widget, "setCurrentRow", None)
+        if callable(set_current_row):
+            set_current_row(-1)
+        else:
+            set_current_index = getattr(list_widget, "setCurrentIndex", None)
+            if callable(set_current_index):
+                set_current_index(QModelIndex())
 
 
 __all__ = [

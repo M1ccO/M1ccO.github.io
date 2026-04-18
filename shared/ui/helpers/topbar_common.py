@@ -12,9 +12,9 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QToolButton, QWidget
 from shared.ui.helpers.icon_loader import icon_from_path
 
 
-def build_filter_frame() -> tuple[QFrame, QHBoxLayout]:
+def build_filter_frame(*, parent: QWidget | None = None) -> tuple[QFrame, QHBoxLayout]:
     """Create the standard filter frame and layout shell."""
-    frame = QFrame()
+    frame = QFrame(parent)
     frame.setObjectName('filterFrame')
     frame.setProperty('card', True)
 
@@ -58,9 +58,15 @@ def build_details_toggle(icons_dir: Path, on_clicked: Callable[[], None]) -> QTo
     return btn
 
 
-def build_detail_header(close_icon: QIcon, title_text: str, on_close: Callable[[], None]) -> tuple[QWidget, QLabel, QToolButton]:
+def build_detail_header(
+    close_icon: QIcon,
+    title_text: str,
+    on_close: Callable[[], None],
+    *,
+    parent: QWidget | None = None,
+) -> tuple[QWidget, QLabel, QToolButton]:
     """Create the shared detail-header container shown in topbar."""
-    container = QWidget()
+    container = QWidget(parent)
     row = QHBoxLayout(container)
     row.setContentsMargins(0, 0, 0, 0)
     row.setSpacing(6)

@@ -7,7 +7,13 @@
       "Bash(python -m pytest tests/test_work_editor_launch_parent.py --tb=line)",
       "Bash(python -m pytest tests/test_work_editor_launch_parent.py --tb=no -q)",
       "Bash(python -m pytest tests/test_work_editor_launch_parent.py --tb=no -q --deselect \"tests/test_work_editor_launch_parent.py::TestWorkEditorLaunchParent::test_create_work_editor_dialog_uses_family_shell\")",
-      "Bash(python -m pytest tests/test_work_editor_launch_parent.py -k \"not test_create_work_editor_dialog_uses_family_shell and not test_exec_work_editor_dialog\" --tb=line -q)"
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py -k \"not test_create_work_editor_dialog_uses_family_shell and not test_exec_work_editor_dialog\" --tb=line -q)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('Setup Manager/main.py', encoding='utf-8-sig'\\).read\\(\\)\\); ast.parse\\(open\\('Setup Manager/ui/main_window.py', encoding='utf-8-sig'\\).read\\(\\)\\); ast.parse\\(open\\('Setup Manager/ui/work_editor_factory.py', encoding='utf-8-sig'\\).read\\(\\)\\); ast.parse\\(open\\('Setup Manager/services/preload_manager.py', encoding='utf-8-sig'\\).read\\(\\)\\); ast.parse\\(open\\('Setup Manager/services/print_service.py', encoding='utf-8-sig'\\).read\\(\\)\\); print\\('all ast ok'\\)\")",
+      "Bash(python -m pytest tests/test_selector_session.py -q)",
+      "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_print_service_resolver_fallback.py tests/test_selector_session.py tests/test_shared_regressions.py tests/test_shared_selector_widgets.py tests/test_selector_adapter_phase6.py tests/test_work_editor_style_inheritance.py -q)",
+      "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_selector_session.py tests/test_print_service_resolver_fallback.py -q --tb=short)",
+      "Bash(python -m pytest tests/test_work_editor_resolver_fallback.py -v --tb=short)",
+      "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_selector_session.py tests/test_print_service_resolver_fallback.py tests/test_work_editor_resolver_fallback.py -q)"
     ]
   }
 }

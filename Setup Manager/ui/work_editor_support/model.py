@@ -4,6 +4,26 @@ from machine_profiles import KNOWN_HEAD_KEYS, KNOWN_SPINDLE_KEYS, MachineProfile
 from .machining_center import collect_machining_center_payload, load_machining_center_payload
 
 
+def _tool_assignment_widgets_for_head(dialog, head_key: str):
+    columns = getattr(dialog, "_tool_column_lists", {}).get(head_key, {})
+    if isinstance(columns, dict) and columns:
+        seen: set[int] = set()
+        widgets = []
+        for ordered_list in columns.values():
+            if ordered_list is None:
+                continue
+            widget_id = id(ordered_list)
+            if widget_id in seen:
+                continue
+            seen.add(widget_id)
+            widgets.append(ordered_list)
+        if widgets:
+            return widgets
+
+    ordered_list = getattr(dialog, "_ordered_tool_lists", {}).get(head_key)
+    return [ordered_list] if ordered_list is not None else []
+
+
 class WorkEditorPayloadAdapter:
     """Bridge the profile-driven dialog UI to the legacy work payload shape.
 
@@ -111,9 +131,10 @@ class WorkEditorPayloadAdapter:
                     if widget is not None:
                         widget.setText(payload.get(self.axis_field(head.key, spindle.key, axis), ""))
 
-            ordered_list = dialog._ordered_tool_lists.get(head.key)
-            if ordered_list is not None and not is_mc:
-                ordered_list.set_tool_assignments(payload.get(self.tool_assignment_field(head.key), []))
+            if not is_mc:
+                assignments = payload.get(self.tool_assignment_field(head.key), [])
+                for ordered_list in _tool_assignment_widgets_for_head(dialog, head.key):
+                    ordered_list.set_tool_assignments(assignments)
 
         if hasattr(dialog, "sub_pickup_z_input"):
             dialog.sub_pickup_z_input.setText(payload.get("sub_pickup_z", ""))
@@ -179,8 +200,9 @@ class WorkEditorPayloadAdapter:
             payload[self.stop_screws_field(spindle_key)] = selector.get_stop_screws()
 
         for head_key in KNOWN_HEAD_KEYS:
-            ordered_list = dialog._ordered_tool_lists.get(head_key)
-            if ordered_list is not None and not is_mc:
+            ordered_widgets = _tool_assignment_widgets_for_head(dialog, head_key)
+            if ordered_widgets and not is_mc:
+                ordered_list = ordered_widgets[0]
                 assignments = ordered_list.get_tool_assignments()
                 payload[self.tool_assignment_field(head_key)] = assignments
                 payload[self.tool_ids_field(head_key)] = ordered_list.get_tool_ids()

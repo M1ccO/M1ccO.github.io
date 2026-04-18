@@ -59,6 +59,36 @@ def _noop_combo_popup_styler(_combo: QComboBox) -> None:
     return
 
 
+def _noop_direct_tool_ref_resolver(_assignment: dict) -> dict | None:
+    return None
+
+
+def _find_tool_ref_for_assignment(all_tools: list, assignment: dict, assignment_key_fn) -> dict | None:
+    if not isinstance(assignment, dict):
+        return None
+
+    assignment_key = assignment_key_fn(assignment)
+    tool_id = str(assignment.get("tool_id") or "").strip()
+    fallback_ref = None
+
+    for tool in all_tools or []:
+        if not isinstance(tool, dict):
+            continue
+        ref_tool_id = str(tool.get("id") or "").strip()
+        candidate_key = assignment_key_fn(
+            {
+                "tool_id": ref_tool_id,
+                "tool_uid": tool.get("uid"),
+            }
+        )
+        if assignment_key and candidate_key == assignment_key:
+            return dict(tool)
+        if tool_id and ref_tool_id == tool_id and fallback_ref is None:
+            fallback_ref = dict(tool)
+
+    return fallback_ref
+
+
 class WorkEditorOrderedToolList(QWidget):
     """Per-head tool assignment editor with separate SP1/SP2 lists."""
 
@@ -75,6 +105,7 @@ class WorkEditorOrderedToolList(QWidget):
         _noop_default_pot_for_assignment
     )
     _combo_popup_styler: Callable[[QComboBox], None] = staticmethod(_noop_combo_popup_styler)
+    _direct_tool_ref_resolver: Callable[[dict], dict | None] = staticmethod(_noop_direct_tool_ref_resolver)
 
     class _ToolAssignmentRowWidget(MiniAssignmentCard):
         def __init__(
@@ -112,12 +143,14 @@ class WorkEditorOrderedToolList(QWidget):
         tool_icon_for_spindle_resolver: Callable[[str, str], QIcon],
         default_pot_for_assignment_resolver: Callable[[object, dict], str],
         combo_popup_styler: Callable[[QComboBox], None] = apply_tool_library_combo_style,
+        direct_tool_ref_resolver: Callable[[dict], dict | None] = _noop_direct_tool_ref_resolver,
     ) -> None:
         # Store as static callables so instance access does not bind `self`.
         cls._toolbar_icon_resolver = staticmethod(toolbar_icon_resolver)
         cls._tool_icon_for_spindle_resolver = staticmethod(tool_icon_for_spindle_resolver)
         cls._default_pot_for_assignment_resolver = staticmethod(default_pot_for_assignment_resolver)
         cls._combo_popup_styler = staticmethod(combo_popup_styler)
+        cls._direct_tool_ref_resolver = staticmethod(direct_tool_ref_resolver)
 
     @classmethod
     def _configure_icon_action(cls, btn: QPushButton, icon_name: str, tooltip: str, *, danger: bool = False):
@@ -341,30 +374,27 @@ class WorkEditorOrderedToolList(QWidget):
         return f"id:{tool_id}" if tool_id else ""
 
     def _tool_label(self, assignment: dict) -> str:
-        labels = self._labels_by_tool_key()
-        key = self._assignment_key(assignment)
+        ref = self._tool_ref_for_assignment(assignment)
         tool_id = (assignment.get("tool_id") or "").strip()
-        label = labels.get(key)
-        if label is None:
-            deleted = self._t("work_editor.tools.deleted_tool", "DELETED TOOL")
-            return f"{tool_id}  -  {deleted}" if tool_id else deleted
-        return label
+        if isinstance(ref, dict):
+            ref_id = str(ref.get("id") or "").strip() or tool_id
+            description = str(ref.get("description") or "").strip()
+            return f"{ref_id}  -  {description}" if description else ref_id
+        deleted = self._t("work_editor.tools.deleted_tool", "DELETED TOOL")
+        return f"{tool_id}  -  {deleted}" if tool_id else deleted
 
     def _tool_ref_for_assignment(self, assignment: dict) -> dict | None:
-        key = self._assignment_key(assignment)
-        if not key:
-            return None
-        for tool in self._all_tools or []:
-            if not isinstance(tool, dict):
-                continue
-            candidate_key = self._assignment_key(
-                {
-                    "tool_id": (tool.get("id") or "").strip(),
-                    "tool_uid": tool.get("uid"),
-                }
-            )
-            if candidate_key == key:
-                return dict(tool)
+        resolver = getattr(self, "_direct_tool_ref_resolver", None)
+        if callable(resolver):
+            try:
+                resolved = resolver(dict(assignment or {}))
+            except Exception:
+                resolved = None
+            if isinstance(resolved, dict):
+                return dict(resolved)
+        cached_ref = _find_tool_ref_for_assignment(self._all_tools or [], assignment, self._assignment_key)
+        if isinstance(cached_ref, dict):
+            return cached_ref
         return None
 
     def _tool_assignment(self, row: int | None = None) -> dict | None:
@@ -702,6 +732,24 @@ class WorkEditorOrderedToolList(QWidget):
 
     def _labels_by_tool_key(self) -> dict:
         key_to_label: dict = {}
+        for spindle in ("main", "sub"):
+            for assignment in self._assignments_by_spindle.get(spindle, []):
+                if not isinstance(assignment, dict):
+                    continue
+                key = self._assignment_key(assignment)
+                if not key:
+                    continue
+                ref = self._tool_ref_for_assignment(assignment)
+                tool_id = str(assignment.get("tool_id") or "").strip()
+                if isinstance(ref, dict):
+                    resolved_id = str(ref.get("id") or "").strip() or tool_id
+                    desc = str(ref.get("description") or "").strip()
+                    key_to_label[key] = f"{resolved_id}  -  {desc}" if desc else resolved_id
+                elif tool_id:
+                    key_to_label[key] = tool_id
+
+        # Keep cache-derived labels as a final fallback for assignments that
+        # are not currently present in spindle buckets.
         for tool in self._all_tools:
             tid = (tool.get("id") or "").strip()
             if not tid:
@@ -709,7 +757,7 @@ class WorkEditorOrderedToolList(QWidget):
             desc = (tool.get("description") or "").strip()
             uid = tool.get("uid")
             key = f"uid:{uid}" if uid is not None and str(uid).strip() else f"id:{tid}"
-            key_to_label[key] = f"{tid}  -  {desc}" if desc else tid
+            key_to_label.setdefault(key, f"{tid}  -  {desc}" if desc else tid)
         return key_to_label
 
     def set_tool_assignments(self, assignments: list):

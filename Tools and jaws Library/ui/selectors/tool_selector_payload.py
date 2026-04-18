@@ -22,7 +22,7 @@ class ToolSelectorPayloadMixin:
             'kind': 'tools',
             'selected_items': selected_items,
             'selector_head': self._current_head,
-            'selector_spindle': 'main',
+            'selector_spindle': self._active_assignment_spindle(),
             'assignment_buckets_by_target': assignment_buckets,
         }
 

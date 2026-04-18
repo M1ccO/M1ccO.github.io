@@ -262,6 +262,7 @@ def main():
     from data.database import Database
     from services.draw_service import DrawService
     from services.logbook_service import LogbookService
+    from services.preload_manager import get_preload_manager
     from services.print_service import PrintService
     from services.work_service import WorkService
     from ui.main_window import MainWindow
@@ -320,18 +321,18 @@ def main():
         fixture_db_path=active_fixtures_db_path,
     )
 
+    preload_manager = get_preload_manager()
+    preload_manager.initialize(draw_service)
+
     step(7, f"{loading_header}\n\n{_lt('setup_manager.loading.load_print_service', 'Loading print service...')}")
     print_service = PrintService(APP_TITLE)
     print_service.set_reference_service(draw_service)
 
     step(8, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_preview', 'Warming up 3D preview...')}")
-    try:
-        from shared.ui.stl_preview import StlPreviewWidget
-
-        app._preview_warmup_widget = StlPreviewWidget()
-        app._preview_warmup_widget.hide()
-    except Exception:
-        app._preview_warmup_widget = None
+    # PreloadManager.initialize() now owns preview warmup. Keep the loading
+    # step for user feedback, but avoid creating a second transient preview
+    # widget here because that can surface as a stray popup on Windows.
+    app._preview_warmup_widget = None
 
     # ----------------------------------------------------------------
     # Machine profile bootstrap
@@ -644,6 +645,7 @@ def main():
                 fixture_db_path=new_fixtures_db,
             )
             print_service.set_reference_service(new_draw_service)
+            preload_manager.refresh(new_draw_service)
 
             # Config profile is authoritative for this setup DB; write it to
             # the DB immediately so Work Editor always reads the right profile

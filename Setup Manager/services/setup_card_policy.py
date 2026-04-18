@@ -17,6 +17,17 @@ def _spindle_label(translate, spindle) -> str:
     return translate(spindle.label_key, spindle.label_default)
 
 
+def _spindle_title(translate, profile: MachineProfile, spindle_key: str) -> str:
+    spindle = profile.spindle(spindle_key)
+    if spindle is not None:
+        return translate(spindle.jaw_title_key, spindle.jaw_title_default)
+    fallback_map = {
+        "main": translate("work_editor.spindles.sp1_jaw", "Pääkara"),
+        "sub": translate("work_editor.spindles.sp2_jaw", "Vastakara"),
+    }
+    return fallback_map.get(str(spindle_key or "").strip().lower(), str(spindle_key or "").strip())
+
+
 def _mc_axis_label(profile: MachineProfile, axis: str) -> str:
     axis_key = str(axis or "").strip().lower()
     if axis_key in {"x", "y", "z"}:
@@ -85,11 +96,13 @@ def _lathe_jaw_sections(printer, profile: MachineProfile, work: dict) -> list[di
         jaw_id = work.get(f"{spindle_key}_jaw_id")
         if not printer._to_text(jaw_id) and spindle_key == "sub" and profile.spindle_count <= 1:
             continue
+        spindle_title = _spindle_title(printer._t, profile, spindle_key)
         details = printer._jaw_details(jaw_id)
         jaw_lines = [
             printer._t(
                 f"print.setup_card.label.{spindle_key}_jaw",
-                f"{spindle_key.upper()} jaw: {{value}}",
+                "{spindle} leuka: {value}",
+                spindle=spindle_title,
                 value=printer._jaw_summary(jaw_id),
             )
         ]
@@ -98,7 +111,8 @@ def _lathe_jaw_sections(printer, profile: MachineProfile, work: dict) -> list[di
             jaw_lines.append(
                 printer._t(
                     f"print.setup_card.label.{spindle_key}_turning_ring",
-                    f"{spindle_key.upper()} turning ring: {{value}}",
+                    "{spindle} sorvausrengas: {value}",
+                    spindle=spindle_title,
                     value=turning_washer,
                 )
             )
@@ -107,7 +121,8 @@ def _lathe_jaw_sections(printer, profile: MachineProfile, work: dict) -> list[di
             jaw_lines.append(
                 printer._t(
                     f"print.setup_card.label.{spindle_key}_last_modified",
-                    f"{spindle_key.upper()} last modified: {{value}}",
+                    "{spindle} viimeksi muokattu: {value}",
+                    spindle=spindle_title,
                     value=last_modified,
                 )
             )
@@ -116,7 +131,8 @@ def _lathe_jaw_sections(printer, profile: MachineProfile, work: dict) -> list[di
             jaw_lines.append(
                 printer._t(
                     f"print.setup_card.label.{spindle_key}_stop_screws",
-                    f"{spindle_key.upper()} stop screws: {{value}}",
+                    "{spindle} stoppariruuvit: {value}",
+                    spindle=spindle_title,
                     value=stop_screws,
                 )
             )
@@ -124,7 +140,8 @@ def _lathe_jaw_sections(printer, profile: MachineProfile, work: dict) -> list[di
             {
                 "title": printer._t(
                     f"print.setup_card.section.jaws_{spindle_key}",
-                    f"{spindle_key.upper()} Jaws",
+                    "{spindle}n leuat",
+                    spindle=spindle_title,
                 ),
                 "lines": jaw_lines,
                 "layout": "half",

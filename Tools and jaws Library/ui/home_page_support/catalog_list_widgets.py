@@ -7,7 +7,11 @@ from PySide6.QtGui import QDrag, QIcon, QTransform
 from PySide6.QtWidgets import QListView
 
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
-from shared.ui.helpers.dragdrop_helpers import build_text_drag_ghost, build_widget_drag_ghost
+from shared.ui.helpers.dragdrop_helpers import (
+    build_text_drag_ghost,
+    build_widget_drag_ghost,
+    clear_selection_on_blank_click,
+)
 try:
     from ..selector_mime import SELECTOR_TOOL_MIME, encode_selector_payload
     from ..tool_catalog_delegate import ROLE_TOOL_DATA, ROLE_TOOL_ID, ROLE_TOOL_UID, tool_icon_for_type
@@ -28,6 +32,10 @@ def _drag_icon_for_payload(tool_type: str, spindle: str) -> QIcon:
 
 class ToolCatalogListView(QListView):
     """QListView that starts selector-compatible tool drags."""
+
+    def mousePressEvent(self, event):
+        clear_selection_on_blank_click(self, event)
+        super().mousePressEvent(event)
 
     def startDrag(self, supportedActions):
         selection_model = self.selectionModel()

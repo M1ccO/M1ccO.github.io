@@ -246,11 +246,25 @@ FIXTURE_LIBRARY_DB_PATH = _first_existing_path(
 
 NAV_ITEMS = ["SETUPS", "DRAWINGS", "LOGBOOK"]
 
-# Preload Tool Library by default so first switch from Setup Manager is seamless.
-# Can be disabled for diagnostics via NTX_ENABLE_TOOL_LIBRARY_PRELOAD=0.
+# Preload Tool Library by default in both source and frozen runs.
+# This keeps the library process warm before the user opens it from Setup
+# Manager. Diagnostics can still disable it explicitly with the env var.
 ENABLE_TOOL_LIBRARY_PRELOAD = str(
     os.environ.get("NTX_ENABLE_TOOL_LIBRARY_PRELOAD", "1")
 ).strip().lower() not in {"0", "false", "no", "off"}
+
+# Work Editor selector diagnostics are opt-in and intended only for targeted
+# glitch isolation. Supported values for KIND currently include: "", "off",
+# and "trivial".
+WORK_EDITOR_SELECTOR_DIAGNOSTIC_KIND = str(
+    os.environ.get("NTX_WORK_EDITOR_SELECTOR_DIAGNOSTIC_KIND", "")
+).strip().lower()
+WORK_EDITOR_SELECTOR_TRACE_PAINT = str(
+    os.environ.get("NTX_WORK_EDITOR_SELECTOR_TRACE_PAINT", "0")
+).strip().lower() not in {"0", "false", "no", "off", ""}
+WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE = str(
+    os.environ.get("NTX_WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "auto")
+).strip().lower()
 
 JAW_TYPES = ["Soft jaws", "Hard jaws", "Spiked jaws", "Special jaws"]
 SPINDLE_SIDES = ["SP1", "SP2", "Both"]

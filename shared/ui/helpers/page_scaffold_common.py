@@ -31,9 +31,9 @@ def build_catalog_splitter(left: QWidget, right: QWidget) -> QSplitter:
     return splitter
 
 
-def build_catalog_list_shell() -> tuple[QFrame, QVBoxLayout]:
+def build_catalog_list_shell(*, parent: QWidget | None = None) -> tuple[QFrame, QVBoxLayout]:
     """Create a card shell used by catalog list panes."""
-    list_card = QFrame()
+    list_card = QFrame(parent)
     list_card.setProperty('catalogShell', True)
     list_layout = QVBoxLayout(list_card)
     list_layout.setContentsMargins(0, 0, 0, 0)
@@ -64,28 +64,33 @@ def install_catalog_list_event_filters(list_view: QListView, page) -> None:
     list_view.viewport().installEventFilter(page)
 
 
-def build_detail_container_shell(*, min_width: int = 280, detail_spacing: int = 10) -> tuple[QWidget, QVBoxLayout, QFrame, QScrollArea, QWidget, QVBoxLayout]:
+def build_detail_container_shell(
+    *,
+    min_width: int = 280,
+    detail_spacing: int = 10,
+    parent: QWidget | None = None,
+) -> tuple[QWidget, QVBoxLayout, QFrame, QScrollArea, QWidget, QVBoxLayout]:
     """Create detail container + card + scroll + panel shell."""
-    detail_container = QWidget()
+    detail_container = QWidget(parent)
     detail_container.setMinimumWidth(min_width)
 
     detail_layout = QVBoxLayout(detail_container)
     detail_layout.setContentsMargins(0, 0, 0, 0)
     detail_layout.setSpacing(0)
 
-    detail_card = QFrame()
+    detail_card = QFrame(detail_container)
     detail_card.setProperty('card', True)
     detail_card_layout = QVBoxLayout(detail_card)
     detail_card_layout.setContentsMargins(0, 0, 0, 0)
     detail_card_layout.setSpacing(0)
 
-    detail_scroll = QScrollArea()
+    detail_scroll = QScrollArea(detail_card)
     detail_scroll.setObjectName('detailScrollArea')
     detail_scroll.setWidgetResizable(True)
     detail_scroll.setFrameShape(QFrame.NoFrame)
     detail_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    detail_panel = QWidget()
+    detail_panel = QWidget(detail_scroll)
     detail_panel.setObjectName('detailPanel')
     panel_layout = QVBoxLayout(detail_panel)
     panel_layout.setContentsMargins(0, 0, 0, 0)

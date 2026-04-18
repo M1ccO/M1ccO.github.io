@@ -188,6 +188,14 @@ def sync_tool_head_view(dialog: Any) -> None:
 
 
 def default_pot_for_assignment(ordered_list, assignment: dict) -> str:
+    # Try resolver-primary path first (via _tool_ref_for_assignment which
+    # already prefers _direct_tool_ref_resolver over _all_tools).
+    ref = ordered_list._tool_ref_for_assignment(assignment)
+    if isinstance(ref, dict) and str(ref.get("default_pot") or "").strip():
+        return str(ref["default_pot"]).strip()
+
+    # Fall back to _all_tools cache scan (legacy path, kept until resolver
+    # covers all assignment contexts).
     assignment_key = ordered_list._assignment_key(assignment)
     tool_id = (assignment.get("tool_id") or "").strip()
     for tool in ordered_list._all_tools or []:

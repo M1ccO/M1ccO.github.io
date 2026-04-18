@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtWidgets import (
     QComboBox,
     QDialogButtonBox,
+    QFrame,
     QHBoxLayout,
     QPushButton,
     QStackedWidget,
@@ -37,6 +38,9 @@ def setup_button_row(dialog) -> None:
     dialog._normal_page = QWidget(dialog._root_stack)
     dialog._selector_page = QWidget(dialog._root_stack)
     dialog._selector_mount_container = QWidget(dialog._selector_page)
+    dialog._selector_overlay_container = QFrame(dialog._normal_page)
+    dialog._selector_overlay_mount_container = QWidget(dialog._selector_overlay_container)
+    dialog._selector_transition_shield = QFrame(dialog)
 
     dialog._root_stack.addWidget(dialog._normal_page)
     dialog._root_stack.addWidget(dialog._selector_page)
@@ -52,6 +56,25 @@ def setup_button_row(dialog) -> None:
     buttons.rejected.connect(dialog.reject)
     dialog._dialog_buttons = buttons
     normal_layout.addWidget(buttons)
+
+    dialog._selector_overlay_container.setObjectName("workEditorSelectorOverlay")
+    dialog._selector_overlay_container.setProperty("selectorContext", True)
+    dialog._selector_overlay_container.setProperty("selectorOverlayHost", True)
+    dialog._selector_overlay_container.setVisible(False)
+
+    dialog._selector_transition_shield.setObjectName("workEditorSelectorTransitionShield")
+    dialog._selector_transition_shield.setProperty("selectorTransitionShield", True)
+    dialog._selector_transition_shield.setVisible(False)
+
+    overlay_layout = QVBoxLayout(dialog._selector_overlay_container)
+    overlay_layout.setContentsMargins(0, 0, 0, 0)
+    overlay_layout.setSpacing(0)
+
+    overlay_mount_layout = QHBoxLayout(dialog._selector_overlay_mount_container)
+    overlay_mount_layout.setContentsMargins(0, 0, 0, 0)
+    overlay_mount_layout.setSpacing(0)
+
+    overlay_layout.addWidget(dialog._selector_overlay_mount_container, 1)
 
     selector_layout = QVBoxLayout(dialog._selector_page)
     selector_layout.setContentsMargins(0, 0, 0, 0)

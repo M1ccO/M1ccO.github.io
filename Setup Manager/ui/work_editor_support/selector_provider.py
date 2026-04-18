@@ -8,14 +8,41 @@ from .selectors import (
     selector_initial_tool_assignment_buckets,
     selector_initial_tool_assignments,
 )
+from .selector_state import (
+    default_jaw_selector_spindle,
+    default_selector_head,
+    default_selector_spindle,
+    selector_target_ordered_list,
+)
+
+
+def _dialog_default_selector_head(dialog: Any) -> str:
+    legacy = getattr(dialog, "_default_selector_head", None)
+    if callable(legacy):
+        return str(legacy() or "")
+    return default_selector_head(dialog)
+
+
+def _dialog_default_selector_spindle(dialog: Any) -> str:
+    legacy = getattr(dialog, "_default_selector_spindle", None)
+    if callable(legacy):
+        return str(legacy() or "")
+    return default_selector_spindle(dialog)
+
+
+def _dialog_default_jaw_selector_spindle(dialog: Any) -> str:
+    legacy = getattr(dialog, "_default_jaw_selector_spindle", None)
+    if callable(legacy):
+        return str(legacy() or "")
+    return default_jaw_selector_spindle(dialog)
 
 
 def build_initial_jaw_assignments(dialog: Any) -> list[dict]:
     assignments: list[dict] = []
     jaws_by_id: dict[str, dict] = {
-        str(jaw.get("id") or "").strip(): jaw
+        str(jaw.get("id") or jaw.get("jaw_id") or "").strip(): jaw
         for jaw in (dialog._jaw_cache or [])
-        if isinstance(jaw, dict) and str(jaw.get("id") or "").strip()
+        if isinstance(jaw, dict) and str(jaw.get("id") or jaw.get("jaw_id") or "").strip()
     }
     for spindle_key in ("main", "sub"):
         selector = dialog._jaw_selectors.get(spindle_key)
@@ -47,16 +74,16 @@ def build_tool_selector_request(
     initial_assignments: list[dict] | None = None,
 ) -> dict:
     """Build normalized request payload inputs for tool selector sessions."""
-    resolved_head = normalize_selector_head(initial_head or dialog._default_selector_head())
-    resolved_spindle = normalize_selector_spindle(initial_spindle or dialog._default_selector_spindle())
+    resolved_head = normalize_selector_head(initial_head or _dialog_default_selector_head(dialog))
+    resolved_spindle = normalize_selector_spindle(initial_spindle or _dialog_default_selector_spindle(dialog))
 
     assignments = list(initial_assignments or [])
     if not assignments:
-        ordered_list = dialog._selector_target_ordered_list(resolved_head)
+        ordered_list = selector_target_ordered_list(dialog, resolved_head)
         assignments = selector_initial_tool_assignments(ordered_list, resolved_spindle)
 
     buckets = selector_initial_tool_assignment_buckets(
-        dialog._ordered_tool_lists,
+        dialog._tool_column_lists,
         tuple(dialog._head_profiles.keys()),
         tuple(dialog._spindle_profiles.keys()),
     )
@@ -74,7 +101,7 @@ def build_jaw_selector_request(dialog: Any, *, initial_spindle: str | None = Non
     """Build normalized request payload inputs for jaw selector sessions."""
     return {
         "kind": "jaws",
-        "spindle": normalize_selector_spindle(initial_spindle or dialog._default_jaw_selector_spindle()),
+        "spindle": normalize_selector_spindle(initial_spindle or _dialog_default_jaw_selector_spindle(dialog)),
         "initial_assignments": build_initial_jaw_assignments(dialog),
     }
 

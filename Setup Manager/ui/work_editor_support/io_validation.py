@@ -13,7 +13,11 @@ def refresh_external_refs(dialog: Any) -> None:
         dialog.draw_service,
         tuple(dialog._head_profiles.keys()),
     )
-    dialog._jaw_cache = dialog.draw_service.list_jaw_refs(force_reload=True)
+    list_jaw_refs = getattr(dialog.draw_service, "list_jaw_refs", None)
+    if callable(list_jaw_refs):
+        dialog._jaw_cache = list_jaw_refs(force_reload=True)
+    else:
+        dialog._jaw_cache = []
 
     for selector in dialog._jaw_selectors.values():
         selector.populate(dialog._jaw_cache)

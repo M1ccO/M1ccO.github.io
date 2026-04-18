@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Callable
 
-from PySide6.QtWidgets import QAbstractItemView, QDialog, QFrame, QHBoxLayout, QPushButton, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QAbstractItemView, QDialog, QFrame, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
 
 
 class SelectorDialogBase(QDialog):
@@ -18,8 +19,9 @@ class SelectorDialogBase(QDialog):
         translate: Callable[[str, str | None], str],
         on_cancel: Callable[[], None],
         parent=None,
+        window_flags: Qt.WindowType | Qt.WindowFlags = Qt.WindowFlags(),
     ):
-        super().__init__(parent)
+        super().__init__(parent, window_flags)
         self._translate = translate
         self._on_cancel = on_cancel
         self._submitted = False
@@ -49,6 +51,54 @@ class SelectorDialogBase(QDialog):
         super().closeEvent(event)
 
 
+class SelectorWidgetBase(QWidget):
+    """Shared embedded selector widget lifecycle helpers."""
+
+    submitted = Signal(dict)
+    canceled = Signal()
+
+    def __init__(
+        self,
+        *,
+        translate: Callable[[str, str | None], str],
+        on_cancel: Callable[[], None],
+        parent=None,
+    ):
+        super().__init__(parent)
+        self._translate = translate
+        self._on_cancel = on_cancel
+        self._submitted = False
+        self._cancel_notified = False
+
+    def _t(self, key: str, default: str | None = None, **kwargs) -> str:
+        return self._translate(key, default, **kwargs)
+
+    def _notify_cancel_once(self) -> None:
+        if self._cancel_notified:
+            return
+        self._cancel_notified = True
+        self._on_cancel()
+        self.canceled.emit()
+
+    def _reset_selector_widget_state(self, *, on_cancel: Callable[[], None]) -> None:
+        self._on_cancel = on_cancel
+        self._submitted = False
+        self._cancel_notified = False
+
+    def _finish_submit(self, on_submit: Callable[[dict], None], payload: dict) -> None:
+        self._submitted = True
+        on_submit(payload)
+        self.submitted.emit(payload)
+
+    def _cancel_dialog(self) -> None:
+        self._notify_cancel_once()
+
+    def closeEvent(self, event):
+        if not self._submitted:
+            self._notify_cancel_once()
+        super().closeEvent(event)
+
+
 def selected_rows_or_current(view: QAbstractItemView) -> list:
     """Return selected rows, falling back to current row when nothing is selected."""
 
@@ -68,13 +118,14 @@ def build_selector_bottom_bar(
     translate: Callable[[str, str | None], str],
     on_cancel: Callable[[], None],
     on_done: Callable[[], None],
+    parent=None,
 ) -> tuple[QFrame, QPushButton, QPushButton]:
     """Build the shared selector DONE/CANCEL bottom bar."""
 
     def _t(key: str, default: str | None = None, **kwargs) -> str:
         return translate(key, default, **kwargs)
 
-    bar = QFrame()
+    bar = QFrame(parent)
     bar.setProperty('bottomBar', True)
     layout = QHBoxLayout(bar)
     layout.setContentsMargins(10, 8, 10, 8)

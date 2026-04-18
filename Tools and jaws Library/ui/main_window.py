@@ -206,6 +206,7 @@ class MainWindow(QMainWindow):
         self._fixture_selector_dialog: FixtureSelectorDialog | None = None
         self._closing_selector_dialogs = False
         self._runtime_initialized = False
+        self._background_catalog_preload_done = False
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.fixture_service, self.export_service, self.settings_service)
@@ -240,10 +241,55 @@ class MainWindow(QMainWindow):
         if not self._runtime_initialized:
             self._runtime_initialized = True
             QApplication.instance().installEventFilter(self)
+            QTimer.singleShot(0, self.preload_catalog_pages)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._ensure_on_screen()
         self._position_rail_title()
+
+    def _preload_catalog_page(self, page, warmup_fn) -> None:
+        if page is None:
+            return
+        try:
+            ensure_polished = getattr(page, "ensurePolished", None)
+            if callable(ensure_polished):
+                ensure_polished()
+            layout = getattr(page, "layout", lambda: None)()
+            if layout is not None:
+                layout.activate()
+        except Exception:
+            pass
+
+        try:
+            setattr(page, "_initial_load_done", True)
+            setattr(page, "_initial_load_scheduled", False)
+            setattr(page, "_deferred_refresh_needed", False)
+            refresh_catalog = getattr(page, "refresh_catalog", None)
+            if callable(refresh_catalog):
+                refresh_catalog()
+        except Exception:
+            logger.debug("Background catalog preload failed for %s", type(page).__name__, exc_info=True)
+
+        try:
+            warmup_fn(page)
+        except Exception:
+            logger.debug("Background preview warmup failed for %s", type(page).__name__, exc_info=True)
+
+    def preload_catalog_pages(self) -> None:
+        if self._background_catalog_preload_done:
+            return
+        self._background_catalog_preload_done = True
+        try:
+            from ui.home_page_support.detached_preview import warmup_preview_engine as warmup_tool_preview
+            from ui.jaw_page_support.detached_preview import warmup_preview_engine as warmup_jaw_preview
+            from ui.fixture_page_support.detached_preview import warmup_preview_engine as warmup_fixture_preview
+
+            self._preload_catalog_page(self.home_page, warmup_tool_preview)
+            self._preload_catalog_page(self.jaws_page, warmup_jaw_preview)
+            self._preload_catalog_page(self.fixtures_page, warmup_fixture_preview)
+        except Exception:
+            self._background_catalog_preload_done = False
+            logger.debug("Background catalog preload failed", exc_info=True)
 
     def _position_rail_title(self):
         """Place the header label at the top-left of the central widget."""
@@ -1112,8 +1158,11 @@ class MainWindow(QMainWindow):
     def _clear_selector_session(self, show: bool = True):
         self._close_selector_dialogs()
         self._set_selector_session_state(empty_selector_session_state())
-        # Remove stay-on-top hint so the window behaves normally
-        self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+        # Only remove stay-on-top when it is actually set — unconditionally
+        # calling setWindowFlag on Windows can briefly recreate the native
+        # window handle and cause a visible flash.
+        if self.windowFlags() & Qt.WindowStaysOnTopHint:
+            self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
         if show:
             self.show()
 
@@ -1348,11 +1397,7 @@ class MainWindow(QMainWindow):
             self.hide()
             self._open_selector_dialog_for_session(should_show=should_show)
         else:
-            self._clear_selector_session(show=should_show)
-            # Remove stay-on-top when exiting selector mode
-            self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
-            if should_show:
-                self.show()
+            self._clear_selector_session(show=False)
 
             # Switch module only when NOT in selector mode.
             module = selector_mode if selector_mode in ('tools', 'jaws', 'fixtures') else str(payload.get('module', '')).strip()

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import logging
+from time import perf_counter
+
 from PySide6.QtGui import QStandardItem
 
 from shared.ui.helpers.topbar_common import rebuild_filter_row
@@ -8,7 +11,18 @@ from ..selector_ui_helpers import normalize_selector_spindle, selector_spindle_l
 from .common import selected_rows_or_current
 
 
+_LOGGER = logging.getLogger(__name__)
+
+
 class JawSelectorStateMixin:
+    def _trace_selector_state(self, event: str, **fields) -> None:
+        payload = {
+            'event': event,
+            'embedded_mode': bool(getattr(self, '_embedded_mode', False)),
+        }
+        payload.update(fields)
+        _LOGGER.info('jaw_selector.trace %s', payload)
+
     def _load_initial_assignments(self, initial_assignments: list[dict] | None) -> None:
         pending: list[dict] = []
         for item in initial_assignments or []:
@@ -66,8 +80,10 @@ class JawSelectorStateMixin:
         return side == target
 
     def _refresh_catalog(self) -> None:
+        started = perf_counter()
         search_text = self.search_input.text().strip()
         view_mode = self.view_filter.currentData() or 'all'
+        delegate = self.list_view.itemDelegate()
         jaws = self.jaw_service.list_jaws(search_text=search_text, view_mode=view_mode, jaw_type_filter='All')
 
         self._model.clear()
@@ -76,14 +92,32 @@ class JawSelectorStateMixin:
             jaw_id = str(jaw.get('jaw_id') or '').strip()
             item.setData(jaw_id, ROLE_JAW_ID)
             item.setData(dict(jaw), ROLE_JAW_DATA)
+            prewarm_icon = getattr(delegate, 'prewarm_icon_pixmap', None)
+            if callable(prewarm_icon):
+                prewarm_icon(dict(jaw))
             self._model.appendRow(item)
+        self._trace_selector_state(
+            'catalog.refresh',
+            search_text=search_text,
+            view_mode=view_mode,
+            row_count=self._model.rowCount(),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _refresh_slot_ui(self) -> None:
+        started = perf_counter()
         self.slot_main.set_assignment(self._selector_assignments.get('main'))
         self.slot_sub.set_assignment(self._selector_assignments.get('sub'))
         self.slot_main.set_selected('main' in self._selected_slots)
         self.slot_sub.set_selected('sub' in self._selected_slots)
         self._update_remove_button()
+        self._trace_selector_state(
+            'slot_ui.refresh',
+            main_assigned=bool(self._selector_assignments.get('main')),
+            sub_assigned=bool(self._selector_assignments.get('sub')),
+            selected_slots=sorted(self._selected_slots),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _update_context_header(self) -> None:
         label = selector_spindle_label(self._current_spindle)
@@ -234,6 +268,9 @@ class JawSelectorStateMixin:
     def _switch_to_detail_panel(self, jaw_data: dict | None = None) -> None:
         """Show the detail card and populate it with jaw_data."""
         self.setUpdatesEnabled(False)
+        ensure_detail_card_built = getattr(self, '_ensure_detail_card_built', None)
+        if callable(ensure_detail_card_built):
+            ensure_detail_card_built()
         self.selector_card.setVisible(False)
         self.detail_card.setVisible(True)
         self.detail_header_container.setVisible(True)
@@ -278,6 +315,10 @@ class JawSelectorStateMixin:
 
     def _populate_jaw_detail(self, jaw: dict | None) -> None:
         """Clear and rebuild the detail panel content using jaw detail builder."""
+        started = perf_counter()
+        ensure_detail_card_built = getattr(self, '_ensure_detail_card_built', None)
+        if callable(ensure_detail_card_built):
+            ensure_detail_card_built()
         from ..jaw_page_support.detail_panel_builder import populate_detail_panel
         # Clear existing content
         while self.detail_layout.count():
@@ -286,9 +327,16 @@ class JawSelectorStateMixin:
             if widget is not None:
                 widget.deleteLater()
         populate_detail_panel(self, jaw)
+        self._trace_selector_state(
+            'detail.populate',
+            jaw_id=str((jaw or {}).get('jaw_id') or '').strip() or None,
+            has_jaw=bool(jaw),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _prime_detail_panel_cache(self) -> None:
         """Pre-render first jaw detail payload so first open is smooth."""
+        started = perf_counter()
         indexes = selected_rows_or_current(self.list_view)
         if not indexes and self._model.rowCount() > 0:
             first_index = self._model.index(0, 0)
@@ -301,6 +349,11 @@ class JawSelectorStateMixin:
         if isinstance(jaw_data, dict):
             self.current_jaw_id = str(jaw_data.get('jaw_id') or '').strip() or None
             self._populate_jaw_detail(jaw_data)
+        self._trace_selector_state(
+            'detail.prime_cache',
+            has_index=bool(indexes),
+            duration_ms=round((perf_counter() - started) * 1000, 2),
+        )
 
     def _sync_preview_if_open(self) -> None:
         preview_btn = getattr(self, 'preview_window_btn', None)

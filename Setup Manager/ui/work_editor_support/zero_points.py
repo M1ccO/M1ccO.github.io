@@ -24,17 +24,18 @@ def _responsive_width(dialog: Any) -> int:
 
 
 def set_zero_xy_visibility(dialog: Any, show_xy: bool) -> None:
+    axis_widgets = getattr(dialog, "_zero_axis_widgets", {})
     for axis in ("z", "c"):
-        for widget in dialog._zero_axis_widgets.get(axis, []):
+        for widget in axis_widgets.get(axis, []):
             widget.setVisible(True)
     for axis in ("x", "y"):
-        for widget in dialog._zero_axis_widgets.get(axis, []):
+        for widget in axis_widgets.get(axis, []):
             widget.setVisible(show_xy)
 
-    for spacer in dialog._zero_row_spacers:
+    for spacer in getattr(dialog, "_zero_row_spacers", []):
         spacer.setMinimumWidth(56 if show_xy else 0)
 
-    for combo in dialog._zero_coord_combos:
+    for combo in getattr(dialog, "_zero_coord_combos", []):
         if show_xy:
             combo.setMinimumWidth(92)
             combo.setMaximumWidth(16777215)
@@ -44,15 +45,16 @@ def set_zero_xy_visibility(dialog: Any, show_xy: bool) -> None:
         combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     zc_min = 74 if not show_xy else 88
+    axis_inputs = getattr(dialog, "_zero_axis_inputs", {})
     for axis in ("z", "c"):
-        for value_input in dialog._zero_axis_inputs.get(axis, []):
+        for value_input in axis_inputs.get(axis, []):
             value_input.setMinimumWidth(zc_min)
             value_input.setMaximumWidth(16777215)
             value_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     axis_columns = {"z": 2, "x": 3, "y": 4, "c": 5}
     axis_stretch = {"z": 1, "x": 1 if show_xy else 0, "y": 1 if show_xy else 0, "c": 1}
-    for grid in dialog._zero_point_grids:
+    for grid in getattr(dialog, "_zero_point_grids", []):
         grid.setHorizontalSpacing(6 if show_xy else 2)
         for axis, col in axis_columns.items():
             grid.setColumnStretch(col, axis_stretch[axis])
@@ -60,7 +62,7 @@ def set_zero_xy_visibility(dialog: Any, show_xy: bool) -> None:
         grid.setColumnStretch(0, 0)
         grid.setColumnMinimumWidth(0, 72 if show_xy else 58)
 
-    for grid, _group in dialog._zero_grids_with_groups:
+    for grid, _group in getattr(dialog, "_zero_grids_with_groups", []):
         if show_xy:
             grid.setContentsMargins(12, 8, 12, 8)
         else:

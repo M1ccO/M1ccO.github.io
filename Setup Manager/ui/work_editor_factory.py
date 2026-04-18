@@ -69,6 +69,26 @@ class MachiningCenterWorkEditorDialog(WorkEditorDialog):
         )
 
 
+def _bump_resolver_caches_on_work_editor_open() -> None:
+    """Natural sync point: invalidate resolver caches before Work Editor opens.
+
+    The user may have edited the Tool or Jaw Library in the separate
+    library process. The shared resolver cannot see those writes, so
+    every Work Editor open performs a coarse cache bump to guarantee
+    fresh labels/metadata. Cheap (only drops in-memory dicts) and runs
+    once per open.
+    """
+    try:
+        from services.preload_manager import get_preload_manager
+    except Exception:
+        return
+    try:
+        get_preload_manager().bump_revisions()
+    except Exception:
+        # Non-fatal: stale cache is a display issue, not a crash cause.
+        pass
+
+
 def resolve_work_editor_dialog_class(machine_profile_key: str | None):
     family = resolve_machine_family(profile_key=machine_profile_key)
     if family == MACHINING_CENTER_FAMILY:
@@ -89,6 +109,7 @@ def create_work_editor_dialog(
     drawings_enabled: bool = True,
     machine_profile_key: str | None = None,
 ):
+    _bump_resolver_caches_on_work_editor_open()
     dialog_cls = resolve_work_editor_dialog_class(machine_profile_key)
     return dialog_cls(
         draw_service,

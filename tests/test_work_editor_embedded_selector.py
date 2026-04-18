@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import unittest
+from unittest.mock import patch
 import importlib.util
 from pathlib import Path
 
@@ -45,6 +46,7 @@ def _load_work_editor_dialog_class():
         if spec is None or spec.loader is None:
             raise RuntimeError(f"Unable to load WorkEditorDialog module from {module_path}")
         module = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = module
         spec.loader.exec_module(module)
         return module.WorkEditorDialog
     finally:
@@ -75,6 +77,10 @@ class _DummyDialog:
         self._head_profiles = {"HEAD1": _Profile("HEAD1"), "HEAD2": _Profile("HEAD2")}
         self._spindle_profiles = {"main": _Profile("main"), "sub": _Profile("sub")}
         self._ordered_tool_lists = {"HEAD1": _DummyOrderedList(), "HEAD2": _DummyOrderedList()}
+        self._tool_column_lists = {
+            "HEAD1": {"main": self._ordered_tool_lists["HEAD1"], "sub": self._ordered_tool_lists["HEAD1"]},
+            "HEAD2": {"main": self._ordered_tool_lists["HEAD2"], "sub": self._ordered_tool_lists["HEAD2"]},
+        }
         self._jaw_cache = []
         self._jaw_selectors = {}
         self._mc_operations = [
@@ -91,8 +97,11 @@ class _DummyDialog:
     def _default_jaw_selector_spindle(self):
         return "main"
 
-    def _selector_target_ordered_list(self, _head_key: str):
-        return _DummyOrderedList()
+    def _normalize_selector_head(self, head: str | None) -> str:
+        value = str(head or "").strip().upper()
+        if value in {"HEAD2", "LOWER", "L"}:
+            return "HEAD2"
+        return "HEAD1"
 
 
 class TestSelectorProvider(unittest.TestCase):
@@ -111,6 +120,21 @@ class TestSelectorProvider(unittest.TestCase):
         self.assertEqual("sub", request["spindle"])
         self.assertEqual([{"tool_id": "T10"}], request["initial_assignments"])
         self.assertIn("HEAD1:main", request["initial_assignment_buckets"])
+
+    def test_tool_selector_request_uses_actual_sub_column_bucket_when_available(self):
+        dialog = _DummyDialog()
+        head1_main = _DummyOrderedList()
+        head1_sub = _DummyOrderedList()
+        head1_main._assignments_by_spindle["main"] = [{"tool_id": "T101", "spindle": "main"}]
+        head1_sub._assignments_by_spindle["sub"] = [{"tool_id": "T102", "spindle": "sub"}]
+        dialog._tool_column_lists["HEAD1"] = {"main": head1_main, "sub": head1_sub}
+
+        request = build_tool_selector_request(dialog)
+
+        self.assertEqual(
+            [{"tool_id": "T102"}],
+            request["initial_assignment_buckets"]["HEAD1:sub"],
+        )
 
     def test_jaw_selector_request_defaults(self):
         dialog = _DummyDialog()
@@ -150,6 +174,42 @@ class TestSelectorModeEnv(unittest.TestCase):
                 os.environ.pop("NTX_WORK_EDITOR_SELECTOR_MODE", None)
             else:
                 os.environ["NTX_WORK_EDITOR_SELECTOR_MODE"] = original
+
+
+class TestEmbeddedSelectorSubmit(unittest.TestCase):
+    def test_handle_embedded_selector_submit_forwards_assignment_buckets(self):
+        WorkEditorDialog = _load_work_editor_dialog_class()
+        captured = {}
+
+        class _DummySubmitDialog:
+            def _log_selector_event(self, *_args, **_kwargs):
+                return
+
+        dummy = _DummySubmitDialog()
+
+        def _capture_apply(_dialog, request, selected_items):
+            captured["request"] = dict(request)
+            captured["selected_items"] = list(selected_items)
+            return True
+
+        module = sys.modules[WorkEditorDialog.__module__]
+        with patch.object(module, "apply_tool_selector_result", side_effect=_capture_apply):
+            WorkEditorDialog._handle_embedded_selector_submit(
+                dummy,
+                {"kind": "tools", "head": "HEAD1", "spindle": "main"},
+                {
+                    "kind": "tools",
+                    "selected_items": [{"tool_id": "T001"}],
+                    "assignment_buckets_by_target": {
+                        "HEAD1:main": [{"tool_id": "T001"}],
+                        "HEAD2:sub": [{"tool_id": "T201"}],
+                    },
+                },
+            )
+
+        self.assertEqual([{"tool_id": "T001"}], captured["selected_items"])
+        self.assertIn("assignment_buckets_by_target", captured["request"])
+        self.assertIn("HEAD2:sub", captured["request"]["assignment_buckets_by_target"])
 
 
 if __name__ == "__main__":

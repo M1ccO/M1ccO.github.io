@@ -97,7 +97,30 @@ class JawAssignmentSlot(QGroupBox):
         self.value_label.setFixedHeight(self._content_height)
         self.value_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         layout.addWidget(self.value_label)
+        self._build_assignment_card()
         self._refresh_ui()
+
+    def _build_assignment_card(self) -> None:
+        if self._assignment_card is not None:
+            return
+        self._assignment_card = _DraggableJawAssignmentCard(
+            icon=QPixmap(),
+            title="",
+            subtitle="",
+            badges=[],
+            editable=False,
+            compact=True,
+            parent=self,
+        )
+        self._assignment_card.slotClicked.connect(
+            lambda ctrl: self.slotClicked.emit(self._slot_key, ctrl)
+        )
+        self._assignment_card.dragRequested.connect(self._start_assignment_drag)
+        self._assignment_card.setFixedHeight(self._content_height)
+        self._assignment_card.icon_label.setFixedSize(32, 32)
+        self._assignment_card.subtitle_label.setVisible(False)
+        self._assignment_card.setVisible(False)
+        self.layout().insertWidget(0, self._assignment_card)
 
     def set_title(self, title: str):
         if self._embedded_title:
@@ -167,33 +190,15 @@ class JawAssignmentSlot(QGroupBox):
             jaw_type = self._localized_jaw_type(str(self._assignment.get("jaw_type") or "").strip())
             title = f"{jaw_id}  -  {jaw_type}" if jaw_type else jaw_id
             icon_jaw = {**self._assignment, "spindle_side": "sub" if self._slot_key == "sub" else "main"}
-            if self._assignment_card is None:
-                icon = jaw_icon_for_row(icon_jaw)
-                self._assignment_card = _DraggableJawAssignmentCard(
-                    icon=icon,
-                    title=title,
-                    subtitle="",
-                    badges=[],
-                    editable=False,
-                    compact=True,
-                    parent=self,
-                )
-                self._assignment_card.slotClicked.connect(
-                    lambda ctrl: self.slotClicked.emit(self._slot_key, ctrl)
-                )
-                self._assignment_card.dragRequested.connect(self._start_assignment_drag)
-                self._assignment_card.setFixedHeight(self._content_height)
-                self._assignment_card.icon_label.setFixedSize(32, 32)
-                if not icon.isNull():
-                    self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
-                self.layout().insertWidget(0, self._assignment_card)
+            self._build_assignment_card()
+            icon = jaw_icon_for_row(icon_jaw)
+            self._assignment_card.icon_label.setFixedSize(32, 32)
+            if icon is not None and not icon.isNull():
+                self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
             else:
-                icon = jaw_icon_for_row(icon_jaw)
-                self._assignment_card.icon_label.setFixedSize(32, 32)
-                if icon is not None and not icon.isNull():
-                    self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
-                self._assignment_card.title_label.setText(title)
-                self._assignment_card.setFixedHeight(self._content_height)
+                self._assignment_card.icon_label.clear()
+            self._assignment_card.set_title_text(title)
+            self._assignment_card.setFixedHeight(self._content_height)
             self._assignment_card.subtitle_label.setVisible(False)
             self._assignment_card.set_badges([])
             self._assignment_card.setVisible(True)

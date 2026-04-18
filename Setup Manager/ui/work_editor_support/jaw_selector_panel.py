@@ -201,7 +201,7 @@ class WorkEditorJawSelectorPanel(QWidget):
                 self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
             self._selection_layout.insertWidget(0, self._assignment_card)
         else:
-            self._assignment_card.title_label.setText(label)
+            self._assignment_card.set_title_text(label)
             icon = self._jaw_icon()
             if not icon.isNull():
                 self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))

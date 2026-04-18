@@ -1,36 +1,20 @@
 from .dragdrop_widgets import (
-    WorkEditorToolAssignmentListWidget,
     WorkEditorToolRemoveDropButton,
 )
 from .embedded_selector_host import WorkEditorSelectorHost
 from .io_validation import collect_unresolved_reference_messages, refresh_external_refs
-from .icon_resolvers import toolbar_icon, tool_icon_for_type, tool_icon_for_type_in_spindle
+from .icon_resolvers import toolbar_icon, tool_icon_for_type_in_spindle
 from .jaw_selector_panel import WorkEditorJawSelectorPanel
 from .model import WorkEditorPayloadAdapter
 from .ordered_tool_list import WorkEditorOrderedToolList
 from .machining_center import (
-    apply_fixture_selection_to_operation,
     build_machining_center_zeros_tab_ui,
 )
 from .selectors import (
-    apply_fixture_selector_items_to_operations,
-    apply_jaw_selector_items_to_selectors,
-    apply_tool_selector_items_to_ordered_list,
-    build_tool_selector_bucket,
-    jaw_ref_key,
-    jaw_selection_by_spindle,
-    load_external_tool_refs,
-    merge_jaw_refs,
-    merge_jaw_refs_and_sync_selectors,
-    merge_tool_refs,
-    merge_tool_refs_and_sync_lists,
     normalize_selector_head,
     normalize_selector_spindle,
-    parse_optional_int,
     selector_initial_tool_assignment_buckets,
     selector_initial_tool_assignments,
-    tool_ref_key,
-    unique_selected_jaw_ids,
 )
 from .pot_editor import open_pot_editor_dialog
 from .selector_provider import (
@@ -41,6 +25,7 @@ from .selector_provider import (
 )
 from .selector_parity_factory import (
     build_embedded_selector_parity_widget,
+    dispose_embedded_selector_runtime,
     release_tool_library_namespace_aliases,
     warmup_embedded_selector_runtime,
 )
@@ -50,19 +35,14 @@ from .selector_adapter import (
     apply_tool_selector_result,
     head_label,
     merge_jaw_refs,
-    merge_tool_refs,
     show_selector_warning_for_dialog,
     spindle_label,
 )
 from .selector_state import (
-    current_tools_head_value,
     default_jaw_selector_spindle,
     default_selector_head,
     default_selector_spindle,
     selector_target_ordered_list,
-    set_tools_head_value,
-    toggle_tools_head_view,
-    update_tools_head_switch_text,
 )
 from .tab_builders import (
     build_general_tab_ui,
@@ -87,7 +67,6 @@ from .tool_actions import (
     update_shared_tool_actions,
     visible_tool_lists,
 )
-from .tool_picker_dialog import WorkEditorToolPickerDialog
 from .tools_tab_builder import build_tools_tab_ui
 from .zero_points import (
     build_spindle_zero_group,
@@ -100,34 +79,17 @@ __all__ = [
     "WorkEditorPayloadAdapter",
     "WorkEditorOrderedToolList",
     "build_machining_center_zeros_tab_ui",
-    "apply_fixture_selection_to_operation",
-    "WorkEditorToolAssignmentListWidget",
     "WorkEditorToolRemoveDropButton",
     "WorkEditorSelectorHost",
     "collect_unresolved_reference_messages",
     "refresh_external_refs",
     "toolbar_icon",
-    "tool_icon_for_type",
     "tool_icon_for_type_in_spindle",
     "WorkEditorJawSelectorPanel",
-    "apply_jaw_selector_items_to_selectors",
-    "apply_fixture_selector_items_to_operations",
-    "apply_tool_selector_items_to_ordered_list",
-    "build_tool_selector_bucket",
-    "jaw_ref_key",
-    "jaw_selection_by_spindle",
-    "load_external_tool_refs",
-    "merge_jaw_refs",
-    "merge_jaw_refs_and_sync_selectors",
-    "merge_tool_refs",
-    "merge_tool_refs_and_sync_lists",
     "normalize_selector_head",
     "normalize_selector_spindle",
-    "parse_optional_int",
     "selector_initial_tool_assignment_buckets",
     "selector_initial_tool_assignments",
-    "tool_ref_key",
-    "unique_selected_jaw_ids",
     "build_general_tab_ui",
     "build_notes_tab_ui",
     "build_spindles_tab_ui",
@@ -142,24 +104,20 @@ __all__ = [
     "build_jaw_selector_request",
     "build_fixture_selector_request",
     "build_embedded_selector_parity_widget",
+    "dispose_embedded_selector_runtime",
     "release_tool_library_namespace_aliases",
     "warmup_embedded_selector_runtime",
     "head_label",
     "spindle_label",
-    "merge_tool_refs",
     "merge_jaw_refs",
     "apply_fixture_selector_result",
     "apply_tool_selector_result",
     "apply_jaw_selector_result",
     "show_selector_warning_for_dialog",
-    "current_tools_head_value",
     "default_jaw_selector_spindle",
     "default_selector_head",
     "default_selector_spindle",
     "selector_target_ordered_list",
-    "set_tools_head_value",
-    "toggle_tools_head_view",
-    "update_tools_head_switch_text",
     "refresh_tool_head_widgets",
     "remove_dragged_tool_assignments",
     "populate_default_pots",
@@ -172,7 +130,6 @@ __all__ = [
     "sync_tool_head_view",
     "update_shared_tool_actions",
     "visible_tool_lists",
-    "WorkEditorToolPickerDialog",
     "make_zero_axis_input",
     "set_zero_xy_visibility",
     "build_spindle_zero_group",

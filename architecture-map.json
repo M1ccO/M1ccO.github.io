@@ -124,8 +124,7 @@
           "familyRuntime": "Setup Manager/ui/machine_family_runtime.py",
           "dialog": "Setup Manager/ui/work_editor_dialog.py",
           "support": "Setup Manager/ui/work_editor_support/",
-          "refactorStatus": "Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md",
-          "glitchInvestigation": "WORK_EDITOR_GLITCH_INVESTIGATION_REPORT.md"
+          "refactorStatus": "Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md"
         }
       },
       "supportPackages": {

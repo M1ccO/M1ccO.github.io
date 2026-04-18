@@ -32,6 +32,7 @@ from ui.work_editor_factory import (  # noqa: E402
     create_work_editor_dialog,
     resolve_work_editor_dialog_class,
 )
+import ui.work_editor_dialog as work_editor_dialog_module  # noqa: E402
 from ui.work_editor_dialog import WorkEditorDialog  # noqa: E402
 from ui.work_editor_support.dialog_lifecycle import setup_tabs  # noqa: E402
 from ui.work_editor_support.zero_points import set_zero_xy_visibility  # noqa: E402
@@ -153,7 +154,7 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
             def _close_transient_combo_popups(self):
                 pass
 
-        module = sys.modules[WorkEditorDialog.__module__]
+        module = work_editor_dialog_module
         with mock.patch.object(module, "UiPreferencesService") as prefs_mock, mock.patch.object(
             module, "load_profile", return_value=_DummyProfile()
         ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch.object(
@@ -208,7 +209,7 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
             def _close_transient_combo_popups(self):
                 pass
 
-        module = sys.modules[WorkEditorDialog.__module__]
+        module = work_editor_dialog_module
         with mock.patch.object(module, "UiPreferencesService") as prefs_mock, mock.patch.object(
             module, "load_profile"
         ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch.object(
@@ -271,7 +272,7 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
             def _close_transient_combo_popups(self):
                 pass
 
-        module = sys.modules[WorkEditorDialog.__module__]
+        module = work_editor_dialog_module
         with mock.patch.object(module, "UiPreferencesService") as prefs_mock, mock.patch.object(
             module, "load_profile", return_value=_DummyProfile()
         ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch.object(

@@ -51,7 +51,7 @@ class JawSelectorLayoutMixin:
 
     def _build_toolbar(self, root: QVBoxLayout) -> None:
         """Build the shared filter toolbar matching the library style."""
-        frame, self._filter_layout = build_filter_frame()
+        frame, self._filter_layout = build_filter_frame(parent=self)
         # Dialog has no left rail — clear the page-specific objectName and margins
         frame.setObjectName('')
         self._filter_layout.setContentsMargins(8, 6, 8, 6)
@@ -100,6 +100,7 @@ class JawSelectorLayoutMixin:
                 self._close_icon,
                 self._t('work_editor.selector.assignment.details_title', 'Leukojen tiedot'),
                 self._switch_to_selector_panel,
+                parent=frame,
             )
         self.detail_header_container.setVisible(False)
 
@@ -125,7 +126,7 @@ class JawSelectorLayoutMixin:
         splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(False)
 
-        list_card, list_layout = build_catalog_list_shell()
+        list_card, list_layout = build_catalog_list_shell(parent=splitter)
         self.list_view = JawCatalogListView()
         apply_catalog_list_view_defaults(self.list_view)
         self._model = QStandardItemModel(self.list_view)
@@ -141,25 +142,38 @@ class JawSelectorLayoutMixin:
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
         right_layout.addWidget(self._build_selector_card(parent=right_panel), 1)
-        right_layout.addWidget(self._build_detail_card(), 1)
+        right_layout.addWidget(self._build_detail_card(parent=right_panel), 1)
         splitter.addWidget(right_panel)
 
-        splitter.setSizes([int(self.width() * 0.58), int(self.width() * 0.42)])
+        splitter.setStretchFactor(0, 58)
+        splitter.setStretchFactor(1, 42)
         root.addWidget(splitter, 1)
 
-    def _build_detail_card(self) -> QWidget:
-        """Build the switchable detail panel using the shared container shell."""
+    def _build_detail_card(self, parent: QWidget | None = None) -> QWidget:
+        """Create the hidden detail host and defer the heavy shell until first use."""
+        detail_container = QWidget(parent)
+        detail_container.setMinimumWidth(300)
+        self._detail_container_host_layout = QVBoxLayout(detail_container)
+        self._detail_container_host_layout.setContentsMargins(0, 0, 0, 0)
+        self._detail_container_host_layout.setSpacing(0)
+        self.detail_layout = None
+        self.detail_card = detail_container
+        self.detail_card.setVisible(False)
+        return self.detail_card
+
+    def _ensure_detail_card_built(self) -> None:
+        if getattr(self, 'detail_layout', None) is not None:
+            return
         (
-            detail_container,
+            detail_shell,
             _outer_layout,
             _card,
             _scroll,
             _panel,
-            self.detail_layout,
-        ) = build_detail_container_shell(min_width=300)
-        self.detail_card = detail_container
-        self.detail_card.setVisible(False)
-        return self.detail_card
+            detail_layout,
+        ) = build_detail_container_shell(min_width=300, parent=self.detail_card)
+        self._detail_container_host_layout.addWidget(detail_shell, 1)
+        self.detail_layout = detail_layout
 
     def _build_selector_card(self, parent: QWidget | None = None):
         selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(
@@ -231,7 +245,6 @@ class JawSelectorLayoutMixin:
         actions.addStretch(1)
         selector_layout.addLayout(actions)
 
-        selector_scroll.setWidget(selector_panel)
         selector_card_layout.addWidget(selector_scroll, 1)
         return selector_card
 
@@ -241,5 +254,6 @@ class JawSelectorLayoutMixin:
             translate=self._translate,
             on_cancel=self._cancel,
             on_done=self._send_selector_selection,
+            parent=self,
         )
 

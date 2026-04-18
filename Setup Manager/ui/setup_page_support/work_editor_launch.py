@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
@@ -115,14 +117,87 @@ def exec_work_editor_dialog(dialog) -> int:
         _position_dialog_over_host(dialog, preload_host)
     if callable(trace_event):
         trace_event("pre_exec", dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()))
+
+    def _wait_for_real_close(previous_result: int) -> int:
+        """Keep the editor modal when Qt drops out of exec() too early.
+
+        Tool Selector can currently cause a premature exec() return even though the
+        Work Editor dialog is still visible and interactive. In that case we must
+        not let the caller resume as if the dialog really closed.
+        """
+        if not isinstance(dialog, QDialog):
+            return previous_result
+        if not dialog.isVisible():
+            return previous_result
+
+        selector_active = bool(getattr(dialog, "_selector_mode_active", False))
+        host = getattr(dialog, "_embedded_selector_host", None)
+        host_widget = getattr(host, "active_widget", None) if host is not None else None
+        if callable(trace_event):
+            trace_event(
+                "spurious_exec_return",
+                result=previous_result,
+                dialog_visible=True,
+                selector_active=selector_active,
+                active_selector_widget=type(host_widget).__name__ if host_widget is not None else "",
+            )
+        app = QApplication.instance()
+        if app is None:
+            if callable(trace_event):
+                trace_event("spurious_exec_return_no_app")
+            return previous_result
+
+        wait_started_at = time.monotonic()
+        heartbeat_deadline = wait_started_at + 1.0
+        while True:
+            try:
+                if not dialog.isVisible():
+                    break
+            except RuntimeError:
+                break
+
+            app.processEvents()
+            if time.monotonic() >= heartbeat_deadline:
+                heartbeat_deadline = time.monotonic() + 1.0
+                if callable(trace_event):
+                    trace_event(
+                        "spurious_exec_return_waiting",
+                        elapsed_ms=int((time.monotonic() - wait_started_at) * 1000),
+                        dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()),
+                        selector_active=bool(getattr(dialog, "_selector_mode_active", False)),
+                    )
+
+        try:
+            final_result = int(getattr(dialog, "result", lambda: previous_result)())
+        except RuntimeError:
+            final_result = previous_result
+        if callable(trace_event):
+            trace_event(
+                "spurious_exec_return_resolved",
+                previous_result=previous_result,
+                final_result=final_result,
+                dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()),
+            )
+        return final_result
+
     try:
         result = dialog.exec()
+        if isinstance(dialog, QDialog) and dialog.isVisible():
+            result = _wait_for_real_close(result)
         if callable(trace_event):
             trace_event("post_exec", result=result)
         return result
     finally:
         if callable(resume_tool_library_preload) and isinstance(preload_host, QWidget):
-            resume_tool_library_preload(preload_host, schedule_delay_ms=1800)
+            dialog_still_visible = False
+            try:
+                dialog_still_visible = bool(isinstance(dialog, QDialog) and dialog.isVisible())
+            except RuntimeError:
+                dialog_still_visible = False
+            if not dialog_still_visible:
+                resume_tool_library_preload(preload_host, schedule_delay_ms=1800)
+            elif callable(trace_event):
+                trace_event("resume_preload_skipped_dialog_visible")
         end_trace = getattr(preload_host, "_end_modal_trace", None)
         if callable(end_trace):
             end_trace(

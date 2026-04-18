@@ -34,7 +34,7 @@ _HERE = Path(__file__).resolve().parent
 _WORKSPACE = _HERE.parent
 _SETUP_MANAGER_ROOT = _WORKSPACE / "Setup Manager"
 _TOOLS_LIBRARY_ROOT = _WORKSPACE / "Tools and jaws Library"
-for _candidate in (_WORKSPACE / "Tools and jaws Library", _WORKSPACE):
+for _candidate in (_WORKSPACE / "Tools and jaws Library", _SETUP_MANAGER_ROOT, _WORKSPACE):
     candidate_str = str(_candidate)
     if candidate_str not in sys.path:
         sys.path.insert(0, candidate_str)
@@ -55,12 +55,10 @@ def _prefer_tools_library_namespace() -> None:
     sys.path.insert(0, tools_root)
 
     prefixed_roots = ("ui", "data", "services", "models")
+    root_prefixes = tuple(f"{root}." for root in prefixed_roots)
     for mod_name in list(sys.modules.keys()):
-        if mod_name == "config" or mod_name.startswith(tuple(f"{root}." for root in prefixed_roots)) or mod_name in prefixed_roots:
-            mod = sys.modules.get(mod_name)
-            mod_file = str(getattr(mod, "__file__", "") or "")
-            if setup_root and setup_root in mod_file:
-                sys.modules.pop(mod_name, None)
+        if mod_name == "config" or mod_name in prefixed_roots or mod_name.startswith(root_prefixes):
+            sys.modules.pop(mod_name, None)
 
 
 _prefer_tools_library_namespace()
@@ -160,7 +158,7 @@ class TestToolServiceListTools(unittest.TestCase):
 
     def setUp(self):
         from data.migrations.tools_migrations import create_or_migrate_tools_schema
-        from services.tool_service import ToolService
+        from tools_and_jaws_library.services.tool_service import ToolService
 
         self._db = _InMemDb()
         create_or_migrate_tools_schema(self._db.conn)
@@ -236,7 +234,7 @@ class TestJawServiceListJaws(unittest.TestCase):
 
     def setUp(self):
         from data.migrations.jaws_migrations import create_or_migrate_jaws_schema
-        from services.jaw_service import JawService
+        from tools_and_jaws_library.services.jaw_service import JawService
 
         self._db = _InMemDb()
         create_or_migrate_jaws_schema(self._db.conn)
@@ -417,7 +415,7 @@ class TestSelectorMime(unittest.TestCase):
 
     def test_tool_encode_decode_roundtrip(self):
         from PySide6.QtCore import QMimeData
-        from ui.selector_mime import (
+        from tools_and_jaws_library.ui.selector_mime import (
             SELECTOR_TOOL_MIME,
             decode_tool_payload,
             encode_selector_payload,
@@ -434,7 +432,7 @@ class TestSelectorMime(unittest.TestCase):
 
     def test_jaw_encode_decode_roundtrip(self):
         from PySide6.QtCore import QMimeData
-        from ui.selector_mime import (
+        from tools_and_jaws_library.ui.selector_mime import (
             SELECTOR_JAW_MIME,
             decode_jaw_payload,
             encode_selector_payload,
@@ -448,14 +446,14 @@ class TestSelectorMime(unittest.TestCase):
 
     def test_decode_missing_mime_type_returns_empty(self):
         from PySide6.QtCore import QMimeData
-        from ui.selector_mime import decode_tool_payload
+        from tools_and_jaws_library.ui.selector_mime import decode_tool_payload
 
         empty_mime = QMimeData()
         self.assertEqual(decode_tool_payload(empty_mime), [])
 
     def test_decode_corrupt_data_returns_empty(self):
         from PySide6.QtCore import QMimeData
-        from ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload
+        from tools_and_jaws_library.ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload
 
         mime = QMimeData()
         mime.setData(SELECTOR_TOOL_MIME, b"not valid json }{")
@@ -1030,14 +1028,20 @@ class TestSelectorMixins(unittest.TestCase):
         class _DummyToolPayload(ToolSelectorPayloadMixin):
             def __init__(self):
                 self._assigned_tools = [{"tool_id": "T001", "spindle": "main"}]
-                self._assignments_by_target = {"HEAD1:main": [{"tool_id": "T001", "spindle": "main"}]}
+                self._assignments_by_target = {
+                    "HEAD1:main": [{"tool_id": "T001", "spindle": "main"}],
+                    "HEAD1:sub": [{"tool_id": "T099", "spindle": "sub"}],
+                }
                 self._current_head = "HEAD1"
-                self._current_spindle = "main"
+                self._current_spindle = "sub"
                 self._on_submit = object()
                 self.captured = None
 
             def _sync_assignment_order(self):
                 return None
+
+            def _active_assignment_spindle(self) -> str:
+                return "sub"
 
             @staticmethod
             def _target_key(head: str, spindle: str) -> str:
@@ -1054,8 +1058,9 @@ class TestSelectorMixins(unittest.TestCase):
         self.assertIs(callback, dummy._on_submit)
         self.assertEqual(payload["kind"], "tools")
         self.assertEqual(payload["selector_head"], "HEAD1")
-        self.assertEqual(payload["selector_spindle"], "main")
+        self.assertEqual(payload["selector_spindle"], "sub")
         self.assertEqual(payload["selected_items"][0]["tool_id"], "T001")
+        self.assertEqual(payload["selected_items"][1]["tool_id"], "T099")
 
     def test_jaw_selector_send_selector_selection_emits_slot_payload(self):
         from ui.selectors.jaw_selector_payload import JawSelectorPayloadMixin

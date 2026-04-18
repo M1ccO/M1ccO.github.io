@@ -609,13 +609,28 @@ class MainWindow(QMainWindow):
     def showEvent(self, event):
         """Reload shared preferences when window is shown to sync with Tool Library."""
         super().showEvent(event)
-        if not self._runtime_initialized:
+        first_show = not self._runtime_initialized
+        if first_show:
             self._runtime_initialized = True
             QApplication.instance().installEventFilter(self)
             # Keep first show free of hidden dialog warmups; the old Work Editor
             # preload was the source of the launch-time hide/show flash.
+            if not getattr(self, "_tool_library_preload_completed", False):
+                QTimer.singleShot(150, self._preload_tool_library_background)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
+
+        # On every re-show except the first one, assume the user may have
+        # returned from the Tool Library process and invalidate resolver
+        # caches so freshly edited tool/jaw metadata renders correctly on
+        # the next Setup Card / Work Editor open.
+        if not first_show:
+            try:
+                from services.preload_manager import get_preload_manager
+
+                get_preload_manager().bump_revisions()
+            except Exception:
+                pass
 
     def closeEvent(self, event):
         """Save window geometry when closing for restoration on next launch."""

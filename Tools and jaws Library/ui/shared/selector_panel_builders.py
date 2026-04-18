@@ -38,6 +38,7 @@ def build_selector_card_shell(
     selector_panel.setProperty("selectorPanel", True)
     selector_panel.setMinimumWidth(0)
     selector_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
+    selector_scroll.setWidget(selector_panel)
 
     selector_layout = QVBoxLayout(selector_panel)
     selector_layout.setContentsMargins(10, 10, 10, 10)

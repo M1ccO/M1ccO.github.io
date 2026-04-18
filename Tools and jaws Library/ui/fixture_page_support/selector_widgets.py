@@ -167,8 +167,8 @@ class FixtureAssignmentSlot(QGroupBox):
                 self._assignment_card.icon_label.setFixedSize(32, 32)
                 if icon is not None and not icon.isNull():
                     self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
-                self._assignment_card.title_label.setText(title)
-                self._assignment_card.setFixedHeight(self._content_height)
+            self._assignment_card.set_title_text(title)
+            self._assignment_card.setFixedHeight(self._content_height)
             self._assignment_card.subtitle_label.setVisible(False)
             self._assignment_card.set_badges([])
             self._assignment_card.setVisible(True)

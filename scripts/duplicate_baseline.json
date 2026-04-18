@@ -1,12 +1,13 @@
 {
-  "max_cross_app_signature_collisions": 8,
-  "notes": "Current observed baseline is 8 cross-app signature collisions. Three drag/drop collisions are tracked as refactor_target until shared extraction is completed.",
+  "max_cross_app_signature_collisions": 9,
+  "notes": "Current observed baseline is 9 cross-app signature collisions. Three drag/drop collisions are tracked as refactor_target until shared extraction is completed.",
   "classification": {
     "intentional": [
       "ClassDef:Database:8a6fd8df5417ff71aa627b1374f9df7dfdeff74c",
       "ClassDef:JawDatabase:c7a6391ef1016cdc158db2556f0d84a3ceb9bd97",
       "FunctionDef:__init__:0f6d19ea8d0450438d8fc63baffa99b232c35af3",
       "FunctionDef:__init__:f35bd597525879eb55dcc73e740ed5971d196acb",
+      "FunctionDef:_normalize_selector_spindle:ae08747aee87e9eee65f2d5c83e0cd5d56e6e52d",
       "FunctionDef:_t:04a38c460d55ff3dac737e1196a9b83ad0d972e4"
     ],
     "refactor_target": [

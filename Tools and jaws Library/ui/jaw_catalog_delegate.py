@@ -95,9 +95,13 @@ class JawCatalogDelegate(CatalogDelegate):
         self._value_font_full = _value_font(13.4)
         self._value_font_narrow = _value_font(12.4)
         self._value_font_tight = _value_font(11.4)
+        self._icon_cache: dict[str, QPixmap] = {}
 
     def set_translate(self, translate: Callable) -> None:
         self._translate = translate
+
+    def prewarm_icon_pixmap(self, jaw: dict) -> None:
+        self._cached_pixmap(jaw)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
@@ -133,10 +137,7 @@ class JawCatalogDelegate(CatalogDelegate):
             stage = 'icon-only'
 
         icon_rect = QRect(content.x(), content.y() + (content.height() - ICON_SIZE) // 2, ICON_SLOT_W, ICON_SIZE)
-        icon = jaw_icon_for_row(jaw)
-        pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE)) if not icon.isNull() else QPixmap()
-        if not pixmap.isNull() and _is_sub_spindle_jaw(jaw):
-            pixmap = pixmap.transformed(QTransform().scale(-1, 1))
+        pixmap = self._cached_pixmap(jaw)
         if not pixmap.isNull():
             px = icon_rect.x() + (ICON_SLOT_W - pixmap.width()) // 2
             py = icon_rect.y() + (ICON_SIZE - pixmap.height()) // 2
@@ -246,3 +247,17 @@ class JawCatalogDelegate(CatalogDelegate):
     @staticmethod
     def _elide(metrics: QFontMetrics, text: str, width: int) -> str:
         return metrics.elidedText(str(text or ''), Qt.ElideRight, max(10, width - 4))
+
+    def _cached_pixmap(self, jaw: dict) -> QPixmap:
+        mirrored = _is_sub_spindle_jaw(jaw)
+        key = f"jaw|{'mirrored' if mirrored else 'normal'}"
+        cached = self._icon_cache.get(key)
+        if cached is not None:
+            return cached
+
+        icon = jaw_icon_for_row(jaw)
+        pixmap = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE)) if not icon.isNull() else QPixmap()
+        if not pixmap.isNull() and mirrored:
+            pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+        self._icon_cache[key] = pixmap
+        return pixmap

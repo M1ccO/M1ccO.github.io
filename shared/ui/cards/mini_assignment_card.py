@@ -96,6 +96,15 @@ class MiniAssignmentCard(QFrame):
         self.meta_label.setText("   ".join(clean))
         self._apply_elision()
 
+    def set_title_text(self, title: str) -> None:
+        self._full_title = (title or "").strip()
+        self._apply_elision()
+
+    def set_subtitle_text(self, subtitle: str) -> None:
+        self._full_subtitle = (subtitle or "").strip()
+        self.subtitle_label.setVisible(bool(self._full_subtitle))
+        self._apply_elision()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._apply_elision()

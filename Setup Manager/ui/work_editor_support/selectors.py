@@ -1,3 +1,5 @@
+from .machining_center import apply_fixture_selection_to_operation
+
 def normalize_selector_head(value: str | None, known_heads: tuple[str, ...] | list[str] | None = None) -> str:
     text = str(value or "").strip().upper()
     known = tuple(str(item).strip().upper() for item in (known_heads or ("HEAD1", "HEAD2")) if str(item).strip())
@@ -37,16 +39,21 @@ def jaw_ref_key(jaw: dict | None) -> str:
 
 
 def load_external_tool_refs(draw_service, head_keys: list[str] | tuple[str, ...]) -> tuple[dict[str, list[dict]], list[dict]]:
+    list_tool_refs = getattr(draw_service, "list_tool_refs", None)
+    if not callable(list_tool_refs):
+        refs_by_head = {head_key: [] for head_key in head_keys}
+        return refs_by_head, []
+
     refs_by_head: dict[str, list[dict]] = {}
     for head_key in head_keys:
-        refs_by_head[head_key] = draw_service.list_tool_refs(
+        refs_by_head[head_key] = list_tool_refs(
             force_reload=True,
             head_filter=head_key,
             dedupe_by_id=False,
         )
 
     if not any(refs_by_head.values()):
-        combined = draw_service.list_tool_refs(force_reload=True, dedupe_by_id=False)
+        combined = list_tool_refs(force_reload=True, dedupe_by_id=False)
         refs_by_head = {head_key: list(combined) for head_key in head_keys}
         return refs_by_head, list(combined)
 
@@ -300,9 +307,10 @@ def apply_fixture_selector_items_to_operations(dialog, *, request: dict, selecte
     target_key = str(request.get('target_key') or '').strip()
     if not target_key:
         return False
-    if hasattr(dialog, '_apply_fixture_selection_to_operation'):
-        return bool(dialog._apply_fixture_selection_to_operation(target_key, selected_items))
-    return False
+    legacy_apply = getattr(dialog, '_apply_fixture_selection_to_operation', None)
+    if not hasattr(dialog, '_mc_operations') and callable(legacy_apply):
+        return bool(legacy_apply(target_key, selected_items))
+    return bool(apply_fixture_selection_to_operation(dialog, target_key, selected_items))
 
 
 def selector_initial_tool_assignments(ordered_list, spindle: str) -> list[dict]:
@@ -362,9 +370,12 @@ def selector_initial_tool_assignment_buckets(
 ) -> dict[str, list[dict]]:
     buckets: dict[str, list[dict]] = {}
     for head_key in head_keys:
-        ordered_list = ordered_lists.get(head_key)
-        if ordered_list is None:
-            continue
+        ordered_entry = ordered_lists.get(head_key)
         for spindle_key in spindle_keys:
+            ordered_list = ordered_entry
+            if isinstance(ordered_entry, dict):
+                ordered_list = ordered_entry.get(spindle_key)
+            if ordered_list is None:
+                continue
             buckets[f"{head_key}:{spindle_key}"] = selector_initial_tool_assignments(ordered_list, spindle_key)
     return buckets

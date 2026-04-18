@@ -327,8 +327,6 @@ All 10 phases COMPLETE. The Tools and Jaws Library has been fully migrated to th
 ## Ongoing Refactor Tracking
 - For behavior-preserving reduction of `Setup Manager/ui/work_editor_dialog.py`, follow:
   - `Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md`
-- For current Work Editor open-glitch investigation status and remaining hypothesis, follow:
-  - `WORK_EDITOR_GLITCH_INVESTIGATION_REPORT.md`
 - For support-layer convergence tracking (Phase 11), see:
   - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_STATUS.md`
 - Keep refactor passes small and responsibility-scoped.

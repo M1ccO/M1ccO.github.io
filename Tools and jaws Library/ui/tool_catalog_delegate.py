@@ -288,6 +288,9 @@ class ToolCatalogDelegate(QStyledItemDelegate):
     def set_translate(self, translate: Callable):
         self._translate = translate
 
+    def prewarm_icon_pixmap(self, icon: QIcon, tool_type: str, *, mirrored: bool = False) -> None:
+        self._cached_pixmap(icon, tool_type, mirrored=mirrored)
+
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
 

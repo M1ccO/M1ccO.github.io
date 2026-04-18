@@ -199,6 +199,8 @@ def main():
         launch_master_filter=launch_master_filter,
     )
 
+    QTimer.singleShot(50, win.preload_catalog_pages)
+
     def warm_preview_after_startup():
         if getattr(app, '_preview_warmup_widget', None) is not None:
             return
@@ -243,11 +245,14 @@ def main():
             app.quit()
             return
 
+        # Capture visibility BEFORE apply_external_request so _show_main_window
+        # has the true pre-handoff state even if apply_external_request shows the
+        # window as a side effect.
+        was_visible = bool(win.isVisible() and not win.isMinimized())
         win.apply_external_request(payload)
         geometry_text = str(payload.get('geometry', '')).strip()
         selector_mode = str(payload.get('selector_mode', '')).strip().lower()
         selector_active_request = selector_mode in {'tools', 'jaws', 'fixtures'}
-        was_visible = bool(win.isVisible() and not win.isMinimized())
 
         if bool(payload.get('show', True)):
             # Selector sessions run in standalone dialogs while the main window
@@ -268,8 +273,15 @@ def main():
             # Defer top-level visibility changes out of the socket callback so
             # selector/session transitions settle before foreground activation.
             def _show_main_window() -> None:
-                win.setWindowOpacity(1.0)
-                app.processEvents()
+                if not was_visible:
+                    # Ensure the window is hidden and transparent before geometry
+                    # is applied so it never flashes at the wrong position.
+                    win.hide()
+                    win.setWindowOpacity(0.0)
+                if geometry_text:
+                    # Apply geometry while still hidden (or before raising) so
+                    # the window appears at the correct position on first paint.
+                    _apply_frame_geometry_string(win, geometry_text)
                 if win.isMinimized():
                     win.showNormal()
                 if not win.isVisible():
@@ -278,6 +290,9 @@ def main():
                     _apply_frame_geometry_string(win, geometry_text)
                     QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
                     QTimer.singleShot(120, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
+                if not was_visible:
+                    # Smooth fade-in instead of a hard opacity snap.
+                    win.fade_in()
                 win.raise_()
                 win.activateWindow()
                 # Belt-and-suspenders: use Win32 API for reliable foreground activation.
@@ -287,8 +302,6 @@ def main():
                     ctypes.windll.user32.SetForegroundWindow(hwnd)
                 except Exception:
                     pass
-                if not was_visible:
-                    win.fade_in()
 
             QTimer.singleShot(0, _show_main_window)
 

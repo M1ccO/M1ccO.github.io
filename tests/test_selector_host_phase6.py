@@ -31,7 +31,7 @@ class _DialogStub:
     def __init__(self):
         self.events = []
 
-    def _log_selector_event(self, event: str):
+    def _log_selector_event(self, event: str, **_fields):
         self.events.append(event)
 
 
@@ -54,18 +54,13 @@ class _WidgetWithSignals(QWidget):
 
 
 class TestSelectorHostPhase6(unittest.TestCase):
-    def test_open_and_close_calls_mode_hooks(self):
+    def test_open_and_close_mounts_and_detaches_widget(self):
         dialog = _DialogStub()
         mount = QWidget()
-        enter_calls = []
-        exit_calls = []
-        enter_show_counts = []
 
         host = WorkEditorSelectorHost(
             dialog=dialog,
             mount_container=mount,
-            enter_selector_mode=lambda: (enter_calls.append("enter"), enter_show_counts.append(widget.show_events)),
-            exit_selector_mode=lambda: exit_calls.append("exit"),
         )
 
         widget = _WidgetWithSignals()
@@ -73,14 +68,11 @@ class TestSelectorHostPhase6(unittest.TestCase):
 
         self.assertIs(host.active_widget, widget)
         self.assertIs(widget.parent(), mount)
-        self.assertEqual([0], enter_show_counts)
-        self.assertEqual(["enter"], enter_calls)
 
         host.close_active_widget()
         self.assertIsNone(host.active_widget)
         self.assertIsNone(widget.parent())
         self.assertGreaterEqual(widget.hide_events, 1)
-        self.assertEqual(["exit", "enter"], [exit_calls[0], enter_calls[0]])
 
     def test_submit_signal_ignored_by_default(self):
         dialog = _DialogStub()
@@ -89,8 +81,6 @@ class TestSelectorHostPhase6(unittest.TestCase):
         host = WorkEditorSelectorHost(
             dialog=dialog,
             mount_container=mount,
-            enter_selector_mode=lambda: None,
-            exit_selector_mode=lambda: None,
         )
 
         widget = _WidgetWithSignals()
@@ -98,7 +88,23 @@ class TestSelectorHostPhase6(unittest.TestCase):
         widget.submitted.emit({"kind": "tools"})
 
         self.assertIs(host.active_widget, widget)
-        self.assertEqual([], dialog.events)
+        self.assertNotIn("submit.embedded", dialog.events)
+
+    def test_open_widget_can_mount_into_override_container(self):
+        dialog = _DialogStub()
+        default_mount = QWidget()
+        override_mount = QWidget()
+
+        host = WorkEditorSelectorHost(
+            dialog=dialog,
+            mount_container=default_mount,
+        )
+
+        widget = _WidgetWithSignals()
+        host.open_widget(widget, mount_container=override_mount)
+
+        self.assertIs(host.active_widget, widget)
+        self.assertIs(widget.parent(), override_mount)
 
     def test_submit_signal_closes_and_logs_when_opted_in(self):
         dialog = _DialogStub()
@@ -107,8 +113,6 @@ class TestSelectorHostPhase6(unittest.TestCase):
         host = WorkEditorSelectorHost(
             dialog=dialog,
             mount_container=mount,
-            enter_selector_mode=lambda: None,
-            exit_selector_mode=lambda: None,
             auto_close_on_widget_signals=True,
         )
 
@@ -126,8 +130,6 @@ class TestSelectorHostPhase6(unittest.TestCase):
         host = WorkEditorSelectorHost(
             dialog=dialog,
             mount_container=mount,
-            enter_selector_mode=lambda: None,
-            exit_selector_mode=lambda: None,
             auto_close_on_widget_signals=True,
         )
 

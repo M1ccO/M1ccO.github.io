@@ -270,8 +270,13 @@ class FixtureSelectorDialog(SelectorDialogBase):
         parent=None,
         embedded_mode: bool = False,
     ):
-        super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
         self._embedded_mode = bool(embedded_mode)
+        super().__init__(
+            translate=translate,
+            on_cancel=on_cancel,
+            parent=parent,
+            window_flags=Qt.Widget if self._embedded_mode else Qt.WindowFlags(),
+        )
         self.fixture_service = fixture_service
         self._on_submit = on_submit
 
@@ -332,24 +337,28 @@ class FixtureSelectorDialog(SelectorDialogBase):
         ]
         self._selected_ids = {self._fixture_key(item) for item in self._selected_items if self._fixture_key(item)}
 
-        if not self._embedded_mode:
-            self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
-            self.setAttribute(Qt.WA_DeleteOnClose, True)
-            self.resize(1180, 720)
-            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
+        self.setUpdatesEnabled(False)
+        try:
+            if not self._embedded_mode:
+                self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
+                self.setAttribute(Qt.WA_DeleteOnClose, True)
+                self.resize(1180, 720)
+                restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(8)
+            root = QVBoxLayout(self)
+            root.setContentsMargins(8, 8, 8, 8)
+            root.setSpacing(8)
 
-        self._build_toolbar(root)
-        self._build_content(root)
-        self._build_bottom_bar(root)
+            self._build_toolbar(root)
+            self._build_content(root)
+            self._build_bottom_bar(root)
 
-        self._switch_to_selector_panel()
-        self._refresh_catalog()
-        self._rebuild_assignment_list()
-        self._update_assignment_buttons()
+            self._switch_to_selector_panel()
+            self._refresh_catalog()
+            self._rebuild_assignment_list()
+            self._update_assignment_buttons()
+        finally:
+            self.setUpdatesEnabled(True)
 
     @staticmethod
     def _use_shared_selector_wrapper() -> bool:
@@ -390,7 +399,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
         super().closeEvent(event)
 
     def _build_toolbar(self, root: QVBoxLayout) -> None:
-        frame, self._filter_layout = build_filter_frame()
+        frame, self._filter_layout = build_filter_frame(parent=self)
         frame.setObjectName('')
         self._filter_layout.setContentsMargins(8, 6, 8, 6)
 
@@ -439,6 +448,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             close_icon,
             self._t('fixture_library.section.fixture_details', 'Fixture details'),
             self._switch_to_selector_panel,
+            parent=frame,
         )
         self.detail_header_container.setVisible(False)
 
@@ -459,7 +469,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
         splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(False)
 
-        list_card, list_layout = build_catalog_list_shell()
+        list_card, list_layout = build_catalog_list_shell(parent=splitter)
         self.list_view = FixtureCatalogListView()
         apply_catalog_list_view_defaults(self.list_view)
         self._model = QStandardItemModel(self.list_view)
@@ -475,13 +485,13 @@ class FixtureSelectorDialog(SelectorDialogBase):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
         right_layout.addWidget(self._build_selector_card(parent=right_panel), 1)
-        right_layout.addWidget(self._build_detail_card(), 1)
+        right_layout.addWidget(self._build_detail_card(parent=right_panel), 1)
         splitter.addWidget(right_panel)
 
         splitter.setSizes([int(self.width() * 0.58), int(self.width() * 0.42)])
         root.addWidget(splitter, 1)
 
-    def _build_detail_card(self) -> QWidget:
+    def _build_detail_card(self, parent: QWidget | None = None) -> QWidget:
         (
             detail_container,
             _outer_layout,
@@ -489,7 +499,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             _scroll,
             _panel,
             self.detail_layout,
-        ) = build_detail_container_shell(min_width=300)
+        ) = build_detail_container_shell(min_width=300, parent=parent)
         self.detail_card = detail_container
         self.detail_card.setVisible(False)
         return self.detail_card
@@ -543,7 +553,10 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self.assignment_list.itemSelectionChanged.connect(self._sync_card_selection_states)
         self.assignment_list.itemSelectionChanged.connect(self._update_assignment_buttons)
 
-        self.assignment_frame = create_titled_section(self._t('fixture_library.selector.selection_title', 'Selected fixtures'))
+        self.assignment_frame = create_titled_section(
+            self._t('fixture_library.selector.selection_title', 'Selected fixtures'),
+            parent=selector_panel,
+        )
         self.assignment_frame.setProperty('selectorAssignmentsFrame', True)
         self.assignment_frame.setProperty('toolIdsPanel', True)
         self.assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
@@ -584,7 +597,6 @@ class FixtureSelectorDialog(SelectorDialogBase):
         actions.addStretch(1)
         selector_layout.addLayout(actions)
 
-        selector_scroll.setWidget(selector_panel)
         selector_card_layout.addWidget(selector_scroll, 1)
         return selector_card
 
@@ -594,6 +606,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             translate=self._translate,
             on_cancel=self._cancel,
             on_done=self._send_selector_selection,
+            parent=self,
         )
 
     def _toggle_search(self) -> None:

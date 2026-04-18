@@ -76,6 +76,18 @@ class PrintService:
         return str(value).strip()
 
     @staticmethod
+    def _merge_missing_fields(target: dict, source: dict | None) -> None:
+        if not isinstance(target, dict) or not isinstance(source, dict):
+            return
+        for key, value in source.items():
+            if key not in target:
+                continue
+            current = target.get(key)
+            if current in (None, "", []):
+                if value not in (None, "", []):
+                    target[key] = value
+
+    @staticmethod
     def _coord_z(coord, z_value):
         coord = PrintService._to_text(coord)
         z_value = PrintService._to_text(z_value)
@@ -146,6 +158,10 @@ class PrintService:
             return None
 
         result = {"id": tool_id, "description": "", "tool_type": "", "radius": "", "nose_corner_radius": ""}
+        resolved = self._resolve_tool_via_resolver(tool_id)
+        if isinstance(resolved, dict):
+            result.update(resolved)
+
         service = self.reference_service
         if service is None:
             return result
@@ -157,7 +173,7 @@ class PrintService:
                 logger.exception("Failed to resolve full tool by UID during print payload build")
                 full_by_uid = None
             if isinstance(full_by_uid, dict):
-                result.update(full_by_uid)
+                self._merge_missing_fields(result, full_by_uid)
                 return result
 
         try:
@@ -166,7 +182,7 @@ class PrintService:
             logger.exception("Failed to resolve full tool by ID during print payload build")
             full = None
         if isinstance(full, dict):
-            result.update(full)
+            self._merge_missing_fields(result, full)
             return result
 
         try:
@@ -175,8 +191,60 @@ class PrintService:
             logger.exception("Failed to resolve tool reference during print payload build")
             ref = None
         if isinstance(ref, dict):
-            result.update(ref)
+            self._merge_missing_fields(result, ref)
         return result
+
+    @staticmethod
+    def _resolve_tool_via_resolver(tool_id):
+        """Resolver-primary tool lookup for setup-card rendering.
+
+        Returns a metadata mapping when available; returns None if resolver
+        is not configured or the tool cannot be resolved.
+        """
+        try:
+            from shared.selector.payloads import ToolBucket
+            from shared.ui.resolvers import ResolverNotConfiguredError, get_resolver
+        except Exception:
+            return None
+        try:
+            resolver = get_resolver("tool")
+        except ResolverNotConfiguredError:
+            return None
+        except Exception:
+            logger.debug("Resolver lookup failed for tool %s", tool_id, exc_info=True)
+            return None
+        try:
+            resolved = resolver.resolve_tool(tool_id, bucket=ToolBucket.MAIN)
+        except Exception:
+            logger.debug("Resolver.resolve_tool failed for %s", tool_id, exc_info=True)
+            return None
+        if resolved is None:
+            return None
+        return dict(resolved.metadata)
+
+    @staticmethod
+    def _resolve_jaw_via_resolver(jaw_id):
+        """Resolver-primary jaw lookup for setup-card rendering."""
+        try:
+            from shared.selector.payloads import SpindleKey
+            from shared.ui.resolvers import ResolverNotConfiguredError, get_resolver
+        except Exception:
+            return None
+        try:
+            resolver = get_resolver("jaw")
+        except ResolverNotConfiguredError:
+            return None
+        except Exception:
+            logger.debug("Resolver lookup failed for jaw %s", jaw_id, exc_info=True)
+            return None
+        try:
+            resolved = resolver.resolve_jaw(jaw_id, spindle=SpindleKey.MAIN)
+        except Exception:
+            logger.debug("Resolver.resolve_jaw failed for %s", jaw_id, exc_info=True)
+            return None
+        if resolved is None:
+            return None
+        return dict(resolved.metadata)
 
     def _tool_entry_data(self, assignment):
         if not isinstance(assignment, dict):
@@ -254,20 +322,41 @@ class PrintService:
 
     def _jaw_details(self, jaw_id):
         jaw_id = self._to_text(jaw_id)
-        if not jaw_id or self.reference_service is None:
+        if not jaw_id:
             return {}
-        try:
-            full = self.reference_service.get_full_jaw(jaw_id)
-        except Exception:
-            logger.exception("Failed to resolve jaw details during print payload build")
-            full = None
-        if not isinstance(full, dict):
-            return {}
-        return {
-            "jaw_type": self._to_text(full.get("jaw_type")),
-            "turning_washer": self._to_text(full.get("turning_washer")),
-            "last_modified": self._to_text(full.get("last_modified")),
+        result = {
+            "jaw_type": "",
+            "turning_washer": "",
+            "last_modified": "",
         }
+        resolved = self._resolve_jaw_via_resolver(jaw_id)
+        if isinstance(resolved, dict):
+            result.update(
+                {
+                    "jaw_type": self._to_text(resolved.get("jaw_type")),
+                    "turning_washer": self._to_text(resolved.get("turning_washer")),
+                    "last_modified": self._to_text(resolved.get("last_modified")),
+                }
+            )
+        full = None
+        if self.reference_service is not None:
+            try:
+                full = self.reference_service.get_full_jaw(jaw_id)
+            except Exception:
+                logger.exception("Failed to resolve jaw details during print payload build")
+                full = None
+        if isinstance(full, dict):
+            self._merge_missing_fields(
+                result,
+                {
+                    "jaw_type": self._to_text(full.get("jaw_type")),
+                    "turning_washer": self._to_text(full.get("turning_washer")),
+                    "last_modified": self._to_text(full.get("last_modified")),
+                },
+            )
+        if not any(result.values()):
+            return {}
+        return result
 
     def _jaw_summary(self, jaw_id):
         jaw_id = self._to_text(jaw_id)

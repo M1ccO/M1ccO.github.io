@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QVBoxLayout
 
 try:
@@ -12,7 +12,7 @@ except ImportError:
     from config import SHARED_UI_PREFERENCES_PATH
 from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
 from shared.ui.selectors import ToolSelectorWidget
-from .common import SelectorDialogBase
+from .common import SelectorDialogBase, SelectorWidgetBase
 from .tool_selector_layout import ToolSelectorLayoutMixin
 from .tool_selector_payload import ToolSelectorPayloadMixin
 from .tool_selector_state import ToolSelectorStateMixin
@@ -49,8 +49,13 @@ class ToolSelectorDialog(
         parent=None,
         embedded_mode: bool = False,
     ):
-        super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
         self._embedded_mode = bool(embedded_mode)
+        super().__init__(
+            translate=translate,
+            on_cancel=on_cancel,
+            parent=parent,
+            window_flags=Qt.Widget if self._embedded_mode else Qt.WindowFlags(),
+        )
         self.tool_service = tool_service
         self.machine_profile = machine_profile
         self._on_submit = on_submit
@@ -87,27 +92,34 @@ class ToolSelectorDialog(
                 initial_assignment_buckets=initial_assignment_buckets,
             )
             return
+        self.setUpdatesEnabled(False)
+        try:
+            if not self._embedded_mode:
+                self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
+                self.setAttribute(Qt.WA_DeleteOnClose, True)
+                self.resize(1180, 720)
+                restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
-        if not self._embedded_mode:
-            self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
-            self.setAttribute(Qt.WA_DeleteOnClose, True)
-            self.resize(1180, 720)
-            restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
+            root = QVBoxLayout(self)
+            root.setContentsMargins(8, 8, 8, 8)
+            root.setSpacing(8)
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(8)
+            self._build_filter_row(root)
+            self._build_content(root)
+            self._build_bottom_bar(root)
 
-        self._build_filter_row(root)
-        self._build_content(root)
-        self._build_bottom_bar(root)
-
-        self._load_current_bucket()
-        self._refresh_catalog()
-        self._rebuild_assignment_list()
-        self._update_context_header()
-        self._update_assignment_buttons()
-        self._prime_detail_panel_cache()
+            self._load_current_bucket()
+            self._refresh_catalog()
+            self._rebuild_assignment_list()
+            self._update_context_header()
+            self._update_assignment_buttons()
+            # Embedded selector launches should prioritize first-visible stability.
+            # Priming detail content can initialize heavier preview subtrees that are
+            # not needed until the user explicitly opens the detail panel.
+            if not self._embedded_mode:
+                self._prime_detail_panel_cache()
+        finally:
+            self.setUpdatesEnabled(True)
 
     @staticmethod
     def _use_shared_selector_wrapper() -> bool:
@@ -195,4 +207,165 @@ class ToolSelectorDialog(
         if not getattr(self, '_embedded_mode', False):
             save_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
         super().closeEvent(event)
+
+
+class EmbeddedToolSelectorWidget(
+    ToolSelectorLayoutMixin,
+    ToolSelectorStateMixin,
+    ToolSelectorPayloadMixin,
+    SelectorWidgetBase,
+):
+    """Work Editor embedded Tool selector built as a QWidget from birth."""
+
+    def __init__(
+        self,
+        *,
+        tool_service,
+        machine_profile,
+        translate: Callable[[str, str | None], str],
+        selector_head: str,
+        selector_spindle: str,
+        initial_assignments: list[dict] | None,
+        initial_assignment_buckets: dict[str, list[dict]] | None,
+        on_submit: Callable[[dict], None],
+        on_cancel: Callable[[], None],
+        parent=None,
+    ):
+        self._embedded_mode = True
+        super().__init__(translate=translate, on_cancel=on_cancel, parent=parent)
+        self.tool_service = tool_service
+        self.machine_profile = machine_profile
+        self._on_submit = on_submit
+
+        self._current_head = self._normalize_head(selector_head)
+        self._current_spindle = self._normalize_spindle(selector_spindle)
+        self._assigned_tools: list[dict] = []
+        self.current_tool_id: str | None = None
+        self.current_tool_uid: int | None = None
+        self._assignments_by_target = self._build_initial_buckets(
+            initial_assignments,
+            initial_assignment_buckets,
+        )
+
+        self._detail_preview_widget = None
+        self._detail_preview_model_key = None
+        self._detached_preview_dialog = None
+        self._detached_preview_widget = None
+        self._close_preview_shortcut = None
+        self._measurement_toggle_btn = None
+        self._measurement_filter_combo = None
+        self._detached_measurements_enabled = True
+        self._detached_measurement_filter = None
+        self._detached_preview_last_model_key = None
+
+        self.setUpdatesEnabled(False)
+        try:
+            root = QVBoxLayout(self)
+            root.setContentsMargins(8, 8, 8, 8)
+            root.setSpacing(8)
+
+            self._build_filter_row(root)
+            self._build_content(root)
+            self._build_bottom_bar(root)
+
+            self._load_current_bucket()
+            self._refresh_catalog()
+            self._rebuild_assignment_list()
+            self._update_context_header()
+            self._update_assignment_buttons()
+        finally:
+            self.setUpdatesEnabled(True)
+
+    def prepare_for_session(
+        self,
+        *,
+        selector_head: str,
+        selector_spindle: str,
+        initial_assignments: list[dict] | None,
+        initial_assignment_buckets: dict[str, list[dict]] | None,
+        on_submit: Callable[[dict], None],
+        on_cancel: Callable[[], None],
+    ) -> None:
+        self.setUpdatesEnabled(False)
+        try:
+            self._reset_selector_widget_state(on_cancel=on_cancel)
+            self._on_submit = on_submit
+            self._current_head = self._normalize_head(selector_head)
+            self._current_spindle = self._normalize_spindle(selector_spindle)
+            self._assigned_tools = []
+            self.current_tool_id = None
+            self.current_tool_uid = None
+            self._assignments_by_target = self._build_initial_buckets(
+                initial_assignments,
+                initial_assignment_buckets,
+            )
+            self._assignment_hint_dismissed = {}
+
+            if hasattr(self, 'search_toggle'):
+                self.search_toggle.setChecked(False)
+            if hasattr(self, 'search_input'):
+                self.search_input.setVisible(False)
+                self.search_input.blockSignals(True)
+                self.search_input.clear()
+                self.search_input.blockSignals(False)
+            if hasattr(self, 'type_filter') and self.type_filter.count():
+                self.type_filter.setCurrentIndex(0)
+            if hasattr(self, 'detail_card') and self.detail_card.isVisible():
+                self._switch_to_selector_panel()
+            if hasattr(self, 'list_view'):
+                self.list_view.clearSelection()
+                self.list_view.setCurrentIndex(QModelIndex())
+            for assignment_list in getattr(self, 'assignment_lists', {}).values():
+                assignment_list.clearSelection()
+                assignment_list.setCurrentRow(-1)
+
+            self._load_current_bucket()
+            self._refresh_catalog()
+            self._rebuild_assignment_list()
+            self._update_context_header()
+            self._update_assignment_buttons()
+        finally:
+            self.setUpdatesEnabled(True)
+
+    def _localized_tool_type(self, tool_type: str) -> str:
+        return _localized_tool_type_impl(self, tool_type)
+
+    @staticmethod
+    def _tool_id_display_value(value: str) -> str:
+        return _tool_id_display_value_impl(value)
+
+    @staticmethod
+    def _is_turning_drill_tool_type(tool_type: str) -> bool:
+        normalized = str(tool_type or '').strip()
+        return normalized in {'Turn Drill', 'Turn Spot Drill', 'Turn Center Drill'}
+
+    def _load_preview_content(self, viewer, stl_path: str | None, *, label: str | None = None) -> bool:
+        from ..home_page_support.detached_preview import load_preview_content
+        return load_preview_content(viewer, stl_path, label=label)
+
+    def part_clicked(self, part: dict) -> None:
+        pass
+
+    def _get_selected_tool(self) -> dict | None:
+        index = self.list_view.currentIndex()
+        if index.isValid():
+            tool = index.data(ROLE_TOOL_DATA)
+            if isinstance(tool, dict):
+                return tool
+        selection_model = self.list_view.selectionModel()
+        if selection_model is None:
+            return None
+        rows = selection_model.selectedRows()
+        if not rows:
+            return None
+        tool = rows[0].data(ROLE_TOOL_DATA)
+        return tool if isinstance(tool, dict) else None
+
+    def _sync_detached_preview(self, show_errors: bool = False) -> bool:
+        from ..home_page_support.detached_preview import sync_detached_preview
+        return sync_detached_preview(self, show_errors=show_errors)
+
+    def toggle_preview_window(self) -> None:
+        from ..home_page_support.detached_preview import toggle_preview_window
+        toggle_preview_window(self)
 
