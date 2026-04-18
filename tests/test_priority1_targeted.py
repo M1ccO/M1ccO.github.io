@@ -91,6 +91,10 @@ _SETUP_DRAW_SERVICE = _load_module_from_path(
     "setup_manager_draw_service_for_tests",
     _SETUP_MANAGER_ROOT / "services" / "draw_service.py",
 )
+_SETUP_SETUP_CARD_POLICY = _load_module_from_path(
+    "setup_manager_setup_card_policy_for_tests",
+    _SETUP_MANAGER_ROOT / "services" / "setup_card_policy.py",
+)
 
 
 def _load_tool_library_main_window_module():
@@ -685,6 +689,29 @@ class TestPrintServiceHelpers(unittest.TestCase):
     def test_get_logbook_color_invalid_date_uses_fallback(self):
         color = self.svc._get_logbook_color_for_date("not-a-date")
         self.assertEqual(color, self.svc._hex_to_rgb("#8B8B8B"))
+
+    def test_setup_card_policy_builds_machining_center_sections(self):
+        profile = _SETUP_SETUP_CARD_POLICY.resolve_setup_card_profile("machining_center_3ax")
+        sections = _SETUP_SETUP_CARD_POLICY.build_setup_card_sections(
+            self.svc,
+            {
+                "main_program": "O300",
+                "mc_operations": [
+                    {
+                        "op_key": "OP10",
+                        "coord": "G54",
+                        "sub_program": "O301",
+                        "fixture_ids": ["FIX-01"],
+                        "selected_fixture_part": "PART-01",
+                        "axes": {"x": "0", "y": "0", "z": "120"},
+                    }
+                ],
+            },
+            profile,
+        )
+        titles = [section["title"] for section in sections]
+        self.assertIn("Operations", titles)
+        self.assertIn("Fixtures", titles)
 
 
 class TestPrintServicePdfGuards(unittest.TestCase):

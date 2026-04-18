@@ -191,9 +191,9 @@ class TestEmbeddedSelectorFactory(unittest.TestCase):
         self.assertEqual(True, tool_widget.kwargs["embedded_mode"])
         self.assertEqual(True, jaw_widget.kwargs["embedded_mode"])
         self.assertEqual(True, fixture_widget.kwargs["embedded_mode"])
-        self.assertIsNone(tool_widget.kwargs["parent"])
-        self.assertIsNone(jaw_widget.kwargs["parent"])
-        self.assertIsNone(fixture_widget.kwargs["parent"])
+        self.assertIs(dialog, tool_widget.kwargs["parent"])
+        self.assertIs(dialog, jaw_widget.kwargs["parent"])
+        self.assertIs(dialog, fixture_widget.kwargs["parent"])
 
 
 class TestEmbeddedSelectorMode(unittest.TestCase):

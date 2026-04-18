@@ -66,7 +66,7 @@ class WorkEditorJawSelectorPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
-        selection_group = create_titled_section(title)
+        selection_group = create_titled_section(title, parent=self)
         selection_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         selection_layout = QVBoxLayout(selection_group)
         self._selection_layout = selection_layout
@@ -82,7 +82,10 @@ class WorkEditorJawSelectorPanel(QWidget):
         selection_layout.addWidget(self.assignment_placeholder)
         layout.addWidget(selection_group, 0)
 
-        self.stop_screws_group = create_titled_section(self._t("setup_page.field.stop_screws", "Stop Screws"))
+        self.stop_screws_group = create_titled_section(
+            self._t("setup_page.field.stop_screws", "Stop Screws"),
+            parent=self,
+        )
         self.stop_screws_group.setProperty("jawInputGroup", True)
         self.stop_screws_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         stop_layout = QVBoxLayout(self.stop_screws_group)

@@ -369,11 +369,11 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         section_grid.setHorizontalSpacing(8)
         section_grid.setVerticalSpacing(6)
 
-        row_label_header = QLabel('')
+        row_label_header = QLabel('', card)
         row_label_header.setMinimumWidth(96)
         section_grid.addWidget(row_label_header, 0, 0)
 
-        coord_header = QLabel('WCS')
+        coord_header = QLabel('WCS', card)
         coord_header.setProperty('detailFieldKey', True)
         coord_header.setAlignment(Qt.AlignCenter)
         section_grid.addWidget(coord_header, 0, 1)
@@ -381,7 +381,7 @@ def _rebuild_operation_groups(dialog: Any, work_coordinates: list[str] | tuple[s
         axis_inputs: dict[str, QLineEdit] = {}
         display_axes = [axis for axis in ('z', 'x', 'y', 'c', 'b') if axis in dialog._zero_axes]
         for col, axis in enumerate(display_axes):
-            axis_label = QLabel(_axis_display_label(dialog, axis))
+            axis_label = QLabel(_axis_display_label(dialog, axis), card)
             axis_label.setProperty('detailFieldKey', True)
             axis_label.setAlignment(Qt.AlignCenter)
             section_grid.addWidget(axis_label, 0, col + 2)
@@ -494,7 +494,10 @@ def build_machining_center_zeros_tab_ui(
     outer.setContentsMargins(18, 18, 18, 18)
     outer.setSpacing(0)
 
-    programs_group = create_titled_section_fn(dialog._t('work_editor.zeros.nc_programs', 'NC Programs'))
+    programs_group = create_titled_section_fn(
+        dialog._t('work_editor.zeros.nc_programs', 'NC Programs'),
+        parent=dialog.zeros_tab,
+    )
     programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     programs_layout = QFormLayout(programs_group)
     programs_layout.setSpacing(8)
@@ -514,7 +517,7 @@ def build_machining_center_zeros_tab_ui(
     dialog.mc_select_fixtures_btn.clicked.connect(lambda _checked=False: dialog._open_fixture_selector())
     programs_layout.addRow('', dialog.mc_select_fixtures_btn)
 
-    scroll = QScrollArea()
+    scroll = QScrollArea(dialog.zeros_tab)
     scroll.setWidgetResizable(True)
     scroll.setFrameShape(QScrollArea.NoFrame)
 
@@ -535,7 +538,7 @@ def build_machining_center_zeros_tab_ui(
     outer.addWidget(scroll, 1)
 
     def _create_section(title: str):
-        section = create_titled_section_fn(title)
+        section = create_titled_section_fn(title, parent=host)
         # create_titled_section defaults to fixed vertical policy; operation cards
         # must grow with fixture cards to avoid overlap between OP sections.
         section.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
@@ -544,7 +547,7 @@ def build_machining_center_zeros_tab_ui(
     def _create_coord_combo(coords: list[str] | tuple[str, ...]):
         from PySide6.QtWidgets import QComboBox
 
-        combo = QComboBox(dialog)
+        combo = QComboBox(host)
         combo.addItems(list(coords))
         combo.setProperty('modernDropdown', True)
         dialog._apply_coord_combo_popup_style(combo)

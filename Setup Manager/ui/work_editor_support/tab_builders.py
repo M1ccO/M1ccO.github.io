@@ -81,14 +81,14 @@ class _UserTriggeredPopupCombo(QComboBox):
         super().keyPressEvent(event)
 
 
-def _build_eliding_checkbox(checkbox: QCheckBox, text: str) -> QWidget:
+def _build_eliding_checkbox(checkbox: QCheckBox, text: str, *, parent: QWidget | None = None) -> QWidget:
     checkbox.setText('')
-    row = QWidget()
+    row = QWidget(parent)
     row_layout = QHBoxLayout(row)
     row_layout.setContentsMargins(0, 0, 0, 0)
     row_layout.setSpacing(6)
     row_layout.addWidget(checkbox, 0, Qt.AlignVCenter)
-    row_layout.addWidget(_ElidingLabel(text), 1)
+    row_layout.addWidget(_ElidingLabel(text, row), 1)
     row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     return row
 
@@ -97,6 +97,7 @@ def _setup_jaw_selectors(
     dialog: Any,
     *,
     jaw_selector_panel_cls: type,
+    parent: QWidget,
     main_title: str,
     sub_title: str,
     main_filter_placeholder: tuple[str, str] | None = None,
@@ -118,8 +119,8 @@ def _setup_jaw_selectors(
     if sub_spindle_side_filter:
         sub_kwargs["spindle_side_filter"] = sub_spindle_side_filter
 
-    dialog.main_jaw_selector = jaw_selector_panel_cls(main_title, parent=dialog, **main_kwargs)
-    dialog.sub_jaw_selector = jaw_selector_panel_cls(sub_title, parent=dialog, **sub_kwargs)
+    dialog.main_jaw_selector = jaw_selector_panel_cls(main_title, parent=parent, **main_kwargs)
+    dialog.sub_jaw_selector = jaw_selector_panel_cls(sub_title, parent=parent, **sub_kwargs)
     dialog.main_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     dialog.sub_jaw_selector.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     dialog._jaw_selectors["main"] = dialog.main_jaw_selector
@@ -172,7 +173,10 @@ def build_general_tab_ui(
     drawing_layout.addWidget(browse_btn)
     drawing_row.setVisible(dialog._drawings_enabled)
 
-    general_group = create_titled_section_fn(dialog._t("work_editor.general.section.general", "General"))
+    general_group = create_titled_section_fn(
+        dialog._t("work_editor.general.section.general", "General"),
+        parent=dialog.general_tab,
+    )
     general_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     general_form = QFormLayout(general_group)
     general_form.setSpacing(8)
@@ -184,7 +188,10 @@ def build_general_tab_ui(
     if dialog._drawings_enabled:
         general_form.addRow(dialog._drawing_row_label, drawing_row)
 
-    raw_part_group = create_titled_section_fn(dialog._t("work_editor.general.section.raw_part", "Raw Part"))
+    raw_part_group = create_titled_section_fn(
+        dialog._t("work_editor.general.section.raw_part", "Raw Part"),
+        parent=dialog.general_tab,
+    )
     raw_part_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     raw_form = QFormLayout(raw_part_group)
     raw_form.setSpacing(8)
@@ -326,6 +333,7 @@ def build_spindles_tab_ui(
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
+        parent=dialog.spindles_tab,
         main_title=_main_jaw_title,
         sub_title=_sub_jaw_title,
         main_filter_placeholder=_main_filter_ph,
@@ -372,7 +380,10 @@ def build_zeros_tab_ui(
     scroll.setWidget(content)
     layout.addWidget(scroll, 1)
 
-    programs_group = create_titled_section_fn(dialog._t("work_editor.zeros.nc_programs", "NC Programs"))
+    programs_group = create_titled_section_fn(
+        dialog._t("work_editor.zeros.nc_programs", "NC Programs"),
+        parent=content,
+    )
     programs_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     programs_form = QFormLayout(programs_group)
     programs_form.setSpacing(8)
@@ -411,6 +422,7 @@ def build_zeros_tab_ui(
     _setup_jaw_selectors(
         dialog,
         jaw_selector_panel_cls=jaw_selector_panel_cls,
+        parent=content,
         main_title=_zp_main_title,
         sub_title=_zp_sub_title,
         main_spindle_side_filter=(_zp_main_sp.jaw_filter if _zp_main_sp else "Main spindle"),
@@ -467,6 +479,7 @@ def build_zeros_tab_ui(
     zero_show_xy_row = _build_eliding_checkbox(
         dialog.zero_show_xy_checkbox,
         dialog._t("work_editor.zeros.show_xy", "Show X/Y columns"),
+        parent=left_controls,
     )
     zero_show_xy_row.setVisible(dialog.machine_profile.supports_zero_xy_toggle)
     left_controls_layout.addWidget(zero_show_xy_row, 1)

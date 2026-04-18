@@ -3,11 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 import traceback
 
-from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QDialog, QInputDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup
-from ui.work_editor_dialog import WorkEditorDialog
+from ui.work_editor_factory import create_work_editor_dialog
 from ui.setup_page_support.crud_dialogs import ask_delete_logbook_entries, confirm_delete_work
 from ui.setup_page_support.work_editor_launch import (
     exec_work_editor_dialog,
@@ -31,10 +30,14 @@ def _dialog_cache(page) -> dict:
 
 
 def _create_work_editor_dialog(page, host_window, work=None):
-    return WorkEditorDialog(
+    # Parent to host_window so Qt's QDialog first-show adjustPosition centers
+    # on the visible host instead of screen default. Without a parent, Qt
+    # ignored pre-show move(-32000) and briefly flashed the native titlebar
+    # at its default screen position before our final geometry applied.
+    return create_work_editor_dialog(
         page.draw_service,
         work=work,
-        parent=None,
+        parent=host_window,
         style_host=host_window,
         translate=page._t,
         drawings_enabled=page.drawings_enabled,
@@ -45,7 +48,7 @@ def _create_work_editor_dialog(page, host_window, work=None):
 def _get_or_create_shared_dialog(page, host_window):
     cache = _dialog_cache(page)
     dialog = cache.get("shared")
-    if isinstance(dialog, WorkEditorDialog):
+    if dialog is not None:
         return dialog
     dialog = _create_work_editor_dialog(page, host_window, work=None)
     prime_work_editor_dialog(dialog)
@@ -82,53 +85,12 @@ def _prepare_shared_dialog_context(dialog, work_payload: dict | None) -> None:
         pass
 
 
-def _materialize_dialog_hidden(dialog) -> None:
-    # Force native window creation and first backing-store paint off-screen so the
-    # first user-visible open does not pay this cost.
-    if bool(getattr(dialog, "_startup_materialized_hidden", False)):
-        return
-
-    # Use WA_DontShowOnScreen + WA_ShowWithoutActivating to avoid the focus-stealing
-    # flash that opacity-0 + off-screen positioning still causes on Windows.
-    dialog.setAttribute(Qt.WA_DontShowOnScreen, True)
-    dialog.setAttribute(Qt.WA_ShowWithoutActivating, True)
-    dialog.setUpdatesEnabled(False)
-    try:
-        dialog.show()
-        QCoreApplication.processEvents()
-        QCoreApplication.processEvents()
-    finally:
-        try:
-            dialog.hide()
-        except Exception:
-            pass
-        dialog.setAttribute(Qt.WA_DontShowOnScreen, False)
-        dialog.setAttribute(Qt.WA_ShowWithoutActivating, False)
-        dialog.setUpdatesEnabled(True)
-        # Startup surface already paid; skip first visible loading cover.
-        try:
-            release_cover = getattr(dialog, "_release_startup_cover", None)
-            if callable(release_cover):
-                release_cover()
-            else:
-                dialog._startup_cover_active = False
-        except Exception:
-            dialog._startup_cover_active = False
-        dialog._startup_materialized_hidden = True
-
-
-def preload_shared_work_editor_dialog(page) -> None:
-    host_window = resolve_work_editor_parent(page)
-    dialog = _get_or_create_shared_dialog(page, host_window)
-    _prepare_shared_dialog_context(dialog, None)
-    _materialize_dialog_hidden(dialog)
-
-
 def create_work(page) -> None:
     host_window = resolve_work_editor_parent(page)
     try:
         dialog = _get_or_create_shared_dialog(page, host_window)
         _prepare_shared_dialog_context(dialog, None)
+        prime_work_editor_dialog(dialog)
     except Exception as exc:
         QMessageBox.critical(
             page,
@@ -174,6 +136,7 @@ def edit_work(page) -> None:
     try:
         dialog = _get_or_create_shared_dialog(page, host_window)
         _prepare_shared_dialog_context(dialog, work)
+        prime_work_editor_dialog(dialog)
     except Exception as exc:
         QMessageBox.critical(
             page,

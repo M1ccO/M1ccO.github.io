@@ -470,11 +470,11 @@ class FixtureSelectorDialog(SelectorDialogBase):
         list_layout.addWidget(self.list_view, 1)
         splitter.addWidget(list_card)
 
-        right_panel = QWidget()
+        right_panel = QWidget(splitter)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
-        right_layout.addWidget(self._build_selector_card(), 1)
+        right_layout.addWidget(self._build_selector_card(parent=right_panel), 1)
         right_layout.addWidget(self._build_detail_card(), 1)
         splitter.addWidget(right_panel)
 
@@ -494,8 +494,11 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self.detail_card.setVisible(False)
         return self.detail_card
 
-    def _build_selector_card(self) -> QWidget:
-        selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(spacing=8)
+    def _build_selector_card(self, parent: QWidget | None = None) -> QWidget:
+        selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(
+            spacing=8,
+            parent=parent,
+        )
         selector_card.setVisible(True)
         self.selector_card = selector_card
         selector_card_layout = QVBoxLayout(selector_card)
@@ -512,6 +515,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             left_badge_text='',
             right_badge_text='',
             fixed_height_policy=True,
+            parent=selector_panel,
         )
         self.selector_spindle_value_label.setVisible(False)
         self.selector_head_value_label.setVisible(False)
@@ -523,6 +527,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
                 'Drag fixtures from the catalog to this list and reorder them by dragging.',
             ),
             multiline=False,
+            parent=selector_panel,
         )
         selector_layout.addWidget(hint, 0)
 

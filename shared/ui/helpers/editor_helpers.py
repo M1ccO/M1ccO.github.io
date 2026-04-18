@@ -129,9 +129,9 @@ def apply_titled_section_style(group: QGroupBox) -> QGroupBox:
     return group
 
 
-def create_titled_section(title: str) -> QGroupBox:
+def create_titled_section(title: str, parent: QWidget | None = None) -> QGroupBox:
     """Create a light-blue titled section matching measurement editor groups."""
-    group = QGroupBox(title)
+    group = QGroupBox(title, parent)
     apply_titled_section_style(group)
     group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     return group

@@ -52,13 +52,21 @@ class WorkEditorSelectorHost(QObject):
             dialog.setUpdatesEnabled(False)
         try:
             layout.addWidget(widget)
+            ensure_polished = getattr(widget, "ensurePolished", None)
+            if callable(ensure_polished):
+                ensure_polished()
             if self._auto_close_on_widget_signals:
                 self._connect_selector_signals(widget)
             self._enter_selector_mode()
+            widget_layout = widget.layout()
+            if widget_layout is not None:
+                widget_layout.activate()
+            if layout is not None:
+                layout.activate()
+            widget.setVisible(True)
         finally:
             if hasattr(dialog, "setUpdatesEnabled"):
                 dialog.setUpdatesEnabled(had_updates)
-        widget.setVisible(True)
 
     def close_active_widget(self) -> None:
         widget = self._active_widget

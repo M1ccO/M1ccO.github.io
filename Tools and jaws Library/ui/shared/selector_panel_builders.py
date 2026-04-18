@@ -20,20 +20,21 @@ from shared.ui.helpers.editor_helpers import style_icon_action_button, style_pan
 def build_selector_card_shell(
     *,
     spacing: int = 6,
+    parent: QWidget | None = None,
 ) -> tuple[QFrame, QScrollArea, QWidget, QVBoxLayout]:
     """Create the shared selector card -> scroll -> panel shell."""
-    selector_card = QFrame()
+    selector_card = QFrame(parent)
     selector_card.setProperty("card", True)
     selector_card.setProperty("selectorContext", True)
     selector_card.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
     selector_card.setVisible(False)
 
-    selector_scroll = QScrollArea()
+    selector_scroll = QScrollArea(selector_card)
     selector_scroll.setWidgetResizable(True)
     selector_scroll.setFrameShape(QFrame.NoFrame)
     selector_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-    selector_panel = QWidget()
+    selector_panel = QWidget(selector_scroll)
     selector_panel.setProperty("selectorPanel", True)
     selector_panel.setMinimumWidth(0)
     selector_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Expanding)
@@ -50,9 +51,10 @@ def build_selector_info_header(
     left_badge_text: str,
     right_badge_text: str,
     fixed_height_policy: bool = False,
+    parent: QWidget | None = None,
 ) -> tuple[QFrame, QLabel, QLabel, QLabel]:
     """Build the common selector info header with centered title and two badges."""
-    selector_info_header = QFrame()
+    selector_info_header = QFrame(parent)
     selector_info_header.setProperty("detailHeader", True)
     selector_info_header.setProperty("selectorInfoHeader", True)
     if fixed_height_policy:
@@ -128,8 +130,9 @@ def build_selector_hint_label(
     *,
     text: str,
     multiline: bool = False,
+    parent: QWidget | None = None,
 ) -> QLabel:
-    hint_label = QLabel(text)
+    hint_label = QLabel(text, parent)
     hint_label.setWordWrap(multiline)
     hint_label.setProperty("detailHint", True)
     if not multiline:

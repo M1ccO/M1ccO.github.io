@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile \"tests/test_work_editor_launch_parent.py\" \"tests/test_priority1_targeted.py\")",
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py -x --tb=short)",
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py -k \"create_work_uses_top_level or edit_work_uses_top_level or reuses_cached or test_create_work_prepares_shared\" --tb=short)",
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py --tb=line)",
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py --tb=no -q)",
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py --tb=no -q --deselect \"tests/test_work_editor_launch_parent.py::TestWorkEditorLaunchParent::test_create_work_editor_dialog_uses_family_shell\")",
+      "Bash(python -m pytest tests/test_work_editor_launch_parent.py -k \"not test_create_work_editor_dialog_uses_family_shell and not test_exec_work_editor_dialog\" --tb=line -q)"
+    ]
+  }
+}

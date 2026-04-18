@@ -4,6 +4,11 @@ from pathlib import Path
 import textwrap
 
 from config import DEFAULT_TOOL_ICON, TOOL_ICONS_DIR, TOOL_LIBRARY_TOOL_ICONS_DIR, TOOL_TYPE_TO_ICON
+from services.setup_card_policy import (
+    build_setup_card_sections,
+    build_setup_card_tool_groups,
+    resolve_setup_card_profile,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -769,6 +774,88 @@ class PrintService:
         canvas.drawRightString(page_w - margin, top_y + 14, self._t("print.setup_card.tools_heading", "Tools"))
         return top_y - 20
 
+    def _render_setup_sections(self, pdf, top_y, margin, col_gap, col_w, content_w, sections):
+        left_x = margin
+        right_x = margin + col_w + col_gap
+        pending_half: dict | None = None
+        current_y = top_y
+
+        for section in sections:
+            layout = str(section.get("layout") or "half").strip().lower()
+            lines = section.get("lines") or ["-"]
+            kwargs = {
+                "body_font": float(section.get("body_font", 12.0)),
+                "body_font_name": str(section.get("body_font_name") or "Helvetica"),
+                "colorize_axis_letters": bool(section.get("colorize_axis_letters", False)),
+                "bold_value_after_colon": bool(section.get("bold_value_after_colon", False)),
+            }
+            if layout == "full":
+                if pending_half is not None:
+                    current_y = self._render_setup_section_pair(
+                        pdf, current_y, left_x, right_x, col_w, pending_half, None
+                    )
+                    pending_half = None
+                current_y = self._draw_box(
+                    pdf,
+                    margin,
+                    current_y,
+                    content_w,
+                    str(section.get("title") or ""),
+                    lines,
+                    **kwargs,
+                )
+                continue
+
+            if pending_half is None:
+                pending_half = dict(section)
+            else:
+                current_y = self._render_setup_section_pair(
+                    pdf, current_y, left_x, right_x, col_w, pending_half, section
+                )
+                pending_half = None
+
+        if pending_half is not None:
+            current_y = self._render_setup_section_pair(
+                pdf, current_y, left_x, right_x, col_w, pending_half, None
+            )
+        return current_y
+
+    def _render_setup_section_pair(self, pdf, top_y, left_x, right_x, col_w, left_section, right_section):
+        left_kwargs = {
+            "body_font": float(left_section.get("body_font", 12.0)),
+            "body_font_name": str(left_section.get("body_font_name") or "Helvetica"),
+            "colorize_axis_letters": bool(left_section.get("colorize_axis_letters", False)),
+            "bold_value_after_colon": bool(left_section.get("bold_value_after_colon", False)),
+        }
+        left_bottom = self._draw_box(
+            pdf,
+            left_x,
+            top_y,
+            col_w,
+            str(left_section.get("title") or ""),
+            left_section.get("lines") or ["-"],
+            **left_kwargs,
+        )
+        if right_section is None:
+            return left_bottom
+
+        right_kwargs = {
+            "body_font": float(right_section.get("body_font", 12.0)),
+            "body_font_name": str(right_section.get("body_font_name") or "Helvetica"),
+            "colorize_axis_letters": bool(right_section.get("colorize_axis_letters", False)),
+            "bold_value_after_colon": bool(right_section.get("bold_value_after_colon", False)),
+        }
+        right_bottom = self._draw_box(
+            pdf,
+            right_x,
+            top_y,
+            col_w,
+            str(right_section.get("title") or ""),
+            right_section.get("lines") or ["-"],
+            **right_kwargs,
+        )
+        return min(left_bottom, right_bottom)
+
     def _spindle_zero_text(self, coord, axis_values):
         coord_text = self._to_text(coord)
         parts = []
@@ -796,7 +883,7 @@ class PrintService:
                 lines.append(self._t("print.setup_card.label.zero", "{spindle} zero: {text}", spindle=spindle_title, text=text))
         return lines
 
-    def generate_setup_card(self, work, entry, output_path):
+    def generate_setup_card(self, work, entry, output_path, machine_profile_key: str | None = None):
         try:
             from reportlab.lib.pagesizes import A4  # type: ignore[import-not-found]
             from reportlab.pdfgen import canvas  # type: ignore[import-not-found]
@@ -813,6 +900,7 @@ class PrintService:
         content_w = page_w - (margin * 2)
         col_gap = 12
         col_w = (content_w - col_gap) / 2
+        profile = resolve_setup_card_profile(machine_profile_key)
 
         # ------------------------------------------------------------------
         # PAGE 1: Programs + zero points + jaws + notes
@@ -843,149 +931,17 @@ class PrintService:
 
         left_x = margin
         right_x = margin + col_w + col_gap
-        left_y = top_y
-        right_y = top_y
-        head1_lines = [
-            self._t("print.setup_card.label.program", "Program: {value}", value=self._safe(work.get('main_program'))),
-            self._t("print.setup_card.label.sub_program", "Sub program: {value}", value=self._safe(work.get('head1_sub_program'))),
-        ]
-        head1_lines.extend(self._zero_lines_for_head(work, "head1"))
-
-        head2_lines = [
-            self._t("print.setup_card.label.program", "Program: {value}", value=self._safe(work.get('main_program'))),
-            self._t("print.setup_card.label.sub_program", "Sub program: {value}", value=self._safe(work.get('head2_sub_program'))),
-        ]
-        head2_lines.extend(self._zero_lines_for_head(work, "head2"))
-
-        left_y = self._draw_box(
+        top_y = self._render_setup_sections(
             pdf,
-            left_x,
-            left_y,
-            col_w,
-            self._t("print.setup_card.section.head1", "HEAD1"),
-            head1_lines,
-            body_font=12.0,
-            body_font_name="Helvetica",
-            colorize_axis_letters=True,
-            bold_value_after_colon=True,
-        )
-        right_y = self._draw_box(
-            pdf,
-            right_x,
-            right_y,
-            col_w,
-            self._t("print.setup_card.section.head2", "HEAD2"),
-            head2_lines,
-            body_font=12.0,
-            body_font_name="Helvetica",
-            colorize_axis_letters=True,
-            bold_value_after_colon=True,
-        )
-
-        top_y = min(left_y, right_y)
-
-        sp1_details = self._jaw_details(work.get("main_jaw_id"))
-        sp2_details = self._jaw_details(work.get("sub_jaw_id"))
-        raw_part_od = self._to_text(work.get("raw_part_od"))
-        raw_part_id = self._to_text(work.get("raw_part_id"))
-        raw_part_length = self._to_text(work.get("raw_part_length"))
-        raw_part_line = ""
-        if raw_part_od or raw_part_id or raw_part_length:
-            if raw_part_od and raw_part_id and raw_part_length:
-                raw_part_value = f"{raw_part_od}/{raw_part_id}*{raw_part_length}"
-            elif raw_part_od and raw_part_length:
-                raw_part_value = f"{raw_part_od}*{raw_part_length}"
-            elif raw_part_od and raw_part_id:
-                raw_part_value = f"{raw_part_od}/{raw_part_id}"
-            elif raw_part_od:
-                raw_part_value = raw_part_od
-            elif raw_part_id and raw_part_length:
-                raw_part_value = f"{raw_part_id}*{raw_part_length}"
-            elif raw_part_id:
-                raw_part_value = raw_part_id
-            else:
-                raw_part_value = raw_part_length
-            raw_part_line = self._t(
-                "print.setup_card.label.sp1_raw_part",
-                "Aihio: {value}",
-                value=raw_part_value,
-            )
-
-        sp1_is_spiked = self._to_text(sp1_details.get('jaw_type')).lower() == 'spiked jaws'
-        sp1_jaw_lines = [
-            self._t("print.setup_card.label.sp1_jaw", "SP1 jaw: {value}", value=self._jaw_summary(work.get('main_jaw_id'))),
-        ]
-        if raw_part_line and not sp1_is_spiked:
-            sp1_jaw_lines.append(raw_part_line)
-        sp1_turning_washer = self._to_text(sp1_details.get('turning_washer'))
-        if sp1_turning_washer:
-            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_turning_ring", "SP1 turning ring: {value}", value=sp1_turning_washer))
-        sp1_last_modified = self._to_text(sp1_details.get('last_modified'))
-        if sp1_last_modified:
-            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_last_modified", "SP1 last modified: {value}", value=sp1_last_modified))
-        if sp1_is_spiked:
-            sp1_jaw_lines.append(self._t("print.setup_card.label.sp1_stop_screws", "SP1 stop screws: {value}", value=self._safe(work.get('main_stop_screws'))))
-            if raw_part_line:
-                sp1_jaw_lines.append(raw_part_line)
-
-        sp2_jaw_lines = [
-            self._t("print.setup_card.label.sp2_jaw", "SP2 jaw: {value}", value=self._jaw_summary(work.get('sub_jaw_id'))),
-        ]
-        if self._to_text(sp2_details.get('jaw_type')).lower() == 'spiked jaws':
-            sp2_jaw_lines.append(self._t("print.setup_card.label.sp2_stop_screws", "SP2 stop screws: {value}", value=self._safe(work.get('sub_stop_screws'))))
-        sp2_turning_washer = self._to_text(sp2_details.get('turning_washer'))
-        if sp2_turning_washer:
-            sp2_jaw_lines.insert(1, self._t("print.setup_card.label.sp2_turning_ring", "SP2 turning ring: {value}", value=sp2_turning_washer))
-        sp2_last_modified = self._to_text(sp2_details.get('last_modified'))
-        if sp2_last_modified:
-            insert_idx = 2 if sp2_turning_washer else 1
-            sp2_jaw_lines.insert(insert_idx, self._t("print.setup_card.label.sp2_last_modified", "SP2 last modified: {value}", value=sp2_last_modified))
-
-        left_y = self._draw_box(
-            pdf,
-            left_x,
             top_y,
+            margin,
+            col_gap,
             col_w,
-            self._t("print.setup_card.section.jaws_sp1", "Jaws SP1"),
-            sp1_jaw_lines,
-            body_font=12.0,
-            bold_value_after_colon=True,
+            content_w,
+            build_setup_card_sections(self, work, profile),
         )
-        right_y = self._draw_box(
-            pdf,
-            right_x,
-            top_y,
-            col_w,
-            self._t("print.setup_card.section.jaws_sp2", "Jaws SP2"),
-            sp2_jaw_lines,
-            body_font=12.0,
-            bold_value_after_colon=True,
-        )
-        top_y = min(left_y, right_y)
 
-        notes_text = self._to_text(work.get('notes'))
-        has_real_notes = bool(notes_text and notes_text not in {"-", "--"})
-        if has_real_notes:
-            top_y = self._draw_box(pdf, margin, top_y, content_w, self._t("setup_page.section.notes", "Notes"), [notes_text], body_font=12.0)
-        robot_info = self._to_text(work.get('robot_info'))
-        if robot_info:
-            top_y = self._draw_box(pdf, margin, top_y, content_w, self._t("print.setup_card.section.robot_notes", "Robot notes"), [robot_info], body_font=12.0)
-
-        head1_main, head1_sub = self._tool_lists_for_head(work.get("head1_tool_assignments") or [])
-        head2_main, head2_sub = self._tool_lists_for_head(work.get("head2_tool_assignments") or [])
-        head_groups = []
-        if head1_main or head1_sub:
-            head_groups.append({
-                "label": self._t("print.setup_card.section.head1", "HEAD1"),
-                "main": head1_main,
-                "sub": head1_sub,
-            })
-        if head2_main or head2_sub:
-            head_groups.append({
-                "label": self._t("print.setup_card.section.head2", "HEAD2"),
-                "main": head2_main,
-                "sub": head2_sub,
-            })
+        head_groups = build_setup_card_tool_groups(self, work, profile)
         min_bottom = margin + 18
         show_pot = bool(work.get("print_pots"))
 

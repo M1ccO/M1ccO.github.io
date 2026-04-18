@@ -14,6 +14,15 @@ def make_zero_axis_input(dialog: Any, value_attr_name: str, axis: str, parent=No
     return value_input
 
 
+def _responsive_width(dialog: Any) -> int:
+    host = getattr(dialog, "zero_points_host", None)
+    if isinstance(host, QWidget):
+        width = int(host.width() or 0)
+        if width > 1:
+            return width
+    return int(getattr(dialog, "width", lambda: 0)() or 0)
+
+
 def set_zero_xy_visibility(dialog: Any, show_xy: bool) -> None:
     for axis in ("z", "c"):
         for widget in dialog._zero_axis_widgets.get(axis, []):
@@ -59,9 +68,10 @@ def set_zero_xy_visibility(dialog: Any, show_xy: bool) -> None:
 
     if hasattr(dialog, "zero_points_host"):
         dialog.zero_points_host._switch_width = 1320 if show_xy else 820
+        host_width = _responsive_width(dialog)
         direction = (
             QBoxLayout.TopToBottom
-            if dialog.zero_points_host.width() < dialog.zero_points_host._switch_width
+            if host_width < dialog.zero_points_host._switch_width
             else QBoxLayout.LeftToRight
         )
         if dialog.zero_points_host._layout.direction() != direction:
@@ -75,9 +85,10 @@ def build_spindle_zero_group(
     spindle_key: str,
     *,
     create_titled_section_fn: Callable[[str], object],
+    parent: QWidget | None = None,
     work_coordinates: list[str] | tuple[str, ...],
 ) -> QGroupBox:
-    group = create_titled_section_fn(title)
+    group = create_titled_section_fn(title, parent=parent)
     group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
     root = QVBoxLayout(group)
     root.setContentsMargins(8, 6, 8, 8)

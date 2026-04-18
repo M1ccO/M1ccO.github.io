@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QComboBox
+from PySide6.QtWidgets import QApplication, QComboBox
 
 from shared.ui.helpers.common_widgets import apply_shared_dropdown_style
 
@@ -273,6 +273,20 @@ QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOve
         style.polish(widget)
 
 
+def _prime_embedded_selector_widget(widget: Any) -> None:
+    if widget is None:
+        return
+    ensure_polished = getattr(widget, "ensurePolished", None)
+    if callable(ensure_polished):
+        ensure_polished()
+    layout = getattr(widget, "layout", lambda: None)()
+    if layout is not None:
+        layout.activate()
+    app = QApplication.instance()
+    if app is not None:
+        app.processEvents()
+
+
 def build_embedded_selector_parity_widget(
     dialog: Any,
     *,
@@ -289,6 +303,7 @@ def build_embedded_selector_parity_widget(
     kind_key = str(kind or "").strip().lower()
     _activate_tool_library_namespace_aliases(dialog)
     services = _ensure_service_bundle(dialog)
+    parent_widget = mount_container or dialog
 
     if kind_key == "tools":
         from tools_and_jaws_library.ui.selectors.tool_selector_dialog import ToolSelectorDialog
@@ -303,7 +318,7 @@ def build_embedded_selector_parity_widget(
             initial_assignment_buckets=initial_assignment_buckets,
             on_submit=on_submit,
             on_cancel=on_cancel,
-            parent=None,
+            parent=parent_widget,
             embedded_mode=True,
         )
         if not hasattr(widget, "_refresh_elided_group_title"):
@@ -319,7 +334,7 @@ def build_embedded_selector_parity_widget(
             initial_assignments=initial_assignments,
             on_submit=on_submit,
             on_cancel=on_cancel,
-            parent=None,
+            parent=parent_widget,
             embedded_mode=True,
         )
     else:
@@ -333,19 +348,18 @@ def build_embedded_selector_parity_widget(
             initial_target_key=str((follow_up or {}).get("target_key") or ""),
             on_submit=on_submit,
             on_cancel=on_cancel,
-            parent=None,
+            parent=parent_widget,
             embedded_mode=True,
         )
 
     # Force child-widget hosting to avoid transient top-level QDialog flashes.
     # Use a single setWindowFlags call — individual setWindowFlag calls each
     # trigger a re-parent cycle that can briefly flash a top-level window.
-    parent_widget = mount_container or dialog
     widget.setWindowFlags(Qt.Widget)
-    widget.setParent(parent_widget)
     widget.setWindowModality(Qt.NonModal)
     widget.setAttribute(Qt.WA_DontShowOnScreen, True)
     widget.setVisible(False)
-    widget.setAttribute(Qt.WA_DontShowOnScreen, False)
+    _prime_embedded_selector_widget(widget)
     _apply_embedded_selector_style(widget)
+    widget.setAttribute(Qt.WA_DontShowOnScreen, False)
     return widget

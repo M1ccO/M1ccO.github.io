@@ -26,9 +26,7 @@ from .library_handoff_controller import (
 from .preload_controller import (
     initialize_preload_state,
     pause_tool_library_preload,
-    preload_work_editor_background,
     preload_tool_library_background,
-    retry_work_editor_preload,
     resume_tool_library_preload,
     retry_tool_library_preload,
 )
@@ -60,10 +58,8 @@ __all__ = [
     "open_jaws_library_action",
     "open_preferences_action",
     "open_tool_library_action",
-    "preload_work_editor_background",
     "preload_tool_library_background",
     "resolve_compatibility_target_path",
-    "retry_work_editor_preload",
     "resume_tool_library_preload",
     "retry_tool_library_preload",
     "show_compatibility_report_dialog",

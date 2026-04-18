@@ -1,6 +1,6 @@
 {
   "version": 3,
-  "description": "Machine-readable architecture map for AI agents and tooling. Describes app ownership, module structure, active support packages, runtime boundaries, dependency rules, and key entry points. Last updated: 2026-04-14.",
+  "description": "Machine-readable architecture map for AI agents and tooling. Describes app ownership, module structure, active support packages, runtime boundaries, dependency rules, and key entry points. Last updated: 2026-04-18.",
 
   "apps": {
     "toolsAndJawsLibrary": {
@@ -100,7 +100,10 @@
         "Tool and jaw master data stay read-only and come from the sibling app.",
         "Main window and setup page now use extracted support packages.",
         "Drawings page is runtime-capable but preference-gated.",
-        "Work Editor refactor is active and tracked in WORK_EDITOR_REFACTOR_STATUS.md."
+        "Work Editor refactor is active and tracked in WORK_EDITOR_REFACTOR_STATUS.md.",
+        "High-level Work Editor creation is now family-selected via ui/work_editor_factory.py instead of callers directly instantiating the shared base dialog.",
+        "Setup routing uses ui/machine_family_runtime.py for machine-family decisions such as jaws vs fixtures and Work Editor shell selection.",
+        "Setup Card printing now has a machine-profile-aware content policy in services/setup_card_policy.py; print_service.py remains the shared PDF renderer."
       ],
       "pages": {
         "setupPage": {
@@ -116,10 +119,13 @@
       },
       "editors": {
         "workEditor": {
-          "label": "Work Editor (large central dialog)",
+          "label": "Work Editor (shared base dialog + family-selected shells)",
+          "factory": "Setup Manager/ui/work_editor_factory.py",
+          "familyRuntime": "Setup Manager/ui/machine_family_runtime.py",
           "dialog": "Setup Manager/ui/work_editor_dialog.py",
           "support": "Setup Manager/ui/work_editor_support/",
-          "refactorStatus": "Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md"
+          "refactorStatus": "Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md",
+          "glitchInvestigation": "WORK_EDITOR_GLITCH_INVESTIGATION_REPORT.md"
         }
       },
       "supportPackages": {
@@ -131,7 +137,8 @@
         "workService": "Setup Manager/services/work_service.py",
         "logbookService": "Setup Manager/services/logbook_service.py",
         "drawService": "Setup Manager/services/draw_service.py",
-        "printService": "Setup Manager/services/print_service.py"
+        "printService": "Setup Manager/services/print_service.py",
+        "setupCardPolicy": "Setup Manager/services/setup_card_policy.py"
       },
       "ownedDomains": ["works", "logbook", "drawings", "setup database preferences"],
       "intentionalBoundaries": [

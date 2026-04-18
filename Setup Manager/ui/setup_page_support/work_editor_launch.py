@@ -38,9 +38,29 @@ def prime_work_editor_dialog(dialog) -> None:
     # on Windows during widget construction.
     dialog.setUpdatesEnabled(False)
     try:
+        activate_layout = getattr(dialog.layout(), "activate", None)
+        if callable(activate_layout):
+            activate_layout()
+
+        ensure_surface = getattr(dialog, "_ensure_normal_editor_surface_visible", None)
+        if callable(ensure_surface):
+            ensure_surface()
+
+        ensure_content = getattr(dialog, "_ensure_normal_editor_content_visible", None)
+        if callable(ensure_content):
+            ensure_content()
+
+        warmup_surfaces = getattr(dialog, "_warmup_initial_interaction_surfaces", None)
+        if callable(warmup_surfaces):
+            warmup_surfaces()
+
         close_popups = getattr(dialog, "_close_transient_combo_popups", None)
         if callable(close_popups):
             close_popups()
+
+        update_geometry = getattr(dialog, "updateGeometry", None)
+        if callable(update_geometry):
+            update_geometry()
     finally:
         dialog.setUpdatesEnabled(True)
 

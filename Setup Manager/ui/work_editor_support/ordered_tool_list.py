@@ -172,14 +172,14 @@ class WorkEditorOrderedToolList(QWidget):
         header_row.addWidget(self.spindle_selector)
         layout.addLayout(header_row)
 
-        list_panel = create_titled_section(head_label)
+        list_panel = create_titled_section(head_label, parent=self)
         list_panel.setProperty("toolIdsPanel", True)
         list_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         list_panel_layout = QVBoxLayout(list_panel)
         list_panel_layout.setContentsMargins(8, 10, 8, 8)
         list_panel_layout.setSpacing(0)
 
-        self.tool_list = WorkEditorToolAssignmentListWidget()
+        self.tool_list = WorkEditorToolAssignmentListWidget(list_panel)
         self.tool_list._owner = self
         self.tool_list.setObjectName("toolIdsOrderList")
         self.tool_list.setSortingEnabled(False)
@@ -192,9 +192,9 @@ class WorkEditorOrderedToolList(QWidget):
         btn_row = QHBoxLayout(self.controls_bar)
         btn_row.setContentsMargins(0, 0, 0, 0)
         btn_row.setSpacing(8)
-        self.move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "▲"), self)
-        self.move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "▼"), self)
-        self.remove_btn = QPushButton(self._t("work_editor.tools.remove", "Remove"), self)
+        self.move_up_btn = QPushButton(self._t("work_editor.tools.move_up", "▲"), self.controls_bar)
+        self.move_down_btn = QPushButton(self._t("work_editor.tools.move_down", "▼"), self.controls_bar)
+        self.remove_btn = QPushButton(self._t("work_editor.tools.remove", "Remove"), self.controls_bar)
         for btn in (self.move_up_btn, self.move_down_btn, self.remove_btn):
             btn.setProperty("panelActionButton", True)
             btn.setMinimumWidth(64)
@@ -212,8 +212,14 @@ class WorkEditorOrderedToolList(QWidget):
         btn_row.addWidget(self.move_down_btn)
         btn_row.addWidget(self.remove_btn)
 
-        self.comment_btn = QPushButton(self._t("work_editor.tools.add_comment", "Add Comment"), self)
-        self.delete_comment_btn = QPushButton(self._t("work_editor.tools.delete_comment", "Delete Comment"), self)
+        self.comment_btn = QPushButton(
+            self._t("work_editor.tools.add_comment", "Add Comment"),
+            self.controls_bar,
+        )
+        self.delete_comment_btn = QPushButton(
+            self._t("work_editor.tools.delete_comment", "Delete Comment"),
+            self.controls_bar,
+        )
         self.comment_btn.setMinimumWidth(112)
         self.comment_btn.setMaximumWidth(150)
         self.delete_comment_btn.setMinimumWidth(112)
@@ -607,12 +613,12 @@ class WorkEditorOrderedToolList(QWidget):
         form.setContentsMargins(14, 14, 14, 14)
         form.setSpacing(8)
 
-        id_input = QLineEdit()
+        id_input = QLineEdit(dlg)
         id_input.setPlaceholderText(lib_id)
         id_input.setText((assignment.get("override_id") or "").strip())
         form.addRow(self._t("work_editor.tools.override_id", "T-code"), id_input)
 
-        desc_input = QLineEdit()
+        desc_input = QLineEdit(dlg)
         desc_input.setPlaceholderText(lib_desc)
         desc_input.setText((assignment.get("override_description") or "").strip())
         form.addRow(self._t("work_editor.tools.override_description", "Description"), desc_input)
@@ -620,7 +626,7 @@ class WorkEditorOrderedToolList(QWidget):
         effective_pot = (assignment.get("pot") or "").strip() or self._default_pot_for_assignment_resolver(
             self, assignment
         )
-        pot_input = QLineEdit()
+        pot_input = QLineEdit(dlg)
         pot_input.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "e.g. P1"))
         pot_input.setText(effective_pot)
         form.addRow(self._t("work_editor.tools.pot_number", "Pot"), pot_input)

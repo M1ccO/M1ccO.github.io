@@ -47,14 +47,14 @@ class _ElidingLabel(QLabel):
         self.setToolTip(self._full_text if self.text() != self._full_text else '')
 
 
-def _build_eliding_checkbox(checkbox: QCheckBox, text: str) -> QWidget:
+def _build_eliding_checkbox(checkbox: QCheckBox, text: str, *, parent: QWidget | None = None) -> QWidget:
     checkbox.setText('')
-    row = QWidget()
+    row = QWidget(parent)
     row_layout = QHBoxLayout(row)
     row_layout.setContentsMargins(0, 0, 0, 0)
     row_layout.setSpacing(6)
     row_layout.addWidget(checkbox, 0, Qt.AlignVCenter)
-    label = _ElidingLabel(text)
+    label = _ElidingLabel(text, row)
     row_layout.addWidget(label, 1)
     row.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     return row
@@ -301,6 +301,7 @@ def build_tools_tab_ui(
     print_pots_row = _build_eliding_checkbox(
         dialog.print_pots_checkbox,
         dialog._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"),
+        parent=left_controls,
     )
     print_pots_row.setVisible(dialog.machine_profile.supports_print_pots)
     left_controls_layout.addWidget(print_pots_row, 1)

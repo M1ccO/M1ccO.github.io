@@ -47,7 +47,12 @@ def view_setup_card(page) -> None:
         preview_dir.mkdir(parents=True, exist_ok=True)
         date_stamp = datetime.now().strftime('%d-%m-%Y')
         output_path = preview_dir / f"setup-card__{date_stamp}.pdf"
-        page.print_service.generate_setup_card(work, entry, output_path)
+        page.print_service.generate_setup_card(
+            work,
+            entry,
+            output_path,
+            machine_profile_key=page.work_service.get_machine_profile_key(),
+        )
         if not page.draw_service.open_drawing(output_path):
             QMessageBox.warning(
                 page,

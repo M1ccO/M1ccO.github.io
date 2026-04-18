@@ -53,16 +53,14 @@ from ui.main_window_support import (
     open_jaws_library_action,
     open_preferences_action,
     open_tool_library_action,
-    preload_work_editor_background,
     preload_tool_library_background,
-    retry_work_editor_preload,
     retry_tool_library_preload,
     send_request_with_retry,
     send_to_tool_library,
     update_launch_actions,
     update_navigation_labels,
 )
-from machine_profiles import is_machining_center, load_profile
+from ui.machine_family_runtime import is_machining_center_family, secondary_library_module
 from shared.ui.main_window_helpers import (
     current_window_rect,
     fade_in as _shared_fade_in,
@@ -370,8 +368,7 @@ class MainWindow(QMainWindow):
     def _is_machining_center_profile(self) -> bool:
         try:
             key = str(self.work_service.get_machine_profile_key() or "").strip()
-            profile = load_profile(key)
-            return bool(is_machining_center(profile))
+            return bool(is_machining_center_family(profile_key=key))
         except Exception:
             return False
 
@@ -405,12 +402,6 @@ class MainWindow(QMainWindow):
     def _retry_tool_library_preload(self):
         retry_tool_library_preload(self)
 
-    def _preload_work_editor_background(self):
-        preload_work_editor_background(self)
-
-    def _retry_work_editor_preload(self):
-        retry_work_editor_preload(self)
-
     def _fade_out_and(self, callback):
         _shared_fade_out_and(self, callback)
 
@@ -434,7 +425,9 @@ class MainWindow(QMainWindow):
     def _open_tool_library_separate(self):
         # Legacy external hook retained for backward compatibility.
         """Backward-compatible helper that opens Jaws/Fixtures module without filters."""
-        self._open_tool_library_module("fixtures" if self._is_machining_center_profile() else "jaws")
+        self._open_tool_library_module(
+            secondary_library_module(profile_key=self.work_service.get_machine_profile_key())
+        )
 
     def _open_tool_library_deep_link(self, kind: str, item_id: str):
         open_tool_library_deep_link(self, kind, item_id)
@@ -476,7 +469,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "open_tools_btn"):
             self.open_tools_btn.setText(self._t("setup_manager.open_tool_library", "Open Tool Library"))
         if hasattr(self, "open_jaws_btn"):
-            if self._is_machining_center_profile():
+            if secondary_library_module(profile_key=self.work_service.get_machine_profile_key()) == "fixtures":
                 self.open_jaws_btn.setText(self._t("setup_manager.open_fixtures_library", "Open Fixtures Library"))
             else:
                 self.open_jaws_btn.setText(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))

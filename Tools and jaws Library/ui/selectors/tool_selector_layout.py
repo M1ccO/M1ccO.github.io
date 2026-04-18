@@ -160,11 +160,11 @@ class ToolSelectorLayoutMixin:
         list_layout.addWidget(self.list_view, 1)
         splitter.addWidget(list_card)
 
-        right_panel = QWidget()
+        right_panel = QWidget(splitter)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
-        right_layout.addWidget(self._build_selector_card(), 1)
+        right_layout.addWidget(self._build_selector_card(parent=right_panel), 1)
         right_layout.addWidget(self._build_detail_card(), 1)
         splitter.addWidget(right_panel)
 
@@ -185,8 +185,11 @@ class ToolSelectorLayoutMixin:
         self.detail_card.setVisible(False)
         return self.detail_card
 
-    def _build_selector_card(self) -> QWidget:
-        selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(spacing=8)
+    def _build_selector_card(self, parent: QWidget | None = None) -> QWidget:
+        selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(
+            spacing=8,
+            parent=parent,
+        )
         selector_card.setVisible(True)
         self.selector_card = selector_card
         selector_card_layout = QVBoxLayout(selector_card)
@@ -203,6 +206,7 @@ class ToolSelectorLayoutMixin:
             left_badge_text=f"{self._t('work_editor.selector.sp1', 'Pääkara')} / {self._t('work_editor.selector.sp2', 'Vastakara')}",
             right_badge_text=self._t('work_editor.selector.head1', 'Yläkara'),
             fixed_height_policy=True,
+            parent=selector_panel,
         )
         self._is_machining_center_selector_mode = self._selector_is_machining_center()
         if self._is_machining_center_selector_mode:
@@ -315,7 +319,7 @@ class ToolSelectorLayoutMixin:
         self.delete_comment_btn.clicked.connect(self._delete_comment)
         actions.addWidget(self.delete_comment_btn)
 
-        actions_host = QWidget()
+        actions_host = QWidget(selector_card)
         actions_host_layout = QHBoxLayout(actions_host)
         actions_host_layout.setContentsMargins(8, 6, 8, 6)
         actions_host_layout.setSpacing(0)
@@ -324,7 +328,7 @@ class ToolSelectorLayoutMixin:
         actions_host_layout.addStretch(1)
 
         selector_scroll.setWidget(selector_panel)
-        scroll_frame = QFrame()
+        scroll_frame = QFrame(selector_card)
         scroll_frame.setProperty('selectorScrollFrame', True)
         scroll_frame_layout = QVBoxLayout(scroll_frame)
         scroll_frame_layout.setContentsMargins(1, 1, 1, 1)

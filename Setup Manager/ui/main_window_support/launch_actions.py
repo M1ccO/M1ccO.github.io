@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import QMessageBox
 
+from ui.machine_family_runtime import secondary_library_label, secondary_library_module
+
 
 def set_launch_button_variant(window, button, primary: bool) -> None:
     button.setProperty("primaryAction", bool(primary))
@@ -36,10 +38,14 @@ def update_navigation_labels(window) -> None:
 
 def update_launch_actions(window) -> None:
     selected = bool(window._launch_context.get("selected"))
-    mc = bool(getattr(window, "_is_machining_center_profile", lambda: False)())
-    secondary_label = "Fixtures" if mc else "Jaws"
+    secondary_module = secondary_library_module(
+        profile_key=getattr(window.work_service, "get_machine_profile_key", lambda: None)()
+    )
+    secondary_label = secondary_library_label(
+        profile_key=getattr(window.work_service, "get_machine_profile_key", lambda: None)()
+    )
     if hasattr(window, "open_jaws_btn"):
-        if mc:
+        if secondary_module == "fixtures":
             window.open_jaws_btn.setText(
                 window._t("setup_manager.open_fixtures_library", "Open Fixtures Library")
             )
@@ -100,12 +106,13 @@ def open_tool_library_action(window) -> None:
 
 
 def open_jaws_library_action(window) -> None:
-    mc = bool(getattr(window, "_is_machining_center_profile", lambda: False)())
-    secondary_module = "fixtures" if mc else "jaws"
+    secondary_module = secondary_library_module(
+        profile_key=getattr(window.work_service, "get_machine_profile_key", lambda: None)()
+    )
     if window._launch_context.get("selected"):
         tool_ids = window._launch_context.get("tool_ids") or []
         jaw_ids = window._launch_context.get("jaw_ids") or []
-        if not jaw_ids and not mc:
+        if not jaw_ids and secondary_module != "fixtures":
             QMessageBox.information(
                 window,
                 window._t("setup_manager.viewer.title", "Viewer"),

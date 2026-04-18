@@ -96,6 +96,7 @@ from ui.work_editor_support import (
     build_tool_selector_request,
     build_embedded_selector_parity_widget,
     release_tool_library_namespace_aliases,
+    warmup_embedded_selector_runtime,
     make_zero_axis_input,
     set_coord_combo,
     set_zero_xy_visibility,
@@ -251,34 +252,84 @@ class WorkEditorDialog(QDialog):
         self._embedded_selector_host: WorkEditorSelectorHost | None = None
         self._raw_part_combo_popup_allowed = False
         self._raw_part_combo_popup_window: QWidget | None = None
+        self.setUpdatesEnabled(False)
+        try:
+            setup_tabs(self)
+            self.tabs.currentChanged.connect(self._on_tabs_current_changed)
 
-        setup_tabs(self)
-        self.tabs.currentChanged.connect(self._on_tabs_current_changed)
+            self._build_general_tab()
+            self._build_notes_tab()
 
-        self._build_general_tab()
-        self._build_notes_tab()
+            setup_button_row(self)
+            self._embedded_selector_host = WorkEditorSelectorHost(
+                dialog=self,
+                mount_container=self._selector_mount_container,
+                enter_selector_mode=self._enter_selector_mode,
+                exit_selector_mode=self._exit_selector_mode,
+                auto_close_on_widget_signals=False,
+                parent=self,
+            )
 
-        setup_button_row(self)
-        self._embedded_selector_host = WorkEditorSelectorHost(
-            dialog=self,
-            mount_container=self._selector_mount_container,
-            enter_selector_mode=self._enter_selector_mode,
-            exit_selector_mode=self._exit_selector_mode,
-            auto_close_on_widget_signals=False,
-            parent=self,
+            self._load_external_refs()
+            self._load_work()
+            self._initialize_family_shell()
+            try:
+                warmup_embedded_selector_runtime(self)
+            except Exception:
+                self._LOGGER.debug("work_editor.selector warmup skipped", exc_info=True)
+
+            # Apply stylesheet after the full initial hierarchy exists so the
+            # first visible paint is not chasing late subtree polish work.
+            self._apply_host_visual_style()
+            self._prime_selector_host_surface()
+
+            # Keep dialog actions visually consistent with secondary gray buttons.
+            self._set_secondary_button_theme()
+
+            finalize_ui(self)
+            self._close_transient_combo_popups()
+            self._setup_raw_part_combo_popup_guard()
+            self._install_local_event_filters()
+        finally:
+            self.setUpdatesEnabled(True)
+
+    def _prime_selector_host_surface(self) -> None:
+        """Prime selector host subtree while still in startup batch mode."""
+        selector_page = getattr(self, "_selector_page", None)
+        mount = getattr(self, "_selector_mount_container", None)
+        root_stack = getattr(self, "_root_stack", None)
+
+        for widget in (root_stack, selector_page, mount):
+            if isinstance(widget, QWidget):
+                widget.setAttribute(Qt.WA_StyledBackground, True)
+                ensure_polished = getattr(widget, "ensurePolished", None)
+                if callable(ensure_polished):
+                    ensure_polished()
+                layout = widget.layout()
+                if layout is not None:
+                    layout.activate()
+
+    def _initialize_family_shell(self) -> None:
+        """Shell hook for family-specific startup sequencing."""
+        self._prime_startup_tabs(
+            build_zeros=bool(getattr(self, "_startup_prime_zeros_tab", False)),
+            build_tools=bool(getattr(self, "_startup_prime_tools_tab", False)),
         )
-        self._apply_host_visual_style()
 
-        # Keep dialog actions visually consistent with secondary gray buttons.
-        self._set_secondary_button_theme()
-
-        self._load_external_refs()
-        self._load_work()
-
-        finalize_ui(self)
-        self._close_transient_combo_popups()
-        self._setup_raw_part_combo_popup_guard()
-        self._install_local_event_filters()
+    def _prime_startup_tabs(self, *, build_zeros: bool, build_tools: bool) -> None:
+        if not build_zeros and not build_tools:
+            return
+        was_enabled = self.updatesEnabled()
+        if was_enabled:
+            self.setUpdatesEnabled(False)
+        try:
+            if build_zeros:
+                self._ensure_zeros_tab_ready()
+            if build_tools:
+                self._ensure_tools_tab_ready()
+        finally:
+            if was_enabled:
+                self.setUpdatesEnabled(True)
 
     def _close_transient_combo_popups(self) -> None:
         """Defensively close any combo popups opened during startup wiring."""
@@ -478,10 +529,14 @@ class WorkEditorDialog(QDialog):
             style_sheet = self._load_work_editor_style_sheet_from_disk()
 
         if style_sheet.strip():
-            self.setStyleSheet(style_sheet)
-            self.style().unpolish(self)
-            self.style().polish(self)
-            self._host_visual_style_applied = True
+            current = str(self.styleSheet() or "")
+            if current != style_sheet:
+                self.setStyleSheet(style_sheet)
+                self.style().unpolish(self)
+                self.style().polish(self)
+        # Flag latches unconditionally so showEvent never re-enters this path
+        # after __init__, preventing a post-map polish repaint on first open.
+        self._host_visual_style_applied = True
 
     def _setup_raw_part_combo_popup_guard(self) -> None:
         """Allow RAW PART dropdown popup only after explicit user interaction."""
@@ -817,6 +872,7 @@ class WorkEditorDialog(QDialog):
             title,
             spindle_key,
             create_titled_section_fn=create_titled_section,
+            parent=getattr(self, "zero_points_host", None),
             work_coordinates=WORK_COORDINATES,
         )
 
@@ -839,18 +895,7 @@ class WorkEditorDialog(QDialog):
         build_spindles_tab_ui(self, jaw_selector_panel_cls=WorkEditorJawSelectorPanel)
 
     def _build_zeros_tab(self):
-        if is_machining_center(self.machine_profile):
-            build_machining_center_zeros_tab_ui(
-                self,
-                create_titled_section_fn=create_titled_section,
-                work_coordinates=self.WORK_COORDINATES,
-            )
-            return
-        build_zeros_tab_ui(
-            self,
-            jaw_selector_panel_cls=WorkEditorJawSelectorPanel,
-            create_titled_section_fn=create_titled_section,
-        )
+        self._build_family_zeros_tab()
 
     def _build_tools_tab(self):
         WorkEditorOrderedToolList.configure_dependencies(
@@ -859,6 +904,16 @@ class WorkEditorDialog(QDialog):
             default_pot_for_assignment_resolver=self._default_pot_for_assignment,
             combo_popup_styler=apply_tool_library_combo_style,
         )
+        self._build_family_tools_tab()
+
+    def _build_family_zeros_tab(self) -> None:
+        build_zeros_tab_ui(
+            self,
+            jaw_selector_panel_cls=WorkEditorJawSelectorPanel,
+            create_titled_section_fn=create_titled_section,
+        )
+
+    def _build_family_tools_tab(self) -> None:
         build_tools_tab_ui(
             self,
             ordered_tool_list_cls=WorkEditorOrderedToolList,

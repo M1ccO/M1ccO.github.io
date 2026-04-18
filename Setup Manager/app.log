@@ -3107,3 +3107,759 @@ sqlite3.OperationalError: no such table: tools
 2026-04-17 19:10:00,352 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
 2026-04-17 19:10:04,492 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
 2026-04-17 19:10:04,492 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-18 06:49:52,507 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 06:49:52,532 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 06:49:52,533 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 06:49:52,543 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:49:52,544 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:49:52,545 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:49:52,550 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:49:52,551 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:49:52,554 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:49:57,963 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-18 06:49:57,963 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-18 06:50:16,531 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 06:50:16,555 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 06:50:16,556 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 06:50:16,566 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:16,567 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:16,568 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:16,571 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:16,572 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:16,575 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:20,509 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3952, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 06:50:20,510 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3952, 'result': 1}
+2026-04-18 06:50:20,510 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3952, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 06:50:22,470 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 06:50:22,471 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 06:50:22,483 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:22,484 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:22,485 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:22,492 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:22,493 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:22,496 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:23,893 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-18 06:50:23,893 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 1}
+2026-04-18 06:50:48,177 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 06:50:48,201 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 06:50:48,202 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 06:50:48,213 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:48,213 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:48,214 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:48,218 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:48,219 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:50:48,222 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:51:10,014 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-18 06:51:10,014 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 1}
+2026-04-18 06:55:11,139 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 06:55:11,164 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 06:55:11,164 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 06:55:11,175 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:55:11,175 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:55:11,176 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:55:11,182 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:55:11,182 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:55:11,186 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 06:56:32,649 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 81483, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': False}
+2026-04-18 07:00:48,304 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:00:48,328 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:00:48,328 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:00:48,339 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:48,340 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:48,341 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:48,345 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:48,345 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:48,348 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:51,827 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3500, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:00:51,828 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3500, 'result': 0}
+2026-04-18 07:00:51,828 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3500, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:00:59,232 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:00:59,256 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:00:59,257 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:00:59,267 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:59,268 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:59,269 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:59,273 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:59,274 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:00:59,277 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:03,631 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4375, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:01:13,810 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:01:13,834 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:01:13,834 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:01:13,845 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:13,846 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:13,847 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:13,851 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:13,852 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:13,855 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:18,846 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 5016, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:01:27,040 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:01:27,064 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'WorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:01:27,065 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:01:27,075 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:27,076 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:27,077 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:27,081 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:27,082 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:01:27,085 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:05:19,568 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-18 07:05:19,568 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 1}
+2026-04-18 07:19:39,977 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:19:40,002 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:19:40,002 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:19:40,015 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:19:40,015 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:19:40,016 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:19:40,020 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:19:40,021 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:19:40,024 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:19:45,101 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 5094, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:20:58,080 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:20:58,105 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:20:58,105 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:20:58,117 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:20:58,118 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:20:58,119 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:20:58,123 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:20:58,124 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:20:58,127 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:01,018 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2921, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:21:01,019 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2921, 'result': 0}
+2026-04-18 07:21:01,019 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2921, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:21:09,503 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:21:09,527 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:21:09,528 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:21:09,540 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:09,541 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:09,542 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:09,546 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:09,547 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:09,550 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:15,707 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 6187, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:21:23,627 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:21:23,652 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:21:23,653 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:21:23,664 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:23,664 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:23,665 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:23,670 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:23,671 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:23,674 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:21:29,448 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-18 07:21:29,448 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-18 07:23:07,487 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:23:07,511 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:23:07,512 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:23:07,523 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:23:07,524 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:23:07,525 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:23:07,529 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:23:07,530 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:23:07,533 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:23:13,002 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 5500, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:32:19,277 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:32:19,301 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:32:19,302 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:32:19,314 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:32:19,314 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:32:19,315 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:32:19,320 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:32:19,321 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:32:19,324 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:32:25,572 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-18 07:32:25,572 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-18 07:34:11,375 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:34:11,398 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:34:11,398 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:34:11,408 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:34:11,408 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:34:11,409 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:34:11,414 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:34:11,414 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:34:11,417 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:34:17,870 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 6469, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:37:12,586 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:37:12,816 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:37:12,816 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:37:12,831 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:12,832 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:12,833 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:12,837 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:12,838 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:12,841 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:17,414 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4594, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:37:19,372 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:37:19,373 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:37:19,383 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:19,383 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:19,384 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:19,388 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:19,388 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:19,391 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:21,351 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1983, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:37:21,352 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1983, 'result': 0}
+2026-04-18 07:37:21,352 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1983, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:37:29,528 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:37:29,757 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:37:29,757 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:37:29,771 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:29,772 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:29,773 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:29,777 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:29,777 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:29,780 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:37:30,854 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1094, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:37:30,855 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1094, 'result': 0}
+2026-04-18 07:37:30,855 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1094, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:22,063 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:38:22,251 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:22,251 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:22,263 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:22,263 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:22,264 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:22,269 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:22,269 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:22,272 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:23,410 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1157, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:23,411 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1157, 'result': 0}
+2026-04-18 07:38:23,411 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1157, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:24,226 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:24,226 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:24,237 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:24,238 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:24,239 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:24,242 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:24,243 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:24,246 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:25,750 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1516, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:25,751 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1530, 'result': 0}
+2026-04-18 07:38:25,751 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1530, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:28,344 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:28,344 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:28,354 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:28,354 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:28,355 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:28,359 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:28,359 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:28,362 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:29,473 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1141, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:29,474 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1141, 'result': 0}
+2026-04-18 07:38:29,474 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1141, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:30,129 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:30,130 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:30,138 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:30,139 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:30,140 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:30,143 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:30,144 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:30,147 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:31,297 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1157, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:31,298 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1172, 'result': 0}
+2026-04-18 07:38:31,298 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1172, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:38,159 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:38:38,383 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:38,384 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:38,398 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:38,398 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:38,399 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:38,403 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:38,404 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:38,407 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:39,860 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1485, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:39,861 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1485, 'result': 0}
+2026-04-18 07:38:39,862 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1485, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:41,511 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:41,512 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:41,520 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:41,520 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:41,521 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:41,525 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:41,526 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:41,529 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:42,512 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1000, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:42,512 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1000, 'result': 0}
+2026-04-18 07:38:42,513 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1000, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:49,861 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:38:50,051 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:38:50,051 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:38:50,064 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:50,064 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:50,065 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:50,069 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:50,069 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:50,073 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:38:51,051 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1000, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:38:51,052 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1000, 'result': 0}
+2026-04-18 07:38:51,052 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1000, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:41:45,971 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:41:46,167 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:41:46,167 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:41:46,171 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:41:46,172 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:41:48,084 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1921, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:41:48,096 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 1937, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:41:48,096 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 1937, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:41:48,099 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 1937, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:41:50,464 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-18 07:41:50,464 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-18 07:44:27,298 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:44:27,533 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:27,534 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:44:27,537 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:27,538 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:29,051 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1515, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:29,056 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 1515, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:29,057 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 1515, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:29,060 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 1515, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:29,167 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1625, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:44:29,167 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1625, 'result': 0}
+2026-04-18 07:44:29,168 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1625, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:30,577 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:30,578 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:44:30,583 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:30,583 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:31,781 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1203, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:31,788 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1219, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:44:31,789 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1219, 'result': 0}
+2026-04-18 07:44:31,789 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1219, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:40,159 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:44:40,355 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:40,355 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:44:40,360 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:40,361 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:42,020 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1671, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:42,026 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1671, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:44:42,026 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1671, 'result': 0}
+2026-04-18 07:44:42,027 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1671, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:49,994 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:44:50,192 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:44:50,192 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:44:50,197 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:50,198 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:51,260 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1062, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:44:51,267 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1078, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:44:51,268 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1078, 'result': 0}
+2026-04-18 07:44:51,268 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1078, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:46:20,704 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:46:20,901 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:46:20,902 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:46:20,906 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:20,906 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:21,979 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1078, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:21,984 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 1078, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:21,985 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 1078, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:21,988 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 1094, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:22,078 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1171, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:46:22,079 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1187, 'result': 0}
+2026-04-18 07:46:22,080 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1187, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:46:50,056 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:46:50,292 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:46:50,293 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:46:50,297 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:50,298 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:51,578 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1280, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:51,584 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1296, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:46:51,584 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1296, 'result': 0}
+2026-04-18 07:46:51,585 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1296, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:46:58,444 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:46:58,642 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:46:58,643 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 07:46:58,647 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:58,648 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:59,714 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1062, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:46:59,721 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1078, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:46:59,722 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1078, 'result': 0}
+2026-04-18 07:46:59,722 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1078, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:49:04,255 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:49:04,493 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:49:04,509 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 14, 'dialog_visible': False}
+2026-04-18 07:49:04,513 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:49:04,513 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:49:05,795 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1296, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:49:05,801 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1312, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:49:05,802 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1312, 'result': 0}
+2026-04-18 07:49:05,802 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1312, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 07:49:14,364 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 07:49:14,562 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 07:49:14,572 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 15, 'dialog_visible': False}
+2026-04-18 07:49:14,576 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:49:14,577 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:49:15,703 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 1140, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 07:49:15,709 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1155, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 07:49:15,710 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1155, 'result': 0}
+2026-04-18 07:49:15,710 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1155, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:04:59,404 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:04:59,641 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:04:59,642 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:04:59,649 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:04:59,649 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:04:59,655 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:04:59,661 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:04:59,662 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:04:59,665 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:05:01,612 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1969, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:05:01,613 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1969, 'result': 0}
+2026-04-18 08:05:01,613 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1969, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:05:05,473 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:05:05,474 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:05:05,482 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:05:05,486 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:05:05,487 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:05:05,490 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:05:06,877 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1405, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:05:06,878 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1405, 'result': 0}
+2026-04-18 08:05:06,878 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1405, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:07:02,765 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:07:03,007 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:07:03,007 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:07:03,014 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:03,015 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:03,020 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:03,025 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:03,025 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:03,028 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:04,180 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1172, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:07:04,181 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1172, 'result': 0}
+2026-04-18 08:07:04,181 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1172, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:07:12,195 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:07:12,392 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:07:12,393 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:07:12,399 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:12,400 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:12,405 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:12,410 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:12,411 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:12,414 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:07:13,314 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 921, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:07:13,315 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 921, 'result': 0}
+2026-04-18 08:07:13,315 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 921, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:10:21,337 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:10:21,568 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:10:21,568 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:10:21,583 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:21,584 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:21,584 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:21,590 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:21,591 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:21,594 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:22,556 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 984, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:10:22,557 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 984, 'result': 0}
+2026-04-18 08:10:22,557 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 984, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:10:30,589 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:10:30,781 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:10:30,782 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:10:30,796 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:30,796 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:30,797 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:30,802 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:30,803 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:30,806 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:10:31,749 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 969, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:10:31,750 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 969, 'result': 0}
+2026-04-18 08:10:31,750 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 969, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:33,914 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:12:34,165 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:34,166 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:12:34,183 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:34,183 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:34,184 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:34,189 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:34,190 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:34,193 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:35,185 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1015, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:12:35,186 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1015, 'result': 0}
+2026-04-18 08:12:35,186 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1015, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:36,527 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:36,528 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:12:36,538 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:36,539 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:36,540 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:36,545 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:36,546 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:36,549 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:37,414 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 891, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:12:37,415 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 891, 'result': 0}
+2026-04-18 08:12:37,415 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 891, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:41,117 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:41,117 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:12:41,127 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:41,128 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:41,129 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:41,134 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:41,134 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:41,138 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:42,164 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1046, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:12:42,165 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1046, 'result': 0}
+2026-04-18 08:12:42,165 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1046, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:49,808 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:12:50,005 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:12:50,006 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:12:50,019 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:50,020 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:50,021 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:50,025 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:50,026 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:50,028 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:12:51,038 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1032, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:12:51,038 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1032, 'result': 0}
+2026-04-18 08:12:51,039 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1032, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:13:58,908 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:13:59,140 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:13:59,140 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:13:59,156 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:13:59,156 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:13:59,157 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:13:59,163 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:13:59,164 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:13:59,167 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:07,147 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 8016, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:14:16,837 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:14:17,070 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:14:17,071 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:14:17,087 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:17,088 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:17,089 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:17,093 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:17,093 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:17,096 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:14:22,003 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4937, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:17:20,275 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:17:20,511 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:17:20,512 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:17:20,526 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:20,527 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:20,534 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:20,542 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:20,542 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:20,545 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:21,609 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1094, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:17:21,610 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1110, 'result': 0}
+2026-04-18 08:17:21,611 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1110, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:17:22,752 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:17:22,753 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:17:22,760 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:22,761 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:22,767 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:22,771 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:22,772 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:22,775 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:17:23,729 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 969, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:17:23,730 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 969, 'result': 0}
+2026-04-18 08:17:23,730 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 969, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:18:44,628 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:18:44,826 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:18:44,826 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:18:44,837 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:44,838 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:44,845 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:44,850 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:44,850 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:44,853 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:45,985 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1156, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:18:45,986 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1172, 'result': 0}
+2026-04-18 08:18:45,986 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1172, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:18:55,066 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:18:55,302 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:18:55,302 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:18:55,315 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:55,315 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:55,322 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:55,327 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:55,328 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:55,331 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:18:56,356 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1046, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:18:56,357 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1046, 'result': 0}
+2026-04-18 08:18:56,357 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1046, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:21:24,025 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:21:24,260 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:21:24,260 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:21:24,275 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:21:24,276 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:21:24,285 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:21:24,291 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:21:24,292 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:21:24,295 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:21:26,357 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2094, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:21:26,358 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2094, 'result': 0}
+2026-04-18 08:21:26,358 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2094, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:32:19,341 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-18 08:34:57,907 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-18 08:37:17,549 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-18 08:38:45,061 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-18 08:42:12,492 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-18 08:42:12,496 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-18 08:42:12,498 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-18 08:43:49,673 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:43:49,941 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:43:49,941 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:43:49,954 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:43:49,954 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:43:49,962 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:43:49,966 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:43:49,966 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:43:49,969 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:43:51,056 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1109, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:43:51,057 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1109, 'result': 0}
+2026-04-18 08:43:51,058 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1109, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:12,957 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:54:13,206 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:13,206 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:54:13,218 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:13,218 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:13,219 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:13,224 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:13,225 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:13,228 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:17,707 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4500, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:20,126 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:20,127 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:54:20,138 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:20,139 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:20,140 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:20,143 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:20,144 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:20,147 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:23,062 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'jaws', 'spindle': 'main'}
+2026-04-18 08:54:23,062 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'jaws', 'session_id': 1}
+2026-04-18 08:54:36,432 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:54:36,655 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:36,656 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:54:36,666 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:36,667 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:36,667 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:36,671 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:36,672 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:36,674 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:45,312 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 8656, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:52,832 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:54:53,096 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:54:53,097 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:54:53,108 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:53,108 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:53,109 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 0, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:53,113 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:53,114 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:53,117 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:54:54,225 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1125, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:54:54,226 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1125, 'result': 0}
+2026-04-18 08:54:54,227 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1125, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:56:30,598 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:56:30,918 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:56:30,918 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:56:30,930 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:30,931 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:30,932 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:30,936 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:30,936 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:30,939 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:34,484 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3562, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:56:34,485 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3578, 'result': 0}
+2026-04-18 08:56:34,485 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3578, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:56:41,622 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:56:41,896 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:56:41,897 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:56:41,906 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:41,907 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:41,908 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:41,911 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:41,912 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:41,915 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:56:42,749 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 844, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:56:42,750 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 844, 'result': 0}
+2026-04-18 08:56:42,751 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 858, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 08:59:57,269 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 08:59:57,574 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 08:59:57,574 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 08:59:57,586 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:59:57,587 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:59:57,587 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:59:57,591 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:59:57,592 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:59:57,595 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 08:59:58,697 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1125, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 08:59:58,697 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1125, 'result': 0}
+2026-04-18 08:59:58,698 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1125, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:01:48,773 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:01:49,036 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:01:49,036 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 09:01:49,048 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:01:49,049 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:01:49,050 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:01:49,054 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:01:49,054 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:01:49,057 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:01:51,295 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2250, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 09:01:51,296 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2250, 'result': 0}
+2026-04-18 09:01:51,296 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2250, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:01:59,901 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:02:00,172 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:00,172 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 15, 'dialog_visible': False}
+2026-04-18 09:02:00,185 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:00,185 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:00,186 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:00,190 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:00,191 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:00,194 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:03,738 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3578, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 09:02:03,738 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3578, 'result': 0}
+2026-04-18 09:02:03,739 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3578, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:13,210 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:02:13,430 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:13,431 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 09:02:13,441 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:13,442 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:13,443 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:13,446 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:13,447 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:13,450 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:15,341 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1905, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 09:02:15,342 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1905, 'result': 0}
+2026-04-18 09:02:15,342 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1905, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:16,267 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:16,268 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 09:02:16,286 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:16,286 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:16,287 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:16,290 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:16,291 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:16,294 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:17,116 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 844, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 09:02:17,117 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 844, 'result': 0}
+2026-04-18 09:02:17,117 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 844, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:25,190 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:02:25,411 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:25,412 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 09:02:25,421 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:25,422 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 0, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:25,422 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:25,426 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:25,427 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:25,429 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:27,115 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 1703, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 09:02:27,116 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 1703, 'result': 0}
+2026-04-18 09:02:27,117 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 1703, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:35,118 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:02:35,385 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:02:35,385 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 09:02:35,399 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:35,399 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:35,400 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:35,405 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:35,406 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:35,409 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 32, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:02:37,837 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2453, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-18 09:02:37,838 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2453, 'result': 0}
+2026-04-18 09:02:37,838 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2453, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-18 09:07:18,396 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:07:18,656 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-18 09:07:18,657 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-18 09:07:18,669 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:07:18,670 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:07:18,671 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:07:18,675 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:07:18,675 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:07:18,678 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-18 09:07:22,588 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-18 09:07:22,588 ui.work_editor_dialog INFO work_editor.selector {'event': 'session.requested', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
+2026-04-18 09:13:15,660 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-18 09:18:36,411 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h

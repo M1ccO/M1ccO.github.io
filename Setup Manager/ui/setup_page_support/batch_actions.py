@@ -8,7 +8,7 @@ import traceback
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup, prune_backups
-from ui.work_editor_dialog import WorkEditorDialog
+from ui.work_editor_factory import create_work_editor_dialog
 from ui.setup_page_support.work_editor_launch import exec_work_editor_dialog, resolve_work_editor_parent
 
 
@@ -53,10 +53,10 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
         if not work:
             continue
         try:
-            dialog = WorkEditorDialog(
+            dialog = create_work_editor_dialog(
                 page.draw_service,
                 work=work,
-                parent=None,
+                parent=host_window,
                 style_host=host_window,
                 translate=page._t,
                 batch_label=f"{idx}/{total}",
@@ -87,9 +87,9 @@ def batch_edit_works(page, work_ids: list[str]) -> None:
 def group_edit_works(page, work_ids: list[str]) -> None:
     host_window = resolve_work_editor_parent(page)
     try:
-        baseline_dialog = WorkEditorDialog(
+        baseline_dialog = create_work_editor_dialog(
             page.draw_service,
-            parent=None,
+            parent=host_window,
             style_host=host_window,
             translate=page._t,
             group_edit_mode=True,

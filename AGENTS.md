@@ -30,7 +30,7 @@ When the user says something conversational, map it to the right file before tou
 | "Tool card" / "catalog card" (rendering) | `ToolCatalogDelegate` — custom item renderer | `Tools and jaws Library/ui/tool_catalog_delegate.py` |
 | "Jaw card" / "catalog card" (jaws) | `JawCatalogDelegate` | `Tools and jaws Library/ui/jaw_catalog_delegate.py` |
 | "Setup Manager" | The setup workflow app (separate process) | `Setup Manager/` |
-| "Work Editor" | `WorkEditorDialog` — the main work editing dialog in Setup Manager | `Setup Manager/ui/work_editor_dialog.py` + `ui/work_editor_support/` |
+| "Work Editor" | Family-selected Work Editor dialog in Setup Manager. Shared base dialog + family factory/shells. | `Setup Manager/ui/work_editor_factory.py` · `Setup Manager/ui/work_editor_dialog.py` + `ui/work_editor_support/` |
 | "Setup page" / "Works list" | `SetupPage` — the main list of setups/works | `Setup Manager/ui/setup_page.py` + `ui/setup_page_support/` |
 | "Logbook" | `LogbookPage` | `Setup Manager/ui/logbook_page.py` |
 | "Drawings" | `DrawingPage` | `Setup Manager/ui/drawing_page.py` + `ui/drawing_page_support/` |
@@ -207,7 +207,9 @@ Setup Manager/
   ui/
     main_window.py                          ← app shell
     setup_page.py + setup_page_support/    ← works/setups list
-    work_editor_dialog.py + work_editor_support/  ← work editor (large dialog)
+    work_editor_factory.py                  ← family-selected Work Editor creation (`LatheWorkEditorDialog` / `MachiningCenterWorkEditorDialog`)
+    machine_family_runtime.py               ← shared machine-family resolver used by setup routing and editor selection
+    work_editor_dialog.py + work_editor_support/  ← shared Work Editor base dialog + support modules
     logbook_page.py                         ← logbook
     drawing_page.py + drawing_page_support/ ← drawings
     preferences_dialog.py
@@ -215,7 +217,8 @@ Setup Manager/
     work_service.py                         ← CRUD for works/setups
     logbook_service.py
     draw_service.py
-    print_service.py
+    print_service.py                        ← PDF rendering / shared print primitives
+    setup_card_policy.py                    ← machine-profile-aware Setup Card content policy
   models/                                   ← Setup Manager-specific models
   data/                                     ← migrations, DB access
 ```
@@ -324,6 +327,16 @@ All 10 phases COMPLETE. The Tools and Jaws Library has been fully migrated to th
 ## Ongoing Refactor Tracking
 - For behavior-preserving reduction of `Setup Manager/ui/work_editor_dialog.py`, follow:
   - `Setup Manager/WORK_EDITOR_REFACTOR_STATUS.md`
+- For current Work Editor open-glitch investigation status and remaining hypothesis, follow:
+  - `WORK_EDITOR_GLITCH_INVESTIGATION_REPORT.md`
 - For support-layer convergence tracking (Phase 11), see:
   - `Tools and jaws Library/PHASE11_SHARED_SUPPORT_STATUS.md`
 - Keep refactor passes small and responsibility-scoped.
+
+## Setup Manager Notes
+- `Work Editor` is no longer truthfully a single-entry monolith at the caller level.
+- High-level callers should prefer:
+  - `Setup Manager/ui/work_editor_factory.py`
+  - `Setup Manager/ui/machine_family_runtime.py`
+- The shared base dialog still lives in `Setup Manager/ui/work_editor_dialog.py`, but machine-family selection and some startup/tab divergence now belong behind the family shells.
+- Setup Card printing is also no longer fully generic: machine-profile-aware content policy now lives in `Setup Manager/services/setup_card_policy.py` while PDF drawing primitives remain in `print_service.py`.

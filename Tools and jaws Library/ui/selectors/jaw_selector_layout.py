@@ -136,11 +136,11 @@ class JawSelectorLayoutMixin:
         list_layout.addWidget(self.list_view, 1)
         splitter.addWidget(list_card)
 
-        right_panel = QWidget()
+        right_panel = QWidget(splitter)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
-        right_layout.addWidget(self._build_selector_card(), 1)
+        right_layout.addWidget(self._build_selector_card(parent=right_panel), 1)
         right_layout.addWidget(self._build_detail_card(), 1)
         splitter.addWidget(right_panel)
 
@@ -161,8 +161,11 @@ class JawSelectorLayoutMixin:
         self.detail_card.setVisible(False)
         return self.detail_card
 
-    def _build_selector_card(self):
-        selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(spacing=8)
+    def _build_selector_card(self, parent: QWidget | None = None):
+        selector_card, selector_scroll, selector_panel, selector_layout = build_selector_card_shell(
+            spacing=8,
+            parent=parent,
+        )
         selector_card.setVisible(True)
         self.selector_card = selector_card
         selector_card_layout = QVBoxLayout(selector_card)
@@ -179,12 +182,14 @@ class JawSelectorLayoutMixin:
             left_badge_text=self._t('work_editor.selector.sp1', 'Pääkara'),
             right_badge_text=self._t('work_editor.jaw.main_spindle_jaws', 'Leuat'),
             fixed_height_policy=True,
+            parent=selector_panel,
         )
         selector_layout.addWidget(self.selector_info_header, 0)
 
         hint = build_selector_hint_label(
             text=self._t('work_editor.selector.action.drag_hint', 'Vedä leuat kirjastosta SP1- tai SP2-paikkaan.'),
             multiline=False,
+            parent=selector_panel,
         )
         hint.setProperty('selectorInlineHint', True)
         selector_layout.addWidget(hint, 0)

@@ -95,13 +95,13 @@ class WorkEditorToolPickerDialog(QDialog):
         controls.addStretch(1)
         layout.addLayout(controls)
 
-        list_panel = QFrame()
+        list_panel = QFrame(self)
         list_panel.setProperty("toolPickerPanel", True)
         list_panel_layout = QVBoxLayout(list_panel)
         list_panel_layout.setContentsMargins(6, 6, 6, 6)
         list_panel_layout.setSpacing(0)
 
-        self.tool_list = QListWidget()
+        self.tool_list = QListWidget(list_panel)
         self.tool_list.setObjectName("toolPickerList")
         self.tool_list.setSelectionMode(QAbstractItemView.NoSelection)
         self.tool_list.setFocusPolicy(Qt.NoFocus)
