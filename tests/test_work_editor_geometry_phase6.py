@@ -19,7 +19,6 @@ for _candidate in (_WORKSPACE, _SETUP_ROOT):
 
 from PySide6.QtCore import QEvent, QRect, QSize, Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication, QDialog, QStackedWidget, QWidget  # noqa: E402
-from services.selector_session import SelectorSessionCoordinator  # noqa: E402
 from ui import work_editor_dialog as work_editor_dialog_module  # noqa: E402
 from ui.work_editor_dialog import WorkEditorDialog  # noqa: E402
 
@@ -49,7 +48,6 @@ class _GeometryDialog(QDialog):
         self._selector_session_uuid = None
         self._selector_session_kind = ""
         self._selector_session_phase = "idle"
-        self._selector_session_coordinator = SelectorSessionCoordinator(name="test-geometry")
         self._host_visual_style_applied = False
         self._startup_popup_guard_active = False
         self._selector_restore_state = None
@@ -72,7 +70,6 @@ class _GeometryDialog(QDialog):
         self.tabs.setVisible(True)
         self._dialog_buttons.setVisible(True)
         self._selector_transition_shield_pending_hide = False
-        self._embedded_selector_host = type("_HostStub", (), {"active_widget": None})()
         self.logged_events = []
         self.closed_popup_count = 0
 
@@ -87,12 +84,6 @@ class _GeometryDialog(QDialog):
 
     def _clear_selector_session_request(self, session_id=None):
         return WorkEditorDialog._clear_selector_session_request(self, session_id)
-
-    def _create_selector_session_coordinator(self):
-        return WorkEditorDialog._create_selector_session_coordinator(self)
-
-    def _selector_coordinator(self):
-        return WorkEditorDialog._selector_coordinator(self)
 
     def _resolve_style_host(self):
         return None

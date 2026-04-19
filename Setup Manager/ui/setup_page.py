@@ -108,7 +108,7 @@ class SetupPage(QWidget):
         controls_frame = QFrame()
         controls_frame.setProperty("topBarContainer", True)
         controls = QHBoxLayout(controls_frame)
-        controls.setContentsMargins(8, 6, 8, 6)
+        controls.setContentsMargins(56, 6, 8, 6)
         controls.setSpacing(8)
 
         self.search_icon = _toolbar_icon_with_svg_render_fallback("search_icon", 28)
@@ -181,7 +181,7 @@ class SetupPage(QWidget):
         list_shell_container = QWidget()
         list_shell_container.setProperty("pageFamilyHost", True)
         list_shell_container_layout = QVBoxLayout(list_shell_container)
-        list_shell_container_layout.setContentsMargins(32, 24, 0, 0)
+        list_shell_container_layout.setContentsMargins(56, 40, 0, 0)
         list_shell_container_layout.setSpacing(0)
         list_shell_container_layout.addWidget(list_shell)
         list_shell_container.setMinimumWidth(self._min_list_panel_width)

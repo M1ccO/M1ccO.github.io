@@ -19006,3 +19006,1211 @@ ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
 2026-04-19 16:28:29,137 selector_parity_factory_for_tests INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_SpySelectorWidget', 'parent_type': '_FactoryDialog', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
 2026-04-19 16:28:29,138 selector_parity_factory_for_tests INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_SpySelectorWidget', 'parent_type': '_FactoryDialog', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
 2026-04-19 16:28:48,868 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 16:31:10,495 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 16:35:10,433 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,443 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,451 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,459 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,468 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,477 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,486 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,486 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:35:10,496 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,505 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,514 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,523 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,534 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,545 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,549 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,550 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:35:10,557 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,566 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,567 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,575 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,577 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,586 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,594 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:10,637 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpw4d_kp1r\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:35:10,637 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpw4d_kp1r\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:35:10,641 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-19 16:35:10,655 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:35:10,794 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:35:10,827 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:35:10,896 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:35:11,227 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:35:11,228 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:35:11,228 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:35:11,269 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:35:22,617 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,628 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,636 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,644 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,653 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,662 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,671 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,671 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:35:22,680 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,690 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,700 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,709 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,720 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,729 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,733 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,733 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:35:22,742 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,752 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,754 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,764 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,766 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,775 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:22,784 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,783 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,794 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,802 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,810 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,818 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,827 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,835 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,836 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:35:27,846 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,856 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,864 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,873 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,883 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,892 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,897 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,897 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:35:27,905 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,914 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,916 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,925 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,927 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,937 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,945 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:27,983 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpfzud6y2z\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:35:27,983 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpfzud6y2z\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:35:27,984 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-19 16:35:27,994 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:35:28,126 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:35:28,160 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:35:28,233 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:35:28,341 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:35:28,341 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:35:28,341 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:35:28,384 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:35:32,442 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,454 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,463 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,471 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,480 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,489 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,498 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,498 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:35:32,507 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,516 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,525 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,534 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,544 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,554 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,558 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,558 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:35:32,566 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,575 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,577 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,587 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,589 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,598 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,605 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:35:32,644 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpe413gme0\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:35:32,644 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpe413gme0\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:35:32,646 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-19 16:35:32,654 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:35:32,785 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:35:32,819 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:35:32,890 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:35:32,991 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:35:32,991 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:35:32,991 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:35:33,035 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:36:06,928 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 16:36:10,844 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,855 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,862 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,870 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,879 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,888 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,896 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,897 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:36:10,907 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,915 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,923 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,931 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,941 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,950 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,955 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,955 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:36:10,962 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,972 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,974 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,983 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,985 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:10,994 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:11,002 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:11,040 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp590rbwgs\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:36:11,040 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp590rbwgs\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-19 16:36:11,042 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-19 16:36:11,050 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:36:11,185 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:36:11,219 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:36:11,291 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:36:11,401 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:36:11,401 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:36:11,401 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:36:11,446 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:36:47,713 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,727 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,737 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,741 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,742 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:36:47,751 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,761 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,763 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,773 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,775 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,785 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,793 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,802 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,811 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,820 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,828 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,840 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,850 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,859 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,859 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:36:47,869 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,878 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,887 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:36:47,897 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:37:29,050 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,063 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,073 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,078 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,079 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:37:29,090 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,102 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,104 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,115 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,118 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,127 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,136 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,145 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,155 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,163 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,174 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,183 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,192 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,202 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,202 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:37:29,211 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,221 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,229 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:29,240 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:37:57,971 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:57,985 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:57,995 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,000 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,000 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:37:58,010 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,022 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,024 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,034 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,036 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,047 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,056 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,065 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,075 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,084 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,095 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,105 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,115 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,125 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,126 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:37:58,136 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,148 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,157 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:37:58,168 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:38:00,101 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:38:00,183 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:38:00,183 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:38:00,184 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:38:00,188 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:38:00,397 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:38:00,436 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:38:10,405 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 16:38:24,670 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,684 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,694 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,699 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,699 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:38:24,710 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,722 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,724 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,735 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,737 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,748 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,756 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,766 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,778 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,790 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,801 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,813 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,824 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,837 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,838 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:38:24,849 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,860 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,870 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:24,882 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:38:26,713 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:38:26,791 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:38:26,791 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:38:26,791 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:38:26,796 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:38:27,001 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:38:27,045 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:38:46,496 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,509 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,520 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,524 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,525 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 16:38:46,534 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,545 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,546 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,557 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,560 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,570 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,579 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,589 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,598 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,607 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,617 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,626 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,636 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,647 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,648 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 16:38:46,658 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,667 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,677 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 16:38:46,687 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 16:38:48,527 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:38:48,606 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 16:38:48,606 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 16:38:48,606 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 16:38:48,611 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 16:38:48,815 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 16:38:48,853 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 16:39:17,164 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 16:41:20,355 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 16:41:22,439 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-19 16:41:22,786 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 16:41:22,786 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 16:41:22,800 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 16:41:22,801 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 16:41:22,802 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 16:41:22,807 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 16:41:22,808 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 16:41:22,811 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 15, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 16:41:26,754 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 16:41:26,754 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': 'f3f87585-8c8f-43e7-b216-6a36546c9f54'}
+2026-04-19 16:41:26,755 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 16:41:26,760 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3967, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-19 16:41:26,760 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3967, 'result': 0}
+2026-04-19 16:41:26,761 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3967, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 16:41:26,818 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.05}
+2026-04-19 16:41:26,836 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 18.68}
+2026-04-19 16:41:26,859 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 21.61}
+2026-04-19 16:41:26,859 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 21.87}
+2026-04-19 16:41:33,047 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 9.5}
+2026-04-19 16:41:33,059 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 11.28}
+2026-04-19 16:41:33,294 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 16:41:35,354 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 16:41:35,355 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '60be7101-9a8a-4c50-aa80-f6b62b5e9994'}
+2026-04-19 16:41:35,763 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 16:41:35,824 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.75}
+2026-04-19 16:41:35,840 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 15.91}
+2026-04-19 16:41:35,859 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.02}
+2026-04-19 16:41:35,859 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.22}
+2026-04-19 16:41:38,010 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 9.51}
+2026-04-19 16:41:38,021 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 11.04}
+2026-04-19 16:41:38,252 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 16:41:39,020 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 16:41:39,021 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '5e015912-23ec-4242-a207-2642f5a4562f'}
+2026-04-19 16:41:39,022 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 16:41:39,082 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.99}
+2026-04-19 16:41:39,098 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 15.74}
+2026-04-19 16:41:39,119 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 20.09}
+2026-04-19 16:41:39,119 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 20.33}
+2026-04-19 16:41:40,400 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 10.01}
+2026-04-19 16:41:40,411 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 11.09}
+2026-04-19 16:41:40,641 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 16:41:42,985 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 16:41:42,986 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '89d06730-a349-4a47-9a2c-f4734643cdd9'}
+2026-04-19 16:41:42,987 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 16:41:43,055 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.31}
+2026-04-19 16:41:43,071 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 15.99}
+2026-04-19 16:41:43,091 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.46}
+2026-04-19 16:41:43,091 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.65}
+2026-04-19 16:41:44,383 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 9.29}
+2026-04-19 16:41:44,394 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 11.19}
+2026-04-19 16:41:44,626 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 16:42:45,224 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:09:42,587 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:22:13,817 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:31:31,003 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:44:32,627 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:47:36,607 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:49:06,343 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:52:35,440 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:54:19,814 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,827 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,836 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,840 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,841 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 17:54:19,850 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,860 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,862 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,871 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,873 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,882 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,891 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,899 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,908 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,918 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,926 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,937 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,947 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,956 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,957 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 17:54:19,967 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,976 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,985 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 17:54:19,996 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 17:54:21,959 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 17:54:22,479 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 17:54:22,479 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 17:54:22,480 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 17:54:22,486 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 17:54:22,709 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 17:54:22,746 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 17:54:48,688 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:54:53,941 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-19 17:54:54,278 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 17:54:54,278 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 17:54:54,292 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:54:54,292 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:54:54,293 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:54:54,299 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:54:54,300 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:54:54,304 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 31, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:54:56,493 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:54:56,494 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '5d60b82e-d6c6-40b4-ba0e-0776a96c240e'}
+2026-04-19 17:54:56,495 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:54:56,547 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.82}
+2026-04-19 17:54:56,564 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 17.15}
+2026-04-19 17:54:56,586 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2311, 'result': 0}
+2026-04-19 17:54:56,586 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2311, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 17:54:56,587 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 22.45}
+2026-04-19 17:54:56,587 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 22.67}
+2026-04-19 17:55:07,962 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:55:43,712 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 17:55:46,490 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-19 17:55:46,822 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 17:55:46,822 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 17:55:46,835 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:46,836 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:46,837 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:46,842 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:46,843 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:46,847 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:50,640 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3811, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-19 17:55:50,641 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3827, 'result': 0}
+2026-04-19 17:55:50,641 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3827, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 17:55:53,447 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 17:55:53,447 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 17:55:53,462 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:53,462 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 14, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:53,464 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 14, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:53,470 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:53,471 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:53,475 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 17:55:56,902 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:55:56,903 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '426a9898-9e5a-48d9-8933-aa67c80d6d6b'}
+2026-04-19 17:55:56,904 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:55:56,957 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.7}
+2026-04-19 17:55:56,975 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 18.07}
+2026-04-19 17:55:56,994 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3546, 'result': 0}
+2026-04-19 17:55:56,994 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3546, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 17:55:56,997 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 21.6}
+2026-04-19 17:55:56,998 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 21.81}
+2026-04-19 17:56:01,857 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 9.72}
+2026-04-19 17:56:01,868 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 11.59}
+2026-04-19 17:56:02,098 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 17:57:00,730 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:00,730 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '4501a8c0-0be8-44c5-adfc-5e2bb27301de'}
+2026-04-19 17:57:01,158 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:01,221 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.98}
+2026-04-19 17:57:01,238 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 16.98}
+2026-04-19 17:57:01,258 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.38}
+2026-04-19 17:57:01,258 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.57}
+2026-04-19 17:57:05,730 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 4}, 'duration_ms': 17.32}
+2026-04-19 17:57:07,898 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 13.03}
+2026-04-19 17:57:08,440 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.68}
+2026-04-19 17:57:08,447 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 7.03}
+2026-04-19 17:57:08,593 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:09,504 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:09,504 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '325afc30-2083-4fed-9cce-e29b1cdb4d96'}
+2026-04-19 17:57:09,506 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:09,563 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.22}
+2026-04-19 17:57:09,573 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.42}
+2026-04-19 17:57:09,593 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.97}
+2026-04-19 17:57:09,593 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 20.14}
+2026-04-19 17:57:11,163 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.68}
+2026-04-19 17:57:11,169 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 6.04}
+2026-04-19 17:57:11,314 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:12,038 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:12,038 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '39976ba8-5df0-4294-bddd-8ce3ec245a94'}
+2026-04-19 17:57:12,040 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:12,098 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.04}
+2026-04-19 17:57:12,108 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.55}
+2026-04-19 17:57:12,127 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 18.96}
+2026-04-19 17:57:12,127 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.14}
+2026-04-19 17:57:12,981 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.54}
+2026-04-19 17:57:12,986 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.68}
+2026-04-19 17:57:13,131 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:13,812 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:13,812 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': 'f9501891-8d11-4bac-98c4-c24d31ffc7a2'}
+2026-04-19 17:57:13,814 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:13,873 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 15.93}
+2026-04-19 17:57:13,883 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.74}
+2026-04-19 17:57:13,903 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.44}
+2026-04-19 17:57:13,903 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.71}
+2026-04-19 17:57:27,765 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.53}
+2026-04-19 17:57:27,771 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 6.02}
+2026-04-19 17:57:27,948 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:29,464 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:29,465 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '335b8a1a-af39-4109-ab75-7dba6870fa79'}
+2026-04-19 17:57:29,896 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:29,953 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.13}
+2026-04-19 17:57:29,963 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.18}
+2026-04-19 17:57:29,982 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.38}
+2026-04-19 17:57:29,982 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.56}
+2026-04-19 17:57:32,947 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.51}
+2026-04-19 17:57:32,953 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.68}
+2026-04-19 17:57:33,103 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:34,342 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:34,342 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': 'ee6a124e-a5c4-418e-b685-0b1f42204384'}
+2026-04-19 17:57:34,765 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:34,836 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.84}
+2026-04-19 17:57:34,846 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.48}
+2026-04-19 17:57:34,866 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.08}
+2026-04-19 17:57:34,866 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.35}
+2026-04-19 17:57:38,147 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.69}
+2026-04-19 17:57:38,154 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.9}
+2026-04-19 17:57:38,299 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:39,304 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:39,305 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '6ed4dba7-596b-42d9-a264-56a70a1a7bb4'}
+2026-04-19 17:57:39,716 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:39,776 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.98}
+2026-04-19 17:57:39,785 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.64}
+2026-04-19 17:57:39,805 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.06}
+2026-04-19 17:57:39,805 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.23}
+2026-04-19 17:57:43,477 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.73}
+2026-04-19 17:57:43,483 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.71}
+2026-04-19 17:57:43,632 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:57:45,666 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:57:45,666 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': 'd107fcec-6527-404b-b4bc-1a2353050653'}
+2026-04-19 17:57:46,083 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:57:46,129 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.21}
+2026-04-19 17:57:46,140 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.5}
+2026-04-19 17:57:46,160 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 20.25}
+2026-04-19 17:57:46,160 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 20.46}
+2026-04-19 17:58:49,853 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 7.23}
+2026-04-19 17:58:49,859 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 6.04}
+2026-04-19 17:58:50,019 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:58:50,954 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:58:50,954 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '0174e42d-cdbc-464f-a922-9638dee37338'}
+2026-04-19 17:58:51,374 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:58:51,450 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.97}
+2026-04-19 17:58:51,459 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.49}
+2026-04-19 17:58:51,479 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.24}
+2026-04-19 17:58:51,479 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.44}
+2026-04-19 17:58:52,395 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 7.02}
+2026-04-19 17:58:52,401 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.68}
+2026-04-19 17:58:52,546 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:58:53,209 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:58:53,210 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '7d1d349f-b85e-47ff-b12c-ef347f1fe557'}
+2026-04-19 17:58:53,211 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:58:53,267 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.09}
+2026-04-19 17:58:53,277 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.38}
+2026-04-19 17:58:53,301 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 23.4}
+2026-04-19 17:58:53,301 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 23.6}
+2026-04-19 17:58:55,695 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 7.18}
+2026-04-19 17:58:55,701 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.85}
+2026-04-19 17:58:55,846 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:58:57,412 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:58:57,412 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '99bb1d61-b3e2-41e7-ba0d-b883f0b1861f'}
+2026-04-19 17:58:57,414 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:58:57,471 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 15.2}
+2026-04-19 17:58:57,481 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.94}
+2026-04-19 17:58:57,502 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 20.38}
+2026-04-19 17:58:57,502 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 20.57}
+2026-04-19 17:59:04,292 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 2}, 'duration_ms': 6.69}
+2026-04-19 17:59:04,298 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 2}, 'duration_ms': 5.7}
+2026-04-19 17:59:04,458 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 4}
+2026-04-19 17:59:07,944 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 17:59:07,944 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '282aa6a1-7efb-4c3a-a3c9-7beb704f93cc'}
+2026-04-19 17:59:07,946 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 17:59:07,998 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.48}
+2026-04-19 17:59:08,008 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 2, 'sub': 2}, 'duration_ms': 9.86}
+2026-04-19 17:59:08,029 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 20.35}
+2026-04-19 17:59:08,029 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 20.55}
+2026-04-19 18:09:36,654 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,667 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,676 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,681 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,682 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 18:09:36,691 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,701 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,702 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,712 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,714 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,724 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,732 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,741 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,750 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,759 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,768 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,779 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,788 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,797 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,797 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 18:09:36,807 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,817 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,826 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:09:36,837 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 18:09:38,687 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 18:09:38,767 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 18:09:38,768 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 18:09:38,768 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 18:09:38,772 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 18:09:38,984 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 18:09:39,024 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 18:13:46,789 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 18:13:50,709 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-19 18:13:51,056 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 18:13:51,057 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 18:13:51,071 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:13:51,071 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:13:51,072 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:13:51,077 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:13:51,078 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:13:51,083 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:13:54,220 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:13:54,220 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '80c77ea0-1da9-48cb-abdf-2615a0363304'}
+2026-04-19 18:13:54,221 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:13:54,225 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 3171, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-19 18:13:54,226 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 3171, 'result': 0}
+2026-04-19 18:13:54,226 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 3171, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 18:13:54,278 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.99}
+2026-04-19 18:13:54,297 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 18.1}
+2026-04-19 18:13:54,319 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 22.09}
+2026-04-19 18:13:54,319 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 22.32}
+2026-04-19 18:13:58,093 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 9.87}
+2026-04-19 18:13:58,106 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 12.32}
+2026-04-19 18:13:58,340 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:13:59,792 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:13:59,792 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '6b83af9e-9779-46ec-bf77-88958b31f9ef'}
+2026-04-19 18:14:00,279 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:14:00,342 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.13}
+2026-04-19 18:14:00,358 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 16.45}
+2026-04-19 18:14:00,378 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.56}
+2026-04-19 18:14:00,378 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.75}
+2026-04-19 18:17:44,383 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,397 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,408 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,413 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,414 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 18:17:44,423 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,433 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,435 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,445 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,448 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,459 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,469 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,478 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,488 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,498 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,509 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,519 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,529 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,538 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,538 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 18:17:44,547 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,560 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,569 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:17:44,580 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 18:17:46,499 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 18:17:46,588 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 18:17:46,588 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 18:17:46,588 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 18:17:46,594 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 18:17:46,802 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 18:17:46,842 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 18:18:11,340 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 18:18:14,975 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-19 18:18:15,312 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 18:18:15,312 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 18:18:15,327 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:18:15,328 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:18:15,328 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:18:15,333 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:18:15,334 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:18:15,338 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 30, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:18:17,964 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:18:17,964 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': 'f79d7f23-2641-42be-851a-33b80c32bee9'}
+2026-04-19 18:18:17,966 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:18:17,970 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowActivate', 'dt_ms': 2671, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': False}
+2026-04-19 18:18:17,970 ui.main_window INFO setup_manager.modal_trace {'event': 'post_exec', 'dt_ms': 2671, 'result': 0}
+2026-04-19 18:18:17,971 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 2671, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 18:18:18,033 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.03}
+2026-04-19 18:18:18,048 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 14.99}
+2026-04-19 18:18:18,068 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.56}
+2026-04-19 18:18:18,069 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 19.82}
+2026-04-19 18:18:22,515 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 8.85}
+2026-04-19 18:18:22,525 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 9.92}
+2026-04-19 18:18:22,754 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:18:23,941 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:18:23,942 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '78f1b678-afc1-4e46-87d6-c8503d7c3ffb'}
+2026-04-19 18:18:24,378 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:18:24,434 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.6}
+2026-04-19 18:18:24,447 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 13.33}
+2026-04-19 18:18:24,465 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 17.48}
+2026-04-19 18:18:24,465 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 17.67}
+2026-04-19 18:18:28,019 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 8.7}
+2026-04-19 18:18:28,029 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 9.85}
+2026-04-19 18:18:28,276 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:18:30,386 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:18:30,387 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '87e1374b-287f-4aee-aa98-35be1f6e2367'}
+2026-04-19 18:18:30,388 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:18:30,447 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 15.86}
+2026-04-19 18:18:30,461 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 14.4}
+2026-04-19 18:18:30,479 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 17.6}
+2026-04-19 18:18:30,479 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 17.8}
+2026-04-19 18:31:59,231 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,244 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,253 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,257 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,258 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-19 18:31:59,267 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,276 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,278 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,287 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,290 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,300 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,310 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,319 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,328 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,337 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,347 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,357 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,366 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,375 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,376 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_preload_manager.py", line 293, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-19 18:31:59,387 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,397 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,406 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-19 18:31:59,418 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 260, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-19 18:32:01,355 setup_manager_print_service_for_tests DEBUG Failed to parse logbook date for color mapping; using fallback color
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\print_service.py", line 126, in _get_logbook_color_for_date
+    date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 18:32:01,434 PIL.PngImagePlugin DEBUG STREAM b'IHDR' 16 13
+2026-04-19 18:32:01,435 PIL.PngImagePlugin DEBUG STREAM b'pHYs' 41 9
+2026-04-19 18:32:01,435 PIL.PngImagePlugin DEBUG STREAM b'IDAT' 62 1069
+2026-04-19 18:32:01,439 setup_manager_logbook_service_for_tests DEBUG Failed to parse logbook date for display formatting; using raw value
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\logbook_service.py", line 247, in _format_date_dmy
+    dt = datetime.strptime((date_text or '').strip(), '%Y-%m-%d')
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 568, in _strptime_datetime
+    tt, fraction, gmtoff_fraction = _strptime(data_string, format)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\_strptime.py", line 349, in _strptime
+    raise ValueError("time data %r does not match format %r" %
+ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
+2026-04-19 18:32:01,661 tool_library_main_window_for_tests DEBUG selector: opening 'jaws' dialog — head='' spindle='sub' show=False
+2026-04-19 18:32:01,703 tool_library_main_window_for_tests DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=False
+2026-04-19 18:32:28,486 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 18:32:48,785 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\tool_library_NTX2500.db jaw_db=C:\Users\Omistaja\Desktop\NTX Setup Manager\.runtime\configs\config_ntx2500_8bb9c3\jaws_library_NTX2500.db
+2026-04-19 18:32:52,744 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-19 18:32:53,083 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-19 18:32:53,083 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
+2026-04-19 18:32:53,097 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:32:53,097 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:32:53,098 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:32:53,105 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:32:53,105 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:32:53,109 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1006', 'modal': True}
+2026-04-19 18:32:57,114 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:32:57,114 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': 'aeaa1114-6d60-40fa-b483-4d05ef6632df'}
+2026-04-19 18:32:57,115 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:32:57,120 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 4032, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-19 18:32:57,173 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.03}
+2026-04-19 18:32:57,188 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 14.77}
+2026-04-19 18:32:57,208 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 19.82}
+2026-04-19 18:32:57,208 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 20.04}
+2026-04-19 18:32:59,951 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 8.94}
+2026-04-19 18:32:59,961 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 10.4}
+2026-04-19 18:33:00,201 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:33:02,447 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:33:02,448 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '91b80a8b-09d9-4915-9cb3-62ed607fc543'}
+2026-04-19 18:33:02,871 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:33:02,930 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.87}
+2026-04-19 18:33:02,944 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 14.0}
+2026-04-19 18:33:02,962 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 17.56}
+2026-04-19 18:33:02,962 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 17.76}
+2026-04-19 18:33:04,959 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 8.7}
+2026-04-19 18:33:04,970 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 10.01}
+2026-04-19 18:33:05,208 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:33:06,714 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:33:06,714 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '0de575b4-eb9d-4d17-8362-52b94a4d5eec'}
+2026-04-19 18:33:06,716 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:33:06,776 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 14.46}
+2026-04-19 18:33:06,790 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 14.08}
+2026-04-19 18:33:06,808 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 17.78}
+2026-04-19 18:33:06,808 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 17.96}
+2026-04-19 18:33:19,177 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 8.95}
+2026-04-19 18:33:19,187 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 10.2}
+2026-04-19 18:33:19,440 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:33:21,106 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:33:21,107 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '1e4b91fa-24de-4ff6-b9ba-e7ae6aab799e'}
+2026-04-19 18:33:21,537 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:33:21,600 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.44}
+2026-04-19 18:33:21,614 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 13.72}
+2026-04-19 18:33:21,633 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 17.83}
+2026-04-19 18:33:21,633 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 18.02}
+2026-04-19 18:33:26,013 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main'], 'row_counts': {'main': 3}, 'duration_ms': 8.71}
+2026-04-19 18:33:26,023 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['sub'], 'row_counts': {'sub': 4}, 'duration_ms': 9.66}
+2026-04-19 18:33:26,271 ui.work_editor_dialog INFO work_editor.selector {'event': 'submit.embedded.applied', 'transport': 'embedded', 'kind': 'tools', 'applied': True, 'selected_count': 7}
+2026-04-19 18:33:30,052 ui.work_editor_dialog INFO work_editor.selector {'event': 'open', 'transport': 'embedded', 'kind': 'tools', 'head': 'HEAD1', 'spindle': 'main'}
+2026-04-19 18:33:30,053 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.ipc.sent', 'transport': 'embedded', 'kind': 'tools', 'request_id': '9ad37a68-d000-4957-abc8-c67b8bbd1957'}
+2026-04-19 18:33:30,478 ui.main_window DEBUG selector: opening 'tools' dialog — head='HEAD1' spindle='main' show=True
+2026-04-19 18:33:30,524 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'catalog.refresh', 'embedded_mode': False, 'search_text': '', 'tool_type': 'All', 'head': 'HEAD1', 'row_count': 19, 'duration_ms': 13.64}
+2026-04-19 18:33:30,538 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'assignment_list.rebuild', 'embedded_mode': False, 'targets': ['main', 'sub'], 'row_counts': {'main': 3, 'sub': 4}, 'duration_ms': 13.91}
+2026-04-19 18:33:30,557 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.populate', 'embedded_mode': False, 'tool_id': 'T1001', 'has_tool': True, 'duration_ms': 18.1}
+2026-04-19 18:33:30,557 ui.selectors.tool_selector_state INFO tool_selector.trace {'event': 'detail.prime_cache', 'embedded_mode': False, 'has_index': True, 'duration_ms': 18.3}

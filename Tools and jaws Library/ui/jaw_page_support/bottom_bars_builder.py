@@ -10,7 +10,7 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     page.button_bar = QFrame()
     page.button_bar.setProperty('bottomBar', True)
     actions = QHBoxLayout(page.button_bar)
-    actions.setContentsMargins(10, 8, 10, 8)
+    actions.setContentsMargins(10, 10, 10, 6)
     actions.setSpacing(8)
 
     page.edit_btn = QPushButton(page._t('jaw_library.action.edit_jaw_button', 'EDIT JAW'))
@@ -27,17 +27,14 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     page.add_btn.clicked.connect(page.add_jaw)
     page.copy_btn.clicked.connect(page.copy_jaw)
 
-    page.module_switch_label = QLabel(page._t('tool_library.module.switch_to', 'Switch to'))
-    page.module_switch_label.setProperty('pageSubtitle', True)
-    page.module_toggle_btn = QPushButton(page._t('tool_library.module.tools', 'TOOLS'))
-    page.module_toggle_btn.setProperty('panelActionButton', True)
-    page.module_toggle_btn.setFixedHeight(28)
+    page.module_switch_label = QLabel('')
+    page.module_switch_label.setVisible(False)
+    page.module_toggle_btn = QPushButton('')
+    page.module_toggle_btn.setVisible(False)
     page.module_toggle_btn.clicked.connect(
         lambda: page._module_switch_callback() if callable(page._module_switch_callback) else None
     )
 
-    actions.addWidget(page.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-    actions.addWidget(page.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
     actions.addStretch(1)
 
     page.selection_count_label = QLabel('')

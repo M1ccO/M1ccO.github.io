@@ -26,6 +26,15 @@ QDialog {
     background-color: #eceff2;
 }
 
+/* Navigation rail background */
+QFrame[navRail="true"] {
+    background: #eceff2;
+}
+
+QFrame[navRail="true"] QLabel {
+    background: transparent;
+}
+
 /* Nav-rail footer (import/export launcher card) is transparent so it
    inherits the enclosing navFrame background colour */
 QFrame[launchCard="true"] {

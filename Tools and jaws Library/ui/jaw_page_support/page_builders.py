@@ -58,7 +58,14 @@ def build_jaw_page_layout(page) -> None:
 
     page.search_input = build_search_input(page)
     page.filter_pane = build_filter_toolbar(page)
-    root.addWidget(page.filter_pane)
+    topbar_host = QWidget()
+    topbar_host.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    topbar_host_layout = QVBoxLayout(topbar_host)
+    topbar_host_layout.setContentsMargins(0, 0, 0, 4)
+    topbar_host_layout.setSpacing(0)
+    topbar_host_layout.addWidget(page.filter_pane)
+    root.setSpacing(0)
+    root.addWidget(topbar_host)
 
     content = QHBoxLayout()
     content.setContentsMargins(0, 0, 0, 0)
@@ -126,7 +133,7 @@ def _build_catalog_list_card(page) -> QWidget:
     list_host = QWidget()
     list_host.setProperty('pageFamilyHost', True)
     list_host_layout = QVBoxLayout(list_host)
-    list_host_layout.setContentsMargins(92, 24, 0, 0)
+    list_host_layout.setContentsMargins(56, 40, 0, 0)
     list_host_layout.setSpacing(0)
     list_host_layout.addWidget(list_card)
     return list_host
@@ -143,7 +150,7 @@ def _build_detail_container(page) -> QWidget:
         page.detail_layout,
     ) = build_detail_container_shell()
     page._detail_container_layout = detail_layout
-    detail_layout.setContentsMargins(0, 24, 0, 0)
+    detail_layout.setContentsMargins(0, 8, 0, 0)
     detail_layout.addWidget(_build_selector_card(page), 1)
 
     page.populate_details(None)

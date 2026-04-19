@@ -1,7 +1,6 @@
 import logging
-from pathlib import Path
 from typing import Callable
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from PySide6.QtCore import QEvent, QSize, Qt, QTimer
 from PySide6.QtGui import QFont, QFontMetrics, QIcon
@@ -38,7 +37,6 @@ from ui.work_editor_support import (
     WorkEditorJawSelectorPanel,
     WorkEditorOrderedToolList,
     WorkEditorPayloadAdapter,
-    WorkEditorSelectorHost,
     WorkEditorToolRemoveDropButton,
     apply_fixture_selector_result,
     apply_jaw_selector_result,
@@ -53,7 +51,6 @@ from ui.work_editor_support import (
     collect_unresolved_reference_messages,
     default_pot_for_assignment,
     effective_active_tool_list,
-    merge_jaw_refs,
     normalize_selector_head,
     normalize_selector_spindle,
     on_tool_list_interaction,
@@ -62,8 +59,6 @@ from ui.work_editor_support import (
     refresh_external_refs,
     refresh_tool_head_widgets,
     remove_dragged_tool_assignments,
-    selector_initial_tool_assignment_buckets,
-    selector_initial_tool_assignments,
     selector_target_ordered_list,
     set_active_tool_list,
     shared_add_tool_comment,
@@ -71,7 +66,6 @@ from ui.work_editor_support import (
     shared_move_tool_down,
     shared_move_tool_up,
     shared_remove_selected_tool,
-    show_selector_warning_for_dialog,
     sync_tool_head_view,
     tool_icon_for_type_in_spindle,
     head_label,
@@ -83,9 +77,6 @@ from ui.work_editor_support import (
     build_fixture_selector_request,
     build_jaw_selector_request,
     build_tool_selector_request,
-    build_embedded_selector_parity_widget,
-    dispose_embedded_selector_runtime,
-    warmup_embedded_selector_runtime,
     make_zero_axis_input,
     set_coord_combo,
     set_zero_xy_visibility,
@@ -105,14 +96,6 @@ from shared.selector.payloads import (
     SpindleKey,
     ToolBucket,
     ToolSelectionPayload,
-)
-from services.selector_session import (
-    InvalidSelectorTransitionError,
-    SelectorSessionBusyError,
-    SelectorSessionCoordinator,
-    SessionState,
-    SessionTransition,
-    make_file_trace_listener,
 )
 from ui.work_editor_support.dialog_lifecycle import (
     apply_secondary_button_theme,
@@ -161,7 +144,6 @@ class WorkEditorDialog(QDialog):
     _RESIZE_FOR_SELECTOR_MODE = False
     _SELECTOR_TRANSITION_SHIELD_DELAY_MS = 32
     _LOGGER = logging.getLogger(__name__)
-    _SELECTORS_TEMPORARILY_DISABLED = False
 
     def __init__(
         self,
@@ -264,7 +246,6 @@ class WorkEditorDialog(QDialog):
         self._selector_session_uuid: UUID | None = None
         self._selector_session_kind: str = ""
         self._selector_session_phase = "idle"
-        self._selector_session_coordinator = self._create_selector_session_coordinator()
         self._host_visual_style_applied = False
         self._zeros_tab_pending_build = True
         self._zeros_tab_built = False
@@ -714,9 +695,6 @@ class WorkEditorDialog(QDialog):
             height=geometry.height(),
         )
 
-    def _is_embedded_selector_mode_enabled(self) -> bool:
-        return True
-
     def _begin_selector_session_request(self, *, kind: str) -> int | None:
         if self._selector_session_id is not None or self._selector_mode_active:
             self._LOGGER.warning(
@@ -727,8 +705,7 @@ class WorkEditorDialog(QDialog):
             )
             return None
 
-        import uuid as _uuid_mod
-        session_uuid = _uuid_mod.uuid4()
+        session_uuid = uuid4()
         self._selector_session_serial += 1
         self._selector_session_id = self._selector_session_serial
         self._selector_session_uuid = session_uuid
@@ -848,7 +825,6 @@ class WorkEditorDialog(QDialog):
     def _exit_selector_mode(self) -> None:
         session_id = self._selector_session_id
         session_phase = self._selector_session_phase
-        coordinator = self._selector_coordinator()
 
         was_enabled = self.updatesEnabled()
         if was_enabled:
@@ -872,13 +848,6 @@ class WorkEditorDialog(QDialog):
                 self._restore_from_selector_state()
             self._selector_restore_state = None
             self._selector_mode_active = False
-            try:
-                if coordinator.state in (SessionState.CLOSING, SessionState.CANCELLED):
-                    coordinator.mark_teardown_complete(caller="host.exit")
-                elif coordinator.state in (SessionState.OPENING, SessionState.ACTIVE):
-                    coordinator.force_shutdown(caller="host.exit")
-            except Exception:
-                self._LOGGER.debug("work_editor.selector coordinator teardown failed", exc_info=True)
             self._clear_selector_session_request(session_id)
         finally:
             if was_enabled:
@@ -1255,141 +1224,6 @@ class WorkEditorDialog(QDialog):
             initial_assignment_buckets=dict(request.get("initial_assignment_buckets") or {}),
         )
 
-    def _open_embedded_selector_session(
-        self,
-        *,
-        kind: str,
-        head: str | None = None,
-        spindle: str | None = None,
-        follow_up: dict | None = None,
-        initial_assignments: list[dict] | None = None,
-        initial_assignment_buckets: dict[str, list[dict]] | None = None,
-    ) -> bool:
-        """Phase-3 shared-widget embedded path to validate mode and geometry flow."""
-        host = self._embedded_selector_host
-        if host is None:
-            return False
-        kind_key = str(kind or "").strip().lower()
-        if not self.isVisible():
-            self._LOGGER.warning("work_editor.selector blocked before dialog is visible kind=%s", kind_key)
-            return False
-        session_id = self._begin_selector_session_request(kind=kind_key)
-        if session_id is None:
-            return False
-
-        request = {
-            "kind": kind_key,
-            "head": str(head or ""),
-            "spindle": str(spindle or ""),
-            "target_key": str((follow_up or {}).get("target_key") or ""),
-        }
-
-        def _finalize_embedded_submit(payload: dict, req: dict = request, current_session_id: int = session_id) -> None:
-            try:
-                batch = self._build_selection_batch(req, payload)
-            except Exception:
-                self._LOGGER.exception("work_editor.selector failed to build SelectionBatch")
-                return
-            if not self._begin_selector_session_close(
-                session_id=current_session_id,
-                reason="submit",
-                batch=batch,
-            ):
-                return
-            try:
-                self._handle_embedded_selector_submit(req, payload)
-            except Exception:
-                self._LOGGER.exception(
-                    "work_editor.selector submit handling failed kind=%s session_id=%s",
-                    kind_key,
-                    current_session_id,
-                )
-            finally:
-                self._close_embedded_selector_host_widget()
-
-        def _finalize_embedded_cancel(current_session_id: int = session_id) -> None:
-            if not self._begin_selector_session_close(session_id=current_session_id, reason="cancel"):
-                return
-            try:
-                self._handle_embedded_selector_cancel()
-            except Exception:
-                self._LOGGER.exception(
-                    "work_editor.selector cancel handling failed kind=%s session_id=%s",
-                    kind_key,
-                    current_session_id,
-                )
-            finally:
-                self._close_embedded_selector_host_widget()
-
-        try:
-            container = build_embedded_selector_parity_widget(
-                self,
-                mount_container=self._selector_current_mount_container(),
-                kind=kind_key,
-                head=head,
-                spindle=spindle,
-                follow_up=follow_up,
-                initial_assignments=initial_assignments,
-                initial_assignment_buckets=initial_assignment_buckets,
-                on_submit=_finalize_embedded_submit,
-                on_cancel=_finalize_embedded_cancel,
-            )
-        except Exception as exc:
-            self._LOGGER.exception("Failed to open embedded selector kind=%s", kind_key)
-            self._clear_selector_session_request(session_id)
-            dispose_embedded_selector_runtime(self)
-            show_selector_warning_for_dialog(
-                self,
-                self._t("work_editor.selector.open_failed.title", "Selector unavailable"),
-                self._t(
-                    "work_editor.selector.open_failed.body",
-                    "Could not open embedded selector: {error}",
-                    error=str(exc),
-                ),
-            )
-            return False
-        if container is None:
-            self._clear_selector_session_request(session_id)
-            return False
-        container.setProperty("selectorContext", True)
-        container.setProperty("selectorSessionId", session_id)
-        self._mark_selector_session_phase(session_id, "mounting")
-
-        self._log_selector_event(
-            "open.embedded",
-            kind=kind,
-            head=head,
-            spindle=spindle,
-            session_id=session_id,
-            target_key=str((follow_up or {}).get("target_key") or ""),
-        )
-        mount_container = self._selector_current_mount_container()
-        self._mount_selector_widget_for_session(container, mount_container)
-        try:
-            self._selector_coordinator().mark_mount_complete(caller=f"mount:{kind_key}")
-        except InvalidSelectorTransitionError:
-            self._LOGGER.warning(
-                "work_editor.selector mount completion rejected kind=%s session_id=%s state=%s",
-                kind_key,
-                session_id,
-                self._selector_coordinator().state.value,
-            )
-            dispose_embedded_selector_runtime(self)
-            self._close_embedded_selector_host_widget()
-            self._clear_selector_session_request(session_id)
-            return False
-        if not self._selector_mode_active:
-            self._LOGGER.warning(
-                "work_editor.selector failed to enter selector mode after mounting kind=%s session_id=%s",
-                kind_key,
-                session_id,
-            )
-            dispose_embedded_selector_runtime(self)
-            self._close_embedded_selector_host_widget()
-            self._clear_selector_session_request(session_id)
-            return False
-        return True
-
     @staticmethod
     def _tool_bucket_for_spindle(spindle: str) -> ToolBucket:
         normalized_spindle = normalize_selector_spindle(spindle)
@@ -1539,7 +1373,6 @@ class WorkEditorDialog(QDialog):
         if kind not in {"tools", "jaws", "fixtures"}:
             return False
         try:
-            import uuid as _uuid
             from ui.main_window_support.library_ipc import send_to_tool_library
             from config import SETUP_MANAGER_SERVER_NAME, TOOL_LIBRARY_SERVER_NAME
         except Exception:
@@ -1553,7 +1386,7 @@ class WorkEditorDialog(QDialog):
 
         machine_profile_key = str(getattr(self, "_machine_profile_key", "") or "")
 
-        request_id = str(_uuid.uuid4())
+        request_id = str(uuid4())
         payload = {
             "selector_mode": kind,
             "show": True,

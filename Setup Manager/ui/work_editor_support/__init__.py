@@ -1,7 +1,6 @@
 from .dragdrop_widgets import (
     WorkEditorToolRemoveDropButton,
 )
-from .embedded_selector_host import WorkEditorSelectorHost
 from .io_validation import collect_unresolved_reference_messages, refresh_external_refs
 from .icon_resolvers import toolbar_icon, tool_icon_for_type_in_spindle
 from .jaw_selector_panel import WorkEditorJawSelectorPanel
@@ -13,8 +12,6 @@ from .machining_center import (
 from .selectors import (
     normalize_selector_head,
     normalize_selector_spindle,
-    selector_initial_tool_assignment_buckets,
-    selector_initial_tool_assignments,
 )
 from .pot_editor import open_pot_editor_dialog
 from .selector_provider import (
@@ -23,19 +20,11 @@ from .selector_provider import (
     build_jaw_selector_request,
     build_tool_selector_request,
 )
-from .selector_parity_factory import (
-    build_embedded_selector_parity_widget,
-    dispose_embedded_selector_runtime,
-    release_tool_library_namespace_aliases,
-    warmup_embedded_selector_runtime,
-)
 from .selector_adapter import (
     apply_fixture_selector_result,
     apply_jaw_selector_result,
     apply_tool_selector_result,
     head_label,
-    merge_jaw_refs,
-    show_selector_warning_for_dialog,
     spindle_label,
 )
 from .selector_state import (
@@ -80,7 +69,6 @@ __all__ = [
     "WorkEditorOrderedToolList",
     "build_machining_center_zeros_tab_ui",
     "WorkEditorToolRemoveDropButton",
-    "WorkEditorSelectorHost",
     "collect_unresolved_reference_messages",
     "refresh_external_refs",
     "toolbar_icon",
@@ -88,8 +76,6 @@ __all__ = [
     "WorkEditorJawSelectorPanel",
     "normalize_selector_head",
     "normalize_selector_spindle",
-    "selector_initial_tool_assignment_buckets",
-    "selector_initial_tool_assignments",
     "build_general_tab_ui",
     "build_notes_tab_ui",
     "build_spindles_tab_ui",
@@ -103,17 +89,11 @@ __all__ = [
     "build_tool_selector_request",
     "build_jaw_selector_request",
     "build_fixture_selector_request",
-    "build_embedded_selector_parity_widget",
-    "dispose_embedded_selector_runtime",
-    "release_tool_library_namespace_aliases",
-    "warmup_embedded_selector_runtime",
     "head_label",
     "spindle_label",
-    "merge_jaw_refs",
     "apply_fixture_selector_result",
     "apply_tool_selector_result",
     "apply_jaw_selector_result",
-    "show_selector_warning_for_dialog",
     "default_jaw_selector_spindle",
     "default_selector_head",
     "default_selector_spindle",

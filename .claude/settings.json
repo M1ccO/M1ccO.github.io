@@ -13,7 +13,25 @@
       "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_print_service_resolver_fallback.py tests/test_selector_session.py tests/test_shared_regressions.py tests/test_shared_selector_widgets.py tests/test_selector_adapter_phase6.py tests/test_work_editor_style_inheritance.py -q)",
       "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_selector_session.py tests/test_print_service_resolver_fallback.py -q --tb=short)",
       "Bash(python -m pytest tests/test_work_editor_resolver_fallback.py -v --tb=short)",
-      "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_selector_session.py tests/test_print_service_resolver_fallback.py tests/test_work_editor_resolver_fallback.py -q)"
+      "Bash(python -m pytest tests/test_selector_contracts.py tests/test_preload_manager.py tests/test_selector_session.py tests/test_print_service_resolver_fallback.py tests/test_work_editor_resolver_fallback.py -q)",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/main_window.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/home_page_support/page_builders.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/jaw_page_support/page_builders.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/jaw_page_support/bottom_bars_builder.py\")",
+      "Bash(python -c ' *)",
+      "Bash(python -m unittest discover -s tests -p test_shared_theme_contract.py)",
+      "Bash(python -m unittest discover -s tests -p test_selector_embedded_mode.py)",
+      "Bash(sed -n '255,290p' \"C:/Users/Omistaja/Desktop/NTX Setup Manager/shared/ui/theme.py\")",
+      "Bash(sed -n '490,540p' \"C:/Users/Omistaja/Desktop/NTX Setup Manager/shared/ui/theme.py\")",
+      "Bash(sed -n '108,120p' \"C:/Users/Omistaja/Desktop/NTX Setup Manager/Setup Manager/styles/modules/10-base.qss\")",
+      "Bash(sed -n '313,330p' \"C:/Users/Omistaja/Desktop/NTX Setup Manager/Tools and jaws Library/styles/modules/10-base.qss\")",
+      "Bash(python -m py_compile \"shared/ui/helpers/topbar_common.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/home_page_support/topbar_builder.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/jaw_page_support/topbar_builder.py\")",
+      "Bash(python -m py_compile \"Tools and jaws Library/ui/fixture_page_support/topbar_builder.py\")",
+      "Bash(python -m py_compile \"Setup Manager/ui/main_window.py\")",
+      "Bash(python -m py_compile \"Setup Manager/ui/setup_page.py\")",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/home_page_support/topbar_builder.py\" \"Tools and jaws Library/ui/jaw_page_support/topbar_builder.py\" \"Tools and jaws Library/ui/fixture_page_support/topbar_builder.py\" \"Setup Manager/ui/setup_page.py\")"
     ]
   }
 }

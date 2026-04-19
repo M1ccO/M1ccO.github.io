@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    QSizePolicy,
 )
 
 from shared.ui.helpers.page_scaffold_common import (
@@ -42,7 +43,14 @@ def build_tool_page_layout(page) -> None:
     page.search_input = build_search_input(page)
 
     page.filter_pane = page.build_filter_pane()
-    root.addWidget(page.filter_pane)
+    topbar_host = QWidget()
+    topbar_host.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    topbar_host_layout = QVBoxLayout(topbar_host)
+    topbar_host_layout.setContentsMargins(0, 0, 0, 4)
+    topbar_host_layout.setSpacing(0)
+    topbar_host_layout.addWidget(page.filter_pane)
+    root.setSpacing(0)
+    root.addWidget(topbar_host)
 
     page.splitter = build_catalog_splitter(build_catalog_list_card(page), build_detail_container(page))
     root.addWidget(page.splitter, 1)
@@ -71,7 +79,7 @@ def build_catalog_list_card(page) -> QFrame:
     list_host = QWidget()
     list_host.setProperty('pageFamilyHost', True)
     list_host_layout = QVBoxLayout(list_host)
-    list_host_layout.setContentsMargins(92, 24, 0, 0)
+    list_host_layout.setContentsMargins(56, 40, 0, 0)
     list_host_layout.setSpacing(0)
     list_host_layout.addWidget(list_card)
     return list_host
@@ -89,7 +97,7 @@ def build_detail_container(page) -> QWidget:
     ) = build_detail_container_shell()
 
     page._detail_container_layout = detail_layout
-    detail_layout.setContentsMargins(0, 24, 0, 0)
+    detail_layout.setContentsMargins(0, 8, 0, 0)
 
     page.populate_details(None)
     return page.detail_container
@@ -100,7 +108,7 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     page.button_bar = QFrame()
     page.button_bar.setProperty('bottomBar', True)
     actions = QHBoxLayout(page.button_bar)
-    actions.setContentsMargins(10, 8, 10, 8)
+    actions.setContentsMargins(10, 10, 10, 6)
     actions.setSpacing(8)
 
     page.edit_btn = QPushButton(page._t('tool_library.action.edit_tool', 'EDIT TOOL'))
@@ -117,17 +125,14 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     page.add_btn.clicked.connect(page.add_tool)
     page.copy_btn.clicked.connect(page.copy_tool)
 
-    page.module_switch_label = QLabel(page._t('tool_library.module.switch_to', 'Switch to'))
-    page.module_switch_label.setProperty('pageSubtitle', True)
-    page.module_toggle_btn = QPushButton(page._t('tool_library.module.jaws', 'JAWS'))
-    page.module_toggle_btn.setProperty('panelActionButton', True)
-    page.module_toggle_btn.setFixedHeight(28)
+    page.module_switch_label = QLabel('')
+    page.module_switch_label.setVisible(False)
+    page.module_toggle_btn = QPushButton('')
+    page.module_toggle_btn.setVisible(False)
     page.module_toggle_btn.clicked.connect(
         lambda: page._module_switch_callback() if callable(page._module_switch_callback) else None
     )
 
-    actions.addWidget(page.module_switch_label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-    actions.addWidget(page.module_toggle_btn, 0, Qt.AlignLeft | Qt.AlignVCenter)
     actions.addStretch(1)
 
     page.selection_count_label = QLabel('')

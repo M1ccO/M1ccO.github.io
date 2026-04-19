@@ -269,19 +269,18 @@ def warmup_preview_engine(page) -> None:
         )
     )
 
-    # Force one-time OpenGL initialization offscreen so the first visible
-    # detail preview does not appear to close/reopen the whole window.
+    # Force Chromium/WebEngine GPU context initialization.  The widget must
+    # stay alive for the entire app lifetime so the GPU context is never
+    # torn down — destroying it allows Chromium to release the D3D11 swap
+    # chain, which causes a visible glitch when a new QWebEngineView is
+    # created later (e.g. when opening a selector dialog).
+    #
+    # WA_DontShowOnScreen creates a valid platform surface without mapping
+    # anything on-screen, which is enough for Chromium to initialise its
+    # GPU compositor.  We keep the widget shown permanently.
     page._inline_preview_warmup.setAttribute(Qt.WA_DontShowOnScreen, True)
-    page._inline_preview_warmup.setGeometry(-10000, -10000, 8, 8)
+    page._inline_preview_warmup.resize(8, 8)
     page._inline_preview_warmup.show()
-    QTimer.singleShot(0, page._inline_preview_warmup.hide)
-
-    def _drop_warmup():
-        if page._inline_preview_warmup is not None:
-            page._inline_preview_warmup.deleteLater()
-            page._inline_preview_warmup = None
-
-    QTimer.singleShot(10000, _drop_warmup)
 
 
 __all__ = [

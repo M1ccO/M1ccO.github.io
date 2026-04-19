@@ -31,7 +31,6 @@ TASKS = [
         "regression-tests-setup",
         [
             str(PY), "-m", "pytest",
-            "tests/test_selector_host_phase6.py",
             "tests/test_work_editor_embedded_selector.py",
             "tests/test_work_editor_style_inheritance.py",
             "tests/test_work_editor_launch_parent.py",

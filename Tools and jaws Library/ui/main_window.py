@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QStackedWidget,
+    QStatusBar,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -222,11 +223,6 @@ class MainWindow(QMainWindow):
     def _profile_head_keys(self) -> list[str]:
         return self.machine_profile.head_keys()
 
-    def resizeEvent(self, event):
-        super().resizeEvent(event)
-        self._ensure_on_screen()
-        self._position_rail_title()
-
     def moveEvent(self, event):
         super().moveEvent(event)
         self._ensure_on_screen()
@@ -241,7 +237,6 @@ class MainWindow(QMainWindow):
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._ensure_on_screen()
-        self._position_rail_title()
 
     def _preload_catalog_page(self, page, warmup_fn) -> None:
         if page is None:
@@ -288,13 +283,7 @@ class MainWindow(QMainWindow):
             logger.debug("Background catalog preload failed", exc_info=True)
 
     def _position_rail_title(self):
-        """Place the header label at the top-left of the central widget."""
-        if not hasattr(self, 'rail_title'):
-            return
-        self.rail_title.move(10, 13)
-        # Let it be as wide as its text needs â€” it's outside the layout.
-        self.rail_title.setFixedWidth(self.rail_title.fontMetrics().horizontalAdvance(self.rail_title.text()) + 16)
-        self.rail_title.raise_()
+        pass  # title is now in the layout rail
 
     def _ensure_on_screen(self):
         if self._clamping_screen_bounds:
@@ -439,30 +428,42 @@ class MainWindow(QMainWindow):
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
 
-        # â”€â”€ Header: absolutely positioned, NOT in any layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        # This is the only way to guarantee the title width has zero effect on
-        # the rail width.  It's a direct child of central, raised above the
-        # layout, and repositioned via _position_rail_title().
-        self._header_height = 38
-        self.rail_title = QLabel(self._t("tool_library.rail_title.tools", "Tool Library"), central)
-        self.rail_title.setStyleSheet('color: #000000; font-size: 14pt; font-weight: 700;')
-        self.rail_title.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        self.rail_title.setFixedHeight(self._header_height)
-        self.rail_title.adjustSize()
-        self.rail_title.raise_()
-
-        # â”€â”€ Main layout: rail + stack, with a compact shared top gutter â”€â”€â”€â”€â”€â”€
+        # ── Main layout: rail + stack, matching Setup Manager structure ──────
         root = QHBoxLayout(central)
-        root.setContentsMargins(4, 10, 12, 12)
+        root.setContentsMargins(0, 0, 12, 0)
         root.setSpacing(0)
 
-        self.toggle_rail = QWidget()
-        self.toggle_rail.setFixedWidth(110)
+        # ── Left navigation rail (210px, matches Setup Manager nav_rail) ─────
+        self.toggle_rail = QFrame()
+        self.toggle_rail.setProperty('navRail', True)
+        self.toggle_rail.setFixedWidth(210)
         self.toggle_rail.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         toggle_layout = QVBoxLayout(self.toggle_rail)
-        toggle_layout.setContentsMargins(6, 60, 6, 10)
-        toggle_layout.setSpacing(0)
+        toggle_layout.setContentsMargins(12, 14, 12, 14)
+        toggle_layout.setSpacing(8)
 
+        # Title label — in layout, not absolutely positioned
+        self.rail_title = QLabel(self._t("tool_library.rail_title.tools", "Tool Library"))
+        self.rail_title.setStyleSheet('color: #000000; font-size: 20pt; font-weight: 700;')
+        self.rail_title.setWordWrap(False)
+        self.rail_title.setFixedHeight(36)
+        toggle_layout.addWidget(self.rail_title)
+
+        # HEAD1 / HEAD2 nav buttons — same style as ASETUKSET/LOKIKIRJA
+        head_keys = self._profile_head_keys()
+        self._head_nav_buttons: list[QPushButton] = []
+        for head_key in head_keys:
+            head_label = head_key.replace('HEAD', 'Pää ')
+            btn = QPushButton(head_label)
+            btn.setProperty('navButton', True)
+            btn.setProperty('active', head_key == head_keys[0])
+            btn.clicked.connect(lambda checked=False, k=head_key: self._on_head_nav_clicked(k))
+            toggle_layout.addWidget(btn)
+            self._head_nav_buttons.append(btn)
+
+        toggle_layout.addStretch(1)
+
+        # Icon nav buttons — hidden by default, shown as overlay on hover
         self.nav_frame = QFrame()
         self.nav_frame.setObjectName('navFrame')
         self.nav_frame.setFixedWidth(self._nav_width)
@@ -488,39 +489,48 @@ class MainWindow(QMainWindow):
         nav_h = (len(self.nav_buttons) * 50) + ((len(self.nav_buttons) - 1) * nav_layout.spacing()) + 18
         self.nav_frame.setFixedHeight(nav_h)
 
-        # Host the animated nav frame in a fixed slot so layout won't fight the slide animation.
+        # Host the nav frame in a fixed slot for slide animation compatibility.
         self.nav_slot = QWidget()
         self.nav_slot.setFixedSize(self._nav_width, nav_h)
         self.nav_frame.setParent(self.nav_slot)
         self.nav_frame.move(0, 0)
 
+        # Hidden RailHeadToggleButton kept for API compatibility with pages
+        # that call bind_external_head_filter(). Not shown in UI.
         self.tool_head_filter_combo = RailHeadToggleButton()
         self.tool_head_filter_combo.setObjectName('toolHeadRailFilter')
-        self.tool_head_filter_combo.setFixedWidth(RAIL_HEAD_DROPDOWN_WIDTH)
-        self.tool_head_filter_combo.setCursor(Qt.PointingHandCursor)
-        combo_policy = self.tool_head_filter_combo.sizePolicy()
-        combo_policy.setRetainSizeWhenHidden(True)
-        self.tool_head_filter_combo.setSizePolicy(combo_policy)
-        self.tool_head_filter_combo.setToolTip(self._t('tool_library.head_filter.toggle_tip', 'Left click toggles HEAD1 and HEAD2. Right click shows both heads.'))
-        # Keep shared panel button visuals but without drop shadow for parity.
-        self.tool_head_filter_combo.setProperty('panelActionButton', True)
-        self.tool_head_filter_combo.setGraphicsEffect(None)
+        self.tool_head_filter_combo.setVisible(False)
         self._rebuild_head_filter_combo_items()
         self.tool_head_filter_combo.currentIndexChanged.connect(self._on_global_tool_head_changed)
-        toggle_layout.addSpacing(10)
-        toggle_layout.addWidget(self.tool_head_filter_combo, 0, Qt.AlignHCenter)
-        toggle_layout.addSpacing(10)
-        toggle_layout.addWidget(self.nav_slot, 0, Qt.AlignHCenter)
 
-        toggle_layout.addStretch(1)
-
-        # Keep footer actions grouped so their placement matches Setup Manager's left-rail launcher area.
+        # Launch card — mirrors Setup Manager's bottom-of-rail launch area
         self.footer_actions = QFrame()
         self.footer_actions.setObjectName('railFooterActions')
         self.footer_actions.setProperty('launchCard', True)
         footer_layout = QVBoxLayout(self.footer_actions)
-        footer_layout.setContentsMargins(16, 0, 16, 20)
-        footer_layout.setSpacing(6)
+        footer_layout.setContentsMargins(12, 12, 12, 12)
+        footer_layout.setSpacing(8)
+
+        launch_title = QLabel(self._t("tool_library.launch.title", "Kirjastot"))
+        launch_title.setProperty('sectionTitle', True)
+        footer_layout.addWidget(launch_title)
+
+        launch_body = QLabel(self._t("tool_library.launch.hint", "Switch between libraries"))
+        launch_body.setProperty('navHint', True)
+        launch_body.setWordWrap(True)
+        launch_body.setMaximumHeight(48)
+        footer_layout.addWidget(launch_body)
+
+        self.module_toggle_btn = QPushButton(self._t("tool_library.launch.jaws", "LEUAT"))
+        self.module_toggle_btn.setProperty('panelActionButton', True)
+        self.module_toggle_btn.setProperty('sidebarLaunchButton', True)
+        self.module_toggle_btn.setMinimumWidth(154)
+        self.module_toggle_btn.clicked.connect(self._on_module_toggle_clicked)
+        footer_layout.addWidget(self.module_toggle_btn)
+
+        # Keep old names as aliases for API compat (pages may hold references)
+        self.open_tools_btn = self.module_toggle_btn
+        self.open_jaws_btn = self.module_toggle_btn
 
         self.master_filter_toggle = QToolButton()
         self.master_filter_toggle.setObjectName('masterFilterToggle')
@@ -533,7 +543,8 @@ class MainWindow(QMainWindow):
         self.master_filter_toggle.setToolTip(self._t("tool_library.master_filter.button", "MASTER FILTER"))
         self.master_filter_toggle.setVisible(self._master_filter_enabled)
         self.master_filter_toggle.clicked.connect(self._on_master_filter_toggled)
-        footer_layout.addWidget(self.master_filter_toggle, 0, Qt.AlignHCenter)
+        if self._master_filter_enabled:
+            footer_layout.addWidget(self.master_filter_toggle, 0, Qt.AlignHCenter)
 
         self.back_to_setup_btn = QToolButton()
         self.back_to_setup_btn.setProperty('topBarIconButton', True)
@@ -622,6 +633,10 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.fixtures_page)
         root.addWidget(self.stack, 1)
 
+        _status_bar = QStatusBar()
+        _status_bar.setSizeGripEnabled(False)
+        self.setStatusBar(_status_bar)
+
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
             page.set_module_switch_handler(self._toggle_module)
             page.bind_external_head_filter(self.tool_head_filter_combo)
@@ -642,24 +657,54 @@ class MainWindow(QMainWindow):
 
     def _setup_nav_hover_animation(self):
         self._nav_button_effects.clear()
-        self._nav_hover_widgets = []
-        self._nav_revealed = True
+        self._nav_revealed = False
+
+        # Reparent nav_slot to the stack so it floats as an overlay
+        self.nav_slot.setParent(self.stack)
+        self.nav_slot.setVisible(False)
+        self.nav_slot.raise_()
+
+        # Hover trigger zone: narrow strip on left edge of stack
+        self._nav_hover_zone = QWidget(self.stack)
+        self._nav_hover_zone.setFixedWidth(20)
+        self._nav_hover_zone.setGeometry(0, 0, 20, self.stack.height())
+        self._nav_hover_zone.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+        self._nav_hover_zone.setVisible(True)
+        self._nav_hover_zone.raise_()
+        self._nav_hover_zone.installEventFilter(self)
+        self.nav_slot.installEventFilter(self)
+
+        self._nav_hover_widgets = [self._nav_hover_zone, self.nav_slot]
         self.nav_frame.move(0, 0)
-        self._set_nav_button_opacity(1.0)
 
     def _set_nav_button_opacity(self, opacity: float):
         _ = opacity
 
     def _show_nav(self):
         self._nav_hide_timer.stop()
-        self._nav_revealed = True
-        self.nav_frame.move(0, 0)
-        self._set_nav_button_opacity(1.0)
+        if not self._nav_revealed:
+            self._nav_revealed = True
+            self._position_nav_overlay()
+            self.nav_slot.setVisible(True)
+            self.nav_slot.raise_()
 
     def _hide_nav_if_needed(self):
-        self._nav_revealed = True
-        self.nav_frame.move(0, 0)
-        self._set_nav_button_opacity(1.0)
+        self._nav_revealed = False
+        self.nav_slot.setVisible(False)
+
+    def _position_nav_overlay(self):
+        """Position nav_slot overlay at top-left of stack, below topbar area."""
+        if not hasattr(self, 'nav_slot') or not hasattr(self, 'stack'):
+            return
+        self.nav_slot.setGeometry(4, 4, self._nav_width, self.nav_slot.height())
+        if hasattr(self, '_nav_hover_zone'):
+            self._nav_hover_zone.setGeometry(0, 0, 20, self.stack.height())
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._ensure_on_screen()
+        if hasattr(self, '_nav_hover_zone'):
+            self._position_nav_overlay()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
@@ -841,49 +886,81 @@ class MainWindow(QMainWindow):
                 btn.setVisible(False)
 
         if self._active_module == 'jaws':
-            self.tool_head_filter_combo.hide()
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
                 page.set_module_switch_target('TOOLS')
             self._open_jaws_view('all')
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.jaws", "Jaws Library"))
-                self._position_rail_title()
             except Exception:
                 pass
+            self._set_head_nav_visible(False)
         elif self._active_module == 'fixtures':
-            self.tool_head_filter_combo.hide()
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
                 page.set_module_switch_target('TOOLS')
             self._open_fixtures_view('all')
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
-                self._position_rail_title()
             except Exception:
                 pass
+            self._set_head_nav_visible(False)
         else:
-            if self._is_machining_center():
-                self.tool_head_filter_combo.hide()
-            else:
-                self.tool_head_filter_combo.show()
             sibling_target = 'FIXTURES' if self._is_machining_center() else 'JAWS'
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
                 page.set_module_switch_target(sibling_target)
             self._open_tool_page('tools')
             try:
                 self.rail_title.setText(self._t("tool_library.rail_title.tools", "Tool Library"))
-                self._position_rail_title()
             except Exception:
                 pass
+            self._set_head_nav_visible(not self._is_machining_center())
 
         if self.nav_buttons:
             self.nav_buttons[0].setChecked(True)
         self._refresh_nav_button_icons()
+        self._update_module_toggle_label()
+
+    def _on_module_toggle_clicked(self):
+        """Toggle button in rail footer — switches between tools and jaws/fixtures."""
+        self._toggle_module()
+
+    def _update_module_toggle_label(self):
+        """Update the single toggle button label to show the OTHER module (where it will go)."""
+        try:
+            if self._active_module == 'tools':
+                if self._is_machining_center():
+                    label = self._t("tool_library.launch.fixtures", "KIINNITTIMET")
+                else:
+                    label = self._t("tool_library.launch.jaws", "LEUAT")
+            else:
+                label = self._t("tool_library.launch.tools", "TYÖKALUT")
+            self.module_toggle_btn.setText(label)
+        except Exception:
+            pass
 
     def _toggle_module(self):
         if self._active_module == 'tools':
             self._apply_module_mode('fixtures' if self._is_machining_center() else 'jaws')
             return
         self._apply_module_mode('tools')
+
+    def _on_head_nav_clicked(self, head_key: str):
+        """Handle HEAD1/HEAD2 nav button click — drives the hidden combo for page wiring."""
+        self.tool_head_filter_combo.setCurrentData(head_key)
+        self._update_head_nav_active(head_key)
+
+    def _update_head_nav_active(self, active_key: str):
+        """Set active=True on the matching head nav button, False on others."""
+        head_keys = self._profile_head_keys()
+        for btn, key in zip(self._head_nav_buttons, head_keys):
+            is_active = key == active_key
+            btn.setProperty('active', is_active)
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
+
+    def _set_head_nav_visible(self, visible: bool):
+        """Show or hide the HEAD nav buttons in the rail."""
+        for btn in self._head_nav_buttons:
+            btn.setVisible(visible)
 
     def _rebuild_head_filter_combo_items(self):
         head_keys = self._profile_head_keys()
@@ -932,7 +1009,9 @@ class MainWindow(QMainWindow):
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
             page.set_head_filter_value(head_value, refresh=False)
             page.refresh_list()
-        # Keep selector HEAD in sync with the dropdown
+        # Keep selector HEAD in sync with the nav buttons
+        if head_value in head_keys:
+            self._update_head_nav_active(head_value)
         if self._selector_mode == 'tools' and head_value in head_keys:
             self._selector_head = head_value
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
@@ -1115,6 +1194,9 @@ class MainWindow(QMainWindow):
             try:
                 dialog.blockSignals(True)
                 dialog.close()
+                # Dialogs are created with parent=None so they must be
+                # explicitly scheduled for deletion.
+                dialog.deleteLater()
             except Exception:
                 pass
         self._closing_selector_dialogs = False
@@ -1134,7 +1216,10 @@ class MainWindow(QMainWindow):
                 initial_assignment_buckets=self._selector_initial_assignment_buckets,
                 on_submit=self._on_selector_dialog_submit,
                 on_cancel=self._on_selector_dialog_cancel,
-                parent=self,
+                # parent=None so hiding the main window does NOT cascade to the
+                # dialog (Windows HWND parent-child visibility propagation).
+                # The dialog is managed explicitly via _close_selector_dialogs().
+                parent=None,
             )
             self._tool_selector_dialog = dialog
         elif self._selector_mode == 'jaws':
@@ -1146,7 +1231,7 @@ class MainWindow(QMainWindow):
                 initial_assignments=self._selector_initial_assignments,
                 on_submit=self._on_selector_dialog_submit,
                 on_cancel=self._on_selector_dialog_cancel,
-                parent=self,
+                parent=None,
             )
             self._jaw_selector_dialog = dialog
         elif self._selector_mode == 'fixtures':
@@ -1158,7 +1243,7 @@ class MainWindow(QMainWindow):
                 initial_target_key=getattr(self, '_selector_target_key', ''),
                 on_submit=self._on_selector_dialog_submit,
                 on_cancel=self._on_selector_dialog_cancel,
-                parent=self,
+                parent=None,
             )
             self._fixture_selector_dialog = dialog
         else:
@@ -1206,23 +1291,11 @@ class MainWindow(QMainWindow):
                     except Exception:
                         pass
 
-        # Pre-create the detached 3D preview dialog so the first preview button
-        # click is instant.  No show/hide cycle is needed — Chromium is already
-        # running from the app-startup warmup, so a new QWebEngineView is cheap.
-        # Showing the dialog here (even off-screen) triggers processEvents which
-        # causes the double-open glitch, so we only create, not show.
-        if self._selector_mode in {'tools', 'jaws'}:
-            try:
-                if self._selector_mode == 'tools':
-                    from ui.home_page_support.detached_preview import ensure_detached_preview_dialog
-                else:
-                    from ui.jaw_page_support.detached_preview import ensure_detached_preview_dialog
-                ensure_detached_preview_dialog(dialog)
-                _preview_dlg = getattr(dialog, '_detached_preview_dialog', None)
-                if _preview_dlg is not None:
-                    _preview_dlg.setWindowFlag(Qt.Tool)
-            except Exception:
-                pass
+        # Detached 3D preview dialog is created lazily when the user clicks
+        # the preview button (via ensure_detached_preview_dialog in
+        # sync_detached_preview).  Pre-creating it here in a hidden state
+        # causes the QWebEngineView to initialize with a 0×0 viewport,
+        # which corrupts the Three.js camera/renderer on first use.
 
         if should_show:
             dialog.show()
@@ -1353,13 +1426,13 @@ class MainWindow(QMainWindow):
 
         if selector_active:
             self._set_selector_session_state(selector_state)
-            # Open the standalone selector dialog — it is the sole UI.  Hide
-            # the main library window so it does NOT appear behind the dialog.
-            # Do NOT call show/raise on the main window and do NOT switch the
-            # catalog module (those were part of the old embedded-selector flow
-            # that has been replaced by standalone dialogs).
-            self.hide()
+            # Open the standalone selector dialog first, THEN hide the main
+            # library window.  This order is critical: if the library window
+            # is hidden before the dialog is visible, the screen goes blank
+            # for one or more frames which is the glitch the user sees.
             self._open_selector_dialog_for_session(should_show=should_show)
+            if should_show:
+                self.hide()
         else:
             self._clear_selector_session(show=False)
 

@@ -254,6 +254,13 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
         return False
 
     ensure_detached_preview_dialog(page)
+    # When the detached preview is opened from a selector dialog (which has
+    # WindowStaysOnTopHint), set Qt.Tool so the preview stays on top too.
+    if page._detached_preview_dialog is not None:
+        parent_window = page.window() if page.window() is not page._detached_preview_dialog else page
+        if parent_window is not None and bool(parent_window.windowFlags() & Qt.WindowStaysOnTopHint):
+            if not bool(page._detached_preview_dialog.windowFlags() & Qt.Tool):
+                page._detached_preview_dialog.setWindowFlag(Qt.Tool)
     was_visible = bool(page._detached_preview_dialog and page._detached_preview_dialog.isVisible())
     label = tool.get('description', '').strip() or tool.get('id', '3D Preview')
     raw_model_key = stl_path if isinstance(stl_path, str) else json.dumps(stl_path, ensure_ascii=False, sort_keys=True)
@@ -320,16 +327,15 @@ def warmup_preview_engine(page) -> None:
         )
     )
 
-    # Force one-time OpenGL initialization offscreen so the first visible
-    # detail preview does not appear to close/reopen the whole window.
+    # Force Chromium/WebEngine GPU context initialization.  The widget must
+    # stay alive for the entire app lifetime so the GPU context is never
+    # torn down — destroying it allows Chromium to release the D3D11 swap
+    # chain, which causes a visible glitch when a new QWebEngineView is
+    # created later (e.g. when opening a selector dialog).
+    #
+    # WA_DontShowOnScreen creates a valid platform surface without mapping
+    # anything on-screen, which is enough for Chromium to initialise its
+    # GPU compositor.  We keep the widget shown permanently.
     page._inline_preview_warmup.setAttribute(Qt.WA_DontShowOnScreen, True)
-    page._inline_preview_warmup.setGeometry(-10000, -10000, 8, 8)
+    page._inline_preview_warmup.resize(8, 8)
     page._inline_preview_warmup.show()
-    QTimer.singleShot(0, page._inline_preview_warmup.hide)
-
-    def _drop_warmup():
-        if page._inline_preview_warmup is not None:
-            page._inline_preview_warmup.deleteLater()
-            page._inline_preview_warmup = None
-
-    QTimer.singleShot(10000, _drop_warmup)

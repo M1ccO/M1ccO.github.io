@@ -248,10 +248,30 @@ class StlPreviewWidget(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._sync_rendering_state()
+        # When transitioning from hidden → visible (e.g. detached preview
+        # dialog created in a hidden state then shown later), the Chromium
+        # viewport may still report 0×0.  Defer a JS-level resize so
+        # Three.js picks up the correct canvas dimensions after Qt has
+        # finished processing the layout.
+        if self._page_ready:
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, self._deferred_viewer_resize)
 
     def hideEvent(self, event):
         super().hideEvent(event)
         self._sync_rendering_state()
+
+    def _deferred_viewer_resize(self):
+        """Force Three.js to re-read the viewport dimensions.
+
+        Called via QTimer.singleShot(0, ...) after showEvent so that Qt has
+        finished laying out the widget tree and the QWebEngineView's native
+        window has its final size.
+        """
+        if self._page_ready and self.isVisible():
+            self._web.page().runJavaScript(
+                "window.dispatchEvent(new Event('resize'));"
+            )
 
     def _on_load_finished(self, ok: bool):
         self._page_ready = ok
@@ -274,6 +294,11 @@ class StlPreviewWidget(QWidget):
         self._apply_measurement_state()
         self._apply_axis_orbit_state()
         self._sync_rendering_state()
+
+        # Ensure viewport dimensions are correct after first load.
+        if self.isVisible():
+            from PySide6.QtCore import QTimer
+            QTimer.singleShot(0, self._deferred_viewer_resize)
 
     def set_status_overlay_enabled(self, enabled: bool):
         self._status_overlay_enabled = bool(enabled)

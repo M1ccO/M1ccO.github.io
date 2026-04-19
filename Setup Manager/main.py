@@ -491,7 +491,11 @@ def main():
                 return apply_frame_geometry_string(win, geometry_text)
             return False
 
-        if geometry_text:
+        if geometry_text and not was_visible:
+            # Only reposition when SM was hidden/minimized — this is the
+            # launch or restore-from-tray path.  When SM is already visible
+            # (e.g. during a selector-close handoff) its position must NOT
+            # be overwritten with the Library window's geometry.
             _apply_handoff_bounds()
             QTimer.singleShot(0, _apply_handoff_bounds)
             QTimer.singleShot(120, _apply_handoff_bounds)

@@ -10,6 +10,44 @@
     - QMessageBox button alignment with app style
 */
 
+/* ── Navigation rail buttons ────────────────────────────────────────────── */
+QPushButton[navButton="true"] {
+    color: #000000;
+    background: transparent;
+    text-align: left;
+    border: none;
+    padding: 10px 14px;
+    font-weight: 600;
+    border-radius: 8px;
+    min-height: 0;
+}
+
+QPushButton[navButton="true"]:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+QPushButton[navButton="true"][active="true"] {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #54c5ff, stop:1 #2397e6);
+    color: #ffffff;
+    border: 1px solid #1680de;
+}
+
+QPushButton[navButton="true"][active="true"]:hover {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #72d0ff, stop:1 #2fa1ee);
+}
+
+QPushButton[navButton="true"][active="true"]:pressed {
+    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                                      stop:0 #2fa1ee, stop:1 #1680de);
+}
+
+/* ── Sidebar launch card button ─────────────────────────────────────────── */
+QPushButton[sidebarLaunchButton="true"] {
+    text-align: center;
+}
+
 /* Default push button */
 QPushButton {
     color: #2b3640;

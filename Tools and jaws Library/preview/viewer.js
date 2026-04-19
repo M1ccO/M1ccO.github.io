@@ -269,7 +269,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setClearColor(0xd6d9de, 1.0);
 
 renderer.setPixelRatio(window.devicePixelRatio || 1);
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(Math.max(1, window.innerWidth), Math.max(1, window.innerHeight));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.06;
@@ -396,7 +396,7 @@ if (studioEnvRT) {
 
 const camera = new THREE.PerspectiveCamera(
   45,
-  window.innerWidth / window.innerHeight,
+  (window.innerWidth || 1) / (window.innerHeight || 1),
   0.1,
   10000
 );
@@ -3217,9 +3217,12 @@ function animate() {
 animate();
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  if (w < 1 || h < 1) return;
+  camera.aspect = w / h;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(w, h);
   if (axisOrbitVisible) {
     _drawAxisOrbit();
   }
