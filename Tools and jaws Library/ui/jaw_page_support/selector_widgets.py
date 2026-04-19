@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QMimeData, QSize, Qt, Signal, QTimer
-from PySide6.QtGui import QDrag, QPainter, QPixmap
+from PySide6.QtGui import QDrag, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import QApplication, QGroupBox, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
@@ -194,7 +194,12 @@ class JawAssignmentSlot(QGroupBox):
             icon = jaw_icon_for_row(icon_jaw)
             self._assignment_card.icon_label.setFixedSize(32, 32)
             if icon is not None and not icon.isNull():
-                self._assignment_card.icon_label.setPixmap(icon.pixmap(QSize(32, 32)))
+                pixmap = icon.pixmap(QSize(32, 32))
+                # Mirror the icon horizontally for sub-spindle slots to match
+                # how sub-spindle jaws are displayed in the catalog delegate.
+                if self._slot_key == 'sub' and not pixmap.isNull():
+                    pixmap = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+                self._assignment_card.icon_label.setPixmap(pixmap)
             else:
                 self._assignment_card.icon_label.clear()
             self._assignment_card.set_title_text(title)

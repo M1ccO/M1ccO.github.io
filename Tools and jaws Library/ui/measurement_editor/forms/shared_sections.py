@@ -6,33 +6,12 @@ from collections.abc import Callable, Iterable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGroupBox, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
-
-SECTION_GROUPBOX_STYLESHEET = (
-    "QGroupBox {"
-    "  background-color: #f0f6fc;"
-    "  border: 1px solid #d0d8e0;"
-    "  border-radius: 6px;"
-    "  margin-top: 10px;"
-    "  padding-top: 8px;"
-    "}"
-    "QGroupBox::title {"
-    "  subcontrol-origin: margin;"
-    "  left: 10px;"
-    "  padding: 0 4px;"
-    "  color: #5a6b7c;"
-    "  font-size: 8pt;"
-    "  font-weight: 600;"
-    "}"
-)
-
-ADJUST_HEADER_LABEL_STYLE = (
-    "color: #6b7b8e; font-size: 9pt; background: transparent; "
-    "padding: 0px 0px 1px 0px;"
-)
+from shared.ui.helpers.editor_helpers import apply_titled_section_style
 
 
 def apply_section_groupbox_style(groupbox: QGroupBox) -> None:
-    groupbox.setStyleSheet(SECTION_GROUPBOX_STYLESHEET)
+    apply_titled_section_style(groupbox)
+    groupbox.setProperty("editorSectionCompact", True)
 
 
 def build_adjust_header_row(
@@ -52,7 +31,7 @@ def build_adjust_header_row(
         header_text = translate(header_key, header_fallback) if header_key else header_fallback
         header_label = QLabel(header_text)
         header_label.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-        header_label.setStyleSheet(ADJUST_HEADER_LABEL_STYLE)
+        header_label.setProperty("editorSectionMeta", True)
         if on_header_created is not None:
             on_header_created(header_label, header_key)
 
@@ -83,7 +62,7 @@ def build_xyz_header_row(
         lbl = QLabel(translate(key, fallback))
         lbl.setFixedWidth(56)
         lbl.setAlignment(Qt.AlignHCenter | Qt.AlignBottom)
-        lbl.setStyleSheet('color: #6b7b8e; font-size: 10px; background: transparent;')
+        lbl.setProperty("editorAxisHeader", True)
         row_layout.addWidget(lbl)
 
     row_layout.addStretch(1)

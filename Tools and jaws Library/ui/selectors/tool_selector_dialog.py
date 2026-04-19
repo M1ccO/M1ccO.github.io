@@ -100,13 +100,11 @@ class ToolSelectorDialog(
                 self.resize(1180, 720)
                 restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
-            root = QVBoxLayout(self)
-            root.setContentsMargins(8, 8, 8, 8)
-            root.setSpacing(8)
+            inner = self._make_themed_inner_layout()
 
-            self._build_filter_row(root)
-            self._build_content(root)
-            self._build_bottom_bar(root)
+            self._build_filter_row(inner)
+            self._build_content(inner)
+            self._build_bottom_bar(inner)
 
             self._load_current_bucket()
             self._refresh_catalog()
@@ -140,9 +138,7 @@ class ToolSelectorDialog(
             self.resize(1180, 720)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(8)
+        inner = self._make_themed_inner_layout()
 
         widget = ToolSelectorWidget(
             translate=self._t,
@@ -154,7 +150,7 @@ class ToolSelectorDialog(
         )
         widget.submitted.connect(lambda payload: self._finish_submit(self._on_submit, payload))
         widget.canceled.connect(self._cancel_dialog)
-        root.addWidget(widget, 1)
+        inner.addWidget(widget, 1)
 
     # ── Interface required by DetailPanelBuilder ────────────────────────
 
@@ -276,6 +272,8 @@ class EmbeddedToolSelectorWidget(
         finally:
             self.setUpdatesEnabled(True)
 
+        self._initialize_preview_infrastructure()
+
     def prepare_for_session(
         self,
         *,
@@ -309,6 +307,7 @@ class EmbeddedToolSelectorWidget(
                 self.search_input.clear()
                 self.search_input.blockSignals(False)
             if hasattr(self, 'type_filter') and self.type_filter.count():
+                self._populate_type_filter_items()
                 self.type_filter.setCurrentIndex(0)
             if hasattr(self, 'detail_card') and self.detail_card.isVisible():
                 self._switch_to_selector_panel()

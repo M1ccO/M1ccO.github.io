@@ -162,7 +162,7 @@ class MeasurementEditorDialog(QDialog):
         self.setMinimumSize(700, 520)
         self.setObjectName('measurementEditorDialog')
         self.setProperty('workEditorDialog', True)
-        self.setStyleSheet('QDialog#measurementEditorDialog { background-color: #ffffff; border: 1px solid #c8d4e0; }')
+        self.setProperty('editorHostSurface', True)
 
         self._build_ui()
         self._distance_editor.preview_widget = self._preview_widget
@@ -290,27 +290,14 @@ class MeasurementEditorDialog(QDialog):
         root.setSpacing(10)
 
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setProperty('editorFamilySplitter', True)
         splitter.setChildrenCollapsible(False)
         splitter.setHandleWidth(8)
-        splitter.setStyleSheet(
-            'QSplitter::handle:horizontal {'
-            '  background: qlineargradient(x1:0, y1:0, x2:1, y2:0,'
-            '    stop:0 #ffffff, stop:0.46 #ffffff, stop:0.5 #c4d1dd, stop:0.54 #ffffff, stop:1 #ffffff'
-            '  );'
-            '  border: none;'
-            '  margin: 0;'
-            '}'
-        )
 
         # â”€â”€ LEFT PANEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         left_panel = QFrame()
         left_panel.setObjectName('measurementEditorLeftPanel')
-        left_panel.setStyleSheet('''
-            QFrame#measurementEditorLeftPanel { background-color: #ffffff; }
-            QLabel { background-color: transparent; }
-            QCheckBox { background-color: transparent; }
-            QStackedWidget > QWidget { background-color: #ffffff; }
-        ''')
+        left_panel.setProperty('editorHostSurface', True)
         left_panel.setMinimumWidth(420)
         left_layout = QVBoxLayout(left_panel)
         left_layout.setContentsMargins(0, 0, 0, 0)
@@ -365,13 +352,13 @@ class MeasurementEditorDialog(QDialog):
         self._distance_detail_mode_lbl = QLabel(
             self._t('tool_editor.measurements.precise_mode', 'Precise')
         )
-        self._distance_detail_mode_lbl.setStyleSheet('background: transparent; color: #1f2d3d;')
+        self._distance_detail_mode_lbl.setProperty('detailFieldKey', True)
         self._distance_detail_mode_btn = QCheckBox('')
         self._distance_detail_mode_btn.setChecked(False)
         self._distance_detail_mode_btn.stateChanged.connect(self._on_distance_detail_mode_changed)
         apply_shared_checkbox_style(self._distance_detail_mode_btn, indicator_size=14)
         self._distance_detail_mode_col = QWidget()
-        self._distance_detail_mode_col.setStyleSheet('background: transparent;')
+        self._distance_detail_mode_col.setProperty('hostTransparent', True)
         _detail_col_layout = QHBoxLayout(self._distance_detail_mode_col)
         _detail_col_layout.setContentsMargins(0, 0, 0, 0)
         _detail_col_layout.setSpacing(5)
@@ -383,6 +370,7 @@ class MeasurementEditorDialog(QDialog):
         left_layout.addLayout(list_btn_row)
 
         separator = QFrame()
+        separator.setProperty('editorSeparator', True)
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
         left_layout.addWidget(separator)
@@ -395,7 +383,7 @@ class MeasurementEditorDialog(QDialog):
         placeholder = QLabel(self._t(
             'tool_editor.measurements.select_to_edit', 'Select a measurement to edit.'))
         placeholder.setAlignment(Qt.AlignCenter)
-        placeholder.setStyleSheet('color: #6b7b8e; font-size: 11px;')
+        placeholder.setProperty('detailHint', True)
         self._edit_stack.addWidget(placeholder)
         self._edit_stack.addWidget(self._build_distance_form())
         self._edit_stack.addWidget(self._build_diameter_form())

@@ -56,11 +56,6 @@ class LogEntryDialog(QDialog):
         self.setObjectName("logEntryDialog")
         self.setAttribute(Qt.WA_StyledBackground, True)
         setup_editor_dialog(self)
-        self.setStyleSheet(
-            "QDialog#logEntryDialog {"
-            "  background: #ffffff;"
-            "}"
-        )
         self.resize(560, 420)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 14, 14, 14)
@@ -124,19 +119,19 @@ class LogEntryDialog(QDialog):
 
         custom_date_label = QLabel(self._t("setup_page.log_entry.custom_date", "Custom date"))
         custom_date_label.setWordWrap(True)
-        custom_date_label.setStyleSheet("background: transparent;")
+        custom_date_label.setProperty("detailFieldKey", True)
         custom_date_label.setText(custom_date_label.text().replace(" ", "\n", 1))
 
         custom_serial_label = QLabel(self._t("setup_page.log_entry.custom_serial", "Custom serial"))
         custom_serial_label.setWordWrap(True)
-        custom_serial_label.setStyleSheet("background: transparent;")
+        custom_serial_label.setProperty("detailFieldKey", True)
         custom_serial_label.setText(custom_serial_label.text().replace(" ", "\n", 1))
 
         label_col_width = 118
 
         def _form_label(text: str) -> QLabel:
             lbl = QLabel(text)
-            lbl.setStyleSheet("background: transparent;")
+            lbl.setProperty("detailFieldKey", True)
             lbl.setMinimumWidth(label_col_width)
             lbl.setMaximumWidth(label_col_width)
             lbl.setWordWrap(True)

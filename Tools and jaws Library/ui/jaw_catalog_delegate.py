@@ -13,13 +13,14 @@ try:
 except ImportError:
     from config import TOOL_ICONS_DIR
 from shared.ui.platforms.catalog_delegate import CatalogDelegate
+from shared.ui.platforms.catalog_delegate import resolve_catalog_delegate_theme
 from shared.ui.platforms.catalog_page_base import (
     CATALOG_ROLE_DATA,
     CATALOG_ROLE_ICON,
     CATALOG_ROLE_ID,
 )
 
-__all__ = ['JawCatalogDelegate', 'ROLE_JAW_DATA', 'ROLE_JAW_ICON', 'ROLE_JAW_ID', 'jaw_icon_for_row']
+__all__ = ['JawCatalogDelegate', 'ROLE_JAW_DATA', 'ROLE_JAW_ICON', 'ROLE_JAW_ID', 'apply_delegate_theme', 'jaw_icon_for_row']
 
 ROLE_JAW_ID = CATALOG_ROLE_ID
 ROLE_JAW_DATA = CATALOG_ROLE_DATA
@@ -85,6 +86,15 @@ def _normalize_spindle_side_key(value: str) -> str:
     if 'vasta' in text or 'ala' in text:
         return 'sub_spindle'
     return text.replace(' ', '_')
+
+
+def apply_delegate_theme(theme, accent: str | None = None) -> None:
+    """Update jaw delegate card colors to match the active shared theme palette."""
+    colors = resolve_catalog_delegate_theme(theme, accent=accent)
+    JawCatalogDelegate.CLR_CARD_BG = colors['card_bg']
+    JawCatalogDelegate.CLR_CARD_HOVER = colors['card_hover']
+    JawCatalogDelegate.CLR_CARD_BORDER = colors['card_border']
+    JawCatalogDelegate.CLR_CARD_SELECTED_BORDER = colors['selected_border']
 
 
 class JawCatalogDelegate(CatalogDelegate):

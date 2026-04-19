@@ -206,10 +206,19 @@ def main():
             return
         try:
             from shared.ui.stl_preview import StlPreviewWidget
-
-            app._preview_warmup_widget = StlPreviewWidget()
-            app._preview_warmup_widget.hide()
-            QTimer.singleShot(1500, app._preview_warmup_widget.deleteLater)
+            warmup = StlPreviewWidget()
+            # Qt.Tool suppresses the taskbar entry for this invisible warmup window.
+            warmup.setWindowFlag(Qt.Tool)
+            # Show at real off-screen coordinates so Windows creates the HWND
+            # and D3D11 compositor surface now, not on first user interaction.
+            # WA_DontShowOnScreen intentionally NOT used — it skips surface creation.
+            warmup.setGeometry(-32000, -32000, 8, 8)
+            warmup.show()
+            app.processEvents()
+            # Keep alive for the full app session.  Destroying the last
+            # QWebEngineView shuts down Chromium; any subsequent creation
+            # would cold-start and freeze the UI.
+            app._preview_warmup_widget = warmup
         except Exception:
             app._preview_warmup_widget = None
 

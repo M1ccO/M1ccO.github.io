@@ -62,15 +62,11 @@ from ui.main_window_support import (
     send_selector_result_payload,
 )
 from ui.selectors import FixtureSelectorDialog, JawSelectorDialog, ToolSelectorDialog
-from ui.tool_catalog_delegate import apply_delegate_theme
+from ui.jaw_catalog_delegate import apply_delegate_theme as apply_jaw_delegate_theme
+from ui.tool_catalog_delegate import apply_delegate_theme as apply_tool_delegate_theme
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
-from shared.ui.main_window_helpers import (
-    THEME_PALETTES,
-    current_window_rect,
-    fade_in as _shared_fade_in,
-    fade_out_and as _shared_fade_out_and,
-    get_active_theme_palette,
-)
+from shared.ui.main_window_helpers import THEME_PALETTES, current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and, get_active_theme_palette
+from shared.ui.theme import compile_app_stylesheet, current_theme_color, install_application_theme_state
 from shared.ui.helpers.icon_loader import icon_from_path
 
 
@@ -1024,86 +1020,8 @@ class MainWindow(QMainWindow):
             self.fixtures_page.apply_localization(self._t)
 
     def _build_ui_preference_overrides(self) -> str:
-        palette = get_active_theme_palette(self.ui_preferences)
-        return (
-            "/* Runtime UI preference overrides */\n"
-            # Structural backgrounds — explicit named/attributed containers only.
-            # Intentionally avoids the broad "QWidget" selector because QPushButton,
-            # QComboBox and QToolButton are all QWidget subclasses and would inherit
-            # the flat window_bg, overriding their own gradient rules at equal spec.
-            "QMainWindow,\n"
-            "QWidget#appRoot,\n"
-            "QFrame#navFrame,\n"
-            "QFrame#filterFrame,\n"
-            "QFrame[bottomBar=\"true\"] {\n"
-            f"    background-color: {palette['window_bg']};\n"
-            "}\n"
-            # catalog list / surface
-            "QFrame[catalogShell=\"true\"],\n"
-            "QListView#toolCatalog,\n"
-            "QListView#toolCatalog::viewport,\n"
-            "QListWidget#toolCatalog,\n"
-            "QListWidget#toolCatalog::viewport {\n"
-            f"    background-color: {palette['surface_bg']};\n"
-            "}\n"
-            # detail panel host uses info_box_bg, while the hero header stays
-            # transparent so only its border is visible.
-            "QScrollArea#detailScrollArea,\n"
-            "QWidget#detailPanel {\n"
-            f"    background-color: {palette['info_box_bg']};\n"
-            "}\n"
-            "QFrame[detailHeader=\"true\"] {\n"
-            "    background-color: transparent;\n"
-            "}\n"
-            # input field focus ring
-            "QLineEdit:focus,\n"
-            "QTextEdit:focus {\n"
-            f"    border: 1px solid {palette['accent']};\n"
-            "}\n"
-            # catalog card selection border (QFrame-based cards)
-            "QFrame[toolListCard=\"true\"][selected=\"true\"],\n"
-            "QFrame[toolListCard=\"true\"][selected=\"true\"]:hover {\n"
-            f"    border: 3px solid {palette['accent']};\n"
-            "}\n"
-            # nav rail icon buttons (QToolButton#sideNavButton)
-            # :checked  -> accent gradient  (same family as primary buttons)
-            # :hover    -> icon_hover_bg    (lighter tint, distinct from button hover)
-            # :checked:hover -> shift gradient one step darker
-            "QToolButton#sideNavButton:hover {\n"
-            f"    background-color: {palette['icon_hover_bg']};\n"
-            f"    border-color: {palette['accent_light']};\n"
-            "}\n"
-            "QToolButton#sideNavButton:checked {\n"
-            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
-            f"    border: 1px solid {palette['accent_pressed']};\n"
-            "}\n"
-            "QToolButton#sideNavButton:checked:hover {\n"
-            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
-            "}\n"
-            # top-bar icon buttons (filter, 3D toggle, etc.)
-            "QToolButton[topBarIconButton=\"true\"]:hover {\n"
-            f"    background-color: {palette['icon_hover_bg']};\n"
-            "}\n"
-            "QToolButton[topBarIconButton=\"true\"]:pressed {\n"
-            f"    background-color: {palette['accent_light']};\n"
-            "}\n"
-            # primary call-to-action buttons — gradient from palette
-            # top stop: accent_light (bright highlight), bottom stop: accent
-            "QPushButton[primaryAction=\"true\"],\n"
-            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"] {\n"
-            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
-            "    color: #ffffff;\n"
-            f"    border: 1px solid {palette['accent_pressed']};\n"
-            "}\n"
-            "QPushButton[primaryAction=\"true\"]:hover,\n"
-            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:hover {\n"
-            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
-            "}\n"
-            "QPushButton[primaryAction=\"true\"]:pressed,\n"
-            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:pressed {\n"
-            f"    background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_hover']}, stop:1 {palette['accent_pressed']});\n"
-            "}\n"
-        )
+        _ = get_active_theme_palette(self.ui_preferences)
+        return ""
 
     def _set_graphics_effects_enabled(self, enabled: bool):
         if enabled:
@@ -1172,6 +1090,7 @@ class MainWindow(QMainWindow):
         self._selector_request_id = str(state.get('request_id') or '').strip()
         self._selector_head = str(state.get('head') or '').strip()
         self._selector_spindle = str(state.get('spindle') or '').strip()
+        self._selector_target_key = str(state.get('target_key') or '').strip()
         self._selector_initial_assignments = [dict(item) for item in (state.get('assignments') or []) if isinstance(item, dict)]
         raw_buckets = state.get('assignment_buckets') or {}
         if isinstance(raw_buckets, dict):
@@ -1182,6 +1101,7 @@ class MainWindow(QMainWindow):
             }
         else:
             self._selector_initial_assignment_buckets = {}
+        self._selector_session_geometry = str(state.get('geometry') or '').strip()
 
     def _close_selector_dialogs(self) -> None:
         self._closing_selector_dialogs = True
@@ -1235,7 +1155,7 @@ class MainWindow(QMainWindow):
                 translate=self._t,
                 initial_assignments=self._selector_initial_assignments,
                 initial_assignment_buckets=self._selector_initial_assignment_buckets,
-                initial_target_key='',
+                initial_target_key=getattr(self, '_selector_target_key', ''),
                 on_submit=self._on_selector_dialog_submit,
                 on_cancel=self._on_selector_dialog_cancel,
                 parent=self,
@@ -1243,24 +1163,68 @@ class MainWindow(QMainWindow):
             self._fixture_selector_dialog = dialog
         else:
             return
-        # Ensure selector dialogs open at the same size and position as the main window
-        try:
-            # Map the main window top-left to global coordinates and move the dialog there.
-            top_left = self.mapToGlobal(QPoint(0, 0))
-            dialog.move(top_left)
-            dialog.resize(self.size())
-        except Exception:
-            # Best-effort fallback: try applying geometry directly
-            try:
-                dialog.setGeometry(self.geometry())
-            except Exception:
-                try:
-                    dialog.resize(self.size())
-                except Exception:
-                    pass
+        # Position selector dialog: use geometry sent by Work Editor if available,
+        # otherwise fall back to Library's own window bounds.
+        #
+        # CRITICAL ORDER: setWindowFlag(WindowStaysOnTopHint) recreates the native
+        # HWND, discarding any geometry applied before it.  Apply the flag FIRST,
+        # then palette/stylesheet, then geometry, then show.
         if should_show:
-            # Stay on top of the Setup Manager Work Editor (cross-process).
             dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+            dialog.setAttribute(Qt.WA_StyledBackground, True)
+            dialog.setAutoFillBackground(True)
+            from PySide6.QtGui import QPalette
+            _bg = current_theme_color('page_bg', '#eceff2')
+            _pal = dialog.palette()
+            _pal.setColor(QPalette.Window, _bg)
+            _pal.setColor(QPalette.Base, _bg)
+            dialog.setPalette(_pal)
+            if hasattr(self, '_compiled_stylesheet') and self._compiled_stylesheet:
+                dialog.setStyleSheet(self._compiled_stylesheet)
+
+        session_geometry = getattr(self, '_selector_session_geometry', '')
+        if session_geometry:
+            try:
+                parts = [int(v) for v in session_geometry.split(',')]
+                if len(parts) == 4:
+                    dialog.setGeometry(*parts)
+            except Exception:
+                session_geometry = ''
+        if not session_geometry:
+            try:
+                # Map the main window top-left to global coordinates and move the dialog there.
+                top_left = self.mapToGlobal(QPoint(0, 0))
+                dialog.move(top_left)
+                dialog.resize(self.size())
+            except Exception:
+                # Best-effort fallback: try applying geometry directly
+                try:
+                    dialog.setGeometry(self.geometry())
+                except Exception:
+                    try:
+                        dialog.resize(self.size())
+                    except Exception:
+                        pass
+
+        # Pre-create the detached 3D preview dialog so the first preview button
+        # click is instant.  No show/hide cycle is needed — Chromium is already
+        # running from the app-startup warmup, so a new QWebEngineView is cheap.
+        # Showing the dialog here (even off-screen) triggers processEvents which
+        # causes the double-open glitch, so we only create, not show.
+        if self._selector_mode in {'tools', 'jaws'}:
+            try:
+                if self._selector_mode == 'tools':
+                    from ui.home_page_support.detached_preview import ensure_detached_preview_dialog
+                else:
+                    from ui.jaw_page_support.detached_preview import ensure_detached_preview_dialog
+                ensure_detached_preview_dialog(dialog)
+                _preview_dlg = getattr(dialog, '_detached_preview_dialog', None)
+                if _preview_dlg is not None:
+                    _preview_dlg.setWindowFlag(Qt.Tool)
+            except Exception:
+                pass
+
+        if should_show:
             dialog.show()
             dialog.raise_()
             dialog.activateWindow()
@@ -1410,21 +1374,15 @@ class MainWindow(QMainWindow):
             self.navigate_to(kind, item_id)
 
     def _apply_style(self):
-        def _resolve_asset_urls(qss: str) -> str:
-            assets_dir = (APP_DIR / 'assets').resolve().as_posix()
-            return qss.replace('url("assets/', f'url("{assets_dir}/').replace("url('assets/", f"url('{assets_dir}/")
-
-        base_style = ""
-        # Modules directory is the single source of truth for styles.
-        modules_dir = APP_DIR / 'styles' / 'modules'
-        if modules_dir.exists():
-            parts = [_resolve_asset_urls(p.read_text(encoding='utf-8')) for p in sorted(modules_dir.glob('*.qss'))]
-            if parts:
-                base_style = '\n\n'.join(parts)
-
-        palette = get_active_theme_palette(self.ui_preferences)
-        apply_delegate_theme(palette['info_box_bg'], palette['accent'])
-        self.setStyleSheet(base_style + "\n\n" + self._build_ui_preference_overrides())
+        palette = install_application_theme_state(self.ui_preferences)
+        apply_tool_delegate_theme(palette)
+        apply_jaw_delegate_theme(palette)
+        self._compiled_stylesheet = compile_app_stylesheet(APP_DIR / 'styles' / 'library_style.qss', self.ui_preferences)
+        # Apply on QApplication so ALL windows (including selector dialogs) inherit it.
+        app = QApplication.instance()
+        if app is not None:
+            app.setStyleSheet(self._compiled_stylesheet)
+        self.setStyleSheet(self._compiled_stylesheet)
         # Delegate-painted list views don't get repainted by setStyleSheet alone —
         # force a viewport repaint so the new CLR_CARD_SELECTED_BORDER takes effect.
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page, self.fixtures_page]:

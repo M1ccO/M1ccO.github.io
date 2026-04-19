@@ -26,7 +26,49 @@ from shared.ui.platforms.catalog_page_base import CATALOG_ROLE_DATA
 
 __all__ = [
     "CatalogDelegate",
+    "resolve_catalog_delegate_theme",
 ]
+
+
+def resolve_catalog_delegate_theme(theme, accent: str | None = None) -> dict[str, QColor]:
+    """Resolve shared semantic theme colors for delegate-painted catalog cards."""
+    if isinstance(theme, dict):
+        info_box_bg = str(theme.get("card_bg") or theme.get("info_box_bg") or "#ffffff")
+        border = str(theme.get("border_strong") or theme.get("border") or "#3e4a56")
+        list_bg = str(theme.get("row_area_bg") or theme.get("surface_bg") or "rgba(205, 212, 238, 0.97)")
+        accent = str(theme.get("accent") or accent or "#42a5f5")
+    else:
+        info_box_bg = str(theme or "#ffffff")
+        border = "#3e4a56"
+        list_bg = "rgba(205, 212, 238, 0.97)"
+
+    card_bg = QColor(info_box_bg)
+    if not card_bg.isValid():
+        card_bg = QColor("#ffffff")
+
+    card_border = QColor(border)
+    if not card_border.isValid():
+        card_border = QColor("#3e4a56")
+
+    row_area_bg = QColor(list_bg)
+    if not row_area_bg.isValid():
+        row_area_bg = QColor(205, 212, 238, 247)
+
+    selected_border = QColor(accent or "#42a5f5")
+    if not selected_border.isValid():
+        selected_border = QColor("#42a5f5")
+
+    # Hover cards stay close to the normal card surface, but lighten a touch.
+    h, s, l, a = card_bg.getHslF()
+    card_hover = QColor.fromHslF(h, max(0.0, s - 0.05), min(1.0, l + 0.04), a)
+
+    return {
+        "card_bg": card_bg,
+        "card_hover": card_hover,
+        "card_border": card_border,
+        "selected_border": selected_border,
+        "row_area_bg": row_area_bg,
+    }
 
 
 class CatalogDelegate(QAbstractItemDelegate):

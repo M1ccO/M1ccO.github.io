@@ -135,7 +135,8 @@ class SharedUiHelpersRegressionTests(unittest.TestCase):
 
         section = create_titled_section("Group")
         self.assertEqual(section.title(), "Group")
-        self.assertIn("QGroupBox::title", section.styleSheet())
+        self.assertTrue(bool(section.property("editorSection")))
+        self.assertEqual("", section.styleSheet())
 
     def test_common_widgets_autoshrink_and_collapsible_group(self):
         label = AutoShrinkLabel("Very long sample text for shrink checks", min_point_size=7)

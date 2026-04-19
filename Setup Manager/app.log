@@ -4687,3 +4687,6 @@ ImportError: cannot import name 'FIXTURE_MODELS_ROOT_DEFAULT' from 'config' (C:\
 2026-04-18 18:21:56,408 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
 2026-04-18 18:26:23,023 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
 2026-04-18 18:30:58,748 __main__ WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-19 15:04:07,778 test_work_editor_geometry_phase6 WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-19 15:10:44,299 test_work_editor_geometry_phase6 WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-19 15:12:27,261 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h

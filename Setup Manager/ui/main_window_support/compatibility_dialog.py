@@ -21,11 +21,6 @@ def show_compatibility_report_dialog(
     dialog.setObjectName("compatibilityReportDialog")
     dialog.setProperty("preferencesDialog", True)
     dialog.setAttribute(Qt.WA_StyledBackground, True)
-    dialog.setStyleSheet(
-        "QDialog#compatibilityReportDialog {"
-        " background-color: #ffffff;"
-        "}"
-    )
     dialog.setModal(True)
     dialog.setWindowTitle(title)
     dialog.resize(700, 560)
@@ -58,7 +53,6 @@ def show_compatibility_report_dialog(
     summary_text.setReadOnly(True)
     summary_text.setPlainText(summary)
     summary_text.setMinimumHeight(180)
-    summary_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
     summary_layout.addWidget(summary_text)
     root.addWidget(summary_group)
 
@@ -70,7 +64,6 @@ def show_compatibility_report_dialog(
     info_text.setReadOnly(True)
     info_text.setPlainText(informative)
     info_text.setMinimumHeight(120)
-    info_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
     db_layout.addWidget(info_text)
     root.addWidget(db_group)
 
@@ -83,7 +76,6 @@ def show_compatibility_report_dialog(
         details_text.setReadOnly(True)
         details_text.setPlainText(details)
         details_text.setMinimumHeight(140)
-        details_text.setStyleSheet("QPlainTextEdit { background: #ffffff; }")
         details_layout.addWidget(details_text)
         root.addWidget(details_group, 1)
 

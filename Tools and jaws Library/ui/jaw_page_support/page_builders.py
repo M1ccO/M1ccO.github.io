@@ -104,7 +104,7 @@ def build_jaw_page_layout(page) -> None:
 # Private sub-builders
 # ---------------------------------------------------------------------------
 
-def _build_catalog_list_card(page) -> QFrame:
+def _build_catalog_list_card(page) -> QWidget:
     """Build the catalog list card (list view + model wiring)."""
     list_card, list_layout = build_catalog_list_shell()
 
@@ -123,7 +123,13 @@ def _build_catalog_list_card(page) -> QFrame:
     page._connect_selection_model()
 
     list_layout.addWidget(page.list_view, 1)
-    return list_card
+    list_host = QWidget()
+    list_host.setProperty('pageFamilyHost', True)
+    list_host_layout = QVBoxLayout(list_host)
+    list_host_layout.setContentsMargins(92, 24, 0, 0)
+    list_host_layout.setSpacing(0)
+    list_host_layout.addWidget(list_card)
+    return list_host
 
 
 def _build_detail_container(page) -> QWidget:
@@ -137,6 +143,7 @@ def _build_detail_container(page) -> QWidget:
         page.detail_layout,
     ) = build_detail_container_shell()
     page._detail_container_layout = detail_layout
+    detail_layout.setContentsMargins(0, 24, 0, 0)
     detail_layout.addWidget(_build_selector_card(page), 1)
 
     page.populate_details(None)

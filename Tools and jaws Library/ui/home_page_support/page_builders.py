@@ -68,7 +68,13 @@ def build_catalog_list_card(page) -> QFrame:
     install_catalog_list_event_filters(page.list_view, page)
 
     list_layout.addWidget(page.list_view, 1)
-    return list_card
+    list_host = QWidget()
+    list_host.setProperty('pageFamilyHost', True)
+    list_host_layout = QVBoxLayout(list_host)
+    list_host_layout.setContentsMargins(92, 24, 0, 0)
+    list_host_layout.setSpacing(0)
+    list_host_layout.addWidget(list_card)
+    return list_host
 
 
 def build_detail_container(page) -> QWidget:
@@ -83,6 +89,7 @@ def build_detail_container(page) -> QWidget:
     ) = build_detail_container_shell()
 
     page._detail_container_layout = detail_layout
+    detail_layout.setContentsMargins(0, 24, 0, 0)
 
     page.populate_details(None)
     return page.detail_container

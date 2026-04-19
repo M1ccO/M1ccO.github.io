@@ -24,7 +24,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from PySide6.QtCore import QTimer, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from shared.ui.resolvers import (
@@ -221,10 +221,18 @@ class PreloadManager:
         return True
 
     def _warm_preview_engine(self) -> None:
-        """Pre-initialize shared STL preview runtime once at app preload.
+        """Initialize the Chromium/WebEngine runtime at app startup.
 
-        This warms OpenGL/context setup so first selector/library preview
-        open is less likely to trigger visible mount/rebuild churn.
+        Design contract:
+        - Called once during PreloadManager.initialize(), which runs while the
+          QProgressDialog splash is visible and processEvents() is being pumped.
+        - Shows the warmup QWebEngineView at real off-screen coordinates
+          (no WA_DontShowOnScreen).  This forces Windows to create the HWND and
+          the D3D11 compositor swap chain synchronously during startup, not
+          during a user button click.
+        - The widget is kept alive for the full app session.  Destroying the last
+          QWebEngineView shuts down the Chromium renderer/GPU processes; any
+          subsequent creation would cold-start again and freeze the UI.
         """
         if self._preview_warmup_armed:
             return
@@ -240,24 +248,17 @@ class PreloadManager:
             return
         try:
             warmup = StlPreviewWidget()
-            hint = (
-                "Rotate: left mouse | Pan: right mouse | Zoom: mouse wheel"
-            )
-            set_hint = getattr(warmup, "set_control_hint_text", None)
-            if callable(set_hint):
-                set_hint(hint)
-            warmup.setAttribute(Qt.WA_DontShowOnScreen, True)
-            warmup.setGeometry(-10000, -10000, 8, 8)
+            # Position far off-screen at real coordinates so Windows creates the
+            # HWND + D3D compositor surface now, not on first user interaction.
+            warmup.setGeometry(-32000, -32000, 8, 8)
             warmup.show()
-            QTimer.singleShot(0, warmup.hide)
+            # Pump the event loop so the OS can finish surface setup before we
+            # return.  The progress dialog's processEvents() chain covers this,
+            # but being explicit makes the contract self-contained.
+            app.processEvents()
 
             self._preview_warmup_widget = warmup
             self._preview_warmup_armed = True
-
-            def _drop_warmup() -> None:
-                self._dispose_preview_warmup()
-
-            QTimer.singleShot(10000, _drop_warmup)
         except Exception:
             _log.debug("PreloadManager: STL preview warmup skipped", exc_info=True)
 

@@ -21,6 +21,7 @@ except ModuleNotFoundError:
     if str(workspace_root) not in sys.path:
         sys.path.insert(0, str(workspace_root))
     from shared.ui.preferences_dialog_base import PreferencesDialogBase
+from shared.ui.helpers.editor_helpers import apply_shared_checkbox_style, setup_editor_dialog
 from ui.widgets.common import add_shadow, apply_shared_dropdown_style
 
 
@@ -29,7 +30,9 @@ class PreferencesDialog(PreferencesDialogBase):
         super().__init__(translate, parent)
         self._current = dict(current_preferences or {})
 
+        setup_editor_dialog(self)
         self.setObjectName("appRoot")
+        self.setProperty("preferencesDialog", True)
         self.setWindowTitle(self._t("preferences.title", "Preferences"))
         self.setModal(True)
         self.resize(500, 280)
@@ -66,7 +69,7 @@ class PreferencesDialog(PreferencesDialogBase):
         card_layout.addWidget(self._row(self._t("preferences.color_theme", "Color Theme"), self.theme_combo))
 
         self.assembly_transform_cb = QCheckBox(self._t("preferences.enable_assembly_transform", "Enable assembly transform editing (3D Models tab)"))
-        self.assembly_transform_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        apply_shared_checkbox_style(self.assembly_transform_cb, indicator_size=16)
         card_layout.addWidget(self.assembly_transform_cb)
 
         self.detached_preview_mode_combo = QComboBox()

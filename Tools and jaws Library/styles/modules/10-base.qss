@@ -22,6 +22,10 @@ QWidget#appRoot {
     background-color: #eceff2;
 }
 
+QDialog {
+    background-color: #eceff2;
+}
+
 /* Nav-rail footer (import/export launcher card) is transparent so it
    inherits the enclosing navFrame background colour */
 QFrame[launchCard="true"] {

@@ -9,6 +9,7 @@ def empty_selector_session_state() -> dict:
         "request_id": "",
         "head": "",
         "spindle": "",
+        "target_key": "",
         "assignments": [],
         "assignment_buckets": {},
     }
@@ -39,6 +40,8 @@ def selector_session_from_payload(payload: dict) -> dict:
         "request_id": str((payload or {}).get("selector_request_id", "") or "").strip(),
         "head": str((payload or {}).get("selector_head", "") or "").strip(),
         "spindle": str((payload or {}).get("selector_spindle", "") or "").strip(),
+        "target_key": str((payload or {}).get("target_key", "") or "").strip(),
         "assignments": assignments,
         "assignment_buckets": assignment_buckets,
+        "geometry": str((payload or {}).get("geometry", "") or "").strip(),
     }

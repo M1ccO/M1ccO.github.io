@@ -206,6 +206,38 @@ class _ComboPopupPositionFilter(QObject):
         return False
 
 
+class _ComboPopupWindowStyleFilter(QObject):
+    """Re-apply popup-window style each time the combo popup opens.
+
+    Qt creates the floating popup frame lazily on first showPopup(), so
+    view.window() at apply_shared_dropdown_style() time still points to the
+    host dialog.  By catching QEvent.Show on the view we get the real frame.
+    """
+
+    def __init__(self, combo, view_palette, popup_height: int | None):
+        super().__init__(combo)
+        self.combo = combo
+        self.view_palette = view_palette
+        self.popup_height = popup_height
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Show:
+            view = self.combo.view()
+            if view is None:
+                return False
+            popup_window = view.window()
+            if popup_window is not self.combo:  # genuine popup frame
+                popup_window.setAttribute(Qt.WA_StyledBackground, True)
+                popup_window.setPalette(self.view_palette)
+                popup_window.setStyleSheet(
+                    'background-color: #FCFCFC; border: 1px solid #c8d0d8;'
+                )
+                if self.popup_height is not None:
+                    popup_window.setMinimumHeight(0)
+                    popup_window.setMaximumHeight(self.popup_height + 6)
+        return False
+
+
 def _reset_popup_visual_state(combo):
     view = combo.view()
     if view is None:
@@ -303,11 +335,6 @@ def apply_shared_dropdown_style(combo):
     view.setPalette(view_palette)
     view.viewport().setPalette(view_palette)
 
-    popup_window = view.window()
-    popup_window.setAttribute(Qt.WA_StyledBackground, True)
-    popup_window.setPalette(view_palette)
-    popup_window.setStyleSheet('background-color: #FCFCFC; border: 1px solid #c8d0d8;')
-
     popup_row_height = combo.property('dropdownPopupRowHeight')
     if popup_row_height is None:
         size_profile = str(combo.property('dropdownSizeProfile') or '')
@@ -320,14 +347,14 @@ def apply_shared_dropdown_style(combo):
             popup_row_height = int(popup_row_height)
         except (TypeError, ValueError):
             popup_row_height = None
+
+    popup_height: int | None = None
     if popup_row_height:
         max_rows = max(1, combo.maxVisibleItems())
         popup_height = max_rows * popup_row_height
         view.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         view.setMinimumHeight(0)
         view.setMaximumHeight(popup_height)
-        popup_window.setMinimumHeight(0)
-        popup_window.setMaximumHeight(popup_height + 6)
 
     hover_filter = _ComboHoverFilter(combo)
     combo.installEventFilter(hover_filter)
@@ -342,6 +369,11 @@ def apply_shared_dropdown_style(combo):
     view.viewport().installEventFilter(popup_reset_filter)
     view.window().installEventFilter(popup_reset_filter)
 
+    # Style the popup window on every Show so the real floating frame is always
+    # styled — Qt creates it lazily and view.window() is wrong before first open.
+    popup_window_style_filter = _ComboPopupWindowStyleFilter(combo, view_palette, popup_height)
+    view.installEventFilter(popup_window_style_filter)
+
     popup_position_filter = _ComboPopupPositionFilter(combo)
     view.window().installEventFilter(popup_position_filter)
 
@@ -350,7 +382,15 @@ def apply_shared_dropdown_style(combo):
     combo._shared_dropdown_hover_filter = hover_filter
     combo._shared_dropdown_wheel_guard = wheel_guard
     combo._shared_dropdown_popup_reset_filter = popup_reset_filter
+    combo._shared_dropdown_popup_window_style_filter = popup_window_style_filter
     combo._shared_dropdown_popup_position_filter = popup_position_filter
+
+    # Force QSS to be evaluated immediately so the combo looks correct before
+    # the user ever hovers over it (the hover filter also calls polish, but that
+    # only fires on first mouse-enter).
+    combo.style().unpolish(combo)
+    combo.style().polish(combo)
+    combo.update()
 
 
 def repolish_widget(widget: QWidget | None):

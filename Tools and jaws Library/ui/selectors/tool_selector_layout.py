@@ -25,6 +25,7 @@ from shared.ui.helpers.editor_helpers import (
     style_icon_action_button,
     style_move_arrow_button,
     style_panel_action_button,
+    ResponsiveColumnsHost,
 )
 from shared.ui.helpers.icon_loader import icon_from_path
 from shared.ui.helpers.page_scaffold_common import (
@@ -32,6 +33,7 @@ from shared.ui.helpers.page_scaffold_common import (
     build_catalog_list_shell,
     build_detail_container_shell,
 )
+from shared.ui.theme import apply_top_level_surface_palette
 from shared.services.tool_lib_profile_view import ToolLibProfileView
 from shared.ui.helpers.topbar_common import (
     build_detail_header,
@@ -78,8 +80,13 @@ class ToolSelectorLayoutMixin:
     def _build_toolbar(self, root: QVBoxLayout) -> None:
         """Build the shared filter toolbar matching the library style."""
         frame, self._filter_layout = build_filter_frame(parent=self)
-        # Dialog has no left rail — clear the page-specific objectName and margins
-        frame.setObjectName('')
+        # In the selector dialog the filter bar is not a white card — it should
+        # blend with the dialog background (#eceff2).  Remove the card property
+        # and force the background directly so it works regardless of whether the
+        # app stylesheet reaches the dialog.
+        frame.setProperty('card', False)
+        frame.setProperty('pageFamilyHost', True)
+        apply_top_level_surface_palette(frame, role='page_bg')
         self._filter_layout.setContentsMargins(8, 6, 8, 6)
 
         search_icon = icon_from_path(TOOL_ICONS_DIR / 'search_icon.svg', size=QSize(28, 28))
@@ -104,13 +111,10 @@ class ToolSelectorLayoutMixin:
 
         self.type_filter = QComboBox()
         self.type_filter.setObjectName('topTypeFilter')
-        self.type_filter.addItem(self._t('work_editor.tool_picker.all_types', 'Kaikki tyypit'), 'All')
-        for tool_type in ALL_TOOL_TYPES:
-            self.type_filter.addItem(tool_type, tool_type)
+        self._populate_type_filter_items()
         self.type_filter.currentIndexChanged.connect(self._refresh_catalog)
-        apply_shared_dropdown_style(self.type_filter)
 
-        # Preview toggle: hidden by default — no detached window in selector yet
+        # Preview toggle
         self.preview_window_btn = build_preview_toggle(
             TOOL_ICONS_DIR,
             self._t('tool_library.preview.toggle', 'Näytä irrotettava 3D-esikatselu'),
@@ -145,10 +149,34 @@ class ToolSelectorLayoutMixin:
     def _build_filter_row(self, root: QVBoxLayout) -> None:
         self._build_toolbar(root)
 
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        # Apply dropdown style on first show — at this point Qt's popup container
+        # exists and view.window() returns the real floating popup, not the dialog.
+        if hasattr(self, 'type_filter') and not getattr(self, '_type_filter_styled', False):
+            apply_shared_dropdown_style(self.type_filter)
+            self._type_filter_styled = True
+
+    def _populate_type_filter_items(self) -> None:
+        """Populate (or re-populate) the type filter with localized entries."""
+        current_data = self.type_filter.currentData() if self.type_filter.count() else 'All'
+        self.type_filter.blockSignals(True)
+        self.type_filter.clear()
+        self.type_filter.addItem(self._t('tool_library.filter.all', 'Kaikki'), 'All')
+        for tool_type in ALL_TOOL_TYPES:
+            self.type_filter.addItem(self._localized_tool_type(tool_type), tool_type)
+        # Restore previous selection if it still exists.
+        idx = self.type_filter.findData(current_data)
+        self.type_filter.setCurrentIndex(max(0, idx))
+        self.type_filter.blockSignals(False)
+
     def _build_content(self, root: QVBoxLayout) -> None:
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setObjectName('selectorSplitter')
+        splitter.setProperty('pageFamilySplitter', True)
         splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(False)
+        splitter.setAutoFillBackground(False)
 
         list_card, list_layout = build_catalog_list_shell(parent=splitter)
         self.list_view = ToolCatalogListView()
@@ -164,6 +192,8 @@ class ToolSelectorLayoutMixin:
         splitter.addWidget(list_card)
 
         right_panel = QWidget(splitter)
+        right_panel.setProperty('pageFamilyHost', True)
+        right_panel.setAutoFillBackground(False)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
@@ -178,6 +208,8 @@ class ToolSelectorLayoutMixin:
     def _build_detail_card(self, parent: QWidget | None = None) -> QWidget:
         """Create the hidden detail host and defer the heavy shell until first use."""
         detail_container = QWidget(parent)
+        detail_container.setProperty('pageFamilyHost', True)
+        detail_container.setAutoFillBackground(False)
         detail_container.setMinimumWidth(300)
         self._detail_container_host_layout = QVBoxLayout(detail_container)
         self._detail_container_host_layout.setContentsMargins(0, 0, 0, 0)
@@ -250,6 +282,8 @@ class ToolSelectorLayoutMixin:
         self.assignment_lists: dict[str, ToolAssignmentListWidget] = {}
         self.assignment_frames: dict[str, QWidget] = {}
         self.assignment_hints: dict[str, QLabel] = {}
+        # ResponsiveColumnsHost: stacks vertically when narrow, side-by-side when wide.
+        spindle_host = ResponsiveColumnsHost(switch_width=620)
         for spindle in ('main', 'sub'):
             assignment_list = ToolAssignmentListWidget()
             assignment_list.setObjectName('toolIdsOrderList')
@@ -281,7 +315,7 @@ class ToolSelectorLayoutMixin:
             assignment_layout = QVBoxLayout(assignment_frame)
             assignment_layout.setContentsMargins(8, 10, 8, 8)
             assignment_layout.setSpacing(4)
-            assignment_layout.addWidget(assignment_list, 1)
+            assignment_layout.addWidget(assignment_list, 0)
 
             empty_hint = build_selector_hint_label(
                 text=self._t(
@@ -297,9 +331,10 @@ class ToolSelectorLayoutMixin:
             empty_hint.setWordWrap(True)
             empty_hint.setContentsMargins(2, 0, 2, 0)
             assignment_layout.addWidget(empty_hint, 0, Qt.AlignTop)
-            assignment_layout.setStretch(0, 1)
+            # Do not force the list to stretch inside the frame — let it size
+            # to its content so the frame stays compact when empty.
 
-            selector_layout.addWidget(assignment_frame, 1)
+            spindle_host.add_widget(assignment_frame, 1)
 
             self.assignment_lists[spindle] = assignment_list
             self.assignment_frames[spindle] = assignment_frame
@@ -308,7 +343,9 @@ class ToolSelectorLayoutMixin:
         # Compatibility alias for existing call sites that still read assignment_list/frame.
         self.assignment_list = self.assignment_lists['main']
         self.assignment_frame = self.assignment_frames['main']
-        selector_layout.setStretch(selector_layout.count() - 1, 1)
+        # Push all remaining space to the bottom so the frames stay compact.
+        selector_layout.addWidget(spindle_host, 0)
+        selector_layout.addStretch(1)
 
         actions = build_selector_actions_row(spacing=4)
 
@@ -339,6 +376,9 @@ class ToolSelectorLayoutMixin:
         actions.addWidget(self.delete_comment_btn)
 
         actions_host = QWidget(selector_card)
+        actions_host.setObjectName('selectorActionsHost')
+        actions_host.setProperty('selectorActionBar', True)
+        actions_host.setProperty('hostTransparent', True)
         actions_host_layout = QHBoxLayout(actions_host)
         actions_host_layout.setContentsMargins(8, 6, 8, 6)
         actions_host_layout.setSpacing(0)
@@ -365,3 +405,11 @@ class ToolSelectorLayoutMixin:
             on_done=self._send_selector_selection,
             parent=self,
         )
+
+    def _initialize_preview_infrastructure(self) -> None:
+        """No-op: preview infrastructure is now warmed up in the Library process.
+
+        SM's process must never create a QWebEngineView (causes D3D11 freeze).
+        The Library standalone selector dialog handles 3D preview natively.
+        """
+        pass

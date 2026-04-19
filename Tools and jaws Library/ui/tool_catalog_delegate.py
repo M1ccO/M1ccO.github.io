@@ -37,6 +37,7 @@ from shared.ui.platforms.catalog_page_base import (
     CATALOG_ROLE_ID,
     CATALOG_ROLE_UID,
 )
+from shared.ui.platforms.catalog_delegate import resolve_catalog_delegate_theme
 
 try:
     from ..config import (
@@ -70,7 +71,7 @@ ICON_SLOT_W = 48
 ICON_VISUAL_OFFSET_Y = 3
 CARD_RADIUS = 8
 CARD_MARGIN_H = 6          # horizontal gap between cards and list edge
-CARD_MARGIN_V = 2           # vertical gap between cards
+CARD_MARGIN_V = 2          # vertical gap between cards
 CARD_PADDING_H = 10         # inner horizontal padding inside the card
 CARD_PADDING_V = 1          # inner vertical padding inside the card
 COL_SPACING = 10            # gap between text columns
@@ -94,25 +95,15 @@ CLR_VALUE_TEXT = QColor('#171a1d')
 CLR_LIST_BG = QColor(205, 212, 238, 247)  # rgba(205,212,238,0.97)
 
 
-def apply_delegate_theme(info_box_bg: str, accent: str | None = None) -> None:
-    """Update card colors to match the active theme palette.
-
-    Called from MainWindow._apply_style() whenever the theme changes.
-    *info_box_bg* is a CSS color string (hex or rgba) for the card background.
-    *accent* is an optional CSS color string for the selection border.
-    """
-    global CLR_CARD_BG, CLR_CARD_HOVER, CLR_CARD_SELECTED_BORDER
-    bg = QColor(info_box_bg)
-    if not bg.isValid():
-        return
-    CLR_CARD_BG = bg
-    # hover: slightly lighter than the card background
-    h, s, l, a = bg.getHslF()
-    CLR_CARD_HOVER = QColor.fromHslF(h, max(0.0, s - 0.05), min(1.0, l + 0.04), a)
-    if accent is not None:
-        sel = QColor(accent)
-        if sel.isValid():
-            CLR_CARD_SELECTED_BORDER = sel
+def apply_delegate_theme(theme, accent: str | None = None) -> None:
+    """Update delegate card colors to match the active shared theme palette."""
+    global CLR_CARD_BG, CLR_CARD_HOVER, CLR_CARD_SELECTED_BORDER, CLR_CARD_BORDER, CLR_LIST_BG
+    colors = resolve_catalog_delegate_theme(theme, accent=accent)
+    CLR_CARD_BG = colors['card_bg']
+    CLR_CARD_HOVER = colors['card_hover']
+    CLR_CARD_BORDER = colors['card_border']
+    CLR_CARD_SELECTED_BORDER = colors['selected_border']
+    CLR_LIST_BG = colors['row_area_bg']
 
 
 # ── Fonts (built once, reused) ──────────────────────────────────────────

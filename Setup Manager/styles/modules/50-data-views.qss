@@ -143,6 +143,19 @@ QDialog[preferencesDialog="true"] {
     background: #ffffff;
 }
 
+/* Embedded selector widget inside Work Editor — must match the theme background */
+QDialog[workEditorDialog="true"] QWidget[selectorEmbedded="true"],
+QDialog[workEditorDialog="true"] QWidget[selectorEmbedded="true"] QSplitter {
+    background: #eceff2;
+}
+
+/* Detail panel card and scroll area must stay white inside the embedded selector */
+QDialog[workEditorDialog="true"] QWidget[selectorEmbedded="true"] QFrame[card="true"],
+QDialog[workEditorDialog="true"] QWidget[selectorEmbedded="true"] QScrollArea#detailScrollArea,
+QDialog[workEditorDialog="true"] QWidget[selectorEmbedded="true"] QWidget#detailPanel {
+    background: #ffffff;
+}
+
 /* Base theme sets QWidget#appRoot to gray; keep Preferences dialog white. */
 QDialog#appRoot[preferencesDialog="true"] {
     background: #ffffff;

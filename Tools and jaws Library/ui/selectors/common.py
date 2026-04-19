@@ -3,7 +3,11 @@ from __future__ import annotations
 from typing import Callable
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPainter, QPalette
 from PySide6.QtWidgets import QAbstractItemView, QDialog, QFrame, QHBoxLayout, QPushButton, QVBoxLayout, QWidget
+from shared.ui.theme import apply_top_level_surface_palette, current_theme_color
+
+_DEFAULT_THEME_BG = '#eceff2'
 
 
 class SelectorDialogBase(QDialog):
@@ -22,6 +26,8 @@ class SelectorDialogBase(QDialog):
         window_flags: Qt.WindowType | Qt.WindowFlags = Qt.WindowFlags(),
     ):
         super().__init__(parent, window_flags)
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setProperty('pageFamilyDialog', True)
         self._translate = translate
         self._on_cancel = on_cancel
         self._submitted = False
@@ -50,6 +56,47 @@ class SelectorDialogBase(QDialog):
             self._notify_cancel_once()
         super().closeEvent(event)
 
+    def paintEvent(self, event):
+        """Fill the dialog background with the theme colour unconditionally.
+
+        QPalette and QSS are both unreliable on Windows (Fusion style) for
+        top-level QDialog windows, especially after setWindowFlag() recreates
+        the native HWND.  paintEvent is always called and cannot be bypassed.
+        """
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), current_theme_color('page_bg', _DEFAULT_THEME_BG))
+        painter.end()
+
+    def _make_themed_inner_layout(
+        self,
+        *,
+        margins: tuple[int, int, int, int] = (8, 8, 8, 8),
+        spacing: int = 8,
+    ) -> QVBoxLayout:
+        """Return a QVBoxLayout hosted inside a themed background widget.
+
+        This is the reliable way to get the outer frame to show #eceff2 on
+        Windows: a child QWidget with QPalette + autoFillBackground covers the
+        whole dialog area and paints the theme colour before its children draw
+        on top.  The same mechanism is used by the filter-bar toolbar frame.
+        """
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        bg = QWidget(self)
+        apply_top_level_surface_palette(bg, role='page_bg')
+        _pal = bg.palette()
+        _pal.setColor(QPalette.Window, current_theme_color('page_bg', _DEFAULT_THEME_BG))
+        bg.setPalette(_pal)
+        bg.setProperty('pageFamilyHost', True)
+        root.addWidget(bg, 1)
+
+        inner = QVBoxLayout(bg)
+        inner.setContentsMargins(*margins)
+        inner.setSpacing(spacing)
+        return inner
+
 
 class SelectorWidgetBase(QWidget):
     """Shared embedded selector widget lifecycle helpers."""
@@ -65,10 +112,17 @@ class SelectorWidgetBase(QWidget):
         parent=None,
     ):
         super().__init__(parent)
+        self.setProperty('selectorEmbedded', True)
+        self.setProperty('rowAreaSurface', True)
         self._translate = translate
         self._on_cancel = on_cancel
         self._submitted = False
         self._cancel_notified = False
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.fillRect(self.rect(), current_theme_color('page_bg', _DEFAULT_THEME_BG))
+        painter.end()
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)

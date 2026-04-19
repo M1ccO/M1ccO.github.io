@@ -51,6 +51,7 @@ def _decode_work_editor_tool_payload(mime: QMimeData) -> list[dict]:
 
 class WorkEditorToolAssignmentListWidget(QListWidget):
     externalAssignmentsDropped = Signal(list, int, object)
+    internalReorderRequested = Signal(list, int)  # (moved_assignment_dicts, target_row)
     orderChanged = Signal()
 
     def __init__(self, parent=None):
@@ -111,8 +112,30 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
 
         drag.exec(Qt.MoveAction)
 
+    def _is_same_list(self, source_widget) -> bool:
+        """Return True only when source_widget belongs to the same head AND spindle."""
+        if source_widget is self:
+            return True
+        my_owner = getattr(self, "_owner", None)
+        src_owner = getattr(source_widget, "_owner", None)
+        if my_owner is None or src_owner is None:
+            # Cannot determine context — allow to be safe.
+            return True
+        same_head = (getattr(my_owner, "_head_key", "") or "").strip().upper() == \
+                    (getattr(src_owner, "_head_key", "") or "").strip().upper()
+        try:
+            my_spindle = (my_owner._current_spindle() or "").strip().lower()
+            src_spindle = (src_owner._current_spindle() or "").strip().lower()
+        except Exception:
+            my_spindle = src_spindle = ""
+        same_spindle = my_spindle == src_spindle
+        return same_head and same_spindle
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat(WORK_EDITOR_TOOL_ASSIGNMENT_MIME):
+            if not self._is_same_list(event.source()):
+                event.ignore()
+                return
             event.acceptProposedAction()
             return
         if event.source() is self:
@@ -122,6 +145,9 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(WORK_EDITOR_TOOL_ASSIGNMENT_MIME):
+            if not self._is_same_list(event.source()):
+                event.ignore()
+                return
             event.acceptProposedAction()
             return
         if event.source() is self:
@@ -131,6 +157,9 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
 
     def dropEvent(self, event):
         if event.mimeData().hasFormat(WORK_EDITOR_TOOL_ASSIGNMENT_MIME) and event.source() is not self:
+            if not self._is_same_list(event.source()):
+                event.ignore()
+                return
             dropped = _decode_work_editor_tool_payload(event.mimeData())
             point = event.position().toPoint() if hasattr(event, "position") else event.pos()
             row = self.indexAt(point).row()
@@ -139,9 +168,27 @@ class WorkEditorToolAssignmentListWidget(QListWidget):
             self.externalAssignmentsDropped.emit(dropped if isinstance(dropped, list) else [], row, event.source())
             event.acceptProposedAction()
             return
-        super().dropEvent(event)
         if event.source() is self:
-            self.orderChanged.emit()
+            # Internal reorder: decode the payload and delegate reorder to the
+            # owner widget so it manipulates the backing list directly — this
+            # avoids any Qt DragDrop duplication (Qt never touches item rows).
+            dropped = _decode_work_editor_tool_payload(event.mimeData())
+            point = event.position().toPoint() if hasattr(event, "position") else event.pos()
+            index = self.indexAt(point)
+            if not index.isValid():
+                target_row = self.count()
+            else:
+                # If the drop lands in the lower half of the item, insert after it.
+                item_rect = self.visualItemRect(self.item(index.row()))
+                if point.y() > item_rect.center().y():
+                    target_row = index.row() + 1
+                else:
+                    target_row = index.row()
+            if dropped:
+                self.internalReorderRequested.emit(dropped, target_row)
+            event.acceptProposedAction()
+            return
+        super().dropEvent(event)
 
     def mousePressEvent(self, event):
         clear_selection_on_blank_click(self, event)

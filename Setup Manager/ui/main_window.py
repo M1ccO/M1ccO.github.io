@@ -35,6 +35,7 @@ from config import (
 
 from ui.drawing_page import DrawingPage
 from ui.logbook_page import LogbookPage
+from ui.setup_catalog_delegate import apply_delegate_theme as apply_setup_delegate_theme
 from ui.setup_page import SetupPage
 from shared.services.ui_preferences_service import UiPreferencesService
 from shared.services.localization_service import LocalizationService
@@ -61,12 +62,8 @@ from ui.main_window_support import (
     update_navigation_labels,
 )
 from ui.machine_family_runtime import is_machining_center_family, secondary_library_module
-from shared.ui.main_window_helpers import (
-    current_window_rect,
-    fade_in as _shared_fade_in,
-    fade_out_and as _shared_fade_out_and,
-    get_active_theme_palette,
-)
+from shared.ui.main_window_helpers import current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and
+from shared.ui.theme import compile_app_stylesheet, get_active_theme_palette, install_application_theme_state
 class MainWindow(QMainWindow):
     _LOGGER = logging.getLogger(__name__)
 
@@ -507,94 +504,10 @@ class MainWindow(QMainWindow):
         self._status_bar.showMessage(message)
 
     def _build_ui_preference_overrides(self) -> str:
-        palette = get_active_theme_palette(self.ui_preferences)
-        font_family = self.ui_preferences.get("font_family", "Segoe UI").replace("'", "\\'")
-        return (
-            "/* Runtime UI preference overrides */\n"
-            f"* {{ font-family: '{font_family}'; }}\n"
-            # window background
-            "QMainWindow,\n"
-            "QWidget#appRoot,\n"
-            "QFrame[navRail=\"true\"],\n"
-            "QFrame[bottomBar=\"true\"],\n"
-            "QFrame[topBarContainer=\"true\"] {\n"
-            f"    background-color: {palette['window_bg']};\n"
-            "}\n"
-            # catalog / surface
-            "QFrame#setupWorkShell,\n"
-            "QListView#toolCatalog,\n"
-            "QListView#toolCatalog::viewport,\n"
-            "QListView#setupWorkList,\n"
-            "QListView#setupWorkList::viewport,\n"
-            "QListWidget#toolCatalog,\n"
-            "QListWidget#toolCatalog::viewport,\n"
-            "QListWidget#setupWorkList,\n"
-            "QListWidget#setupWorkList::viewport,\n"
-            "QListWidget#drawingList,\n"
-            "QListWidget#drawingList::viewport {\n"
-            f"    background-color: {palette['surface_bg']};\n"
-            "}\n"
-            # info boxes / detail fields
-            "QFrame[detailField=\"true\"],\n"
-            "QFrame[detailField=\"true\"][detailHeroField=\"true\"] {\n"
-            f"    background-color: {palette['info_box_bg']};\n"
-            "}\n"
-            # input field focus ring
-            "QLineEdit:focus,\n"
-            "QTextEdit:focus {\n"
-            f"    border: 1px solid {palette['accent']};\n"
-            "}\n"
-            # card selection borders
-            "QFrame[toolListCard=\"true\"][selected=\"true\"],\n"
-            "QFrame[toolListCard=\"true\"][selected=\"true\"]:hover,\n"
-            "QFrame[workCard=\"true\"][selected=\"true\"],\n"
-            "QFrame[workCard=\"true\"][selected=\"true\"]:hover {\n"
-            f"    border: 2px solid {palette['accent']};\n"
-            "}\n"
-            # miniAssignmentCard static rule uses QDialog[workEditorDialog] ancestor (spec 0,3,2)
-            # so this runtime rule must match that specificity to win at equal spec + last-defined
-            "QDialog[workEditorDialog=\"true\"] QFrame[miniAssignmentCard=\"true\"][selected=\"true\"],\n"
-            "QDialog[workEditorDialog=\"true\"] QFrame[miniAssignmentCard=\"true\"][selected=\"true\"]:hover {\n"
-            f"    border: 2px solid {palette['accent']};\n"
-            "}\n"
-            "QFrame[selectorDropTarget=\"true\"][activeDropTarget=\"true\"] {\n"
-            f"    border: 2px solid {palette['accent']};\n"
-            "}\n"
-            # icon-only buttons — lighter hover tint, distinct from full button hover
-            "QToolButton[topBarIconButton=\"true\"]:hover {\n"
-            f"    background-color: {palette['icon_hover_bg']};\n"
-            "}\n"
-            "QToolButton[topBarIconButton=\"true\"]:pressed {\n"
-            f"    background-color: {palette['accent_light']};\n"
-            "}\n"
-            # primary action buttons — themed gradient (spec 1: plain buttons)
-            "QPushButton {\n"
-            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
-            "}\n"
-            "QPushButton:hover {\n"
-            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
-            "}\n"
-            "QPushButton:pressed {\n"
-            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_hover']}, stop:1 {palette['accent_pressed']});\n"
-            "}\n"
-            # spec-21 overrides for hardcoded gradients in static QSS that the
-            # spec-1 QPushButton rule above cannot reach:
-            #   [navButton][active]                — active nav rail item
-            #   [panelActionButton][primaryAction] — compact primary panel button
-            "QPushButton[navButton=\"true\"][active=\"true\"],\n"
-            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"] {\n"
-            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_light']}, stop:1 {palette['accent']});\n"
-            f"    border: 1px solid {palette['accent_pressed']};\n"
-            "}\n"
-            "QPushButton[navButton=\"true\"][active=\"true\"]:hover,\n"
-            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:hover {\n"
-            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent']}, stop:1 {palette['accent_hover']});\n"
-            "}\n"
-            "QPushButton[navButton=\"true\"][active=\"true\"]:pressed,\n"
-            "QPushButton[panelActionButton=\"true\"][primaryAction=\"true\"]:pressed {\n"
-            f"    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {palette['accent_hover']}, stop:1 {palette['accent_pressed']});\n"
-            "}\n"
-        )
+        # Shared compiler owns the final runtime overrides; keep this method as a
+        # compatibility hook so older call sites still have one stable entry point.
+        _ = get_active_theme_palette(self.ui_preferences)
+        return ""
 
     def _set_page(self, index):
         # Guard: block navigation to disabled drawings page
@@ -649,24 +562,9 @@ class MainWindow(QMainWindow):
 
     def _apply_style(self):
         try:
-            def _resolve_asset_urls(qss: str) -> str:
-                assets_dir = (Path(STYLE_PATH).parent.parent / "assets").resolve().as_posix()
-                return qss.replace('url("assets/', f'url("{assets_dir}/').replace("url('assets/", f"url('{assets_dir}/")
-
-            style_dir = Path(STYLE_PATH).parent
-            modules_dir = style_dir / "modules"
-            merged = []
-            if modules_dir.is_dir():
-                for module_path in sorted(modules_dir.glob("*.qss")):
-                    try:
-                        merged.append(_resolve_asset_urls(module_path.read_text(encoding="utf-8")))
-                    except Exception:
-                        pass
-            if merged:
-                self.setStyleSheet("\n".join(merged) + "\n\n" + self._build_ui_preference_overrides())
-            else:
-                qss = _resolve_asset_urls(Path(STYLE_PATH).read_text(encoding="utf-8"))
-                self.setStyleSheet(qss + "\n\n" + self._build_ui_preference_overrides())
+            palette = install_application_theme_state(self.ui_preferences)
+            apply_setup_delegate_theme(palette)
+            self.setStyleSheet(compile_app_stylesheet(STYLE_PATH, self.ui_preferences))
         except Exception:
             pass
 

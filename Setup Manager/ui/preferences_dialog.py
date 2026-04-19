@@ -39,6 +39,7 @@ except ModuleNotFoundError:
 
 from ui.widgets.common import add_shadow, apply_tool_library_combo_style
 from machine_profiles import load_profile
+from shared.ui.helpers.editor_helpers import apply_shared_checkbox_style
 
 
 class PreferencesDialog(PreferencesDialogBase):
@@ -138,18 +139,18 @@ class PreferencesDialog(PreferencesDialogBase):
                 "Enable assembly transform editing (3D Models tab)",
             )
         )
-        self.assembly_transform_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        apply_shared_checkbox_style(self.assembly_transform_cb, indicator_size=16)
         card_layout.addWidget(self.assembly_transform_cb)
 
         self.drawings_tab_cb = QCheckBox(
             self._t("preferences.enable_drawings_tab", "Enable Drawings tab")
         )
-        self.drawings_tab_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        apply_shared_checkbox_style(self.drawings_tab_cb, indicator_size=16)
         card_layout.addWidget(self.drawings_tab_cb)
 
         self._op20_sep = QFrame()
+        self._op20_sep.setProperty("editorSeparator", True)
         self._op20_sep.setFrameShape(QFrame.HLine)
-        self._op20_sep.setStyleSheet("QFrame { color: #d0d6de; }")
         card_layout.addWidget(self._op20_sep)
 
         self._op20_hint = QLabel(
@@ -168,7 +169,7 @@ class PreferencesDialog(PreferencesDialogBase):
                 "Include OP20 jaws and zero points by default",
             )
         )
-        self.op20_jaws_default_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        apply_shared_checkbox_style(self.op20_jaws_default_cb, indicator_size=16)
         card_layout.addWidget(self.op20_jaws_default_cb)
 
         self.op20_tools_default_cb = QCheckBox(
@@ -177,7 +178,7 @@ class PreferencesDialog(PreferencesDialogBase):
                 "Include OP20 tools by default",
             )
         )
-        self.op20_tools_default_cb.setStyleSheet("QCheckBox { background: transparent; }")
+        apply_shared_checkbox_style(self.op20_tools_default_cb, indicator_size=16)
         card_layout.addWidget(self.op20_tools_default_cb)
 
         self.detached_preview_mode_combo = QComboBox()

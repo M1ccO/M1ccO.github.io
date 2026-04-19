@@ -35,6 +35,22 @@ CLR_HEADER_TEXT = QColor("#2b3136")
 CLR_VALUE_TEXT = QColor("#171a1d")
 
 
+def apply_delegate_theme(theme: dict[str, str]) -> None:
+    """Update delegate colors from the shared runtime theme palette."""
+    global CLR_CARD_BG, CLR_CARD_HOVER, CLR_CARD_BORDER, CLR_CARD_SELECTED_BORDER
+    card_bg = QColor(str(theme.get("card_bg") or "#ffffff"))
+    if card_bg.isValid():
+        CLR_CARD_BG = card_bg
+        h, s, l, a = card_bg.getHslF()
+        CLR_CARD_HOVER = QColor.fromHslF(h, max(0.0, s - 0.05), min(1.0, l + 0.04), a)
+    border = QColor(str(theme.get("border_strong") or theme.get("border") or "#3e4a56"))
+    if border.isValid():
+        CLR_CARD_BORDER = border
+    selected = QColor(str(theme.get("accent") or "#42a5f5"))
+    if selected.isValid():
+        CLR_CARD_SELECTED_BORDER = selected
+
+
 def _font(point_size: float, weight: int = QFont.DemiBold) -> QFont:
     font = QFont()
     font.setPointSizeF(point_size)

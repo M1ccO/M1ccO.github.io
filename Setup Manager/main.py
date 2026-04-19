@@ -433,6 +433,42 @@ def main():
     _last_show_request_ts = 0.0
     _last_show_geometry = ""
 
+    def _get_active_work_editor(target_win):
+        """Return the shared Work Editor dialog if one is open, or None."""
+        try:
+            setup_page = getattr(target_win, "setup_page", None)
+            if setup_page is None:
+                return None
+            cache = getattr(setup_page, "_work_editor_dialog_cache", {})
+            return cache.get("shared") if isinstance(cache, dict) else None
+        except Exception:
+            return None
+
+    def _deliver_selector_result(target_win, payload: dict):
+        """Route a selector_result IPC message from Library to the Work Editor."""
+        try:
+            dialog = _get_active_work_editor(target_win)
+            if dialog is not None and hasattr(dialog, "_receive_ipc_selector_result"):
+                dialog._receive_ipc_selector_result(payload)
+        except Exception:
+            pass
+
+    def _restore_work_editor_if_waiting(target_win):
+        """Show Work Editor if it was hidden while waiting for a selector result (cancel path)."""
+        try:
+            dialog = _get_active_work_editor(target_win)
+            if dialog is None or dialog.isVisible():
+                return
+            if getattr(dialog, "_pending_ipc_selector_request_id", None) is None:
+                return
+            dialog._pending_ipc_selector_request_id = None
+            dialog._pending_ipc_selector_kind = None
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+        except Exception:
+            pass
+
     def show_setup_manager(request: dict | None = None):
         nonlocal _last_show_request_ts, _last_show_geometry
         geometry_text = str((request or {}).get("geometry", "")).strip()
@@ -470,6 +506,7 @@ def main():
             pass
         if not was_visible:
             win.fade_in()
+        _restore_work_editor_if_waiting(win)
 
     def process_show_requests():
         while server.hasPendingConnections():
@@ -498,6 +535,8 @@ def main():
 
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
+            elif request["command"] == "selector_result":
+                _deliver_selector_result(win, request)
 
     server.newConnection.connect(process_show_requests)
 

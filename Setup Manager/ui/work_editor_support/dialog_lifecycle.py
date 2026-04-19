@@ -33,6 +33,8 @@ def setup_tabs(dialog) -> None:
 def setup_button_row(dialog) -> None:
     """Create the root stack with normal editor and selector host pages."""
     root = QVBoxLayout(dialog)
+    root.setContentsMargins(0, 0, 0, 0)
+    root.setSpacing(0)
 
     dialog._root_stack = QStackedWidget(dialog)
     dialog._normal_page = QWidget(dialog._root_stack)
@@ -47,7 +49,7 @@ def setup_button_row(dialog) -> None:
     root.addWidget(dialog._root_stack, 1)
 
     normal_layout = QVBoxLayout(dialog._normal_page)
-    normal_layout.setContentsMargins(0, 0, 0, 0)
+    normal_layout.setContentsMargins(9, 9, 9, 9)
     normal_layout.setSpacing(10)
     normal_layout.addWidget(dialog.tabs, 1)
 

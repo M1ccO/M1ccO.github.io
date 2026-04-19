@@ -84,13 +84,11 @@ class JawSelectorDialog(
                 self.resize(1180, 720)
                 restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
-            root = QVBoxLayout(self)
-            root.setContentsMargins(8, 8, 8, 8)
-            root.setSpacing(8)
+            inner = self._make_themed_inner_layout()
 
-            self._build_filter_row(root)
-            self._build_content(root)
-            self._build_bottom_bar(root)
+            self._build_filter_row(inner)
+            self._build_content(inner)
+            self._build_bottom_bar(inner)
 
             self._refresh_catalog()
             self._refresh_slot_ui()
@@ -118,9 +116,7 @@ class JawSelectorDialog(
             self.resize(1180, 720)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
-        root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(8)
+        inner = self._make_themed_inner_layout()
 
         widget = JawSelectorWidget(
             translate=self._t,
@@ -130,7 +126,7 @@ class JawSelectorDialog(
         )
         widget.submitted.connect(lambda payload: self._finish_submit(self._on_submit, payload))
         widget.canceled.connect(self._cancel_dialog)
-        root.addWidget(widget, 1)
+        inner.addWidget(widget, 1)
 
     # ── Interface required by populate_detail_panel (jaw detail builder) ─
 
@@ -232,6 +228,8 @@ class EmbeddedJawSelectorWidget(
             self._update_remove_button()
         finally:
             self.setUpdatesEnabled(True)
+
+        self._initialize_preview_infrastructure()
 
     def prepare_for_session(
         self,

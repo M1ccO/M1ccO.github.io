@@ -31,26 +31,6 @@ from PySide6.QtWidgets import (
 )
 
 _SHADOW_COLOR = QColor(121, 138, 156, 72)
-_TITLED_SECTION_STYLESHEET = (
-    'QGroupBox {'
-    '  background-color: #f0f6fc;'
-    '  border: 1px solid #d0d8e0;'
-    '  border-radius: 6px;'
-    '  margin-top: 10px;'
-    '  padding-top: 8px;'
-    '}'
-    'QGroupBox::title {'
-    '  subcontrol-origin: margin;'
-    '  subcontrol-position: top left;'
-    '  left: 10px;'
-    '  top: -3px;'
-    '  padding: 0 6px;'
-    '  color: #22303c;'
-    '  font-size: 10.5pt;'
-    '  font-weight: 700;'
-    '}'
-)
-
 _CHECKBOX_EDGE_COLOR = '#8aa0b6'
 _CHECKBOX_EDGE_HOVER_COLOR = '#6f86a0'
 _CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parents[2] / 'assets' / 'check_mark.svg').as_posix()
@@ -58,6 +38,7 @@ _CHECKBOX_CHECK_ICON = (Path(__file__).resolve().parents[2] / 'assets' / 'check_
 
 from shared.ui.helpers.common_widgets import add_shadow
 from shared.ui.helpers.icon_loader import icon_from_path
+from shared.ui.theme import current_theme_palette
 
 
 class ResponsiveColumnsHost(QWidget):
@@ -125,7 +106,7 @@ def setup_editor_dialog(dialog: QDialog):
 
 def apply_titled_section_style(group: QGroupBox) -> QGroupBox:
     """Apply the shared titled-section style used by editor helper panels."""
-    group.setStyleSheet(_TITLED_SECTION_STYLESHEET)
+    group.setProperty('editorSection', True)
     return group
 
 
@@ -144,6 +125,10 @@ def apply_shared_checkbox_style(
     min_height: int = 0,
 ) -> QCheckBox:
     """Apply a shared checkbox look with visible box edges and checkmark icon."""
+    palette = current_theme_palette()
+    edge_color = str(palette.get("border") or _CHECKBOX_EDGE_COLOR)
+    hover_color = str(palette.get("accent") or _CHECKBOX_EDGE_HOVER_COLOR)
+    indicator_bg = str(palette.get("editor_bg") or "#ffffff")
     checkbox_style = [
         'QCheckBox {'
         '  background: transparent;'
@@ -156,26 +141,26 @@ def apply_shared_checkbox_style(
         'QCheckBox::indicator {'
         f'  width: {int(indicator_size)}px;'
         f'  height: {int(indicator_size)}px;'
-        f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
+        f'  border: 1px solid {edge_color};'
         '  border-radius: 3px;'
-        '  background: #ffffff;'
+        f'  background: {indicator_bg};'
         '}',
         'QCheckBox::indicator:unchecked {'
-        f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
+        f'  border: 1px solid {edge_color};'
         '  border-radius: 3px;'
-        '  background: #ffffff;'
+        f'  background: {indicator_bg};'
         '}',
         'QCheckBox::indicator:checked {'
-        f'  border: 1px solid {_CHECKBOX_EDGE_COLOR};'
+        f'  border: 1px solid {edge_color};'
         '  border-radius: 3px;'
-        '  background: #ffffff;'
+        f'  background: {indicator_bg};'
         f'  image: url("{_CHECKBOX_CHECK_ICON}");'
         '}',
         'QCheckBox::indicator:checked:hover {'
-        f'  border: 1px solid {_CHECKBOX_EDGE_HOVER_COLOR};'
+        f'  border: 1px solid {hover_color};'
         '}',
         'QCheckBox::indicator:unchecked:hover {'
-        f'  border: 1px solid {_CHECKBOX_EDGE_HOVER_COLOR};'
+        f'  border: 1px solid {hover_color};'
         '}',
     ])
     checkbox.setStyleSheet(''.join(checkbox_style))
@@ -238,7 +223,7 @@ def ask_multi_edit_mode(parent: QDialog, count: int, translate=None) -> str | No
         )
     )
     label.setWordWrap(True)
-    label.setStyleSheet('background: transparent; border: none;')
+    label.setProperty('detailHint', True)
     label.setMaximumWidth(440)
     root.addWidget(label)
 
@@ -514,21 +499,14 @@ def build_titled_detail_field(label_text: str, value_text: str, *, multiline: bo
     if multiline:
         normalized = _normalize_multiline_detail_value(value_text)
         value_label = QLabel(normalized if normalized.strip() else '-')
+        value_label.setProperty('detailReadonlyValue', True)
         value_label.setWordWrap(True)
         value_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         value_label.setFocusPolicy(Qt.NoFocus)
         value_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         value_label.setMinimumHeight(32)
         value_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        value_label.setStyleSheet(
-            'QLabel {'
-            '  background-color: #ffffff;'
-            '  border: 1px solid #c8d4e0;'
-            '  border-radius: 6px;'
-            '  padding: 6px;'
-            '  font-size: 10.5pt;'
-            '}'
-        )
+        value_label.setMargin(6)
         value_label.setToolTip('')
         flayout.addWidget(value_label)
     else:

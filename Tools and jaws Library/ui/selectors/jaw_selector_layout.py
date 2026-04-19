@@ -25,6 +25,7 @@ from shared.ui.helpers.page_scaffold_common import (
     build_catalog_list_shell,
     build_detail_container_shell,
 )
+from shared.ui.theme import apply_top_level_surface_palette
 from shared.ui.helpers.topbar_common import (
     build_detail_header,
     build_details_toggle,
@@ -52,8 +53,9 @@ class JawSelectorLayoutMixin:
     def _build_toolbar(self, root: QVBoxLayout) -> None:
         """Build the shared filter toolbar matching the library style."""
         frame, self._filter_layout = build_filter_frame(parent=self)
-        # Dialog has no left rail — clear the page-specific objectName and margins
-        frame.setObjectName('')
+        frame.setProperty('card', False)
+        frame.setProperty('pageFamilyHost', True)
+        apply_top_level_surface_palette(frame, role='page_bg')
         self._filter_layout.setContentsMargins(8, 6, 8, 6)
 
         search_icon = icon_from_path(TOOL_ICONS_DIR / 'search_icon.svg', size=QSize(28, 28))
@@ -123,8 +125,11 @@ class JawSelectorLayoutMixin:
 
     def _build_content(self, root: QVBoxLayout) -> None:
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setObjectName('selectorSplitter')
+        splitter.setProperty('pageFamilySplitter', True)
         splitter.setHandleWidth(1)
         splitter.setChildrenCollapsible(False)
+        splitter.setAutoFillBackground(False)
 
         list_card, list_layout = build_catalog_list_shell(parent=splitter)
         self.list_view = JawCatalogListView()
@@ -138,6 +143,7 @@ class JawSelectorLayoutMixin:
         splitter.addWidget(list_card)
 
         right_panel = QWidget(splitter)
+        right_panel.setProperty('pageFamilyHost', True)
         right_layout = QVBoxLayout(right_panel)
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
@@ -152,6 +158,7 @@ class JawSelectorLayoutMixin:
     def _build_detail_card(self, parent: QWidget | None = None) -> QWidget:
         """Create the hidden detail host and defer the heavy shell until first use."""
         detail_container = QWidget(parent)
+        detail_container.setProperty('pageFamilyHost', True)
         detail_container.setMinimumWidth(300)
         self._detail_container_host_layout = QVBoxLayout(detail_container)
         self._detail_container_host_layout.setContentsMargins(0, 0, 0, 0)
@@ -243,9 +250,18 @@ class JawSelectorLayoutMixin:
         actions = build_selector_actions_row(spacing=4)
         actions.addWidget(self.remove_btn, 0, Qt.AlignLeft)
         actions.addStretch(1)
-        selector_layout.addLayout(actions)
+
+        actions_host = QWidget(selector_card)
+        actions_host.setObjectName('jawSelectorActionsHost')
+        actions_host.setProperty('selectorActionBar', True)
+        actions_host.setProperty('hostTransparent', True)
+        actions_host_layout = QHBoxLayout(actions_host)
+        actions_host_layout.setContentsMargins(8, 6, 8, 6)
+        actions_host_layout.setSpacing(0)
+        actions_host_layout.addLayout(actions)
 
         selector_card_layout.addWidget(selector_scroll, 1)
+        selector_card_layout.addWidget(actions_host, 0)
         return selector_card
 
     def _build_bottom_bar(self, root: QVBoxLayout) -> None:
@@ -256,4 +272,12 @@ class JawSelectorLayoutMixin:
             on_done=self._send_selector_selection,
             parent=self,
         )
+
+    def _initialize_preview_infrastructure(self) -> None:
+        """No-op: preview infrastructure is now warmed up in the Library process.
+
+        SM's process must never create a QWebEngineView (causes D3D11 freeze).
+        The Library standalone selector dialog handles 3D preview natively.
+        """
+        pass
 

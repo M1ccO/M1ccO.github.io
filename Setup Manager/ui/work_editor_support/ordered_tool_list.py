@@ -219,6 +219,7 @@ class WorkEditorOrderedToolList(QWidget):
         # Keep a tiny right inset so card borders never clip at narrow widths.
         self.tool_list.setViewportMargins(0, 0, 2, 0)
         list_panel_layout.addWidget(self.tool_list, 1)
+        self._list_panel = list_panel
         layout.addWidget(list_panel, 1)
 
         self.controls_bar = QWidget(self)
@@ -296,6 +297,7 @@ class WorkEditorOrderedToolList(QWidget):
         self.tool_list.itemSelectionChanged.connect(self._sync_row_selection_states)
         self.tool_list.orderChanged.connect(self._sync_assignment_order)
         self.tool_list.externalAssignmentsDropped.connect(self._on_external_assignments_dropped)
+        self.tool_list.internalReorderRequested.connect(self._on_internal_reorder)
 
         self._all_tools: list = []
         self._show_pot: bool = False
@@ -341,10 +343,16 @@ class WorkEditorOrderedToolList(QWidget):
             self.tool_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustIgnored)
             self.tool_list.setMinimumHeight(120)
             self.tool_list.setMaximumHeight(16777215)
+            # In scrolling mode the panel must be allowed to grow to fill the
+            # available height so the list has room to scroll.
+            self._list_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
         else:
             self.tool_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.tool_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.tool_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
+            # In content-sized mode the panel must NOT expand — it should be
+            # only as tall as the tool list content.
+            self._list_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
             self._update_list_height_for_content()
 
     def _update_list_height_for_content(self) -> None:
@@ -352,7 +360,7 @@ class WorkEditorOrderedToolList(QWidget):
             return
         row_count = self.tool_list.count()
         if row_count <= 0:
-            self.tool_list.setFixedHeight(56)
+            self.tool_list.setFixedHeight(42)
             return
         total_rows_height = 0
         fallback_row_height = 44
@@ -506,6 +514,28 @@ class WorkEditorOrderedToolList(QWidget):
         self._sync_row_selection_states()
         self._update_action_states()
 
+    def _on_internal_reorder(self, moved_items: list, target_row: int) -> None:
+        """Handle a same-list drag reorder without ever letting Qt touch items."""
+        assignments = self._current_assignments()
+        moved_keys = {self._assignment_key(a) for a in moved_items if self._assignment_key(a)}
+
+        # Split into moved vs remaining, preserving original order for each.
+        moved = [a for a in assignments if self._assignment_key(a) in moved_keys]
+        remaining = [a for a in assignments if self._assignment_key(a) not in moved_keys]
+
+        # Adjust target row: count how many moved items were positioned before it.
+        items_above = sum(
+            1 for i, a in enumerate(assignments)
+            if self._assignment_key(a) in moved_keys and i < target_row
+        )
+        insert_at = max(0, min(target_row - items_above, len(remaining)))
+
+        for i, item in enumerate(moved):
+            remaining.insert(insert_at + i, item)
+
+        self._assignments_by_spindle[self._current_spindle()] = remaining
+        self._render_current_spindle()
+
     def _normalized_assignment_for_current_spindle(self, assignment: dict | None) -> dict | None:
         if not isinstance(assignment, dict):
             return None
@@ -558,10 +588,20 @@ class WorkEditorOrderedToolList(QWidget):
             self._render_current_spindle()
 
     def _on_external_assignments_dropped(self, dropped_items: list[dict], insert_row: int, source_widget):
+        # Backstop: reject drops from a different head or a different spindle.
+        source_owner = getattr(source_widget, "_owner", None)
+        if source_owner is not None and source_owner is not self:
+            src_head = (getattr(source_owner, "_head_key", "") or "").strip().upper()
+            my_head = self._head_key.strip().upper()
+            try:
+                src_spindle = (source_owner._current_spindle() or "").strip().lower()
+            except Exception:
+                src_spindle = ""
+            if src_head != my_head or src_spindle != self._current_spindle():
+                return
         added_keys = self._insert_assignments(dropped_items, insert_row)
         if not added_keys:
             return
-        source_owner = getattr(source_widget, "_owner", None)
         if source_owner is not None and source_owner is not self:
             source_owner._remove_assignments_by_keys(added_keys)
         self._render_current_spindle()
