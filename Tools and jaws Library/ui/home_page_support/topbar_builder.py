@@ -46,7 +46,7 @@ def build_tool_filter_toolbar(page) -> QFrame:
     Called from HomePage.build_filter_pane(). Sets up all toolbar widgets
     as page attributes and attaches get_filters() to the returned frame.
     """
-    frame, page.filter_layout = build_filter_frame(left_margin=56)
+    frame, page.filter_layout = build_filter_frame(left_margin=80)
     page.toolbar_title_label = build_toolbar_title(page, page.page_title)
 
     page.search_icon = icon_from_path(TOOL_ICONS_DIR / 'search_icon.svg', size=QSize(28, 28))

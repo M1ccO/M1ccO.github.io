@@ -103,6 +103,10 @@ from ui.work_editor_support.dialog_lifecycle import (
     setup_button_row,
     setup_tabs,
 )
+from ui.work_editor_support.selector_parity_factory import (
+    build_embedded_selector_parity_widget,
+    dispose_embedded_selector_runtime,
+)
 from ui.widgets.common import apply_tool_library_combo_style, clear_focused_dropdown_on_outside_click
 try:
     from shared.ui.helpers.editor_helpers import (
@@ -255,6 +259,7 @@ class WorkEditorDialog(QDialog):
         self._selector_hidden_editor_widgets: list[QWidget] = []
         self._selector_transition_shield_pending_hide = False
         self._selector_trace_widgets: dict[int, tuple[str, QWidget]] = {}
+        self._active_embedded_selector_widget: QWidget | None = None
         self._raw_part_combo_popup_allowed = False
         self._raw_part_combo_popup_window: QWidget | None = None
         self.setUpdatesEnabled(False)
@@ -905,6 +910,8 @@ class WorkEditorDialog(QDialog):
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
+        self._detach_active_embedded_selector_widget()
+        dispose_embedded_selector_runtime(self)
         super().closeEvent(event)
 
     # ------------------------------------------------------------------
@@ -1193,7 +1200,7 @@ class WorkEditorDialog(QDialog):
             head=request.get("head"),
             spindle=request.get("spindle"),
         )
-        return self._try_open_selector_via_ipc(
+        return self._try_open_selector_embedded(
             kind=str(request.get("kind") or "tools"),
             head=str(request.get("head") or ""),
             spindle=str(request.get("spindle") or ""),
@@ -1207,7 +1214,7 @@ class WorkEditorDialog(QDialog):
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
         request = build_jaw_selector_request(self, initial_spindle=initial_spindle)
         self._log_selector_event("open", kind="jaws", spindle=request.get("spindle"))
-        return self._try_open_selector_via_ipc(
+        return self._try_open_selector_embedded(
             kind=str(request.get("kind") or "jaws"),
             spindle=str(request.get("spindle") or ""),
             initial_assignments=list(request.get("initial_assignments") or []),
@@ -1217,12 +1224,120 @@ class WorkEditorDialog(QDialog):
         request = build_fixture_selector_request(self, operation_key=operation_key)
         target_key = str((request.get("follow_up") or {}).get("target_key") or "").strip()
         self._log_selector_event("open", kind="fixtures", target_key=target_key)
-        return self._try_open_selector_via_ipc(
+        return self._try_open_selector_embedded(
             kind="fixtures",
             target_key=target_key,
             initial_assignments=list(request.get("initial_assignments") or []),
             initial_assignment_buckets=dict(request.get("initial_assignment_buckets") or {}),
         )
+
+    def _clear_selector_mount_container(self) -> None:
+        mount = self._selector_current_mount_container()
+        layout = mount.layout()
+        if layout is None:
+            return
+        while layout.count():
+            item = layout.takeAt(0)
+            child = item.widget()
+            if child is None:
+                continue
+            child.hide()
+            child.setParent(None)
+
+    def _detach_active_embedded_selector_widget(self) -> None:
+        widget = getattr(self, "_active_embedded_selector_widget", None)
+        self._active_embedded_selector_widget = None
+        self._clear_selector_mount_container()
+        if not isinstance(widget, QWidget):
+            return
+        if bool(getattr(widget, "_reuse_cached_selector_widget", False)):
+            return
+        try:
+            widget.deleteLater()
+        except Exception:
+            pass
+
+    def _try_open_selector_embedded(
+        self,
+        *,
+        kind: str,
+        head: str = "",
+        spindle: str = "",
+        target_key: str = "",
+        initial_assignments: list | None = None,
+        initial_assignment_buckets: dict | None = None,
+    ) -> bool:
+        kind_key = str(kind or "").strip().lower()
+        if kind_key not in {"tools", "jaws", "fixtures"}:
+            return False
+
+        session_id = self._begin_selector_session_request(kind=kind_key)
+        if session_id is None:
+            return False
+
+        request = {
+            "kind": kind_key,
+            "head": head,
+            "spindle": spindle,
+            "target_key": target_key,
+            "assignment_buckets_by_target": dict(initial_assignment_buckets or {}),
+        }
+
+        def _on_submit(payload: dict) -> None:
+            if not self._begin_selector_session_close(session_id=session_id, reason="submit"):
+                return
+            try:
+                self._handle_embedded_selector_submit(request, payload)
+            finally:
+                self._detach_active_embedded_selector_widget()
+                self._exit_selector_mode()
+
+        def _on_cancel() -> None:
+            if not self._begin_selector_session_close(session_id=session_id, reason="cancel"):
+                return
+            self._handle_embedded_selector_cancel()
+            self._detach_active_embedded_selector_widget()
+            self._exit_selector_mode()
+
+        try:
+            mount = self._selector_current_mount_container()
+            self._detach_active_embedded_selector_widget()
+            widget = build_embedded_selector_parity_widget(
+                self,
+                mount_container=mount,
+                kind=kind_key,
+                head=head,
+                spindle=spindle,
+                follow_up={"target_key": target_key},
+                initial_assignments=[dict(item) for item in (initial_assignments or []) if isinstance(item, dict)],
+                initial_assignment_buckets={
+                    str(k): [dict(item) for item in v if isinstance(item, dict)]
+                    for k, v in dict(initial_assignment_buckets or {}).items()
+                    if isinstance(v, list)
+                },
+                on_submit=_on_submit,
+                on_cancel=_on_cancel,
+            )
+            layout = mount.layout()
+            if layout is None:
+                layout = QHBoxLayout(mount)
+                layout.setContentsMargins(0, 0, 0, 0)
+                layout.setSpacing(0)
+            layout.addWidget(widget)
+            self._active_embedded_selector_widget = widget
+
+            self._enter_selector_mode()
+            self._mark_selector_session_phase(session_id, "active")
+            widget.show()
+            widget.raise_()
+            widget.activateWindow()
+            self._log_selector_event("open.embedded.ready", kind=kind_key, session_id=session_id)
+            return True
+        except Exception:
+            self._LOGGER.exception("work_editor.selector embedded open failed kind=%s", kind_key)
+            self._detach_active_embedded_selector_widget()
+            self._exit_selector_mode()
+            return False
 
     @staticmethod
     def _tool_bucket_for_spindle(spindle: str) -> ToolBucket:

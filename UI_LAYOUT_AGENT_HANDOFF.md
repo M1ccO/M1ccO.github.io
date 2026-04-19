@@ -30,8 +30,8 @@ Both apps are visually aligned. Key confirmed values:
 | Rail layout spacing | 8px | 8px | same |
 | Rail title font | 20pt bold, no wrap | 20pt bold, no wrap | same |
 | Rail title fixed height | — | 36px | same |
-| Card frame host (list_host) margins | (56,40,0,0) | (56,40,0,0) | (56,40,0,0) |
-| Topbar host margins | n/a (different structure) | (0,0,0,4) | (0,0,0,4) |
+| Card frame host (list_host) margins | (56,8,0,0) | (56,8,0,0) | (56,8,0,0) |
+| Topbar host margins | addSpacing(30) before frame | (0,30,0,4) | (0,30,0,4) |
 | Filter frame left margin | 56px (controls layout) | 56px | 56px |
 | SM topbar controls margins | (56,6,8,6) | n/a | n/a |
 | Bottom bar margins | (10,10,10,6) | (10,10,10,6) | (10,10,10,6) |
@@ -148,8 +148,8 @@ Only touch these if the user explicitly asks to change card size, list item spac
 
 1. In all three owner files increase top and left margins only:
    - `Setup Manager/ui/setup_page.py` → `list_shell_container_layout.setContentsMargins(LEFT, TOP, 0, 0)`
-   - `home_page_support/page_builders.py` → `list_host_layout.setContentsMargins(LEFT, TOP, 0, 0)`
-   - `jaw_page_support/page_builders.py` → `list_host_layout.setContentsMargins(LEFT, TOP, 0, 0)`
+   - `home_page_support/page_builders.py` → `list_host_layout.setContentsMargins(LEFT, TOP, 0, 0)` (currently LEFT=56, TOP=8)
+   - `jaw_page_support/page_builders.py` → `list_host_layout.setContentsMargins(LEFT, TOP, 0, 0)` (currently LEFT=56, TOP=8)
 2. Right and bottom stay 0.
 3. Do not touch delegate card geometry.
 

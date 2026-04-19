@@ -659,18 +659,13 @@ class MainWindow(QMainWindow):
         self._nav_button_effects.clear()
         self._nav_revealed = False
 
-        # Reparent nav_slot to the stack so it floats as an overlay
-        self.nav_slot.setParent(self.stack)
+        # Float nav_slot as an overlay inside the nav rail
+        self.nav_slot.setParent(self.toggle_rail)
         self.nav_slot.setVisible(False)
         self.nav_slot.raise_()
 
-        # Hover trigger zone: narrow strip on left edge of stack
-        self._nav_hover_zone = QWidget(self.stack)
-        self._nav_hover_zone.setFixedWidth(20)
-        self._nav_hover_zone.setGeometry(0, 0, 20, self.stack.height())
-        self._nav_hover_zone.setAttribute(Qt.WA_TransparentForMouseEvents, False)
-        self._nav_hover_zone.setVisible(True)
-        self._nav_hover_zone.raise_()
+        # Hover trigger zone: the entire nav rail
+        self._nav_hover_zone = self.toggle_rail
         self._nav_hover_zone.installEventFilter(self)
         self.nav_slot.installEventFilter(self)
 
@@ -693,17 +688,20 @@ class MainWindow(QMainWindow):
         self.nav_slot.setVisible(False)
 
     def _position_nav_overlay(self):
-        """Position nav_slot overlay at top-left of stack, below topbar area."""
-        if not hasattr(self, 'nav_slot') or not hasattr(self, 'stack'):
+        """Position nav_slot overlay centered in the nav rail."""
+        if not hasattr(self, 'nav_slot') or not hasattr(self, 'toggle_rail'):
             return
-        self.nav_slot.setGeometry(4, 4, self._nav_width, self.nav_slot.height())
-        if hasattr(self, '_nav_hover_zone'):
-            self._nav_hover_zone.setGeometry(0, 0, 20, self.stack.height())
+        slot_h = self.nav_slot.height()
+        rail_w = self.toggle_rail.width()
+        rail_h = self.toggle_rail.height()
+        x = (rail_w - self._nav_width) // 2
+        y = max(0, (rail_h - slot_h) // 2)
+        self.nav_slot.setGeometry(x, y, self._nav_width, slot_h)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._ensure_on_screen()
-        if hasattr(self, '_nav_hover_zone'):
+        if hasattr(self, 'nav_slot'):
             self._position_nav_overlay()
 
     def eventFilter(self, obj, event):
@@ -1255,6 +1253,10 @@ class MainWindow(QMainWindow):
         # HWND, discarding any geometry applied before it.  Apply the flag FIRST,
         # then palette/stylesheet, then geometry, then show.
         if should_show:
+            # Selector dialogs should behave as transient tool windows:
+            # stay above normal windows and avoid separate taskbar/Alt-Tab
+            # entries that look like an extra Python instance.
+            dialog.setWindowFlag(Qt.Tool, True)
             dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
             dialog.setAttribute(Qt.WA_StyledBackground, True)
             dialog.setAutoFillBackground(True)
@@ -1301,6 +1303,8 @@ class MainWindow(QMainWindow):
             dialog.show()
             dialog.raise_()
             dialog.activateWindow()
+            QTimer.singleShot(0, dialog.raise_)
+            QTimer.singleShot(0, dialog.activateWindow)
 
     def _on_selector_dialog_cancel(self) -> None:
         if self._closing_selector_dialogs:
@@ -1360,10 +1364,20 @@ class MainWindow(QMainWindow):
                 self.home_page.select_tool_by_id(item_id)
 
     def apply_external_request(self, payload: dict, reload_preferences: bool = True):
-        # Preference reload is deferred to after show/fade_in when called from the
-        # IPC handoff path so it never blocks the transition animation.
-        if reload_preferences:
-            self._reload_shared_preferences()
+        selector_state = selector_session_from_payload(payload)
+        selector_mode = str(selector_state.get('mode') or '')
+        should_show = bool(payload.get('show', True))
+        selector_active = bool(selector_state.get('active'))
+        selector_dialog_open = bool(
+            (self._tool_selector_dialog is not None and self._tool_selector_dialog.isVisible())
+            or (self._jaw_selector_dialog is not None and self._jaw_selector_dialog.isVisible())
+            or (self._fixture_selector_dialog is not None and self._fixture_selector_dialog.isVisible())
+        )
+
+        # During an active selector dialog, ignore generic non-selector IPC
+        # requests so they cannot surface the main library window behind it.
+        if selector_dialog_open and not selector_active:
+            return
 
         # Selector sessions can arrive before shared preferences are refreshed.
         # Prefer explicit machine profile key from payload when provided.
@@ -1387,6 +1401,22 @@ class MainWindow(QMainWindow):
         if new_fixtures_db:
             self._switch_fixtures_database(new_fixtures_db)
 
+        if selector_active:
+            self._set_selector_session_state(selector_state)
+            # Open selector immediately so users do not see a pre-open flash.
+            # Do not run shared preference/style reload during an active
+            # selector handoff. Restyling top-level windows at this point can
+            # recreate native HWNDs and cause z-order/taskbar/icon glitches.
+            self._open_selector_dialog_for_session(should_show=should_show)
+            if should_show:
+                self.hide()
+            return
+
+        # Preference reload is deferred to after show/fade_in when called from the
+        # IPC handoff path so it never blocks the transition animation.
+        if reload_preferences:
+            self._reload_shared_preferences()
+
         # Clear master filter when switching back normally (no filter context).
         if payload.get('clear_master_filter'):
             self._master_filter_enabled = False
@@ -1409,41 +1439,16 @@ class MainWindow(QMainWindow):
                 self._apply_master_filter_to_pages()
                 self._update_master_filter_toggle_visual()
 
-        selector_state = selector_session_from_payload(payload)
-        selector_mode = str(selector_state.get('mode') or '')
-        should_show = bool(payload.get('show', True))
-        selector_active = bool(selector_state.get('active'))
-        selector_dialog_open = bool(
-            (self._tool_selector_dialog is not None and self._tool_selector_dialog.isVisible())
-            or (self._jaw_selector_dialog is not None and self._jaw_selector_dialog.isVisible())
-            or (self._fixture_selector_dialog is not None and self._fixture_selector_dialog.isVisible())
-        )
+        self._clear_selector_session(show=False)
 
-        # During an active selector dialog, ignore generic non-selector IPC
-        # requests so they cannot surface the main library window behind it.
-        if selector_dialog_open and not selector_active:
-            return
-
-        if selector_active:
-            self._set_selector_session_state(selector_state)
-            # Open the standalone selector dialog first, THEN hide the main
-            # library window.  This order is critical: if the library window
-            # is hidden before the dialog is visible, the screen goes blank
-            # for one or more frames which is the glitch the user sees.
-            self._open_selector_dialog_for_session(should_show=should_show)
-            if should_show:
-                self.hide()
-        else:
-            self._clear_selector_session(show=False)
-
-            # Switch module only when NOT in selector mode.
-            module = selector_mode if selector_mode in ('tools', 'jaws', 'fixtures') else str(payload.get('module', '')).strip()
-            if module in ('tools', 'jaws', 'fixtures'):
-                self._apply_module_mode(module)
+        # Switch module only when NOT in selector mode.
+        module = selector_mode if selector_mode in ('tools', 'jaws', 'fixtures') else str(payload.get('module', '')).strip()
+        if module in ('tools', 'jaws', 'fixtures'):
+            self._apply_module_mode(module)
 
         kind = str(payload.get('kind', '')).strip()
         item_id = str(payload.get('item_id', '')).strip()
-        if kind and not selector_active:
+        if kind:
             self.navigate_to(kind, item_id)
 
     def _apply_style(self):

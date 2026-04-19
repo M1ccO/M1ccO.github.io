@@ -4,7 +4,7 @@ import json
 import os
 from typing import Callable
 
-from PySide6.QtCore import QMimeData, QSize, Qt, Signal
+from PySide6.QtCore import QMimeData, QSize, QTimer, Qt, Signal
 from PySide6.QtGui import QDrag, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -336,6 +336,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             if isinstance(item, dict)
         ]
         self._selected_ids = {self._fixture_key(item) for item in self._selected_items if self._fixture_key(item)}
+        self._startup_initialized = False
 
         self.setUpdatesEnabled(False)
         try:
@@ -352,13 +353,24 @@ class FixtureSelectorDialog(SelectorDialogBase):
             self._build_toolbar(root)
             self._build_content(root)
             self._build_bottom_bar(root)
-
-            self._switch_to_selector_panel()
-            self._refresh_catalog()
-            self._rebuild_assignment_list()
-            self._update_assignment_buttons()
         finally:
             self.setUpdatesEnabled(True)
+
+        if self._embedded_mode:
+            self._run_startup_initialization()
+        else:
+            # Defer heavier startup work until after first paint so selector
+            # open feels immediate and frame timing stays consistent.
+            QTimer.singleShot(0, self._run_startup_initialization)
+
+    def _run_startup_initialization(self) -> None:
+        if self._startup_initialized:
+            return
+        self._startup_initialized = True
+        self._switch_to_selector_panel()
+        self._refresh_catalog()
+        self._rebuild_assignment_list()
+        self._update_assignment_buttons()
 
     @staticmethod
     def _use_shared_selector_wrapper() -> bool:

@@ -34,7 +34,7 @@ def populate_jaw_type_filter(page) -> None:
 
 
 def build_filter_toolbar(page) -> QFrame:
-    filter_frame, page.filter_layout = build_filter_frame(left_margin=56)
+    filter_frame, page.filter_layout = build_filter_frame(left_margin=80)
 
     page.toolbar_title_label = build_toolbar_title(page, page._t('tool_library.rail_title.jaws', 'Jaws Library'))
 

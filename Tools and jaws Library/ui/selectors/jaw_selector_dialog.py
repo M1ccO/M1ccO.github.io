@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, QTimer, Qt
 from PySide6.QtWidgets import QVBoxLayout
 
 try:
@@ -67,6 +67,7 @@ class JawSelectorDialog(
         self._detached_measurements_enabled = True
         self._measurement_toggle_btn = None
         self._close_preview_shortcut = None
+        self._startup_initialized = False
 
         if not self._embedded_mode and self._use_shared_selector_wrapper():
             self._init_shared_widget_wrapper(
@@ -89,15 +90,24 @@ class JawSelectorDialog(
             self._build_filter_row(inner)
             self._build_content(inner)
             self._build_bottom_bar(inner)
-
-            self._refresh_catalog()
-            self._refresh_slot_ui()
-            self._update_context_header()
-            self._update_remove_button()
-            if not self._embedded_mode:
-                self._prime_detail_panel_cache()
         finally:
             self.setUpdatesEnabled(True)
+
+        if self._embedded_mode:
+            self._run_startup_initialization()
+        else:
+            # Defer heavy data population until after first paint so selector
+            # handoff appears immediately and avoids startup jitter.
+            QTimer.singleShot(0, self._run_startup_initialization)
+
+    def _run_startup_initialization(self) -> None:
+        if self._startup_initialized:
+            return
+        self._startup_initialized = True
+        self._refresh_catalog()
+        self._refresh_slot_ui()
+        self._update_context_header()
+        self._update_remove_button()
 
     @staticmethod
     def _use_shared_selector_wrapper() -> bool:

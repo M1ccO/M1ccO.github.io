@@ -67,6 +67,13 @@ def ensure_detached_preview_dialog(page) -> None:
 
     dialog = QDialog(page)
     dialog.setProperty('detachedPreviewDialog', True)
+    # When the parent has WindowStaysOnTopHint (e.g. selector dialogs),
+    # set Qt.Tool immediately — before the dialog is shown — so the
+    # preview stays on top.  Setting it later via setWindowFlag() would
+    # recreate the native HWND and cause the parent to flicker.
+    _parent_window = page.window()
+    if _parent_window is not None and bool(_parent_window.windowFlags() & Qt.WindowStaysOnTopHint):
+        dialog.setWindowFlags(dialog.windowFlags() | Qt.Tool)
     dialog.setWindowTitle(page._t('tool_library.preview.window_title', '3D Preview'))
     dialog.resize(620, 820)
     dialog.finished.connect(page._on_detached_preview_closed)
@@ -275,11 +282,13 @@ def warmup_preview_engine(page) -> None:
     # chain, which causes a visible glitch when a new QWebEngineView is
     # created later (e.g. when opening a selector dialog).
     #
-    # WA_DontShowOnScreen creates a valid platform surface without mapping
-    # anything on-screen, which is enough for Chromium to initialise its
-    # GPU compositor.  We keep the widget shown permanently.
-    page._inline_preview_warmup.setAttribute(Qt.WA_DontShowOnScreen, True)
-    page._inline_preview_warmup.resize(8, 8)
+    # We keep the widget shown permanently at far off-screen coordinates.
+    # WA_DontShowOnScreen would skip the native surface entirely and
+    # Chromium would never initialise its GPU compositor.  Keeping a tiny
+    # real surface alive is the only reliable way to pre-warm the D3D11
+    # swap chain on Windows.
+    page._inline_preview_warmup.setFixedSize(1, 1)
+    page._inline_preview_warmup.move(-9999, -9999)
     page._inline_preview_warmup.show()
 
 

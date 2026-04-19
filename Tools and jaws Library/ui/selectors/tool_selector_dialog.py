@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-from PySide6.QtCore import QModelIndex, Qt
+from PySide6.QtCore import QModelIndex, QTimer, Qt
 from PySide6.QtWidgets import QVBoxLayout
 
 try:
@@ -83,6 +83,7 @@ class ToolSelectorDialog(
         self._detached_measurements_enabled = True
         self._detached_measurement_filter = None
         self._detached_preview_last_model_key = None
+        self._startup_initialized = False
 
         if not self._embedded_mode and self._use_shared_selector_wrapper():
             self._init_shared_widget_wrapper(
@@ -105,19 +106,25 @@ class ToolSelectorDialog(
             self._build_filter_row(inner)
             self._build_content(inner)
             self._build_bottom_bar(inner)
-
-            self._load_current_bucket()
-            self._refresh_catalog()
-            self._rebuild_assignment_list()
-            self._update_context_header()
-            self._update_assignment_buttons()
-            # Embedded selector launches should prioritize first-visible stability.
-            # Priming detail content can initialize heavier preview subtrees that are
-            # not needed until the user explicitly opens the detail panel.
-            if not self._embedded_mode:
-                self._prime_detail_panel_cache()
         finally:
             self.setUpdatesEnabled(True)
+
+        if self._embedded_mode:
+            self._run_startup_initialization()
+        else:
+            # Let the dialog paint first; defer heavier data population to avoid
+            # first-show stalls and compositor flicker during selector handoff.
+            QTimer.singleShot(0, self._run_startup_initialization)
+
+    def _run_startup_initialization(self) -> None:
+        if self._startup_initialized:
+            return
+        self._startup_initialized = True
+        self._load_current_bucket()
+        self._refresh_catalog()
+        self._rebuild_assignment_list()
+        self._update_context_header()
+        self._update_assignment_buttons()
 
     @staticmethod
     def _use_shared_selector_wrapper() -> bool:

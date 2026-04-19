@@ -43,16 +43,17 @@ def build_tool_page_layout(page) -> None:
     page.search_input = build_search_input(page)
 
     page.filter_pane = page.build_filter_pane()
-    topbar_host = QWidget()
-    topbar_host.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    topbar_host_layout = QVBoxLayout(topbar_host)
-    topbar_host_layout.setContentsMargins(0, 0, 0, 4)
-    topbar_host_layout.setSpacing(0)
-    topbar_host_layout.addWidget(page.filter_pane)
-    root.setSpacing(0)
-    root.addWidget(topbar_host)
 
-    page.splitter = build_catalog_splitter(build_catalog_list_card(page), build_detail_container(page))
+    list_card_widget = build_catalog_list_card(page)
+    left_panel = QWidget()
+    left_panel_layout = QVBoxLayout(left_panel)
+    left_panel_layout.setContentsMargins(0, 30, 0, 0)
+    left_panel_layout.setSpacing(6)
+    left_panel_layout.addWidget(page.filter_pane)
+    left_panel_layout.addWidget(list_card_widget, 1)
+
+    root.setSpacing(0)
+    page.splitter = build_catalog_splitter(left_panel, build_detail_container(page))
     root.addWidget(page.splitter, 1)
 
     build_bottom_bars(page, root)
@@ -79,7 +80,7 @@ def build_catalog_list_card(page) -> QFrame:
     list_host = QWidget()
     list_host.setProperty('pageFamilyHost', True)
     list_host_layout = QVBoxLayout(list_host)
-    list_host_layout.setContentsMargins(56, 40, 0, 0)
+    list_host_layout.setContentsMargins(80, 0, 0, 0)
     list_host_layout.setSpacing(0)
     list_host_layout.addWidget(list_card)
     return list_host
