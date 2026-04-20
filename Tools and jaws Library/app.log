@@ -22615,3 +22615,14 @@ ValueError: time data 'not-a-date' does not match format '%Y-%m-%d'
 2026-04-20 10:27:51,807 ui.work_editor_dialog INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'embedded', 'session_id': 1, 'current_page': 'selector'}
 2026-04-20 10:27:51,814 ui.work_editor_dialog INFO work_editor.selector {'event': 'open.embedded.ready', 'transport': 'embedded', 'kind': 'tools', 'session_id': 1}
 2026-04-20 10:28:00,857 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 13896, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-20 10:28:16,783 services.preload_manager INFO PreloadManager ready: tool_db=C:\Users\pz9079\NTX Setup Manager\.runtime\configs\config_ntx2500_2a0f90\tool_library_NTX2500.db jaw_db=C:\Users\pz9079\NTX Setup Manager\.runtime\configs\config_ntx2500_2a0f90\jaws_library_NTX2500.db
+2026-04-20 10:28:19,280 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_2sp_2h_mixed raw_param=lathe_2sp_2h_mixed raw_prefs=lathe_2sp_2h_mixed
+2026-04-20 10:28:19,751 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-20 10:28:19,762 ui.main_window INFO setup_manager.modal_trace {'event': 'pre_exec', 'dt_ms': 11, 'dialog_visible': False}
+2026-04-20 10:28:19,785 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 34, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1004', 'modal': True}
+2026-04-20 10:28:19,795 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 44, 'visible': True, 'active': True, 'minimized': False, 'size': '1629x1004', 'modal': True}
+2026-04-20 10:28:19,805 ui.main_window INFO setup_manager.modal_trace {'event': 'WindowDeactivate', 'dt_ms': 54, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1004', 'modal': True}
+2026-04-20 10:28:19,822 ui.main_window INFO setup_manager.modal_trace {'event': 'UpdateRequest', 'dt_ms': 70, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1004', 'modal': True}
+2026-04-20 10:28:19,831 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 80, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1004', 'modal': True}
+2026-04-20 10:28:19,845 ui.main_window INFO setup_manager.modal_trace {'event': 'Paint', 'dt_ms': 94, 'visible': True, 'active': False, 'minimized': False, 'size': '1629x1004', 'modal': True}
+2026-04-20 10:28:26,508 ui.main_window INFO setup_manager.modal_trace {'event': 'modal_trace_end', 'dt_ms': 6757, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
