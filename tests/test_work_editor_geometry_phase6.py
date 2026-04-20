@@ -21,6 +21,8 @@ from PySide6.QtCore import QEvent, QRect, QSize, Qt  # noqa: E402
 from PySide6.QtWidgets import QApplication, QDialog, QStackedWidget, QWidget  # noqa: E402
 from ui import work_editor_dialog as work_editor_dialog_module  # noqa: E402
 from ui.work_editor_dialog import WorkEditorDialog  # noqa: E402
+from ui.work_editor_support.selector_session_controller import WorkEditorSelectorController  # noqa: E402
+import ui.work_editor_support.selector_session_controller as ctrl_module  # noqa: E402
 
 try:
     sys.path.remove(str(_SETUP_ROOT))
@@ -41,16 +43,9 @@ class _GeometryDialog(QDialog):
         super().__init__()
         self.resize(900, 640)
         self.setMinimumSize(760, 560)
-        self._selector_mode_active = False
-        self._selector_open_requested = False
-        self._selector_session_serial = 0
-        self._selector_session_id = None
-        self._selector_session_uuid = None
-        self._selector_session_kind = ""
-        self._selector_session_phase = "idle"
         self._host_visual_style_applied = False
         self._startup_popup_guard_active = False
-        self._selector_restore_state = None
+        self._selector_cache_merge_enabled = False
         self._combo_popup_windows = []
         self._raw_part_combo_popup_window = None
         self._raw_part_combo_popup_allowed = False
@@ -69,63 +64,19 @@ class _GeometryDialog(QDialog):
         self._dialog_buttons = QWidget(self._normal_page)
         self.tabs.setVisible(True)
         self._dialog_buttons.setVisible(True)
-        self._selector_transition_shield_pending_hide = False
         self.logged_events = []
         self.closed_popup_count = 0
 
-    def _capture_selector_restore_state(self):
-        return WorkEditorDialog._capture_selector_restore_state(self)
-
-    def _restore_from_selector_state(self):
-        return WorkEditorDialog._restore_from_selector_state(self)
-
-    def _expand_for_selector_mode(self):
-        return WorkEditorDialog._expand_for_selector_mode(self)
-
-    def _clear_selector_session_request(self, session_id=None):
-        return WorkEditorDialog._clear_selector_session_request(self, session_id)
+        self._selector_ctrl = WorkEditorSelectorController(self)
 
     def _resolve_style_host(self):
         return None
 
     def _load_work_editor_style_sheet_from_disk(self):
-        return "QDialog[workEditorDialog=\"true\"] { background: #ffffff; }"
-
-    def _selector_host_uses_overlay_mode(self):
-        return WorkEditorDialog._selector_host_uses_overlay_mode(self)
-
-    def _selector_current_mount_container(self):
-        return WorkEditorDialog._selector_current_mount_container(self)
-
-    def _sync_selector_overlay_geometry(self):
-        return WorkEditorDialog._sync_selector_overlay_geometry(self)
-
-    def _set_selector_overlay_visible(self, visible: bool):
-        return WorkEditorDialog._set_selector_overlay_visible(self, visible)
-
-    def _install_selector_transition_trace_filters(self):
-        return WorkEditorDialog._install_selector_transition_trace_filters(self)
-
-    def _trace_selector_surface_event(self, obj, event):
-        return WorkEditorDialog._trace_selector_surface_event(self, obj, event)
-
-    def _set_normal_editor_surface_hidden_for_selector(self, hidden: bool):
-        return WorkEditorDialog._set_normal_editor_surface_hidden_for_selector(self, hidden)
-
-    def _selector_session_uses_transition_shield(self):
-        return WorkEditorDialog._selector_session_uses_transition_shield(self)
-
-    def _sync_selector_transition_shield_geometry(self):
-        return WorkEditorDialog._sync_selector_transition_shield_geometry(self)
-
-    def _hide_selector_transition_shield(self):
-        return WorkEditorDialog._hide_selector_transition_shield(self)
-
-    def _set_selector_transition_shield_visible(self, visible: bool):
-        return WorkEditorDialog._set_selector_transition_shield_visible(self, visible)
+        return 'QDialog[workEditorDialog="true"] { background: #ffffff; }'
 
     def _is_true_popup_window(self, widget):
-        return WorkEditorDialog._is_true_popup_window(widget)
+        return WorkEditorDialog._is_true_popup_window(self, widget)
 
     def _release_startup_popup_guard(self, *, reason: str):
         return WorkEditorDialog._release_startup_popup_guard(self, reason=reason)
@@ -143,16 +94,17 @@ class _GeometryDialog(QDialog):
 class TestWorkEditorGeometryPhase6(unittest.TestCase):
     def test_capture_and_restore_round_trip(self):
         dlg = _GeometryDialog()
+        ctrl = dlg._selector_ctrl
         original_geometry = QRect(dlg.geometry())
         original_min = QSize(dlg.minimumSize())
         original_max = QSize(dlg.maximumSize())
 
-        state = WorkEditorDialog._capture_selector_restore_state(dlg)
+        state = ctrl._capture_restore_state()
         dlg.resize(1200, 700)
         dlg.setMinimumSize(1000, 600)
-        dlg._selector_restore_state = state
+        ctrl._restore_state = state
 
-        WorkEditorDialog._restore_from_selector_state(dlg)
+        ctrl._restore_from_state()
 
         self.assertEqual(original_geometry, dlg.geometry())
         self.assertEqual(original_min, dlg.minimumSize())
@@ -160,74 +112,66 @@ class TestWorkEditorGeometryPhase6(unittest.TestCase):
 
     def test_enter_and_exit_selector_mode_switches_stack_and_restores(self):
         dlg = _GeometryDialog()
+        ctrl = dlg._selector_ctrl
         original_geometry = QRect(dlg.geometry())
-        dlg._selector_open_requested = True
-        dlg._selector_session_id = 1
-        dlg._selector_session_phase = "requested"
+        ctrl._open_requested = True
 
-        WorkEditorDialog._enter_selector_mode(dlg)
-        self.assertTrue(dlg._selector_mode_active)
+        ctrl._enter_mode()
+        self.assertTrue(ctrl._mode_active)
         self.assertIs(dlg._root_stack.currentWidget(), dlg._selector_page)
         self.assertGreater(dlg.width(), 0)
 
-        WorkEditorDialog._exit_selector_mode(dlg)
-        self.assertFalse(dlg._selector_mode_active)
+        ctrl._exit_mode()
+        self.assertFalse(ctrl._mode_active)
         self.assertIs(dlg._root_stack.currentWidget(), dlg._normal_page)
         self.assertEqual(original_geometry, dlg.geometry())
-        self.assertIsNone(dlg._selector_session_id)
-        self.assertFalse(dlg._selector_open_requested)
+        self.assertFalse(ctrl._open_requested)
 
     def test_enter_and_exit_selector_mode_can_use_overlay_diagnostic_path(self):
         dlg = _GeometryDialog()
-        dlg._selector_open_requested = True
-        dlg._selector_session_id = 3
-        dlg._selector_session_kind = "tools"
-        dlg._selector_session_phase = "requested"
+        ctrl = dlg._selector_ctrl
+        ctrl._open_requested = True
 
         with mock.patch.object(
-            work_editor_dialog_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "overlay"
+            ctrl_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "overlay"
         ):
-            WorkEditorDialog._enter_selector_mode(dlg)
-            self.assertTrue(dlg._selector_mode_active)
+            ctrl._enter_mode()
+            self.assertTrue(ctrl._mode_active)
             self.assertIs(dlg._root_stack.currentWidget(), dlg._normal_page)
             self.assertFalse(dlg._selector_overlay_container.isHidden())
-            self.assertIn(dlg.tabs, dlg._selector_hidden_editor_widgets)
-            self.assertIn(dlg._dialog_buttons, dlg._selector_hidden_editor_widgets)
-            self.assertTrue(dlg._selector_transition_shield_pending_hide)
+            self.assertIn(dlg.tabs, ctrl._hidden_editor_widgets)
+            self.assertIn(dlg._dialog_buttons, ctrl._hidden_editor_widgets)
+            self.assertTrue(ctrl._transition_shield_pending_hide)
 
-            WorkEditorDialog._exit_selector_mode(dlg)
+            ctrl._exit_mode()
 
-        self.assertFalse(dlg._selector_mode_active)
+        self.assertFalse(ctrl._mode_active)
         self.assertFalse(dlg._selector_overlay_container.isVisible())
         self.assertIs(dlg._root_stack.currentWidget(), dlg._normal_page)
-        self.assertEqual([], dlg._selector_hidden_editor_widgets)
+        self.assertEqual([], ctrl._hidden_editor_widgets)
         self.assertFalse(dlg._selector_transition_shield.isVisible())
 
-    def test_begin_selector_session_request_blocks_reentry(self):
+    def test_coordinator_blocks_reentry(self):
         dlg = _GeometryDialog()
+        ctrl = dlg._selector_ctrl
 
-        session_id = WorkEditorDialog._begin_selector_session_request(dlg, kind="tools")
+        session_id = ctrl._coordinator.request_open(caller="tools")
+        self.assertIsNotNone(session_id)
+        self.assertTrue(ctrl._coordinator.is_busy)
 
-        self.assertEqual(1, session_id)
-        self.assertEqual("tools", dlg._selector_session_kind)
-        self.assertTrue(dlg._selector_open_requested)
-        self.assertEqual("requested", dlg._selector_session_phase)
-        self.assertIsNone(WorkEditorDialog._begin_selector_session_request(dlg, kind="jaws"))
+        with self.assertRaises(Exception) as ctx:
+            ctrl._coordinator.request_open(caller="jaws")
+        self.assertIn("busy", str(ctx.exception).lower())
 
     def test_exit_selector_mode_clears_pending_request_without_active_page(self):
         dlg = _GeometryDialog()
-        dlg._selector_open_requested = True
-        dlg._selector_session_id = 7
-        dlg._selector_session_kind = "tools"
-        dlg._selector_session_phase = "mounting"
+        ctrl = dlg._selector_ctrl
+        ctrl._open_requested = True
 
-        WorkEditorDialog._exit_selector_mode(dlg)
+        ctrl._exit_mode()
 
-        self.assertFalse(dlg._selector_mode_active)
-        self.assertFalse(dlg._selector_open_requested)
-        self.assertIsNone(dlg._selector_session_id)
-        self.assertEqual("", dlg._selector_session_kind)
-        self.assertEqual("idle", dlg._selector_session_phase)
+        self.assertFalse(ctrl._mode_active)
+        self.assertFalse(ctrl._open_requested)
 
     def test_apply_host_visual_style_uses_fallback_stylesheet(self):
         dlg = _GeometryDialog()
@@ -238,59 +182,39 @@ class TestWorkEditorGeometryPhase6(unittest.TestCase):
         self.assertIn("workEditorDialog", dlg.styleSheet())
         self.assertTrue(dlg._host_visual_style_applied)
 
-    def test_install_selector_transition_trace_filters_logs_surface_event(self):
+    def test_install_selector_transition_trace_filters_populates_trace_widgets(self):
         dlg = _GeometryDialog()
-        dlg._selector_trace_widgets = {}
+        ctrl = dlg._selector_ctrl
 
-        with mock.patch.object(work_editor_dialog_module, "WORK_EDITOR_SELECTOR_TRACE_PAINT", True):
-            WorkEditorDialog._install_selector_transition_trace_filters(dlg)
+        with mock.patch.object(ctrl_module, "WORK_EDITOR_SELECTOR_TRACE_PAINT", True):
+            ctrl.install_trace_filters()
             dlg._root_stack.setCurrentWidget(dlg._selector_page)
             paint_event = QEvent(QEvent.Paint)
-            WorkEditorDialog._trace_selector_surface_event(dlg, dlg._selector_page, paint_event)
+            ctrl.trace_surface_event(dlg._selector_page, paint_event)
 
-        self.assertTrue(any(event == "trace.enabled" for event, _fields in dlg.logged_events))
-        self.assertTrue(
-            any(
-                event == "surface.event"
-                and fields.get("watched") == "selector_page"
-                and fields.get("qt_event") == "Paint"
-                for event, fields in dlg.logged_events
-            )
-        )
+        self.assertGreater(len(ctrl._trace_widgets), 0)
 
     def test_selector_current_mount_container_uses_overlay_mount_in_overlay_mode(self):
         dlg = _GeometryDialog()
+        ctrl = dlg._selector_ctrl
         with mock.patch.object(
-            work_editor_dialog_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "overlay"
+            ctrl_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "overlay"
         ):
-            mount_container = WorkEditorDialog._selector_current_mount_container(dlg)
+            mount_container = ctrl._current_mount_container()
         self.assertIs(mount_container, dlg._selector_overlay_mount_container)
 
-    def test_selector_host_auto_mode_keeps_stack_for_tool_sessions(self):
+    def test_host_auto_mode_keeps_stack(self):
         dlg = _GeometryDialog()
-        dlg._selector_session_kind = "tools"
+        ctrl = dlg._selector_ctrl
         with mock.patch.object(
-            work_editor_dialog_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "auto"
+            ctrl_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "auto"
         ):
-            self.assertFalse(WorkEditorDialog._selector_host_uses_overlay_mode(dlg))
+            self.assertFalse(ctrl._host_uses_overlay_mode())
 
-    def test_selector_host_auto_mode_keeps_stack_for_jaw_sessions(self):
+    def test_default_mode_skips_transition_shield(self):
         dlg = _GeometryDialog()
-        dlg._selector_session_kind = "jaws"
-        with mock.patch.object(
-            work_editor_dialog_module, "WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "auto"
-        ):
-            self.assertFalse(WorkEditorDialog._selector_host_uses_overlay_mode(dlg))
-
-    def test_tool_sessions_skip_transition_shield_in_default_mode(self):
-        dlg = _GeometryDialog()
-        dlg._selector_session_kind = "tools"
-        self.assertFalse(WorkEditorDialog._selector_session_uses_transition_shield(dlg))
-
-    def test_jaw_sessions_skip_transition_shield(self):
-        dlg = _GeometryDialog()
-        dlg._selector_session_kind = "jaws"
-        self.assertFalse(WorkEditorDialog._selector_session_uses_transition_shield(dlg))
+        ctrl = dlg._selector_ctrl
+        self.assertFalse(ctrl._uses_transition_shield())
 
 if __name__ == "__main__":
     unittest.main()

@@ -462,8 +462,12 @@ def main():
         """Route a selector_result IPC message from Library to the Work Editor."""
         try:
             dialog = _get_active_work_editor(target_win)
-            if dialog is not None and hasattr(dialog, "_receive_ipc_selector_result"):
-                dialog._receive_ipc_selector_result(payload)
+            if dialog is not None:
+                ctrl = getattr(dialog, "_selector_ctrl", None)
+                if ctrl is not None:
+                    ctrl.receive_ipc_result(payload)
+                elif hasattr(dialog, "_receive_ipc_selector_result"):
+                    dialog._receive_ipc_selector_result(payload)
         except Exception:
             pass
 
@@ -473,13 +477,15 @@ def main():
             dialog = _get_active_work_editor(target_win)
             if dialog is None or dialog.isVisible():
                 return
-            if getattr(dialog, "_pending_ipc_selector_request_id", None) is None:
-                return
-            dialog._pending_ipc_selector_request_id = None
-            dialog._pending_ipc_selector_kind = None
-            dialog.show()
-            dialog.raise_()
-            dialog.activateWindow()
+            ctrl = getattr(dialog, "_selector_ctrl", None)
+            if ctrl is not None:
+                ctrl.restore_if_waiting()
+            elif getattr(dialog, "_pending_ipc_selector_request_id", None) is not None:
+                dialog._pending_ipc_selector_request_id = None
+                dialog._pending_ipc_selector_kind = None
+                dialog.show()
+                dialog.raise_()
+                dialog.activateWindow()
         except Exception:
             pass
 

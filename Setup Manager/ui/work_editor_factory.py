@@ -27,8 +27,6 @@ class LatheWorkEditorDialog(WorkEditorDialog):
     """Lathe-family Work Editor shell."""
 
     machine_family = "lathe"
-    _startup_prime_zeros_tab = True
-    _startup_prime_tools_tab = True
 
     def _build_family_zeros_tab(self) -> None:
         build_zeros_tab_ui(
@@ -50,8 +48,6 @@ class MachiningCenterWorkEditorDialog(WorkEditorDialog):
     """Machining-center Work Editor shell."""
 
     machine_family = MACHINING_CENTER_FAMILY
-    _startup_prime_zeros_tab = True
-    _startup_prime_tools_tab = True
 
     def _build_family_zeros_tab(self) -> None:
         build_machining_center_zeros_tab_ui(

@@ -130,7 +130,8 @@ def exec_work_editor_dialog(dialog) -> int:
         if not dialog.isVisible():
             return previous_result
 
-        selector_active = bool(getattr(dialog, "_selector_mode_active", False))
+        _ctrl = getattr(dialog, "_selector_ctrl", None)
+        selector_active = bool(getattr(_ctrl, "mode_active", False)) if _ctrl is not None else False
         host = getattr(dialog, "_embedded_selector_host", None)
         host_widget = getattr(host, "active_widget", None) if host is not None else None
         if callable(trace_event):
@@ -164,7 +165,7 @@ def exec_work_editor_dialog(dialog) -> int:
                         "spurious_exec_return_waiting",
                         elapsed_ms=int((time.monotonic() - wait_started_at) * 1000),
                         dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()),
-                        selector_active=bool(getattr(dialog, "_selector_mode_active", False)),
+                        selector_active=bool(getattr(getattr(dialog, "_selector_ctrl", None), "mode_active", False)),
                     )
 
         try:
@@ -182,8 +183,55 @@ def exec_work_editor_dialog(dialog) -> int:
 
     try:
         result = dialog.exec()
-        if isinstance(dialog, QDialog) and dialog.isVisible():
-            result = _wait_for_real_close(result)
+
+        # IPC selector path: dialog hides itself while waiting for the Library
+        # process to send back a result.  exec() returns prematurely (Rejected)
+        # because Qt drops out of the event loop when the dialog is hidden.
+        # We must keep processing events until either:
+        #   (a) the IPC result arrives, the dialog shows again, and the user
+        #       clicks Save/Cancel (dialog becomes invisible again), or
+        #   (b) the pending request is cleared by a cancel or failure path.
+        # For the plain close path (no IPC pending, dialog already hidden), this
+        # loop exits immediately after the first processEvents() call.
+        # For the embedded selector path (dialog still visible), the loop also
+        # handles the spurious exec() return case (_wait_for_real_close behaviour).
+        _app = QApplication.instance()
+        if _app is not None:
+            _app.processEvents()
+
+        _needs_extended_wait = isinstance(dialog, QDialog) and (
+            getattr(getattr(dialog, "_selector_ctrl", None), "_pending_ipc_request_id", None) is not None
+            or dialog.isVisible()
+        )
+        if _needs_extended_wait:
+            wait_started_at = time.monotonic()
+            heartbeat_deadline = wait_started_at + 1.0
+            while True:
+                try:
+                    ipc_pending = getattr(getattr(dialog, "_selector_ctrl", None), "_pending_ipc_request_id", None) is not None
+                    dialog_visible = dialog.isVisible()
+                except RuntimeError:
+                    break
+                if not ipc_pending and not dialog_visible:
+                    break
+                if _app is None:
+                    break
+                _app.processEvents()
+                if time.monotonic() >= heartbeat_deadline:
+                    heartbeat_deadline = time.monotonic() + 1.0
+                    if callable(trace_event):
+                        trace_event(
+                            "ipc_selector_wait",
+                            elapsed_ms=int((time.monotonic() - wait_started_at) * 1000),
+                            ipc_pending=ipc_pending,
+                            dialog_visible=dialog_visible,
+                        )
+
+            try:
+                result = int(getattr(dialog, "result", lambda: result)())
+            except RuntimeError:
+                pass
+
         if callable(trace_event):
             trace_event("post_exec", result=result)
         return result

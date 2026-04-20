@@ -8,7 +8,7 @@ from PySide6.QtWidgets import QAbstractItemView, QListView
 
 from shared.ui.helpers.dragdrop_helpers import build_text_drag_ghost
 from ui.fixture_catalog_delegate import ROLE_FIXTURE_DATA, ROLE_FIXTURE_ID
-from ui.selector_mime import SELECTOR_FIXTURE_MIME, encode_selector_payload
+from ui.selectors.selector_mime import SELECTOR_FIXTURE_MIME, encode_selector_payload
 
 
 class FixtureCatalogListView(QListView):

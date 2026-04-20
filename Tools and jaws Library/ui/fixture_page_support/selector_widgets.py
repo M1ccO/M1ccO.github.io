@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QGroupBox, QLabel, QPushButton, QSiz
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.editor_helpers import apply_titled_section_style
 from ui.fixture_catalog_delegate import fixture_icon_for_row
-from ui.selector_mime import (
+from ui.selectors.selector_mime import (
     SELECTOR_FIXTURE_MIME,
     encode_selector_payload,
     first_dropped_fixture,

@@ -13,10 +13,10 @@ from shared.ui.helpers.dragdrop_helpers import (
     clear_selection_on_blank_click,
 )
 try:
-    from ..selector_mime import SELECTOR_TOOL_MIME, encode_selector_payload
+    from ..selectors.selector_mime import SELECTOR_TOOL_MIME, encode_selector_payload
     from ..tool_catalog_delegate import ROLE_TOOL_DATA, ROLE_TOOL_ID, ROLE_TOOL_UID, tool_icon_for_type
 except ImportError:
-    from ui.selector_mime import SELECTOR_TOOL_MIME, encode_selector_payload
+    from ui.selectors.selector_mime import SELECTOR_TOOL_MIME, encode_selector_payload
     from ui.tool_catalog_delegate import ROLE_TOOL_DATA, ROLE_TOOL_ID, ROLE_TOOL_UID, tool_icon_for_type
 
 

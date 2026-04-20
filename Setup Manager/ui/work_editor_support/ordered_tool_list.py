@@ -410,6 +410,9 @@ class WorkEditorOrderedToolList(QWidget):
             library_tool_id=lib_tool_id,
             library_description=lib_desc,
         )
+        if effective_tool_id and effective_desc.startswith(effective_tool_id):
+            tail = effective_desc[len(effective_tool_id):].lstrip(" \t\u2014\u2013-")
+            effective_desc = tail
         display_text = compose_title(row_index=row_index, tool_id=effective_tool_id, description=effective_desc)
         comment = str(assignment.get("comment") or "").strip()
         effective_pot = str(assignment.get("pot") or "").strip()

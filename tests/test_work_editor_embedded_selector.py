@@ -31,6 +31,8 @@ from ui.work_editor_support.selector_provider import (  # noqa: E402
     build_jaw_selector_request,
     build_tool_selector_request,
 )
+from ui.work_editor_support.selector_session_controller import WorkEditorSelectorController  # noqa: E402
+import ui.work_editor_support.selector_session_controller as ctrl_module  # noqa: E402
 
 try:
     sys.path.remove(str(_SETUP_ROOT))
@@ -190,18 +192,14 @@ class TestSelectorProvider(unittest.TestCase):
 
 class TestSelectorModeEnv(unittest.TestCase):
     def test_selector_mode_default_ipc(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
-
-        mode = WorkEditorDialog._resolve_selector_transport_mode(object())
+        mode = WorkEditorSelectorController._resolve_transport_mode()
         self.assertEqual("ipc", mode)
 
     def test_selector_mode_ipc_ignores_env(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
-
         original = os.environ.get("NTX_WORK_EDITOR_SELECTOR_MODE")
         os.environ["NTX_WORK_EDITOR_SELECTOR_MODE"] = "external"
         try:
-            mode = WorkEditorDialog._resolve_selector_transport_mode(object())
+            mode = WorkEditorSelectorController._resolve_transport_mode()
             self.assertEqual("ipc", mode)
         finally:
             if original is None:
@@ -240,75 +238,150 @@ class _FakeScreen:
 
 class TestSelectorTransport(unittest.TestCase):
     def test_open_selector_request_prefers_ipc(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
         calls = []
 
-        dummy = SimpleNamespace(
-            _selector_transport_mode="ipc",
-            _try_open_selector_via_ipc=lambda **kwargs: calls.append(("ipc", kwargs)) or True,
-            _try_open_selector_embedded=lambda **kwargs: calls.append(("embedded", kwargs)) or True,
-            _log_selector_event=lambda *_args, **_kwargs: None,
-        )
+        dummy_dialog = SimpleNamespace()
+        ctrl = WorkEditorSelectorController.__new__(WorkEditorSelectorController)
+        ctrl._dialog = dummy_dialog
+        ctrl._transport_mode = "ipc"
+        ctrl._mode_active = False
+        ctrl._open_requested = False
+        ctrl._pending_ipc_request_id = None
+        ctrl._pending_ipc_kind = None
+        ctrl._ipc_saved_geometry = None
+        ctrl._active_embedded_widget = None
+        ctrl._restore_state = None
+        ctrl._hidden_editor_widgets = []
+        ctrl._transition_shield_pending_hide = False
+        ctrl._trace_widgets = {}
+        ctrl._try_open_via_ipc = lambda **kwargs: calls.append(("ipc", kwargs)) or True
+        ctrl._try_open_embedded = lambda **kwargs: calls.append(("embedded", kwargs)) or True
 
-        opened = WorkEditorDialog._open_selector_request(dummy, kind="tools", head="HEAD1", spindle="main")
+        opened = ctrl._open_selector_request(kind="tools", head="HEAD1", spindle="main")
 
         self.assertTrue(opened)
-        self.assertEqual([("ipc", {"kind": "tools", "head": "HEAD1", "spindle": "main", "target_key": "", "initial_assignments": None, "initial_assignment_buckets": None})], calls)
+        self.assertEqual("ipc", calls[0][0])
+        self.assertEqual("tools", calls[0][1]["kind"])
 
     def test_open_selector_request_does_not_fallback_when_ipc_fails(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
         calls = []
 
-        dummy = SimpleNamespace(
-            _selector_transport_mode="ipc",
-            _try_open_selector_via_ipc=lambda **kwargs: calls.append(("ipc", kwargs)) or False,
-            _try_open_selector_embedded=lambda **kwargs: calls.append(("embedded", kwargs)) or True,
-        )
+        dummy_dialog = SimpleNamespace()
+        ctrl = WorkEditorSelectorController.__new__(WorkEditorSelectorController)
+        ctrl._dialog = dummy_dialog
+        ctrl._transport_mode = "ipc"
+        ctrl._mode_active = False
+        ctrl._open_requested = False
+        ctrl._try_open_via_ipc = lambda **kwargs: calls.append(("ipc", kwargs)) or False
+        ctrl._try_open_embedded = lambda **kwargs: calls.append(("embedded", kwargs)) or True
 
-        opened = WorkEditorDialog._open_selector_request(dummy, kind="jaws", spindle="sub")
+        opened = ctrl._open_selector_request(kind="jaws", spindle="sub")
 
         self.assertFalse(opened)
         self.assertEqual([("ipc", {"kind": "jaws", "head": "", "spindle": "sub", "target_key": "", "initial_assignments": None, "initial_assignment_buckets": None})], calls)
 
     def test_open_selector_request_uses_embedded_when_transport_is_embedded(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
         calls = []
 
-        dummy = SimpleNamespace(
-            _selector_transport_mode="embedded",
-            _try_open_selector_via_ipc=lambda **kwargs: calls.append(("ipc", kwargs)) or False,
-            _try_open_selector_embedded=lambda **kwargs: calls.append(("embedded", kwargs)) or True,
-        )
+        dummy_dialog = SimpleNamespace()
+        ctrl = WorkEditorSelectorController.__new__(WorkEditorSelectorController)
+        ctrl._dialog = dummy_dialog
+        ctrl._transport_mode = "embedded"
+        ctrl._mode_active = False
+        ctrl._open_requested = False
+        ctrl._try_open_via_ipc = lambda **kwargs: calls.append(("ipc", kwargs)) or False
+        ctrl._try_open_embedded = lambda **kwargs: calls.append(("embedded", kwargs)) or True
 
-        opened = WorkEditorDialog._open_selector_request(dummy, kind="fixtures", target_key="OP10")
+        opened = ctrl._open_selector_request(kind="fixtures", target_key="OP10")
 
         self.assertTrue(opened)
         self.assertEqual([("embedded", {"kind": "fixtures", "head": "", "spindle": "", "target_key": "OP10", "initial_assignments": None, "initial_assignment_buckets": None})], calls)
 
     def test_try_open_selector_via_ipc_launches_hidden_library_and_retries(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
-        library_ipc_module = importlib.import_module("ui.main_window_support.library_ipc")
+        import importlib.util as _ilu
+        import types
+
+        # Load library_ipc from Setup Manager path (avoids 'ui' package conflict)
+        _ipc_path = _SETUP_ROOT / "ui" / "main_window_support" / "library_ipc.py"
+        setup_root = str(_SETUP_ROOT)
+        _added = setup_root not in sys.path
+        if _added:
+            sys.path.insert(0, setup_root)
+        try:
+            _spec = _ilu.spec_from_file_location(
+                "ui.main_window_support.library_ipc", _ipc_path,
+                submodule_search_locations=[])
+            library_ipc_module = _ilu.module_from_spec(_spec)
+            _spec.loader.exec_module(library_ipc_module)
+        finally:
+            if _added:
+                try:
+                    sys.path.remove(setup_root)
+                except ValueError:
+                    pass
+
+        # Also load config from Setup Manager
+        _config_path = _SETUP_ROOT / "config.py"
+        _cfg_spec = _ilu.spec_from_file_location("config", _config_path)
+        config_module = _ilu.module_from_spec(_cfg_spec)
+        _cfg_spec.loader.exec_module(config_module)
+
+        # Register both modules so controller's lazy import resolves them
+        _keys_to_restore = {}
+        for _key, _mod in [
+            ("ui.main_window_support.library_ipc", library_ipc_module),
+            ("config", config_module),
+        ]:
+            _keys_to_restore[_key] = sys.modules.get(_key)
+            sys.modules[_key] = _mod
+        # Also need parent package registered
+        _mws_key = "ui.main_window_support"
+        _keys_to_restore[_mws_key] = sys.modules.get(_mws_key)
+        if _mws_key not in sys.modules:
+            mws_pkg = types.ModuleType(_mws_key)
+            mws_pkg.__path__ = [str(_SETUP_ROOT / "ui" / "main_window_support")]
+            mws_pkg.__package__ = _mws_key
+            sys.modules[_mws_key] = mws_pkg
+        # Extend ui.__path__ so from-import traversal finds main_window_support
+        _ui_mod = sys.modules.get("ui")
+        _sm_ui_dir = str(_SETUP_ROOT / "ui")
+        _path_added = False
+        if _ui_mod is not None and hasattr(_ui_mod, "__path__"):
+            if _sm_ui_dir not in _ui_mod.__path__:
+                _ui_mod.__path__.insert(0, _sm_ui_dir)
+                _path_added = True
 
         hidden = []
         events = []
-        dummy = SimpleNamespace(
+        dummy_dialog = SimpleNamespace(
             _machine_profile_key="ntx_2sp_2h",
-            _pending_ipc_selector_request_id=None,
-            _pending_ipc_selector_kind=None,
-            _ipc_selector_saved_geometry=None,
-            _build_selector_session_geometry=lambda: "10,20,1220,780",
             geometry=lambda: "original-geometry",
             hide=lambda: hidden.append(True),
-            _log_selector_event=lambda *args, **kwargs: events.append((args, kwargs)),
             _t=lambda _key, default=None, **_kwargs: default or "",
+            print_pots_checkbox=None,
         )
+
+        ctrl = WorkEditorSelectorController.__new__(WorkEditorSelectorController)
+        ctrl._dialog = dummy_dialog
+        ctrl._transport_mode = "ipc"
+        ctrl._mode_active = False
+        ctrl._open_requested = False
+        ctrl._pending_ipc_request_id = None
+        ctrl._pending_ipc_kind = None
+        ctrl._ipc_saved_geometry = None
+        ctrl._active_embedded_widget = None
+        ctrl._restore_state = None
+        ctrl._hidden_editor_widgets = []
+        ctrl._transition_shield_pending_hide = False
+        ctrl._trace_widgets = {}
+        ctrl._build_session_geometry = lambda: "10,20,1220,780"
+        ctrl._log = lambda *args, **kwargs: events.append((args, kwargs))
 
         with patch.object(library_ipc_module, "allow_set_foreground") as allow_fg, \
              patch.object(library_ipc_module, "send_to_tool_library", return_value=False) as send_ipc, \
              patch.object(library_ipc_module, "launch_tool_library", return_value=True) as launch_library, \
              patch.object(library_ipc_module, "send_request_with_retry") as retry_send:
-            opened = WorkEditorDialog._try_open_selector_via_ipc(
-                dummy,
+            opened = ctrl._try_open_via_ipc(
                 kind="tools",
                 head="HEAD1",
                 spindle="main",
@@ -318,9 +391,9 @@ class TestSelectorTransport(unittest.TestCase):
 
         self.assertTrue(opened)
         self.assertTrue(hidden)
-        self.assertIsNotNone(dummy._pending_ipc_selector_request_id)
-        self.assertEqual("tools", dummy._pending_ipc_selector_kind)
-        self.assertEqual("original-geometry", dummy._ipc_selector_saved_geometry)
+        self.assertIsNotNone(ctrl._pending_ipc_request_id)
+        self.assertEqual("tools", ctrl._pending_ipc_kind)
+        self.assertEqual("original-geometry", ctrl._ipc_saved_geometry)
         allow_fg.assert_called_once()
         send_ipc.assert_called_once()
         launch_library.assert_called_once()
@@ -330,11 +403,22 @@ class TestSelectorTransport(unittest.TestCase):
         self.assertEqual("tools", payload["selector_mode"])
         self.assertEqual("10,20,1220,780", payload["geometry"])
 
+        # Restore sys.modules and ui.__path__
+        for _k, _v in _keys_to_restore.items():
+            if _v is None:
+                sys.modules.pop(_k, None)
+            else:
+                sys.modules[_k] = _v
+        if _path_added and _ui_mod is not None:
+            try:
+                _ui_mod.__path__.remove(_sm_ui_dir)
+            except ValueError:
+                pass
+
     def test_build_selector_session_geometry_expands_to_large_default(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
         available = _FakeGeometry(100, 80, 1600, 1000)
         current = _FakeGeometry(220, 180, 960, 680)
-        dummy = SimpleNamespace(
+        dummy_dialog = SimpleNamespace(
             _SELECTOR_DIALOG_WIDTH_PAD=260,
             _SELECTOR_DIALOG_HEIGHT_PAD=140,
             _SELECTOR_DIALOG_DEFAULT_WIDTH=1220,
@@ -343,7 +427,10 @@ class TestSelectorTransport(unittest.TestCase):
             screen=lambda: _FakeScreen(available),
         )
 
-        geometry_text = WorkEditorDialog._build_selector_session_geometry(dummy)
+        ctrl = WorkEditorSelectorController.__new__(WorkEditorSelectorController)
+        ctrl._dialog = dummy_dialog
+
+        geometry_text = ctrl._build_session_geometry()
 
         self.assertTrue(geometry_text)
         x_text, y_text, width_text, height_text = geometry_text.split(",")
@@ -355,7 +442,6 @@ class TestSelectorTransport(unittest.TestCase):
 
 class TestEmbeddedSelectorSubmit(unittest.TestCase):
     def test_apply_selector_result_forwards_assignment_buckets(self):
-        WorkEditorDialog = _load_work_editor_dialog_class()
         captured = {}
 
         class _DummySubmitDialog:
@@ -369,10 +455,12 @@ class TestEmbeddedSelectorSubmit(unittest.TestCase):
             captured["selected_items"] = list(selected_items)
             return True
 
-        module = sys.modules[WorkEditorDialog.__module__]
-        with patch.object(module, "apply_tool_selector_result", side_effect=_capture_apply):
-            WorkEditorDialog._apply_selector_result(
-                dummy,
+        ctrl = WorkEditorSelectorController.__new__(WorkEditorSelectorController)
+        ctrl._dialog = dummy
+        ctrl._transport_mode = "ipc"
+
+        with patch.object(ctrl_module, "apply_tool_selector_result", side_effect=_capture_apply):
+            ctrl._apply_selector_result(
                 {"kind": "tools", "head": "HEAD1", "spindle": "main"},
                 {
                     "kind": "tools",

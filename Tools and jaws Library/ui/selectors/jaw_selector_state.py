@@ -7,7 +7,7 @@ from PySide6.QtGui import QStandardItem
 
 from shared.ui.helpers.topbar_common import rebuild_filter_row
 from ..jaw_catalog_delegate import ROLE_JAW_DATA, ROLE_JAW_ID
-from ..selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
+from .selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 from .common import selected_rows_or_current
 
 

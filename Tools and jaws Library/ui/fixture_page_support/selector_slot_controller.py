@@ -14,7 +14,7 @@ from ui.selector_state_helpers import (
     slot_assignments_state,
     toggle_selector_slot_selection,
 )
-from ui.selector_ui_helpers import normalize_selector_spindle
+from ui.selectors.selector_ui_helpers import normalize_selector_spindle
 
 
 class SelectorSlotController:

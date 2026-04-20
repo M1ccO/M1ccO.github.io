@@ -24,9 +24,9 @@ from shared.ui.theme import (  # noqa: E402
     get_active_theme_palette,
     install_application_theme_state,
 )
-import ui.jaw_catalog_delegate as jaw_catalog_delegate  # noqa: E402
-from ui.selectors.common import SelectorDialogBase, SelectorWidgetBase  # noqa: E402
-import ui.tool_catalog_delegate as tool_catalog_delegate  # noqa: E402
+import tools_and_jaws_library.ui.jaw_catalog_delegate as jaw_catalog_delegate  # noqa: E402
+from tools_and_jaws_library.ui.selectors.common import SelectorDialogBase, SelectorWidgetBase  # noqa: E402
+import tools_and_jaws_library.ui.tool_catalog_delegate as tool_catalog_delegate  # noqa: E402
 
 
 _APP = QApplication.instance() or QApplication([])

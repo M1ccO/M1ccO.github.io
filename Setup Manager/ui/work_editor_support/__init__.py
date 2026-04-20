@@ -54,6 +54,7 @@ from .tool_actions import (
     update_shared_tool_actions,
     visible_tool_lists,
 )
+from .selector_session_controller import WorkEditorSelectorController
 from .tools_tab_builder import build_tools_tab_ui
 from .zero_points import (
     build_spindle_zero_group,
@@ -110,4 +111,5 @@ __all__ = [
     "set_zero_xy_visibility",
     "build_spindle_zero_group",
     "set_coord_combo",
+    "WorkEditorSelectorController",
 ]

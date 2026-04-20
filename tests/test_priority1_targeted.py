@@ -414,7 +414,7 @@ class TestSelectorMime(unittest.TestCase):
 
     def test_tool_encode_decode_roundtrip(self):
         from PySide6.QtCore import QMimeData
-        from tools_and_jaws_library.ui.selector_mime import (
+        from tools_and_jaws_library.ui.selectors.selector_mime import (
             SELECTOR_TOOL_MIME,
             decode_tool_payload,
             encode_selector_payload,
@@ -431,7 +431,7 @@ class TestSelectorMime(unittest.TestCase):
 
     def test_jaw_encode_decode_roundtrip(self):
         from PySide6.QtCore import QMimeData
-        from tools_and_jaws_library.ui.selector_mime import (
+        from tools_and_jaws_library.ui.selectors.selector_mime import (
             SELECTOR_JAW_MIME,
             decode_jaw_payload,
             encode_selector_payload,
@@ -445,14 +445,14 @@ class TestSelectorMime(unittest.TestCase):
 
     def test_decode_missing_mime_type_returns_empty(self):
         from PySide6.QtCore import QMimeData
-        from tools_and_jaws_library.ui.selector_mime import decode_tool_payload
+        from tools_and_jaws_library.ui.selectors.selector_mime import decode_tool_payload
 
         empty_mime = QMimeData()
         self.assertEqual(decode_tool_payload(empty_mime), [])
 
     def test_decode_corrupt_data_returns_empty(self):
         from PySide6.QtCore import QMimeData
-        from tools_and_jaws_library.ui.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload
+        from tools_and_jaws_library.ui.selectors.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload
 
         mime = QMimeData()
         mime.setData(SELECTOR_TOOL_MIME, b"not valid json }{")

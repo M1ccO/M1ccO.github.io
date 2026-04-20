@@ -10,10 +10,10 @@ from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.editor_helpers import apply_titled_section_style
 try:
     from ..jaw_catalog_delegate import jaw_icon_for_row
-    from ..selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
+    from ..selectors.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
 except ImportError:
     from ui.jaw_catalog_delegate import jaw_icon_for_row
-    from ui.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
+    from ui.selectors.selector_mime import SELECTOR_JAW_MIME, encode_selector_payload, first_dropped_jaw, jaw_payload_ids
 
 
 class _DraggableJawAssignmentCard(MiniAssignmentCard):

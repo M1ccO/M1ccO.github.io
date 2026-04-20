@@ -63,7 +63,7 @@ from ..fixture_catalog_delegate import (
     FixtureCatalogDelegate,
     fixture_icon_for_row,
 )
-from ..selector_mime import (
+from .selector_mime import (
     SELECTOR_JAW_MIME,
     decode_jaw_payload,
     encode_selector_payload,

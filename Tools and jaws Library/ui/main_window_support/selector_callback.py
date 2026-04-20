@@ -20,17 +20,6 @@ def send_selector_result_payload(
     target_key: str = "",
     print_pots: bool = False,
 ) -> bool:
-    if kind == "tools" and not selected_items:
-        QMessageBox.information(
-            window,
-            window._t("tool_library.selector.no_selection.title", "Nothing selected"),
-            window._t(
-                "tool_library.selector.no_selection.body",
-                "Select at least one {kind} before sending the selection back.",
-                kind=window._t("tool_library.selector.tools", "tools"),
-            ),
-        )
-        return False
 
     callback_server = str(getattr(window, "_selector_callback_server", "") or "").strip()
     request_id = str(getattr(window, "_selector_request_id", "") or "").strip()

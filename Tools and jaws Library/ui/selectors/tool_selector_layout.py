@@ -291,12 +291,13 @@ class ToolSelectorLayoutMixin:
         for spindle in ('main', 'sub'):
             assignment_list = ToolAssignmentListWidget()
             assignment_list.setObjectName('toolIdsOrderList')
-            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             assignment_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
             assignment_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             assignment_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
             assignment_list.setProperty('selectorAssignmentList', True)
             assignment_list.setViewportMargins(0, 0, 2, 0)
+            assignment_list.setMinimumHeight(80)
             assignment_list.externalToolsDropped.connect(
                 lambda dropped, row, target_spindle=spindle: self._on_tools_dropped_for_spindle(target_spindle, dropped, row)
             )
@@ -315,11 +316,11 @@ class ToolSelectorLayoutMixin:
             )
             assignment_frame.setProperty('selectorAssignmentsFrame', True)
             assignment_frame.setProperty('toolIdsPanel', True)
-            assignment_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            assignment_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             assignment_layout = QVBoxLayout(assignment_frame)
             assignment_layout.setContentsMargins(8, 10, 8, 8)
             assignment_layout.setSpacing(4)
-            assignment_layout.addWidget(assignment_list, 0)
+            assignment_layout.addWidget(assignment_list, 1)
 
             empty_hint = build_selector_hint_label(
                 text=self._t(
@@ -335,8 +336,6 @@ class ToolSelectorLayoutMixin:
             empty_hint.setWordWrap(True)
             empty_hint.setContentsMargins(2, 0, 2, 0)
             assignment_layout.addWidget(empty_hint, 0, Qt.AlignTop)
-            # Do not force the list to stretch inside the frame — let it size
-            # to its content so the frame stays compact when empty.
 
             spindle_host.add_widget(assignment_frame, 1)
 
@@ -347,9 +346,7 @@ class ToolSelectorLayoutMixin:
         # Compatibility alias for existing call sites that still read assignment_list/frame.
         self.assignment_list = self.assignment_lists['main']
         self.assignment_frame = self.assignment_frames['main']
-        # Push all remaining space to the bottom so the frames stay compact.
-        selector_layout.addWidget(spindle_host, 0)
-        selector_layout.addStretch(1)
+        selector_layout.addWidget(spindle_host, 1)
 
         actions = build_selector_actions_row(spacing=4)
 

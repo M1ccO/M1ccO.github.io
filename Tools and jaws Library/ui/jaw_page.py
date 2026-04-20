@@ -50,7 +50,7 @@ from ui.jaw_page_support import (
 )
 from ui.jaw_page_support.event_filter import handle_jaw_page_event
 from ui.jaw_page_support.page_builders import build_jaw_page_layout
-from ui.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
+from ui.selectors.selector_ui_helpers import normalize_selector_spindle, selector_spindle_label
 
 __all__ = ['JawPage']
 

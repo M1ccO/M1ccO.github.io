@@ -53,6 +53,7 @@ class TestWorkEditorStyleInheritance(unittest.TestCase):
         _APP.processEvents()
 
         dlg = _WorkEditorStyleProbe()
+        dlg._explicit_style_host = host
 
         WorkEditorDialog._apply_host_visual_style(dlg)
 

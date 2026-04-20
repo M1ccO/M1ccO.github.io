@@ -157,12 +157,16 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
         module = work_editor_dialog_module
         with mock.patch.object(module, "UiPreferencesService") as prefs_mock, mock.patch.object(
             module, "load_profile", return_value=_DummyProfile()
-        ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch.object(
-            module, "is_machining_center", return_value=True
-        ), mock.patch(
+        ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch(
             "machine_profiles.apply_machining_center_overrides",
             side_effect=lambda base_profile, **_kwargs: base_profile,
-        ), mock.patch.object(WorkEditorDialog, "_ensure_zeros_tab_ready") as ensure_zeros_mock:
+        ), mock.patch.object(WorkEditorDialog, "_build_zeros_tab") as build_zeros_mock, mock.patch.object(
+            WorkEditorDialog, "_apply_work_payload_to_zeros_tab"
+        ), mock.patch.object(WorkEditorDialog, "_build_tools_tab") as build_tools_mock, mock.patch.object(
+            WorkEditorDialog, "_apply_work_payload_to_tools_tab"
+        ), mock.patch.object(WorkEditorDialog, "_refresh_tool_head_widgets"
+        ), mock.patch.object(WorkEditorDialog, "_sync_tool_head_view"
+        ):
             prefs_mock.return_value.load.return_value = {}
             dialog = _DialogStub(
                 draw_service=SimpleNamespace(),
@@ -177,8 +181,8 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
                 machine_profile_key=None,
             )
 
-        ensure_zeros_mock.assert_called_once()
-        self.assertTrue(dialog._zeros_tab_built is False)
+        build_zeros_mock.assert_called_once()
+        build_tools_mock.assert_called_once()
 
     def test_lathe_work_editor_shell_primes_zero_points_and_tools_during_construction(self):
         class _DialogStub(LatheWorkEditorDialog):
@@ -213,10 +217,18 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
         with mock.patch.object(module, "UiPreferencesService") as prefs_mock, mock.patch.object(
             module, "load_profile"
         ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch.object(
-            LatheWorkEditorDialog, "_ensure_zeros_tab_ready"
-        ) as ensure_zeros_mock, mock.patch.object(
-            LatheWorkEditorDialog, "_ensure_tools_tab_ready"
-        ) as ensure_tools_mock:
+            LatheWorkEditorDialog, "_build_zeros_tab"
+        ) as build_zeros_mock, mock.patch.object(
+            LatheWorkEditorDialog, "_apply_work_payload_to_zeros_tab"
+        ), mock.patch.object(
+            LatheWorkEditorDialog, "_build_tools_tab"
+        ) as build_tools_mock, mock.patch.object(
+            LatheWorkEditorDialog, "_apply_work_payload_to_tools_tab"
+        ), mock.patch.object(
+            LatheWorkEditorDialog, "_refresh_tool_head_widgets"
+        ), mock.patch.object(
+            LatheWorkEditorDialog, "_sync_tool_head_view"
+        ):
             prefs_mock.return_value.load.return_value = {}
             _DialogStub(
                 draw_service=SimpleNamespace(),
@@ -231,8 +243,8 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
                 machine_profile_key="lathe_1sp_1h",
             )
 
-        ensure_zeros_mock.assert_called_once()
-        ensure_tools_mock.assert_called_once()
+        build_zeros_mock.assert_called_once()
+        build_tools_mock.assert_called_once()
 
     def test_machining_center_work_editor_shell_primes_zero_points_and_tools_during_construction(self):
         class _DummyProfile:
@@ -275,16 +287,22 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
         module = work_editor_dialog_module
         with mock.patch.object(module, "UiPreferencesService") as prefs_mock, mock.patch.object(
             module, "load_profile", return_value=_DummyProfile()
-        ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch.object(
-            module, "is_machining_center", return_value=True
-        ), mock.patch(
+        ), mock.patch.object(module, "resolve_profile_key", side_effect=lambda value: value), mock.patch(
             "machine_profiles.apply_machining_center_overrides",
             side_effect=lambda base_profile, **_kwargs: base_profile,
         ), mock.patch.object(
-            MachiningCenterWorkEditorDialog, "_ensure_zeros_tab_ready"
-        ) as ensure_zeros_mock, mock.patch.object(
-            MachiningCenterWorkEditorDialog, "_ensure_tools_tab_ready"
-        ) as ensure_tools_mock:
+            MachiningCenterWorkEditorDialog, "_build_zeros_tab"
+        ) as build_zeros_mock, mock.patch.object(
+            MachiningCenterWorkEditorDialog, "_apply_work_payload_to_zeros_tab"
+        ), mock.patch.object(
+            MachiningCenterWorkEditorDialog, "_build_tools_tab"
+        ) as build_tools_mock, mock.patch.object(
+            MachiningCenterWorkEditorDialog, "_apply_work_payload_to_tools_tab"
+        ), mock.patch.object(
+            MachiningCenterWorkEditorDialog, "_refresh_tool_head_widgets"
+        ), mock.patch.object(
+            MachiningCenterWorkEditorDialog, "_sync_tool_head_view"
+        ):
             prefs_mock.return_value.load.return_value = {}
             _DialogStub(
                 draw_service=SimpleNamespace(),
@@ -299,8 +317,8 @@ class TestWorkEditorLaunchParent(unittest.TestCase):
                 machine_profile_key="machining_center_3ax",
             )
 
-        ensure_zeros_mock.assert_called_once()
-        ensure_tools_mock.assert_called_once()
+        build_zeros_mock.assert_called_once()
+        build_tools_mock.assert_called_once()
 
     def test_setup_tabs_parents_pages_to_tab_widget(self):
         class _DialogStub(QWidget):

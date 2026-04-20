@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ui.selector_mime import fixture_payload_ids
+from ui.selectors.selector_mime import fixture_payload_ids
 from ui.selector_state_helpers import has_any_selector_assignment
-from ui.selector_ui_helpers import event_point, normalize_selector_spindle, selector_spindle_label, widget_contains_global_point
+from ui.selectors.selector_ui_helpers import event_point, normalize_selector_spindle, selector_spindle_label, widget_contains_global_point
 
 
 def update_selector_spindle_ui(page) -> None:

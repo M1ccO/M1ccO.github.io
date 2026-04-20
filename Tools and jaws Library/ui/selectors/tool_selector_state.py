@@ -12,7 +12,7 @@ from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.tool_assignment_editing import edit_tool_assignment_dialog, open_tool_pot_editor_dialog
 from shared.ui.tool_assignment_display import build_badges, compose_title, effective_fields, library_label_fields
 from shared.ui.helpers.topbar_common import rebuild_filter_row
-from ..selector_ui_helpers import selector_spindle_label
+from .selector_ui_helpers import selector_spindle_label
 from .common import selected_rows_or_current
 from ..tool_catalog_delegate import (
     ROLE_TOOL_DATA,

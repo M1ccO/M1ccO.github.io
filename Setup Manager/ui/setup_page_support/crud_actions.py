@@ -60,6 +60,14 @@ def _prepare_shared_dialog_context(dialog, work_payload: dict | None) -> None:
     payload = dict(work_payload or {})
     dialog.work = payload
     dialog.is_edit = bool(payload)
+
+    # Reset selector session state left over from any previous use of this
+    # shared dialog.  The controller owns all selector state and delegates
+    # to SelectorSessionCoordinator for lifecycle tracking.
+    ctrl = getattr(dialog, "_selector_ctrl", None)
+    if ctrl is not None:
+        ctrl.reset_for_reuse()
+
     try:
         dialog.setWindowTitle(dialog._dialog_title())
     except Exception:

@@ -5172,3 +5172,367 @@ Traceback (most recent call last):
     def boom(_t): raise RuntimeError("fail")
                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
 RuntimeError: fail
+2026-04-20 14:26:35,030 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 14:26:35,081 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 14:26:35,083 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 14:26:35,085 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 14:39:38,753 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 14:39:38,810 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 14:39:38,812 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 14:39:38,813 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 14:40:59,335 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 14:40:59,386 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 14:40:59,388 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 14:40:59,389 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 14:41:07,479 test_work_editor_geometry_phase6 WARNING work_editor.selector request ignored while session is active kind=jaws session_id=1 phase=requested
+2026-04-20 14:41:07,482 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 14:41:07,540 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 14:41:07,542 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 14:41:07,543 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 15:38:47,801 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-20 15:39:02,028 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-20 15:47:10,593 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 15:47:10,593 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 15:47:10,594 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 15:47:10,602 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-20 15:48:01,460 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 15:48:01,460 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 15:48:01,461 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 15:48:01,469 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:48:09,040 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:09,041 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:09,041 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 15:48:09,041 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 15:48:09,049 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-20 15:48:16,639 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 15:48:16,639 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:48:16,640 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:48:16,640 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:16,640 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 15:48:16,640 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:48:16,640 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:48:16,640 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:16,641 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:48:16,641 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 15:48:16,641 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 15:48:16,649 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+RuntimeError: fail
+2026-04-20 15:58:47,346 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 15:58:47,346 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:58:47,347 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 15:58:47,347 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:58:47,347 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 15:58:47,347 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:58:47,347 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 15:58:47,347 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:58:47,348 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'session.closed', 'transport': 'ipc'}
+2026-04-20 15:58:47,348 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 15:58:47,348 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 15:58:47,349 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 15:58:47,415 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 15:58:47,418 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 15:58:47,420 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:06:12,043 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:06:12,043 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:06:12,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:06:12,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:06:12,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:06:12,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:06:12,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:06:12,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:06:12,045 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:06:12,045 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:06:12,045 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:06:12,045 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:06:12,047 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:06:12,086 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:06:12,087 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:06:12,114 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:06:12,116 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:06:12,119 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:11:29,426 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:11:29,426 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:11:29,426 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:11:29,426 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:11:29,427 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:11:29,427 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:11:29,427 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:11:29,427 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:11:29,427 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:11:29,427 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:11:29,428 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:11:29,428 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:11:29,429 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:11:29,468 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:11:29,469 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:11:29,499 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:11:29,502 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:11:29,504 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:17:08,361 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:08,361 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:08,361 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:17:08,361 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:17:08,362 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:08,362 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:08,362 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:08,362 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:08,362 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:08,362 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:08,363 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:17:08,363 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:17:08,364 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:17:08,396 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:17:08,397 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:17:08,423 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:17:17,221 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:17,221 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:17,221 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:17:17,221 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:17:17,222 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:17:17,224 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:17:17,256 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:17:17,256 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:17:17,284 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:17:24,778 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:24,778 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:24,778 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:17:24,778 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:17:24,779 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:17:24,781 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:17:24,812 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:17:24,813 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:17:24,838 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:17:32,533 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:32,533 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:17:32,534 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:17:32,536 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:17:32,568 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:17:32,569 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:17:32,597 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:17:40,142 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:17:40,143 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:17:40,144 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:17:40,144 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:17:40,145 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:17:40,177 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:17:40,177 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:17:40,203 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:19:05,641 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:19:05,641 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:19:05,641 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:19:05,642 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:19:05,644 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:19:05,676 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:19:05,676 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:19:05,703 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:19:05,707 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:19:05,708 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:19:19,728 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-20 16:19:19,844 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:19:19,845 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:19:19,861 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:19:19,863 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:19:19,866 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:19:19,898 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpsiq4e1if\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-20 16:19:19,899 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpsiq4e1if\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-20 16:19:19,901 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-20 16:22:28,068 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:22:28,068 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:22:28,068 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:22:28,068 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:22:28,069 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:22:28,070 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:22:28,071 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:22:28,101 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:22:28,101 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:22:28,128 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:22:28,131 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:22:28,133 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:23:02,043 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:23:02,043 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:23:02,043 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:23:02,043 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:23:02,044 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:23:02,046 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:23:02,080 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:23:02,080 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:23:02,108 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:23:02,111 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:23:02,113 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:23:15,203 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-20 16:23:15,306 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:23:15,306 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:23:15,323 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:23:15,326 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:23:15,329 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-20 16:23:15,360 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp41d168ul\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-20 16:23:15,361 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp41d168ul\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-20 16:23:15,364 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-20 16:31:49,254 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:31:49,254 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-20 16:31:49,254 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'overlay'}
+2026-04-20 16:31:49,254 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'ipc', 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'ipc', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'ipc', 'current_page': 'selector'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'ipc', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'ipc', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-20 16:31:49,255 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'ipc', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-20 16:31:49,257 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=ntx_2sp_2h
+2026-04-20 16:31:49,288 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-20 16:31:49,288 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-20 16:31:49,315 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-20 16:31:49,318 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-20 16:31:49,320 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=

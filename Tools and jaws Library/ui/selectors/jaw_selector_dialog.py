@@ -12,7 +12,7 @@ except ImportError:
     from config import SHARED_UI_PREFERENCES_PATH
 from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
 from shared.ui.selectors import JawSelectorWidget
-from ..selector_ui_helpers import normalize_selector_spindle
+from .selector_ui_helpers import normalize_selector_spindle
 from .common import SelectorDialogBase, SelectorWidgetBase
 from .jaw_selector_layout import JawSelectorLayoutMixin
 from .jaw_selector_payload import JawSelectorPayloadMixin
