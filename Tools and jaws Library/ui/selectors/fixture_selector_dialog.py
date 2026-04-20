@@ -4,7 +4,7 @@ import json
 import os
 from typing import Callable
 
-from PySide6.QtCore import QMimeData, QSize, QTimer, Qt, Signal
+from PySide6.QtCore import QMimeData, QSize, Qt, Signal
 from PySide6.QtGui import QDrag, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -275,7 +275,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             translate=translate,
             on_cancel=on_cancel,
             parent=parent,
-            window_flags=Qt.Widget if self._embedded_mode else Qt.WindowFlags(),
+            window_flags=Qt.Widget if self._embedded_mode else (Qt.Tool | Qt.WindowStaysOnTopHint),
         )
         self.fixture_service = fixture_service
         self._on_submit = on_submit
@@ -344,7 +344,6 @@ class FixtureSelectorDialog(SelectorDialogBase):
                 self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
                 self.setAttribute(Qt.WA_DeleteOnClose, True)
                 self.resize(1220, 780)
-                restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
 
             root = QVBoxLayout(self)
             root.setContentsMargins(8, 8, 8, 8)
@@ -353,15 +352,11 @@ class FixtureSelectorDialog(SelectorDialogBase):
             self._build_toolbar(root)
             self._build_content(root)
             self._build_bottom_bar(root)
+            # Populate catalog and assignment lists while updates are suppressed
+            # so the dialog is fully built before the first paint.
+            self._run_startup_initialization()
         finally:
             self.setUpdatesEnabled(True)
-
-        if self._embedded_mode:
-            self._run_startup_initialization()
-        else:
-            # Defer heavier startup work until after first paint so selector
-            # open feels immediate and frame timing stays consistent.
-            QTimer.singleShot(0, self._run_startup_initialization)
 
     def _run_startup_initialization(self) -> None:
         if self._startup_initialized:

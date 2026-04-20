@@ -471,6 +471,22 @@ def main():
         except Exception:
             pass
 
+        # Bring Work Editor (and SM main window) to the foreground immediately
+        # without waiting for the follow-up "show" IPC message that Library
+        # sends after this one.  Library called AllowSetForegroundWindow(-1)
+        # before the handoff so SetForegroundWindow is permitted here.
+        try:
+            import ctypes
+            dialog = _get_active_work_editor(target_win)
+            if dialog is not None and dialog.isVisible():
+                ctypes.windll.user32.SetForegroundWindow(int(dialog.winId()))
+            else:
+                target_win.raise_()
+                target_win.activateWindow()
+                ctypes.windll.user32.SetForegroundWindow(int(target_win.winId()))
+        except Exception:
+            pass
+
     def _restore_work_editor_if_waiting(target_win):
         """Show Work Editor if it was hidden while waiting for a selector result (cancel path)."""
         try:

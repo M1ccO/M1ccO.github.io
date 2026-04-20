@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-from PySide6.QtCore import QModelIndex, QTimer, Qt
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QVBoxLayout
 
 try:
@@ -55,7 +55,7 @@ class ToolSelectorDialog(
             translate=translate,
             on_cancel=on_cancel,
             parent=parent,
-            window_flags=Qt.Widget if self._embedded_mode else Qt.WindowFlags(),
+            window_flags=Qt.Widget if self._embedded_mode else (Qt.Tool | Qt.WindowStaysOnTopHint),
         )
         self.tool_service = tool_service
         self.machine_profile = machine_profile
@@ -101,22 +101,19 @@ class ToolSelectorDialog(
                 self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
                 self.setAttribute(Qt.WA_DeleteOnClose, True)
                 self.resize(1500, 860)
-                restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
             inner = self._make_themed_inner_layout()
 
             self._build_filter_row(inner)
             self._build_content(inner)
             self._build_bottom_bar(inner)
+            # Populate catalog and assignment lists while updates are suppressed
+            # so the dialog is fully built before the first paint.  Deferring
+            # via QTimer caused the empty-state hint to flash briefly in the
+            # wrong position before the real content loaded.
+            self._run_startup_initialization()
         finally:
             self.setUpdatesEnabled(True)
-
-        if self._embedded_mode:
-            self._run_startup_initialization()
-        else:
-            # Let the dialog paint first; defer heavier data population to avoid
-            # first-show stalls and compositor flicker during selector handoff.
-            QTimer.singleShot(0, self._run_startup_initialization)
 
     def _run_startup_initialization(self) -> None:
         if self._startup_initialized:

@@ -226,24 +226,45 @@ class WorkEditorSelectorController:
             self._apply_selector_result(request, result_payload)
             dialog = self._dialog
             saved_geo = self._ipc_saved_geometry
+
+            # Re-show: the dialog is hidden, not closed.  Qt retains the backing
+            # store so the window re-appears in its last painted state instantly.
+            # Geometry restore before show() so there's no visible position jump.
             if saved_geo is not None:
                 dialog.setGeometry(saved_geo)
-            dialog.show()
+            if not dialog.isVisible():
+                dialog.show()
             dialog.raise_()
-            dialog.activateWindow()
+            # Library called AllowSetForegroundWindow(-1) before sending this
+            # payload, so SetForegroundWindow is permitted.  Use it directly
+            # instead of activateWindow() — on Windows, activateWindow() is a
+            # polite hint that can be silently ignored if the calling process
+            # doesn't currently own the foreground.
+            try:
+                import ctypes
+                ctypes.windll.user32.SetForegroundWindow(int(dialog.winId()))
+            except Exception:
+                dialog.activateWindow()
 
     def restore_if_waiting(self) -> None:
         """Show dialog if hidden waiting for IPC result (cancel path)."""
         dialog = self._dialog
-        if dialog.isVisible():
-            return
         if self._pending_ipc_request_id is None:
             return
         self._pending_ipc_request_id = None
         self._pending_ipc_kind = None
-        dialog.show()
+
+        # Re-show: direct snap-back, no animation.  The Work Editor has a
+        # cached backing store so it re-appears in its last painted state
+        # instantly — fade-in on a large complex window looks like a flash.
+        if not dialog.isVisible():
+            dialog.show()
         dialog.raise_()
-        dialog.activateWindow()
+        try:
+            import ctypes
+            ctypes.windll.user32.SetForegroundWindow(int(dialog.winId()))
+        except Exception:
+            dialog.activateWindow()
 
     def force_shutdown(self) -> None:
         """Force-close any active session. Safe to call from closeEvent."""
@@ -870,7 +891,9 @@ class WorkEditorSelectorController:
         sent = send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, payload)
         if sent:
             self._log("open.ipc.sent", kind=kind, request_id=request_id)
-            dialog.hide()
+            # Don't hide the Work Editor — the selector has WindowStaysOnTopHint
+            # so it appears on top without any gap.  Hiding would briefly expose
+            # the desktop between the hide and the selector paint.
             return True
 
         launched = launch_tool_library(
@@ -882,6 +905,10 @@ class WorkEditorSelectorController:
         )
         if launched:
             self._log("open.ipc.launching", kind=kind, request_id=request_id)
+            # Hide only when Library had to be launched from scratch (it will
+            # appear fullscreen; keeping Work Editor underneath would be
+            # confusing).  Once Library is running the selector dialog will
+            # appear on top and Work Editor becomes visible again on close.
             dialog.hide()
             send_request_with_retry(
                 lambda request_payload: send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, request_payload),

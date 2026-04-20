@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-from PySide6.QtCore import QModelIndex, QTimer, Qt
+from PySide6.QtCore import QModelIndex, Qt
 from PySide6.QtWidgets import QVBoxLayout
 
 try:
@@ -45,7 +45,7 @@ class JawSelectorDialog(
             translate=translate,
             on_cancel=on_cancel,
             parent=parent,
-            window_flags=Qt.Widget if self._embedded_mode else Qt.WindowFlags(),
+            window_flags=Qt.Widget if self._embedded_mode else (Qt.Tool | Qt.WindowStaysOnTopHint),
         )
         self.jaw_service = jaw_service
         self._on_submit = on_submit
@@ -83,22 +83,17 @@ class JawSelectorDialog(
                 self.setWindowTitle(self._t('work_editor.selector.jaws_dialog_title', 'Leukavalitsin'))
                 self.setAttribute(Qt.WA_DeleteOnClose, True)
                 self.resize(1220, 780)
-                restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
             inner = self._make_themed_inner_layout()
 
             self._build_filter_row(inner)
             self._build_content(inner)
             self._build_bottom_bar(inner)
+            # Populate catalog and assignment lists while updates are suppressed
+            # so the dialog is fully built before the first paint.
+            self._run_startup_initialization()
         finally:
             self.setUpdatesEnabled(True)
-
-        if self._embedded_mode:
-            self._run_startup_initialization()
-        else:
-            # Defer heavy data population until after first paint so selector
-            # handoff appears immediately and avoids startup jitter.
-            QTimer.singleShot(0, self._run_startup_initialization)
 
     def _run_startup_initialization(self) -> None:
         if self._startup_initialized:

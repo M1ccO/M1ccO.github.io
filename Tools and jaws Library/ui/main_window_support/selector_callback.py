@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import ctypes
+import ctypes.wintypes
 import json
 import logging
+import sys
 
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import QMessageBox
@@ -62,6 +65,18 @@ def send_selector_result_payload(
             ),
         )
         return False
+
+    # Grant SM permission to call SetForegroundWindow before the payload
+    # arrives.  Without this, SM's activateWindow() is silently ignored by
+    # Windows because the Library process still owns the foreground at the
+    # time SM processes the result.  Calling AllowSetForegroundWindow(-1) here
+    # (before the socket write) ensures the grant is in place the moment SM
+    # receives the payload and calls SetForegroundWindow.
+    if sys.platform == "win32":
+        try:
+            ctypes.windll.user32.AllowSetForegroundWindow(ctypes.wintypes.DWORD(-1))
+        except Exception:
+            pass
 
     try:
         bytes_written = socket.write(json.dumps(payload).encode("utf-8"))

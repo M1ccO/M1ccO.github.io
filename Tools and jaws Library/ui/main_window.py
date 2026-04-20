@@ -190,6 +190,12 @@ class MainWindow(QMainWindow):
         self._jaw_selector_dialog: JawSelectorDialog | None = None
         self._fixture_selector_dialog: FixtureSelectorDialog | None = None
         self._closing_selector_dialogs = False
+        # Warm-cache: pre-built dialogs that survive between selector sessions.
+        # Created once at startup so the expensive widget-tree construction and
+        # catalog query are already paid before the first IPC request arrives.
+        # Mirrors the Work Editor shared-dialog cache pattern.
+        self._tool_selector_dialog_warmcache: ToolSelectorDialog | None = None
+        self._jaw_selector_dialog_warmcache: JawSelectorDialog | None = None
         self._runtime_initialized = False
         self._background_catalog_preload_done = False
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
@@ -222,6 +228,8 @@ class MainWindow(QMainWindow):
             self._runtime_initialized = True
             QApplication.instance().installEventFilter(self)
             QTimer.singleShot(0, self.preload_catalog_pages)
+            QTimer.singleShot(3000, self._pre_warm_selector_dialogs)
+            QTimer.singleShot(3000, self._pre_warm_selector_dialogs)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
         self._ensure_on_screen()
@@ -1019,6 +1027,10 @@ class MainWindow(QMainWindow):
 
     def _close_selector_dialogs(self) -> None:
         self._closing_selector_dialogs = True
+        warm_cache = {
+            id(self._tool_selector_dialog_warmcache),
+            id(self._jaw_selector_dialog_warmcache),
+        } - {id(None)}
         dialogs = [self._tool_selector_dialog, self._jaw_selector_dialog, self._fixture_selector_dialog]
         self._tool_selector_dialog = None
         self._jaw_selector_dialog = None
@@ -1028,47 +1040,166 @@ class MainWindow(QMainWindow):
                 continue
             try:
                 dialog.blockSignals(True)
-                dialog.close()
-                # Dialogs are created with parent=None so they must be
-                # explicitly scheduled for deletion.
-                dialog.deleteLater()
+                if id(dialog) in warm_cache:
+                    # Warm-cached dialogs are reused across sessions — just hide
+                    # them rather than destroying them so the pre-built widget tree
+                    # and catalog data remain available for the next IPC request.
+                    dialog.hide()
+                    # Re-enable signals so the dialog is fully live for the next
+                    # session (blockSignals is called above for all dialogs).
+                    dialog.blockSignals(False)
+                else:
+                    dialog.close()
+                    # Dialogs are created with parent=None so they must be
+                    # explicitly scheduled for deletion.
+                    dialog.deleteLater()
             except Exception:
                 pass
         self._closing_selector_dialogs = False
+
+    def _pre_warm_selector_dialogs(self) -> None:
+        """Build selector dialogs once, hidden, so widget construction and catalog
+        load are already paid before the first IPC selector request arrives.
+        Mirrors Setup Manager's ``_get_or_create_shared_dialog`` pattern."""
+        if self._tool_selector_dialog_warmcache is None:
+            try:
+                self._tool_selector_dialog_warmcache = ToolSelectorDialog(
+                    tool_service=self.tool_service,
+                    machine_profile=self.machine_profile,
+                    translate=self._t,
+                    selector_head='H1',
+                    selector_spindle='main',
+                    initial_assignments=None,
+                    initial_assignment_buckets=None,
+                    initial_print_pots=False,
+                    on_submit=lambda _: None,
+                    on_cancel=lambda: None,
+                    parent=None,
+                )
+                # Apply Qt.Tool immediately so the HWND is already a tool window
+                # before the first IPC open — avoids a second HWND recreation when
+                # _open_selector_dialog_for_session sets Tool | StaysOnTop flags.
+                self._tool_selector_dialog_warmcache.setWindowFlags(
+                    self._tool_selector_dialog_warmcache.windowFlags()
+                    | Qt.Tool
+                    | Qt.WindowStaysOnTopHint
+                )
+                # Pre-size the dialog to Library's actual geometry while it's
+                # still hidden.  When show() is called during the real open,
+                # DWM creates a fresh surface at the correct size — no stale
+                # stretched texture, no HWND recreation side-effects from
+                # opacity/layered-window changes.
+                try:
+                    _lib_geo = self.geometry()
+                    self._tool_selector_dialog_warmcache.setGeometry(
+                        _lib_geo.x(), _lib_geo.y(),
+                        _lib_geo.width(), _lib_geo.height(),
+                    )
+                except Exception:
+                    pass
+                logger.debug('selector: tool dialog warm-cache ready')
+            except Exception:
+                logger.warning('selector: pre-warm failed for tool dialog', exc_info=True)
+                self._tool_selector_dialog_warmcache = None
+
+        if self._jaw_selector_dialog_warmcache is None:
+            try:
+                self._jaw_selector_dialog_warmcache = JawSelectorDialog(
+                    jaw_service=self.jaw_service,
+                    machine_profile=self.machine_profile,
+                    translate=self._t,
+                    selector_spindle='main',
+                    initial_assignments=None,
+                    on_submit=lambda _: None,
+                    on_cancel=lambda: None,
+                    parent=None,
+                )
+                self._jaw_selector_dialog_warmcache.setWindowFlags(
+                    self._jaw_selector_dialog_warmcache.windowFlags()
+                    | Qt.Tool
+                    | Qt.WindowStaysOnTopHint
+                )
+                try:
+                    _lib_geo = self.geometry()
+                    self._jaw_selector_dialog_warmcache.setGeometry(
+                        _lib_geo.x(), _lib_geo.y(),
+                        _lib_geo.width(), _lib_geo.height(),
+                    )
+                except Exception:
+                    pass
+                logger.debug('selector: jaw dialog warm-cache ready')
+            except Exception:
+                logger.warning('selector: pre-warm failed for jaw dialog', exc_info=True)
+                self._jaw_selector_dialog_warmcache = None
 
     def _open_selector_dialog_for_session(self, should_show: bool) -> None:
         logger.debug("selector: opening %r dialog — head=%r spindle=%r show=%r", self._selector_mode, self._selector_head, self._selector_spindle, should_show)
         self._close_selector_dialogs()
 
+        # _reset_kwargs is set for warm-cached dialogs.  The actual
+        # reset_for_session() call is deferred to INSIDE the setUpdatesEnabled(False)
+        # priming block below so widget-state changes (clear/rebuild assignment list,
+        # context header update) are never visible to the compositor.
+        _reset_kwargs: dict | None = None
+
         if self._selector_mode == 'tools':
-            dialog = ToolSelectorDialog(
-                tool_service=self.tool_service,
-                machine_profile=self.machine_profile,
-                translate=self._t,
-                selector_head=self._selector_head,
-                selector_spindle=self._selector_spindle,
-                initial_assignments=self._selector_initial_assignments,
-                initial_assignment_buckets=self._selector_initial_assignment_buckets,
-                initial_print_pots=bool(getattr(self, '_selector_print_pots', False)),
-                on_submit=self._on_selector_dialog_submit,
-                on_cancel=self._on_selector_dialog_cancel,
-                # parent=None so hiding the main window does NOT cascade to the
-                # dialog (Windows HWND parent-child visibility propagation).
-                # The dialog is managed explicitly via _close_selector_dialogs().
-                parent=None,
-            )
+            cached = self._tool_selector_dialog_warmcache
+            if cached is not None:
+                # Reuse pre-built dialog.  Capture reset kwargs; will be applied
+                # inside the frozen priming block so no intermediate paint occurs.
+                _reset_kwargs = dict(
+                    selector_head=self._selector_head,
+                    selector_spindle=self._selector_spindle,
+                    initial_assignments=self._selector_initial_assignments,
+                    initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                    initial_print_pots=bool(getattr(self, '_selector_print_pots', False)),
+                    on_submit=self._on_selector_dialog_submit,
+                    on_cancel=self._on_selector_dialog_cancel,
+                )
+                dialog = cached
+            else:
+                dialog = ToolSelectorDialog(
+                    tool_service=self.tool_service,
+                    machine_profile=self.machine_profile,
+                    translate=self._t,
+                    selector_head=self._selector_head,
+                    selector_spindle=self._selector_spindle,
+                    initial_assignments=self._selector_initial_assignments,
+                    initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                    initial_print_pots=bool(getattr(self, '_selector_print_pots', False)),
+                    on_submit=self._on_selector_dialog_submit,
+                    on_cancel=self._on_selector_dialog_cancel,
+                    # parent=None so hiding the main window does NOT cascade to
+                    # the dialog (Windows HWND parent-child visibility propagation).
+                    parent=None,
+                )
+                # Cache on first creation so subsequent sessions reuse the
+                # pre-built dialog without paying construction + catalog-load
+                # costs again.  Mirrors Work Editor shared-dialog cache.
+                self._tool_selector_dialog_warmcache = dialog
             self._tool_selector_dialog = dialog
         elif self._selector_mode == 'jaws':
-            dialog = JawSelectorDialog(
-                jaw_service=self.jaw_service,
-                machine_profile=self.machine_profile,
-                translate=self._t,
-                selector_spindle=self._selector_spindle,
-                initial_assignments=self._selector_initial_assignments,
-                on_submit=self._on_selector_dialog_submit,
-                on_cancel=self._on_selector_dialog_cancel,
-                parent=None,
-            )
+            cached = self._jaw_selector_dialog_warmcache
+            if cached is not None:
+                _reset_kwargs = dict(
+                    selector_spindle=self._selector_spindle,
+                    initial_assignments=self._selector_initial_assignments,
+                    on_submit=self._on_selector_dialog_submit,
+                    on_cancel=self._on_selector_dialog_cancel,
+                )
+                dialog = cached
+            else:
+                dialog = JawSelectorDialog(
+                    jaw_service=self.jaw_service,
+                    machine_profile=self.machine_profile,
+                    translate=self._t,
+                    selector_spindle=self._selector_spindle,
+                    initial_assignments=self._selector_initial_assignments,
+                    on_submit=self._on_selector_dialog_submit,
+                    on_cancel=self._on_selector_dialog_cancel,
+                    parent=None,
+                )
+                self._jaw_selector_dialog_warmcache = dialog
             self._jaw_selector_dialog = dialog
         elif self._selector_mode == 'fixtures':
             dialog = FixtureSelectorDialog(
@@ -1087,50 +1218,85 @@ class MainWindow(QMainWindow):
         # Position selector dialog: use geometry sent by Work Editor if available,
         # otherwise fall back to Library's own window bounds.
         #
-        # CRITICAL ORDER: setWindowFlag(WindowStaysOnTopHint) recreates the native
-        # HWND, discarding any geometry applied before it.  Apply the flag FIRST,
-        # then palette/stylesheet, then geometry, then show.
+        # Mirror prime_work_editor_dialog exactly:
+        #   1. processEvents — drain events BEFORE the frozen-update priming block
+        #   2. setUpdatesEnabled(False) block: flags (no-op safety check), palette,
+        #      style, geometry, ensurePolished, layout.activate, updateGeometry
+        #   3. processEvents — drain events AFTER the block
+        # The double drain ensures the compositor never sees a reflow-in-progress frame.
         if should_show:
-            # Selector dialogs should behave as transient tool windows:
-            # stay above normal windows and avoid separate taskbar/Alt-Tab
-            # entries that look like an extra Python instance.
-            dialog.setWindowFlag(Qt.Tool, True)
-            dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
-            dialog.setAttribute(Qt.WA_StyledBackground, True)
-            dialog.setAutoFillBackground(True)
-            from PySide6.QtGui import QPalette
-            _bg = current_theme_color('page_bg', '#eceff2')
-            _pal = dialog.palette()
-            _pal.setColor(QPalette.Window, _bg)
-            _pal.setColor(QPalette.Base, _bg)
-            dialog.setPalette(_pal)
-            if hasattr(self, '_compiled_stylesheet') and self._compiled_stylesheet:
-                dialog.setStyleSheet(self._compiled_stylesheet)
-
-        session_geometry = getattr(self, '_selector_session_geometry', '')
-        if session_geometry:
-            try:
-                parts = [int(v) for v in session_geometry.split(',')]
-                if len(parts) == 4:
-                    dialog.setGeometry(*parts)
-            except Exception:
-                session_geometry = ''
-        if not session_geometry:
-            try:
-                # Map the main window top-left to global coordinates and move the dialog there.
-                top_left = self.mapToGlobal(QPoint(0, 0))
-                dialog.move(top_left)
-                dialog.resize(max(self.width(), 1500), max(self.height(), 860))
-            except Exception:
-                # Best-effort fallback: try applying geometry directly
+            dialog.setUpdatesEnabled(False)
+        try:
+            # For warm-cached dialogs, reset session state INSIDE the frozen block
+            # so widget-state changes (assignment list rebuild, context header update)
+            # are invisible to the compositor — same as first-open where the
+            # constructor runs _run_startup_initialization inside a frozen block.
+            if _reset_kwargs is not None:
                 try:
-                    geom = self.geometry()
-                    dialog.setGeometry(geom.x(), geom.y(), max(geom.width(), 1500), max(geom.height(), 860))
+                    dialog.reset_for_session(**_reset_kwargs)
+                except Exception:
+                    logger.warning('selector: reset_for_session failed', exc_info=True)
+
+            if should_show:
+                # Qt.Tool | Qt.WindowStaysOnTopHint are already set at construction
+                # time, so the bitwise-OR is a no-op in the normal path (no HWND
+                # recreation).  The explicit inequality check guarantees we never
+                # call setWindowFlags when nothing changes.
+                _new_flags = dialog.windowFlags() | Qt.Tool | Qt.WindowStaysOnTopHint
+                if _new_flags != dialog.windowFlags():
+                    dialog.setWindowFlags(_new_flags)
+                dialog.setAttribute(Qt.WA_StyledBackground, True)
+                dialog.setAutoFillBackground(True)
+                from PySide6.QtGui import QPalette
+                _bg = current_theme_color('page_bg', '#eceff2')
+                _pal = dialog.palette()
+                _pal.setColor(QPalette.Window, _bg)
+                _pal.setColor(QPalette.Base, _bg)
+                dialog.setPalette(_pal)
+                if hasattr(self, '_compiled_stylesheet') and self._compiled_stylesheet:
+                    dialog.setStyleSheet(self._compiled_stylesheet)
+
+            session_geometry = getattr(self, '_selector_session_geometry', '')
+            if session_geometry:
+                try:
+                    parts = [int(v) for v in session_geometry.split(',')]
+                    if len(parts) == 4:
+                        dialog.setGeometry(*parts)
+                except Exception:
+                    session_geometry = ''
+            if not session_geometry:
+                try:
+                    top_left = self.mapToGlobal(QPoint(0, 0))
+                    dialog.move(top_left)
+                    dialog.resize(max(self.width(), 1500), max(self.height(), 860))
                 except Exception:
                     try:
-                        dialog.resize(max(self.width(), 1500), max(self.height(), 860))
+                        geom = self.geometry()
+                        dialog.setGeometry(geom.x(), geom.y(), max(geom.width(), 1500), max(geom.height(), 860))
                     except Exception:
-                        pass
+                        try:
+                            dialog.resize(max(self.width(), 1500), max(self.height(), 860))
+                        except Exception:
+                            pass
+
+            if should_show:
+                try:
+                    dialog.ensurePolished()
+                except Exception:
+                    pass
+                try:
+                    layout = dialog.layout()
+                    if layout is not None:
+                        layout.activate()
+                except Exception:
+                    pass
+                try:
+                    dialog.updateGeometry()
+                except Exception:
+                    pass
+        finally:
+            if should_show:
+                dialog.setUpdatesEnabled(True)
 
         # Detached 3D preview dialog is created lazily when the user clicks
         # the preview button (via ensure_detached_preview_dialog in
@@ -1140,10 +1306,9 @@ class MainWindow(QMainWindow):
 
         if should_show:
             dialog.show()
+            dialog.repaint()
             dialog.raise_()
             dialog.activateWindow()
-            QTimer.singleShot(0, dialog.raise_)
-            QTimer.singleShot(0, dialog.activateWindow)
 
     def _on_selector_dialog_cancel(self) -> None:
         if self._closing_selector_dialogs:
@@ -1257,13 +1422,12 @@ class MainWindow(QMainWindow):
 
         if selector_active:
             self._set_selector_session_state(selector_state)
-            # Open selector immediately so users do not see a pre-open flash.
-            # Do not run shared preference/style reload during an active
-            # selector handoff. Restyling top-level windows at this point can
-            # recreate native HWNDs and cause z-order/taskbar/icon glitches.
+            # Open selector on top of the Library window.  The selector has
+            # WindowStaysOnTopHint and is sized to cover the Library exactly,
+            # so the Library stays visible underneath without any gap or flash.
+            # No hide() call — hiding causes a DWM compositing gap between
+            # the Library disappearing and the selector being presented.
             self._open_selector_dialog_for_session(should_show=should_show)
-            if should_show:
-                self.hide()
             return
 
         # Preference reload is deferred to after show/fade_in when called from the
