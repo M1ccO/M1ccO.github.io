@@ -13,6 +13,13 @@ for _candidate in (_WORKSPACE, _SETUP_ROOT):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
+if str(_SETUP_ROOT) in sys.path:
+    sys.path.remove(str(_SETUP_ROOT))
+sys.path.insert(0, str(_SETUP_ROOT))
+for _mod_name in list(sys.modules.keys()):
+    if _mod_name == "ui" or _mod_name.startswith("ui."):
+        sys.modules.pop(_mod_name, None)
+
 from ui.work_editor_support.selector_adapter import (  # noqa: E402
     apply_fixture_selector_result,
     apply_jaw_selector_result,
@@ -217,6 +224,35 @@ class TestSelectorAdapterPhase6(unittest.TestCase):
         self.assertTrue(ok)
         sub_bucket = dialog._tool_column_lists["HEAD1"]["sub"]._assignments_by_spindle["sub"]
         self.assertEqual(["T102"], [item["tool_id"] for item in sub_bucket])
+
+    def test_apply_tool_selector_result_preserves_override_and_pot_fields(self):
+        dialog = _DummyDialog()
+        request = {
+            "head": "head1",
+            "spindle": "main",
+            "assignment_buckets_by_target": {
+                "HEAD1:main": [
+                    {
+                        "tool_id": "T101",
+                        "tool_uid": 101,
+                        "description": "Upper main",
+                        "comment": "Critical",
+                        "pot": "P12",
+                        "override_id": "T901",
+                        "override_description": "Override desc",
+                    },
+                ],
+            },
+        }
+
+        ok = apply_tool_selector_result(dialog, request, [])
+
+        self.assertTrue(ok)
+        bucket = dialog._ordered_tool_lists["HEAD1"]._assignments_by_spindle["main"]
+        self.assertEqual("Critical", bucket[0]["comment"])
+        self.assertEqual("P12", bucket[0]["pot"])
+        self.assertEqual("T901", bucket[0]["override_id"])
+        self.assertEqual("Override desc", bucket[0]["override_description"])
 
     def test_apply_tool_selector_result_can_opt_in_to_cache_merge(self):
         dialog = _DummyDialog()

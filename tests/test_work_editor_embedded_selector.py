@@ -19,6 +19,13 @@ for _candidate in (_WORKSPACE, _SETUP_ROOT):
     if _text not in sys.path:
         sys.path.insert(0, _text)
 
+if str(_SETUP_ROOT) in sys.path:
+    sys.path.remove(str(_SETUP_ROOT))
+sys.path.insert(0, str(_SETUP_ROOT))
+for _mod_name in list(sys.modules.keys()):
+    if _mod_name == "ui" or _mod_name.startswith("ui."):
+        sys.modules.pop(_mod_name, None)
+
 from ui.work_editor_support.selector_provider import (  # noqa: E402
     build_fixture_selector_request,
     build_jaw_selector_request,
@@ -108,6 +115,7 @@ class _DummyDialog:
         }
         self._jaw_cache = []
         self._jaw_selectors = {}
+        self.print_pots_checkbox = SimpleNamespace(isChecked=lambda: True)
         self._mc_operations = [
             {"op_key": "OP10", "fixture_items": [{"fixture_id": "F1"}]},
             {"op_key": "OP20", "fixture_items": [{"fixture_id": "F2"}]},
@@ -145,6 +153,7 @@ class TestSelectorProvider(unittest.TestCase):
         self.assertEqual("sub", request["spindle"])
         self.assertEqual([{"tool_id": "T10"}], request["initial_assignments"])
         self.assertIn("HEAD1:main", request["initial_assignment_buckets"])
+        self.assertTrue(request["print_pots"])
 
     def test_tool_selector_request_uses_actual_sub_column_bucket_when_available(self):
         dialog = _DummyDialog()
@@ -180,20 +189,20 @@ class TestSelectorProvider(unittest.TestCase):
 
 
 class TestSelectorModeEnv(unittest.TestCase):
-    def test_selector_mode_default_embedded(self):
+    def test_selector_mode_default_ipc(self):
         WorkEditorDialog = _load_work_editor_dialog_class()
 
         mode = WorkEditorDialog._resolve_selector_transport_mode(object())
-        self.assertEqual("embedded", mode)
+        self.assertEqual("ipc", mode)
 
-    def test_selector_mode_embedded_ignores_env(self):
+    def test_selector_mode_ipc_ignores_env(self):
         WorkEditorDialog = _load_work_editor_dialog_class()
 
         original = os.environ.get("NTX_WORK_EDITOR_SELECTOR_MODE")
         os.environ["NTX_WORK_EDITOR_SELECTOR_MODE"] = "external"
         try:
             mode = WorkEditorDialog._resolve_selector_transport_mode(object())
-            self.assertEqual("embedded", mode)
+            self.assertEqual("ipc", mode)
         finally:
             if original is None:
                 os.environ.pop("NTX_WORK_EDITOR_SELECTOR_MODE", None)
@@ -201,8 +210,151 @@ class TestSelectorModeEnv(unittest.TestCase):
                 os.environ["NTX_WORK_EDITOR_SELECTOR_MODE"] = original
 
 
+class _FakeGeometry:
+    def __init__(self, x: int, y: int, width: int, height: int):
+        self._x = x
+        self._y = y
+        self._width = width
+        self._height = height
+
+    def x(self) -> int:
+        return self._x
+
+    def y(self) -> int:
+        return self._y
+
+    def width(self) -> int:
+        return self._width
+
+    def height(self) -> int:
+        return self._height
+
+
+class _FakeScreen:
+    def __init__(self, available_geometry):
+        self._available_geometry = available_geometry
+
+    def availableGeometry(self):
+        return self._available_geometry
+
+
+class TestSelectorTransport(unittest.TestCase):
+    def test_open_selector_request_prefers_ipc(self):
+        WorkEditorDialog = _load_work_editor_dialog_class()
+        calls = []
+
+        dummy = SimpleNamespace(
+            _selector_transport_mode="ipc",
+            _try_open_selector_via_ipc=lambda **kwargs: calls.append(("ipc", kwargs)) or True,
+            _try_open_selector_embedded=lambda **kwargs: calls.append(("embedded", kwargs)) or True,
+            _log_selector_event=lambda *_args, **_kwargs: None,
+        )
+
+        opened = WorkEditorDialog._open_selector_request(dummy, kind="tools", head="HEAD1", spindle="main")
+
+        self.assertTrue(opened)
+        self.assertEqual([("ipc", {"kind": "tools", "head": "HEAD1", "spindle": "main", "target_key": "", "initial_assignments": None, "initial_assignment_buckets": None})], calls)
+
+    def test_open_selector_request_does_not_fallback_when_ipc_fails(self):
+        WorkEditorDialog = _load_work_editor_dialog_class()
+        calls = []
+
+        dummy = SimpleNamespace(
+            _selector_transport_mode="ipc",
+            _try_open_selector_via_ipc=lambda **kwargs: calls.append(("ipc", kwargs)) or False,
+            _try_open_selector_embedded=lambda **kwargs: calls.append(("embedded", kwargs)) or True,
+        )
+
+        opened = WorkEditorDialog._open_selector_request(dummy, kind="jaws", spindle="sub")
+
+        self.assertFalse(opened)
+        self.assertEqual([("ipc", {"kind": "jaws", "head": "", "spindle": "sub", "target_key": "", "initial_assignments": None, "initial_assignment_buckets": None})], calls)
+
+    def test_open_selector_request_uses_embedded_when_transport_is_embedded(self):
+        WorkEditorDialog = _load_work_editor_dialog_class()
+        calls = []
+
+        dummy = SimpleNamespace(
+            _selector_transport_mode="embedded",
+            _try_open_selector_via_ipc=lambda **kwargs: calls.append(("ipc", kwargs)) or False,
+            _try_open_selector_embedded=lambda **kwargs: calls.append(("embedded", kwargs)) or True,
+        )
+
+        opened = WorkEditorDialog._open_selector_request(dummy, kind="fixtures", target_key="OP10")
+
+        self.assertTrue(opened)
+        self.assertEqual([("embedded", {"kind": "fixtures", "head": "", "spindle": "", "target_key": "OP10", "initial_assignments": None, "initial_assignment_buckets": None})], calls)
+
+    def test_try_open_selector_via_ipc_launches_hidden_library_and_retries(self):
+        WorkEditorDialog = _load_work_editor_dialog_class()
+        library_ipc_module = importlib.import_module("ui.main_window_support.library_ipc")
+
+        hidden = []
+        events = []
+        dummy = SimpleNamespace(
+            _machine_profile_key="ntx_2sp_2h",
+            _pending_ipc_selector_request_id=None,
+            _pending_ipc_selector_kind=None,
+            _ipc_selector_saved_geometry=None,
+            _build_selector_session_geometry=lambda: "10,20,1220,780",
+            geometry=lambda: "original-geometry",
+            hide=lambda: hidden.append(True),
+            _log_selector_event=lambda *args, **kwargs: events.append((args, kwargs)),
+            _t=lambda _key, default=None, **_kwargs: default or "",
+        )
+
+        with patch.object(library_ipc_module, "allow_set_foreground") as allow_fg, \
+             patch.object(library_ipc_module, "send_to_tool_library", return_value=False) as send_ipc, \
+             patch.object(library_ipc_module, "launch_tool_library", return_value=True) as launch_library, \
+             patch.object(library_ipc_module, "send_request_with_retry") as retry_send:
+            opened = WorkEditorDialog._try_open_selector_via_ipc(
+                dummy,
+                kind="tools",
+                head="HEAD1",
+                spindle="main",
+                initial_assignments=[{"tool_id": "T001"}],
+                initial_assignment_buckets={"HEAD1:main": [{"tool_id": "T001"}]},
+            )
+
+        self.assertTrue(opened)
+        self.assertTrue(hidden)
+        self.assertIsNotNone(dummy._pending_ipc_selector_request_id)
+        self.assertEqual("tools", dummy._pending_ipc_selector_kind)
+        self.assertEqual("original-geometry", dummy._ipc_selector_saved_geometry)
+        allow_fg.assert_called_once()
+        send_ipc.assert_called_once()
+        launch_library.assert_called_once()
+        self.assertEqual(["--hidden"], launch_library.call_args.kwargs["extra_args"])
+        retry_send.assert_called_once()
+        payload = retry_send.call_args.args[1]
+        self.assertEqual("tools", payload["selector_mode"])
+        self.assertEqual("10,20,1220,780", payload["geometry"])
+
+    def test_build_selector_session_geometry_expands_to_large_default(self):
+        WorkEditorDialog = _load_work_editor_dialog_class()
+        available = _FakeGeometry(100, 80, 1600, 1000)
+        current = _FakeGeometry(220, 180, 960, 680)
+        dummy = SimpleNamespace(
+            _SELECTOR_DIALOG_WIDTH_PAD=260,
+            _SELECTOR_DIALOG_HEIGHT_PAD=140,
+            _SELECTOR_DIALOG_DEFAULT_WIDTH=1220,
+            _SELECTOR_DIALOG_DEFAULT_HEIGHT=780,
+            geometry=lambda: current,
+            screen=lambda: _FakeScreen(available),
+        )
+
+        geometry_text = WorkEditorDialog._build_selector_session_geometry(dummy)
+
+        self.assertTrue(geometry_text)
+        x_text, y_text, width_text, height_text = geometry_text.split(",")
+        self.assertGreaterEqual(int(width_text), 1220)
+        self.assertGreaterEqual(int(height_text), 780)
+        self.assertGreaterEqual(int(x_text), available.x())
+        self.assertGreaterEqual(int(y_text), available.y())
+
+
 class TestEmbeddedSelectorSubmit(unittest.TestCase):
-    def test_handle_embedded_selector_submit_forwards_assignment_buckets(self):
+    def test_apply_selector_result_forwards_assignment_buckets(self):
         WorkEditorDialog = _load_work_editor_dialog_class()
         captured = {}
 
@@ -219,7 +371,7 @@ class TestEmbeddedSelectorSubmit(unittest.TestCase):
 
         module = sys.modules[WorkEditorDialog.__module__]
         with patch.object(module, "apply_tool_selector_result", side_effect=_capture_apply):
-            WorkEditorDialog._handle_embedded_selector_submit(
+            WorkEditorDialog._apply_selector_result(
                 dummy,
                 {"kind": "tools", "head": "HEAD1", "spindle": "main"},
                 {

@@ -12,6 +12,7 @@ def empty_selector_session_state() -> dict:
         "target_key": "",
         "assignments": [],
         "assignment_buckets": {},
+        "print_pots": False,
     }
 
 
@@ -43,5 +44,6 @@ def selector_session_from_payload(payload: dict) -> dict:
         "target_key": str((payload or {}).get("target_key", "") or "").strip(),
         "assignments": assignments,
         "assignment_buckets": assignment_buckets,
+        "print_pots": bool((payload or {}).get("print_pots", False)),
         "geometry": str((payload or {}).get("geometry", "") or "").strip(),
     }

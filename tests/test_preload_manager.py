@@ -18,8 +18,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # Make `services.preload_manager` importable without the app-level sys.path
 # munging that main.py performs.
 _SETUP_MANAGER_DIR = Path(__file__).resolve().parent.parent / "Setup Manager"
-if str(_SETUP_MANAGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_SETUP_MANAGER_DIR))
+if str(_SETUP_MANAGER_DIR) in sys.path:
+    sys.path.remove(str(_SETUP_MANAGER_DIR))
+sys.path.insert(0, str(_SETUP_MANAGER_DIR))
+for _mod_name in list(sys.modules.keys()):
+    if _mod_name == "services" or _mod_name.startswith("services."):
+        sys.modules.pop(_mod_name, None)
 
 from services.preload_manager import PreloadManager, reset_preload_manager_for_tests  # noqa: E402
 from shared.selector.payloads import SpindleKey, ToolBucket  # noqa: E402

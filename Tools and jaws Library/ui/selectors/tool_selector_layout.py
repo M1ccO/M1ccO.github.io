@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractScrollArea,
+    QCheckBox,
     QComboBox,
     QFrame,
     QHBoxLayout,
@@ -21,6 +22,7 @@ try:
 except ImportError:
     from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR
 from shared.ui.helpers.editor_helpers import (
+    apply_shared_checkbox_style,
     create_titled_section,
     style_icon_action_button,
     style_move_arrow_button,
@@ -367,15 +369,31 @@ class ToolSelectorLayoutMixin:
         self.remove_btn.toolsDropped.connect(self._remove_by_drop)
         actions.addWidget(self.remove_btn)
 
-        self.comment_btn = QPushButton()
-        style_icon_action_button(self.comment_btn, TOOL_ICONS_DIR / 'comment.svg', self._t('tool_library.selector.add_comment', 'Lisää kommentti'))
-        self.comment_btn.clicked.connect(self._add_comment)
-        actions.addWidget(self.comment_btn)
+        self.edit_btn = QPushButton()
+        style_icon_action_button(
+            self.edit_btn,
+            TOOL_ICONS_DIR / 'edit_arrow.svg',
+            self._t('tool_library.selector.edit_assignment', 'Muokkaa työkaluriviä'),
+        )
+        self.edit_btn.clicked.connect(self._edit_selected_assignment)
+        actions.addWidget(self.edit_btn)
 
-        self.delete_comment_btn = QPushButton()
-        style_icon_action_button(self.delete_comment_btn, TOOL_ICONS_DIR / 'comment_disable.svg', self._t('tool_library.selector.delete_comment', 'Poista kommentti'))
-        self.delete_comment_btn.clicked.connect(self._delete_comment)
-        actions.addWidget(self.delete_comment_btn)
+        self.pot_btn = QPushButton()
+        style_icon_action_button(
+            self.pot_btn,
+            TOOL_ICONS_DIR / 'fine_tune.svg',
+            self._t('tool_library.selector.edit_pots', 'Muokkaa potteja'),
+        )
+        self.pot_btn.clicked.connect(self._open_pot_editor)
+        actions.addWidget(self.pot_btn)
+
+        self.print_pots_checkbox = QCheckBox(
+            self._t('work_editor.tools.print_pot_numbers', 'Print Pot Numbers'),
+            selector_card,
+        )
+        apply_shared_checkbox_style(self.print_pots_checkbox, indicator_size=16, min_height=28)
+        self.print_pots_checkbox.setVisible(bool(getattr(self.machine_profile, 'supports_print_pots', False)))
+        self.print_pots_checkbox.toggled.connect(self._on_print_pots_toggled)
 
         actions_host = QWidget(selector_card)
         actions_host.setObjectName('selectorActionsHost')
@@ -383,7 +401,8 @@ class ToolSelectorLayoutMixin:
         actions_host.setProperty('hostTransparent', True)
         actions_host_layout = QHBoxLayout(actions_host)
         actions_host_layout.setContentsMargins(8, 6, 8, 6)
-        actions_host_layout.setSpacing(0)
+        actions_host_layout.setSpacing(8)
+        actions_host_layout.addWidget(self.print_pots_checkbox, 0, Qt.AlignVCenter)
         actions_host_layout.addStretch(1)
         actions_host_layout.addLayout(actions)
         actions_host_layout.addStretch(1)

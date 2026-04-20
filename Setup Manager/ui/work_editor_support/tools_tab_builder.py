@@ -15,8 +15,6 @@ from machine_profiles import is_machining_center
 from .tool_actions import (
     on_tool_list_interaction,
     remove_dragged_tool_assignments,
-    shared_add_tool_comment,
-    shared_delete_tool_comment,
     shared_move_tool_down,
     shared_move_tool_up,
     shared_remove_selected_tool,
@@ -102,6 +100,7 @@ def _build_machining_center_tools_tab_ui(
     ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     ordered.spindle_selector.setVisible(False)
     ordered.set_controls_visible(False)
+    ordered.set_read_only(True)
     ordered.set_current_spindle("main")
     ordered._assignments_by_spindle = {"main": [], "sub": []}
     ordered.selectorRequested.connect(dialog._open_tool_selector_for_bucket)
@@ -150,36 +149,17 @@ def _build_machining_center_tools_tab_ui(
         danger=True,
     )
 
-    dialog.shared_comment_btn = QPushButton(_sa)
-    ordered_tool_list_cls._configure_icon_action(
-        dialog.shared_comment_btn,
-        "comment",
-        dialog._t("work_editor.tools.add_comment", "Add Comment"),
-    )
-
-    dialog.shared_delete_comment_btn = QPushButton(_sa)
-    ordered_tool_list_cls._configure_icon_action(
-        dialog.shared_delete_comment_btn,
-        "comment_delete",
-        dialog._t("work_editor.tools.delete_comment", "Delete Comment"),
-    )
-    dialog.shared_delete_comment_btn.setVisible(False)
-
     dialog.shared_move_up_btn.clicked.connect(lambda: shared_move_tool_up(dialog))
     dialog.shared_move_down_btn.clicked.connect(lambda: shared_move_tool_down(dialog))
     dialog.shared_remove_btn.clicked.connect(lambda: shared_remove_selected_tool(dialog))
     dialog.shared_remove_btn.assignmentsDropped.connect(
         lambda dropped: remove_dragged_tool_assignments(dialog, dropped)
     )
-    dialog.shared_comment_btn.clicked.connect(lambda: shared_add_tool_comment(dialog))
-    dialog.shared_delete_comment_btn.clicked.connect(lambda: shared_delete_tool_comment(dialog))
 
     shared_actions_layout.addStretch(1)
     shared_actions_layout.addWidget(dialog.shared_move_up_btn)
     shared_actions_layout.addWidget(dialog.shared_move_down_btn)
     shared_actions_layout.addWidget(dialog.shared_remove_btn)
-    shared_actions_layout.addWidget(dialog.shared_comment_btn)
-    shared_actions_layout.addWidget(dialog.shared_delete_comment_btn)
     shared_actions_layout.addStretch(1)
     layout.addWidget(dialog.shared_tool_actions, 0)
 
@@ -303,7 +283,7 @@ def build_tools_tab_ui(
         dialog._t("work_editor.tools.print_pot_numbers", "Print Pot Numbers"),
         parent=left_controls,
     )
-    print_pots_row.setVisible(dialog.machine_profile.supports_print_pots)
+    print_pots_row.setVisible(False)
     left_controls_layout.addWidget(print_pots_row, 1)
 
     toolbar.addWidget(left_controls, 1)
@@ -333,12 +313,6 @@ def build_tools_tab_ui(
     dialog.edit_pots_btn.setVisible(False)
     dialog.edit_pots_btn.clicked.connect(dialog._open_pot_editor)
     right_controls_layout.addWidget(dialog.edit_pots_btn, 0)
-
-    dialog.print_pots_checkbox.toggled.connect(
-        lambda checked: dialog.edit_pots_btn.setVisible(
-            dialog.machine_profile.supports_print_pots and checked
-        )
-    )
     dialog.print_pots_checkbox.toggled.connect(dialog._on_print_pots_toggled)
 
     layout.addLayout(toolbar)
@@ -374,6 +348,8 @@ def build_tools_tab_ui(
         sub_ordered.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         main_ordered.set_list_scrolling_enabled(False)
         sub_ordered.set_list_scrolling_enabled(False)
+        main_ordered.set_read_only(True)
+        sub_ordered.set_read_only(True)
         # Single-spindle: OP20 column hidden until user enables it via checkbox.
         if _is_single_sp_tools:
             sub_ordered.setVisible(getattr(dialog, '_op20_tools_enabled', False))
@@ -459,37 +435,19 @@ def build_tools_tab_ui(
         danger=True,
     )
 
-    dialog.shared_comment_btn = QPushButton(_sa)
-    ordered_tool_list_cls._configure_icon_action(
-        dialog.shared_comment_btn,
-        "comment",
-        dialog._t("work_editor.tools.add_comment", "Add Comment"),
-    )
-
-    dialog.shared_delete_comment_btn = QPushButton(_sa)
-    ordered_tool_list_cls._configure_icon_action(
-        dialog.shared_delete_comment_btn,
-        "comment_delete",
-        dialog._t("work_editor.tools.delete_comment", "Delete Comment"),
-    )
-    dialog.shared_delete_comment_btn.setVisible(False)
-
     dialog.shared_move_up_btn.clicked.connect(lambda: shared_move_tool_up(dialog))
     dialog.shared_move_down_btn.clicked.connect(lambda: shared_move_tool_down(dialog))
     dialog.shared_remove_btn.clicked.connect(lambda: shared_remove_selected_tool(dialog))
     dialog.shared_remove_btn.assignmentsDropped.connect(
         lambda dropped: remove_dragged_tool_assignments(dialog, dropped)
     )
-    dialog.shared_comment_btn.clicked.connect(lambda: shared_add_tool_comment(dialog))
-    dialog.shared_delete_comment_btn.clicked.connect(lambda: shared_delete_tool_comment(dialog))
 
     shared_actions_layout.addStretch(1)
     shared_actions_layout.addWidget(dialog.shared_move_up_btn)
     shared_actions_layout.addWidget(dialog.shared_move_down_btn)
     shared_actions_layout.addWidget(dialog.shared_remove_btn)
-    shared_actions_layout.addWidget(dialog.shared_comment_btn)
-    shared_actions_layout.addWidget(dialog.shared_delete_comment_btn)
     shared_actions_layout.addStretch(1)
+    dialog.shared_tool_actions.setVisible(False)
     layout.addWidget(dialog.shared_tool_actions, 0)
     # Wire OP20 tools checkbox (single-spindle only) to show/hide all sub columns.
     if _is_single_sp_tools and hasattr(dialog, 'op20_tools_checkbox'):

@@ -7,15 +7,10 @@ from typing import Callable
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QAbstractScrollArea,
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
-    QFormLayout,
     QHBoxLayout,
-    QInputDialog,
-    QLabel,
-    QLineEdit,
     QListWidgetItem,
     QPushButton,
     QSizePolicy,
@@ -35,8 +30,9 @@ except ModuleNotFoundError:
         sys.path.insert(0, str(_workspace_root))
     from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from ui.widgets.common import apply_tool_library_combo_style
+from shared.ui.tool_assignment_editing import edit_tool_assignment_dialog
+from shared.ui.tool_assignment_display import build_badges, compose_title, effective_fields
 from .dragdrop_widgets import WorkEditorToolAssignmentListWidget
-from .tool_picker_dialog import WorkEditorToolPickerDialog
 
 
 def _noop_translate(_key: str, default: str | None = None, **_kwargs) -> str:
@@ -248,33 +244,10 @@ class WorkEditorOrderedToolList(QWidget):
         btn_row.addWidget(self.move_down_btn)
         btn_row.addWidget(self.remove_btn)
 
-        self.comment_btn = QPushButton(
-            self._t("work_editor.tools.add_comment", "Add Comment"),
-            self.controls_bar,
-        )
-        self.delete_comment_btn = QPushButton(
-            self._t("work_editor.tools.delete_comment", "Delete Comment"),
-            self.controls_bar,
-        )
-        self.comment_btn.setMinimumWidth(112)
-        self.comment_btn.setMaximumWidth(150)
-        self.delete_comment_btn.setMinimumWidth(112)
-        self.delete_comment_btn.setMaximumWidth(150)
-
         self._configure_icon_action(
             self.select_btn,
             "select",
             self._t("work_editor.tools.select_tools", "Select Tools"),
-        )
-        self._configure_icon_action(
-            self.comment_btn,
-            "comment",
-            self._t("work_editor.tools.add_comment", "Add Comment"),
-        )
-        self._configure_icon_action(
-            self.delete_comment_btn,
-            "comment_delete",
-            self._t("work_editor.tools.delete_comment", "Delete Comment"),
         )
         self._configure_icon_action(
             self.remove_btn,
@@ -283,8 +256,6 @@ class WorkEditorOrderedToolList(QWidget):
             danger=True,
         )
 
-        btn_row.addWidget(self.comment_btn)
-        btn_row.addWidget(self.delete_comment_btn)
         btn_row.addStretch(1)
         layout.addWidget(self.controls_bar)
 
@@ -292,8 +263,6 @@ class WorkEditorOrderedToolList(QWidget):
         self.move_down_btn.clicked.connect(self._move_down)
         self.remove_btn.clicked.connect(self._remove_selected)
         self.select_btn.clicked.connect(self._request_selector)
-        self.comment_btn.clicked.connect(self._add_or_edit_comment)
-        self.delete_comment_btn.clicked.connect(self._delete_comment)
         self.spindle_selector.currentIndexChanged.connect(self._render_current_spindle)
         self.tool_list.currentRowChanged.connect(self._update_action_states)
         self.tool_list.itemSelectionChanged.connect(self._sync_row_selection_states)
@@ -305,6 +274,7 @@ class WorkEditorOrderedToolList(QWidget):
         self._show_pot: bool = False
         self._assignments_by_spindle = {"main": [], "sub": []}
         self._list_scrolling_enabled: bool = True
+        self._read_only: bool = False
         self._update_action_states()
 
     def resizeEvent(self, event) -> None:
@@ -336,6 +306,16 @@ class WorkEditorOrderedToolList(QWidget):
 
     def set_controls_visible(self, visible: bool):
         self.controls_bar.setVisible(bool(visible))
+
+    def set_read_only(self, read_only: bool) -> None:
+        self._read_only = bool(read_only)
+        self.tool_list.setDragEnabled(not self._read_only)
+        self.tool_list.setAcceptDrops(not self._read_only)
+        self.tool_list.setDragDropMode(
+            QAbstractItemView.NoDragDrop if self._read_only else QAbstractItemView.DragDrop
+        )
+        self.tool_list.setDefaultDropAction(Qt.MoveAction)
+        self._render_current_spindle()
 
     def set_list_scrolling_enabled(self, enabled: bool) -> None:
         self._list_scrolling_enabled = bool(enabled)
@@ -386,10 +366,13 @@ class WorkEditorOrderedToolList(QWidget):
     def _tool_label(self, assignment: dict) -> str:
         ref = self._tool_ref_for_assignment(assignment)
         tool_id = (assignment.get("tool_id") or "").strip()
+        assignment_desc = str(assignment.get("description") or "").strip()
         if isinstance(ref, dict):
             ref_id = str(ref.get("id") or "").strip() or tool_id
-            description = str(ref.get("description") or "").strip()
+            description = str(ref.get("description") or "").strip() or assignment_desc
             return f"{ref_id}  -  {description}" if description else ref_id
+        if assignment_desc:
+            return f"{tool_id}  -  {assignment_desc}" if tool_id else assignment_desc
         deleted = self._t("work_editor.tools.deleted_tool", "DELETED TOOL")
         return f"{tool_id}  -  {deleted}" if tool_id else deleted
 
@@ -416,37 +399,49 @@ class WorkEditorOrderedToolList(QWidget):
         return dict(data) if isinstance(data, dict) else None
 
     def _render_assignment_row(self, item: QListWidgetItem, row_index: int, assignment: dict):
-        label = self._tool_label(assignment)
-        override_id = (assignment.get("override_id") or "").strip()
-        override_desc = (assignment.get("override_description") or "").strip()
-        is_edited = bool(override_id or override_desc)
-        if is_edited:
-            lib_desc = ""
-            if "  -  " in label:
-                _, lib_desc = label.split("  -  ", 1)
-            tool_id = override_id or (assignment.get("tool_id") or "").strip()
-            desc = override_desc or lib_desc
-            label = f"{tool_id}  -  {desc}" if desc else tool_id
-        display_text = f"{row_index + 1}. {label}"
-        item.setText("")
-        pot = (assignment.get("pot") or "").strip() if self._show_pot else ""
-        subtitle = str(assignment.get("comment") or "").strip()
-        has_comment = bool(subtitle)
-        icon = QIcon()
+        lib_tool_id = (assignment.get("tool_id") or "").strip()
+        lib_desc = str(assignment.get("description") or "").strip()
         ref = self._tool_ref_for_assignment(assignment)
         if isinstance(ref, dict):
-            icon = self._tool_icon_for_spindle_resolver(ref.get("tool_type", ""), self._current_spindle())
+            lib_tool_id = str(ref.get("id") or "").strip() or lib_tool_id
+            lib_desc = str(ref.get("description") or "").strip() or lib_desc
+        effective_tool_id, effective_desc, is_edited = effective_fields(
+            assignment,
+            library_tool_id=lib_tool_id,
+            library_description=lib_desc,
+        )
+        display_text = compose_title(row_index=row_index, tool_id=effective_tool_id, description=effective_desc)
+        comment = str(assignment.get("comment") or "").strip()
+        effective_pot = str(assignment.get("pot") or "").strip()
+        override_id = (assignment.get("override_id") or "").strip()
+        override_desc = (assignment.get("override_description") or "").strip()
+        item.setText("")
+        badges = build_badges(
+            comment=comment,
+            pot=effective_pot,
+            edited=is_edited or bool(override_id or override_desc),
+            show_pot=self._show_pot,
+        )
+        has_comment = bool(comment)
+        icon = QIcon()
+        tool_type = str(assignment.get("tool_type") or "").strip()
+        if isinstance(ref, dict):
+            tool_type = str(ref.get("tool_type") or "").strip() or tool_type
+        if tool_type:
+            icon = self._tool_icon_for_spindle_resolver(tool_type, self._current_spindle())
         flip_vertical = self._head_key == "HEAD2"
         widget = self._ToolAssignmentRowWidget(
             icon=icon,
             text=display_text,
-            subtitle=subtitle,
-            comment=assignment.get("comment", ""),
-            pot=pot,
+            subtitle=comment,
+            comment=comment,
+            pot=effective_pot if self._show_pot else "",
             edited=is_edited,
             flip_vertical=flip_vertical,
             parent=self.tool_list,
         )
+        widget.set_badges(badges)
+        widget._editable = not self._read_only
         # Keep assignment cards pure white regardless of surrounding panel tint.
         widget.setStyleSheet(
             'QFrame[miniAssignmentCard="true"] { background-color: #ffffff; }'
@@ -455,7 +450,8 @@ class WorkEditorOrderedToolList(QWidget):
             'QFrame[miniAssignmentCard="true"][selected="true"]:hover { background-color: #ffffff; }'
         )
         widget.setProperty("hasComment", has_comment)
-        widget.editRequested.connect(lambda r=row_index: self._inline_edit_row(r))
+        if not self._read_only:
+            widget.editRequested.connect(lambda r=row_index: self._inline_edit_row(r))
         row_host = QWidget(self.tool_list)
         row_host.setAttribute(Qt.WA_StyledBackground, False)
         row_layout = QVBoxLayout(row_host)
@@ -498,14 +494,10 @@ class WorkEditorOrderedToolList(QWidget):
 
     def _update_action_states(self):
         has_selection = self.tool_list.currentRow() >= 0
-        assignment = self._tool_assignment()
-        has_comment = bool((assignment or {}).get("comment"))
-        self.move_up_btn.setEnabled(has_selection and self.tool_list.currentRow() > 0)
-        self.move_down_btn.setEnabled(has_selection and self.tool_list.currentRow() < self.tool_list.count() - 1)
-        self.remove_btn.setEnabled(has_selection)
-        self.comment_btn.setEnabled(has_selection)
-        self.delete_comment_btn.setEnabled(has_comment)
-        self.delete_comment_btn.setVisible(has_comment)
+        actions_enabled = has_selection and not self._read_only
+        self.move_up_btn.setEnabled(actions_enabled and self.tool_list.currentRow() > 0)
+        self.move_down_btn.setEnabled(actions_enabled and self.tool_list.currentRow() < self.tool_list.count() - 1)
+        self.remove_btn.setEnabled(actions_enabled)
 
     def _sync_assignment_order(self):
         ordered: list[dict] = []
@@ -637,172 +629,38 @@ class WorkEditorOrderedToolList(QWidget):
             del self._current_assignments()[row]
             self._render_current_spindle()
 
-    def _add_or_edit_comment(self):
-        row = self.tool_list.currentRow()
-        if row < 0:
-            return
-        assignments = self._current_assignments()
-        assignment = assignments[row]
-        tool_id = assignment.get("tool_id", "")
-        text, ok = QInputDialog.getText(
-            self,
-            self._t("work_editor.tools.comment_title", "Tool Comment"),
-            self._t("work_editor.tools.comment_prompt", "Comment for {tool_id}", tool_id=tool_id),
-            text=assignment.get("comment", ""),
-        )
-        if not ok:
-            return
-        assignment["comment"] = (text or "").strip()
-        self._render_current_spindle()
-        self.tool_list.setCurrentRow(row)
-
-    def _delete_comment(self):
-        row = self.tool_list.currentRow()
-        if row < 0:
-            return
-        assignments = self._current_assignments()
-        assignments[row]["comment"] = ""
-        self._render_current_spindle()
-        self.tool_list.setCurrentRow(row)
-
     def _inline_edit_row(self, row_index: int):
         assignments = self._current_assignments()
         if row_index < 0 or row_index >= len(assignments):
             return
         assignment = assignments[row_index]
         tool_id = (assignment.get("tool_id") or "").strip()
-        labels = self._labels_by_tool_key()
-        key = self._assignment_key(assignment)
-        lib_label = labels.get(key, tool_id)
         lib_id = tool_id
-        lib_desc = ""
-        if "  -  " in lib_label:
-            lib_id, lib_desc = lib_label.split("  -  ", 1)
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle(self._t("work_editor.tools.edit_row_title", "Edit Tool Row"))
-        dlg.setModal(True)
-        dlg.resize(420, 0)
-        form = QFormLayout(dlg)
-        form.setContentsMargins(14, 14, 14, 14)
-        form.setSpacing(8)
-
-        id_input = QLineEdit(dlg)
-        id_input.setPlaceholderText(lib_id)
-        id_input.setText((assignment.get("override_id") or "").strip())
-        form.addRow(self._t("work_editor.tools.override_id", "T-code"), id_input)
-
-        desc_input = QLineEdit(dlg)
-        desc_input.setPlaceholderText(lib_desc)
-        desc_input.setText((assignment.get("override_description") or "").strip())
-        form.addRow(self._t("work_editor.tools.override_description", "Description"), desc_input)
-
-        effective_pot = (assignment.get("pot") or "").strip() or self._default_pot_for_assignment_resolver(
-            self, assignment
+        lib_desc = str(assignment.get("description") or "").strip()
+        ref = self._tool_ref_for_assignment(assignment)
+        if isinstance(ref, dict):
+            lib_id = str(ref.get("id") or "").strip() or lib_id
+            if not lib_desc:
+                lib_desc = str(ref.get("description") or "").strip()
+        result = edit_tool_assignment_dialog(
+            self,
+            translate=self._t,
+            library_tool_id=lib_id,
+            library_description=lib_desc,
+            override_id=str(assignment.get("override_id") or "").strip(),
+            override_description=str(assignment.get("override_description") or "").strip(),
+            comment_value=str(assignment.get("comment") or "").strip(),
+            pot_value=str(assignment.get("pot") or "").strip(),
+            default_pot=self._default_pot_for_assignment_resolver(self, assignment),
         )
-        pot_input = QLineEdit(dlg)
-        pot_input.setPlaceholderText(self._t("work_editor.tools.pot_placeholder", "e.g. P1"))
-        pot_input.setText(effective_pot)
-        form.addRow(self._t("work_editor.tools.pot_number", "Pot"), pot_input)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        ok_btn = buttons.button(QDialogButtonBox.Ok)
-        cancel_btn = buttons.button(QDialogButtonBox.Cancel)
-        if ok_btn:
-            ok_btn.setProperty("panelActionButton", True)
-            ok_btn.setProperty("primaryAction", True)
-        if cancel_btn:
-            cancel_btn.setProperty("panelActionButton", True)
-            cancel_btn.setProperty("secondaryAction", True)
-        buttons.accepted.connect(dlg.accept)
-        buttons.rejected.connect(dlg.reject)
-        form.addRow(buttons)
-
-        if dlg.exec() != QDialog.Accepted:
+        if not isinstance(result, dict):
             return
-        new_id = id_input.text().strip()
-        new_desc = desc_input.text().strip()
-        new_pot = pot_input.text().strip()
-        assignment["override_id"] = new_id if new_id and new_id != lib_id else ""
-        assignment["override_description"] = new_desc if new_desc and new_desc != lib_desc else ""
-        assignment["pot"] = new_pot
+        assignment["override_id"] = str(result.get("override_id") or "").strip()
+        assignment["override_description"] = str(result.get("override_description") or "").strip()
+        assignment["comment"] = str(result.get("comment") or "").strip()
+        assignment["pot"] = str(result.get("pot") or "").strip()
         self._render_current_spindle()
         self.tool_list.setCurrentRow(row_index)
-
-    def _open_picker(self):
-        current_keys = [self._assignment_key(item) for item in self._current_assignments() if self._assignment_key(item)]
-        spindle_filter = self._current_spindle() if self._head_key == "HEAD2" else None
-        dlg = WorkEditorToolPickerDialog(
-            self._all_tools,
-            current_keys,
-            icon_resolver=self._toolbar_icon_resolver,
-            combo_popup_styler=self._combo_popup_styler,
-            parent=self,
-            translate=self._t,
-            spindle_orientation_filter=spindle_filter,
-        )
-        if dlg.exec() != QDialog.Accepted:
-            return
-        selected_tools = dlg.get_selected_tools()
-        current_assignments = self._current_assignments()
-        selected_keys = {
-            f"uid:{tool.get('uid')}" if tool.get("uid") is not None and str(tool.get("uid")).strip() else f"id:{(tool.get('id') or '').strip()}"
-            for tool in selected_tools
-            if (tool.get("id") or "").strip()
-        }
-        kept = [item for item in current_assignments if self._assignment_key(item) in selected_keys]
-        kept_keys = {self._assignment_key(item) for item in kept}
-        added = []
-        for tool in selected_tools:
-            tool_id = (tool.get("id") or "").strip()
-            if not tool_id:
-                continue
-            key = f"uid:{tool.get('uid')}" if tool.get("uid") is not None and str(tool.get("uid")).strip() else f"id:{tool_id}"
-            if key in kept_keys:
-                continue
-            entry = {
-                "tool_id": tool_id,
-                "spindle": self._current_spindle(),
-                "comment": "",
-                "pot": (tool.get("default_pot") or "").strip(),
-                "override_id": "",
-                "override_description": "",
-            }
-            if tool.get("uid") is not None and str(tool.get("uid")).strip():
-                entry["tool_uid"] = int(tool.get("uid"))
-            added.append(entry)
-        self._assignments_by_spindle[self._current_spindle()] = kept + added
-        self._render_current_spindle()
-
-    def _labels_by_tool_key(self) -> dict:
-        key_to_label: dict = {}
-        for spindle in ("main", "sub"):
-            for assignment in self._assignments_by_spindle.get(spindle, []):
-                if not isinstance(assignment, dict):
-                    continue
-                key = self._assignment_key(assignment)
-                if not key:
-                    continue
-                ref = self._tool_ref_for_assignment(assignment)
-                tool_id = str(assignment.get("tool_id") or "").strip()
-                if isinstance(ref, dict):
-                    resolved_id = str(ref.get("id") or "").strip() or tool_id
-                    desc = str(ref.get("description") or "").strip()
-                    key_to_label[key] = f"{resolved_id}  -  {desc}" if desc else resolved_id
-                elif tool_id:
-                    key_to_label[key] = tool_id
-
-        # Keep cache-derived labels as a final fallback for assignments that
-        # are not currently present in spindle buckets.
-        for tool in self._all_tools:
-            tid = (tool.get("id") or "").strip()
-            if not tid:
-                continue
-            desc = (tool.get("description") or "").strip()
-            uid = tool.get("uid")
-            key = f"uid:{uid}" if uid is not None and str(uid).strip() else f"id:{tid}"
-            key_to_label.setdefault(key, f"{tid}  -  {desc}" if desc else tid)
-        return key_to_label
 
     def set_tool_assignments(self, assignments: list):
         grouped = {"main": [], "sub": []}
@@ -815,6 +673,9 @@ class WorkEditorOrderedToolList(QWidget):
                 pot = ""
                 override_id = ""
                 override_description = ""
+                description = ""
+                tool_type = ""
+                default_pot = ""
             else:
                 tool_id = str(item.get("tool_id") or item.get("id") or "").strip()
                 raw_uid = item.get("tool_uid", item.get("uid"))
@@ -827,6 +688,9 @@ class WorkEditorOrderedToolList(QWidget):
                 pot = str(item.get("pot") or "").strip()
                 override_id = str(item.get("override_id") or "").strip()
                 override_description = str(item.get("override_description") or "").strip()
+                description = str(item.get("description") or "").strip()
+                tool_type = str(item.get("tool_type") or "").strip()
+                default_pot = str(item.get("default_pot") or "").strip()
             if not tool_id:
                 continue
             if spindle not in grouped:
@@ -839,6 +703,12 @@ class WorkEditorOrderedToolList(QWidget):
                 "override_id": override_id,
                 "override_description": override_description,
             }
+            if description:
+                entry["description"] = description
+            if tool_type:
+                entry["tool_type"] = tool_type
+            if default_pot:
+                entry["default_pot"] = default_pot
             if tool_uid is not None:
                 entry["tool_uid"] = tool_uid
             grouped[spindle].append(entry)
@@ -879,6 +749,15 @@ class WorkEditorOrderedToolList(QWidget):
                     "override_id": (item.get("override_id") or "").strip(),
                     "override_description": (item.get("override_description") or "").strip(),
                 }
+                description = str(item.get("description") or "").strip()
+                if description:
+                    entry["description"] = description
+                tool_type = str(item.get("tool_type") or "").strip()
+                if tool_type:
+                    entry["tool_type"] = tool_type
+                default_pot = str(item.get("default_pot") or "").strip()
+                if default_pot:
+                    entry["default_pot"] = default_pot
                 if item.get("tool_uid") is not None:
                     try:
                         entry["tool_uid"] = int(item.get("tool_uid"))

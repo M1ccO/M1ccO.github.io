@@ -26,6 +26,7 @@ from shared.ui.helpers.detached_preview_common import (
     apply_detached_preview_default_bounds as _apply_detached_preview_default_bounds,
     bind_escape_close_shortcut,
     close_detached_preview as _close_detached_preview,
+    create_detached_preview_dialog,
     set_preview_button_checked as _set_preview_button_checked,
     toggle_preview_window as _toggle_preview_window,
     update_measurement_toggle_icon,
@@ -65,18 +66,12 @@ def ensure_detached_preview_dialog(page) -> None:
     if page._detached_preview_dialog is not None:
         return
 
-    dialog = QDialog(page)
-    dialog.setProperty('detachedPreviewDialog', True)
-    # When the parent has WindowStaysOnTopHint (e.g. selector dialogs),
-    # set Qt.Tool immediately — before the dialog is shown — so the
-    # preview stays on top.  Setting it later via setWindowFlag() would
-    # recreate the native HWND and cause the parent to flicker.
-    _parent_window = page.window()
-    if _parent_window is not None and bool(_parent_window.windowFlags() & Qt.WindowStaysOnTopHint):
-        dialog.setWindowFlags(dialog.windowFlags() | Qt.Tool)
-    dialog.setWindowTitle(page._t('tool_library.preview.window_title', '3D Preview'))
+    dialog = create_detached_preview_dialog(
+        page,
+        title=page._t('tool_library.preview.window_title', '3D Preview'),
+        on_finished=page._on_detached_preview_closed,
+    )
     dialog.resize(620, 820)
-    dialog.finished.connect(page._on_detached_preview_closed)
     bind_escape_close_shortcut(page, dialog)
 
     layout = QVBoxLayout(dialog)

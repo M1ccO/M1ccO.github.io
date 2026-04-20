@@ -70,15 +70,10 @@ def update_shared_tool_actions(dialog: Any) -> None:
     has_selection = bool(ordered_list and ordered_list.tool_list.currentRow() >= 0)
     current_row = ordered_list.tool_list.currentRow() if ordered_list is not None else -1
     count = ordered_list.tool_list.count() if ordered_list is not None else 0
-    assignment = ordered_list._tool_assignment() if ordered_list is not None else None
-    has_comment = bool((assignment or {}).get("comment"))
 
     dialog.shared_move_up_btn.setEnabled(has_selection and current_row > 0)
     dialog.shared_move_down_btn.setEnabled(has_selection and 0 <= current_row < count - 1)
     dialog.shared_remove_btn.setEnabled(has_selection)
-    dialog.shared_comment_btn.setEnabled(has_selection)
-    dialog.shared_delete_comment_btn.setVisible(has_comment)
-    dialog.shared_delete_comment_btn.setEnabled(has_comment)
 
 
 def shared_move_tool_up(dialog: Any) -> None:
@@ -102,22 +97,6 @@ def shared_remove_selected_tool(dialog: Any) -> None:
     if ordered_list is None:
         return
     ordered_list._remove_selected()
-    update_shared_tool_actions(dialog)
-
-
-def shared_add_tool_comment(dialog: Any) -> None:
-    ordered_list = effective_active_tool_list(dialog)
-    if ordered_list is None:
-        return
-    ordered_list._add_or_edit_comment()
-    update_shared_tool_actions(dialog)
-
-
-def shared_delete_tool_comment(dialog: Any) -> None:
-    ordered_list = effective_active_tool_list(dialog)
-    if ordered_list is None:
-        return
-    ordered_list._delete_comment()
     update_shared_tool_actions(dialog)
 
 

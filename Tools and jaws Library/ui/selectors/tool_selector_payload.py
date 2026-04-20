@@ -24,6 +24,7 @@ class ToolSelectorPayloadMixin:
             'selector_head': self._current_head,
             'selector_spindle': self._active_assignment_spindle(),
             'assignment_buckets_by_target': assignment_buckets,
+            'print_pots': bool(getattr(self, '_print_pots_enabled', False)),
         }
 
     def _send_selector_selection(self) -> None:

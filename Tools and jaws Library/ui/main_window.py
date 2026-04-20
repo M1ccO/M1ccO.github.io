@@ -185,6 +185,7 @@ class MainWindow(QMainWindow):
         self._selector_spindle = ''
         self._selector_initial_assignments: list[dict] = []
         self._selector_initial_assignment_buckets: dict[str, list[dict]] = {}
+        self._selector_print_pots: bool = False
         self._tool_selector_dialog: ToolSelectorDialog | None = None
         self._jaw_selector_dialog: JawSelectorDialog | None = None
         self._fixture_selector_dialog: FixtureSelectorDialog | None = None
@@ -1013,6 +1014,7 @@ class MainWindow(QMainWindow):
             }
         else:
             self._selector_initial_assignment_buckets = {}
+        self._selector_print_pots = bool(state.get('print_pots', False))
         self._selector_session_geometry = str(state.get('geometry') or '').strip()
 
     def _close_selector_dialogs(self) -> None:
@@ -1047,6 +1049,7 @@ class MainWindow(QMainWindow):
                 selector_spindle=self._selector_spindle,
                 initial_assignments=self._selector_initial_assignments,
                 initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                initial_print_pots=bool(getattr(self, '_selector_print_pots', False)),
                 on_submit=self._on_selector_dialog_submit,
                 on_cancel=self._on_selector_dialog_cancel,
                 # parent=None so hiding the main window does NOT cascade to the
@@ -1117,14 +1120,15 @@ class MainWindow(QMainWindow):
                 # Map the main window top-left to global coordinates and move the dialog there.
                 top_left = self.mapToGlobal(QPoint(0, 0))
                 dialog.move(top_left)
-                dialog.resize(self.size())
+                dialog.resize(max(self.width(), 1500), max(self.height(), 860))
             except Exception:
                 # Best-effort fallback: try applying geometry directly
                 try:
-                    dialog.setGeometry(self.geometry())
+                    geom = self.geometry()
+                    dialog.setGeometry(geom.x(), geom.y(), max(geom.width(), 1500), max(geom.height(), 860))
                 except Exception:
                     try:
-                        dialog.resize(self.size())
+                        dialog.resize(max(self.width(), 1500), max(self.height(), 860))
                     except Exception:
                         pass
 
@@ -1156,6 +1160,7 @@ class MainWindow(QMainWindow):
         selector_spindle = str(result.get('selector_spindle') or self._selector_spindle or '').strip().lower()
         assignment_buckets_by_target = result.get('assignment_buckets_by_target') or {}
         target_key = str(result.get('target_key') or '').strip()
+        print_pots = bool(result.get('print_pots', getattr(self, '_selector_print_pots', False)))
         self._send_selector_result_payload(
             kind=kind,
             selected_items=selected_items,
@@ -1163,6 +1168,7 @@ class MainWindow(QMainWindow):
             selector_spindle=selector_spindle,
             assignment_buckets_by_target=assignment_buckets_by_target,
             target_key=target_key,
+            print_pots=print_pots,
         )
 
     def _send_selector_result_payload(
@@ -1174,6 +1180,7 @@ class MainWindow(QMainWindow):
         selector_spindle: str = '',
         assignment_buckets_by_target: dict | None = None,
         target_key: str = '',
+        print_pots: bool = False,
     ) -> None:
         sent = send_selector_result_payload(
             self,
@@ -1183,6 +1190,7 @@ class MainWindow(QMainWindow):
             selector_spindle=selector_spindle,
             assignment_buckets_by_target=assignment_buckets_by_target,
             target_key=target_key,
+            print_pots=print_pots,
         )
         if sent:
             self._back_to_setup_manager()

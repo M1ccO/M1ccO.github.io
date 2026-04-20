@@ -61,8 +61,6 @@ from ui.work_editor_support import (
     remove_dragged_tool_assignments,
     selector_target_ordered_list,
     set_active_tool_list,
-    shared_add_tool_comment,
-    shared_delete_tool_comment,
     shared_move_tool_down,
     shared_move_tool_up,
     shared_remove_selected_tool,
@@ -145,6 +143,10 @@ class WorkEditorDialog(QDialog):
     WORK_COORDINATES = WORK_COORDINATES
     _SELECTOR_MIN_WIDTH = 1100
     _SELECTOR_EXPAND_DELTA = 480
+    _SELECTOR_DIALOG_DEFAULT_WIDTH = 1500
+    _SELECTOR_DIALOG_DEFAULT_HEIGHT = 860
+    _SELECTOR_DIALOG_WIDTH_PAD = 420
+    _SELECTOR_DIALOG_HEIGHT_PAD = 180
     _RESIZE_FOR_SELECTOR_MODE = False
     _SELECTOR_TRANSITION_SHIELD_DELAY_MS = 32
     _LOGGER = logging.getLogger(__name__)
@@ -260,6 +262,9 @@ class WorkEditorDialog(QDialog):
         self._selector_transition_shield_pending_hide = False
         self._selector_trace_widgets: dict[int, tuple[str, QWidget]] = {}
         self._active_embedded_selector_widget: QWidget | None = None
+        self._pending_ipc_selector_request_id: str | None = None
+        self._pending_ipc_selector_kind: str | None = None
+        self._ipc_selector_saved_geometry = None
         self._raw_part_combo_popup_allowed = False
         self._raw_part_combo_popup_window: QWidget | None = None
         self.setUpdatesEnabled(False)
@@ -546,8 +551,12 @@ class WorkEditorDialog(QDialog):
             popup_window.installEventFilter(self)
 
     def _resolve_selector_transport_mode(self) -> str:
-        """Selectors are embedded-only after parity migration completion."""
-        return "embedded"
+        """Use Library-owned selector dialogs in production.
+
+        Embedded selectors remain available only as a temporary fallback while
+        the IPC-owned path is re-established and validated.
+        """
+        return "ipc"
 
     def _log_selector_event(self, event: str, **fields) -> None:
         payload = {
@@ -1068,12 +1077,6 @@ class WorkEditorDialog(QDialog):
     def _shared_remove_selected_tool(self):
         shared_remove_selected_tool(self)
 
-    def _shared_add_tool_comment(self):
-        shared_add_tool_comment(self)
-
-    def _shared_delete_tool_comment(self):
-        shared_delete_tool_comment(self)
-
     def _remove_dragged_tool_assignments(self, dropped_items: list[dict]):
         remove_dragged_tool_assignments(self, dropped_items)
 
@@ -1189,6 +1192,67 @@ class WorkEditorDialog(QDialog):
             tuple(self._spindle_profiles.keys()),
         )
 
+    def _build_selector_session_geometry(self) -> str:
+        try:
+            geometry = self.geometry()
+            target_width = max(
+                int(geometry.width()) + self._SELECTOR_DIALOG_WIDTH_PAD,
+                self._SELECTOR_DIALOG_DEFAULT_WIDTH,
+            )
+            target_height = max(
+                int(geometry.height()) + self._SELECTOR_DIALOG_HEIGHT_PAD,
+                self._SELECTOR_DIALOG_DEFAULT_HEIGHT,
+            )
+
+            screen = self.screen()
+            available = screen.availableGeometry() if screen is not None else None
+            if available is not None:
+                target_width = min(target_width, available.width())
+                target_height = min(target_height, available.height())
+                target_x = int(geometry.x()) - max(0, (target_width - int(geometry.width())) // 2)
+                target_y = int(geometry.y()) - max(0, (target_height - int(geometry.height())) // 2)
+                max_x = available.x() + max(0, available.width() - target_width)
+                max_y = available.y() + max(0, available.height() - target_height)
+                target_x = max(available.x(), min(target_x, max_x))
+                target_y = max(available.y(), min(target_y, max_y))
+            else:
+                target_x = int(geometry.x()) - max(0, (target_width - int(geometry.width())) // 2)
+                target_y = int(geometry.y()) - max(0, (target_height - int(geometry.height())) // 2)
+
+            return f"{target_x},{target_y},{target_width},{target_height}"
+        except Exception:
+            return ""
+
+    def _open_selector_request(
+        self,
+        *,
+        kind: str,
+        head: str = "",
+        spindle: str = "",
+        target_key: str = "",
+        initial_assignments: list[dict] | None = None,
+        initial_assignment_buckets: dict[str, list[dict]] | None = None,
+    ) -> bool:
+        prefer_ipc = str(self._selector_transport_mode or "").strip().lower() == "ipc"
+        if prefer_ipc:
+            return self._try_open_selector_via_ipc(
+                kind=kind,
+                head=head,
+                spindle=spindle,
+                target_key=target_key,
+                initial_assignments=initial_assignments,
+                initial_assignment_buckets=initial_assignment_buckets,
+            )
+
+        return self._try_open_selector_embedded(
+            kind=kind,
+            head=head,
+            spindle=spindle,
+            target_key=target_key,
+            initial_assignments=initial_assignments,
+            initial_assignment_buckets=initial_assignment_buckets,
+        )
+
     def _open_tool_selector(
         self,
         initial_head: str | None = None,
@@ -1212,7 +1276,7 @@ class WorkEditorDialog(QDialog):
             head=request.get("head"),
             spindle=request.get("spindle"),
         )
-        return self._try_open_selector_embedded(
+        return self._open_selector_request(
             kind=str(request.get("kind") or "tools"),
             head=str(request.get("head") or ""),
             spindle=str(request.get("spindle") or ""),
@@ -1226,7 +1290,7 @@ class WorkEditorDialog(QDialog):
     def _open_jaw_selector(self, initial_spindle: str | None = None) -> bool:
         request = build_jaw_selector_request(self, initial_spindle=initial_spindle)
         self._log_selector_event("open", kind="jaws", spindle=request.get("spindle"))
-        return self._try_open_selector_embedded(
+        return self._open_selector_request(
             kind=str(request.get("kind") or "jaws"),
             spindle=str(request.get("spindle") or ""),
             initial_assignments=list(request.get("initial_assignments") or []),
@@ -1236,7 +1300,7 @@ class WorkEditorDialog(QDialog):
         request = build_fixture_selector_request(self, operation_key=operation_key)
         target_key = str((request.get("follow_up") or {}).get("target_key") or "").strip()
         self._log_selector_event("open", kind="fixtures", target_key=target_key)
-        return self._try_open_selector_embedded(
+        return self._open_selector_request(
             kind="fixtures",
             target_key=target_key,
             initial_assignments=list(request.get("initial_assignments") or []),
@@ -1448,7 +1512,7 @@ class WorkEditorDialog(QDialog):
             jaws=tuple(jaw_entries),
         )
 
-    def _handle_embedded_selector_submit(self, request: dict, payload: dict) -> None:
+    def _apply_selector_result(self, request: dict, payload: dict) -> None:
         kind = str((payload or {}).get("kind") or request.get("kind") or "").strip().lower()
         selected_items = list((payload or {}).get("selected_items") or [])
 
@@ -1457,22 +1521,28 @@ class WorkEditorDialog(QDialog):
             "spindle": request.get("spindle") or (payload or {}).get("selector_spindle") or "",
             "target_key": request.get("target_key") or (payload or {}).get("target_key") or "",
             "assignment_buckets_by_target": (payload or {}).get("assignment_buckets_by_target") or {},
+            "print_pots": bool((payload or {}).get("print_pots", request.get("print_pots", False))),
         }
 
         applied = False
         if kind == "tools":
             applied = apply_tool_selector_result(self, selector_request, selected_items)
+            if hasattr(self, "print_pots_checkbox"):
+                self.print_pots_checkbox.setChecked(bool(selector_request.get("print_pots", False)))
         elif kind == "jaws":
             applied = apply_jaw_selector_result(self, selector_request, selected_items)
         elif kind == "fixtures":
             applied = apply_fixture_selector_result(self, selector_request, selected_items)
 
         self._log_selector_event(
-            "submit.embedded.applied",
+            "submit.applied",
             kind=kind,
             applied=bool(applied),
             selected_count=len(selected_items),
         )
+
+    def _handle_embedded_selector_submit(self, request: dict, payload: dict) -> None:
+        self._apply_selector_result(request, payload)
 
     def _handle_embedded_selector_cancel(self) -> None:
         self._log_selector_event("cancel.embedded.request")
@@ -1495,19 +1565,32 @@ class WorkEditorDialog(QDialog):
 
         Returns True if the IPC message was sent — Work Editor hides itself and
         waits for ``_receive_ipc_selector_result``.
-        Returns False if Library is not reachable; caller falls back to embedded mode.
+        Returns True if the request was sent or a hidden Tool Library launch was
+        started and the request was scheduled for retry.
         """
         if kind not in {"tools", "jaws", "fixtures"}:
             return False
         try:
-            from ui.main_window_support.library_ipc import send_to_tool_library
-            from config import SETUP_MANAGER_SERVER_NAME, TOOL_LIBRARY_SERVER_NAME
+            from ui.main_window_support.library_ipc import (
+                allow_set_foreground,
+                is_tool_library_ready,
+                launch_tool_library,
+                send_request_with_retry,
+                send_to_tool_library,
+            )
+            from config import (
+                SETUP_MANAGER_SERVER_NAME,
+                TOOL_LIBRARY_EXE_CANDIDATES,
+                TOOL_LIBRARY_MAIN_PATH,
+                TOOL_LIBRARY_PROJECT_DIR,
+                TOOL_LIBRARY_READY_PATH,
+                TOOL_LIBRARY_SERVER_NAME,
+            )
         except Exception:
             return False
 
         try:
-            geo = self.geometry()
-            geometry_str = f"{geo.x()},{geo.y()},{geo.width()},{geo.height()}"
+            geometry_str = self._build_selector_session_geometry()
         except Exception:
             geometry_str = ""
 
@@ -1524,20 +1607,76 @@ class WorkEditorDialog(QDialog):
             "target_key": target_key,
             "current_assignments": list(initial_assignments or []),
             "current_assignments_by_target": dict(initial_assignment_buckets or {}),
+            "print_pots": bool(
+                kind == "tools"
+                and getattr(self, "print_pots_checkbox", None)
+                and self.print_pots_checkbox.isChecked()
+            ),
             "machine_profile_key": machine_profile_key,
             "geometry": geometry_str,
         }
 
+        def _selector_request_failed() -> None:
+            self._pending_ipc_selector_request_id = None
+            self._pending_ipc_selector_kind = None
+            saved_geometry = getattr(self, "_ipc_selector_saved_geometry", None)
+            if saved_geometry is not None:
+                self.setGeometry(saved_geometry)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            QMessageBox.warning(
+                self,
+                self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+                self._t(
+                    "setup_manager.library_unavailable.start_timeout",
+                    "Tool Library started but did not become ready in time. Please try again.",
+                ),
+            )
+
+        allow_set_foreground()
+
+        self._pending_ipc_selector_request_id = request_id
+        self._pending_ipc_selector_kind = kind
+        self._ipc_selector_saved_geometry = self.geometry()
+
         sent = send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, payload)
         if sent:
-            self._pending_ipc_selector_request_id = request_id
-            self._pending_ipc_selector_kind = kind
             self._log_selector_event("open.ipc.sent", kind=kind, request_id=request_id)
-            self._ipc_selector_saved_geometry = self.geometry()
             self.hide()
             return True
 
+        launched = launch_tool_library(
+            TOOL_LIBRARY_MAIN_PATH,
+            TOOL_LIBRARY_EXE_CANDIDATES,
+            TOOL_LIBRARY_PROJECT_DIR,
+            extra_args=["--hidden"],
+            ready_path=TOOL_LIBRARY_READY_PATH,
+        )
+        if launched:
+            self._log_selector_event("open.ipc.launching", kind=kind, request_id=request_id)
+            self.hide()
+            send_request_with_retry(
+                lambda request_payload: send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, request_payload),
+                payload,
+                on_success=lambda: self._log_selector_event("open.ipc.sent", kind=kind, request_id=request_id),
+                on_failed=_selector_request_failed,
+                ready_check=lambda: is_tool_library_ready(TOOL_LIBRARY_SERVER_NAME, TOOL_LIBRARY_READY_PATH),
+            )
+            return True
+
         self._log_selector_event("open.ipc.failed", kind=kind)
+        self._pending_ipc_selector_request_id = None
+        self._pending_ipc_selector_kind = None
+        self._ipc_selector_saved_geometry = None
+        QMessageBox.warning(
+            self,
+            self._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+            self._t(
+                "setup_manager.library_unavailable.body",
+                "Could not find a launchable Tool Library executable or source entry point.",
+            ),
+        )
         return False
 
     def _receive_ipc_selector_result(self, payload: dict) -> None:
@@ -1554,6 +1693,7 @@ class WorkEditorDialog(QDialog):
             "spindle": str(payload.get("selector_spindle") or ""),
             "target_key": str(payload.get("target_key") or ""),
             "assignment_buckets_by_target": dict(payload.get("assignment_buckets_by_target") or {}),
+            "print_pots": bool(payload.get("print_pots", False)),
         }
         result_payload = {
             "kind": str(payload.get("kind") or ""),
@@ -1562,9 +1702,10 @@ class WorkEditorDialog(QDialog):
             "selector_spindle": request["spindle"],
             "target_key": request["target_key"],
             "assignment_buckets_by_target": request["assignment_buckets_by_target"],
+            "print_pots": request["print_pots"],
         }
 
-        self._handle_embedded_selector_submit(request, result_payload)
+        self._apply_selector_result(request, result_payload)
         _saved_geo = getattr(self, '_ipc_selector_saved_geometry', None)
         if _saved_geo is not None:
             self.setGeometry(_saved_geo)

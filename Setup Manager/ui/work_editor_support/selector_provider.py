@@ -94,6 +94,9 @@ def build_tool_selector_request(
         "spindle": resolved_spindle,
         "initial_assignments": assignments,
         "initial_assignment_buckets": buckets,
+        "print_pots": bool(
+            getattr(dialog, "print_pots_checkbox", None) and dialog.print_pots_checkbox.isChecked()
+        ),
     }
 
 

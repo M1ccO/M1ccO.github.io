@@ -18,6 +18,7 @@ import sys
 import tempfile
 import types
 import unittest
+import importlib
 import importlib.util
 from pathlib import Path
 from unittest import mock
@@ -93,6 +94,8 @@ _SETUP_SETUP_CARD_POLICY = _load_module_from_path(
     "setup_manager_setup_card_policy_for_tests",
     _SETUP_MANAGER_ROOT / "services" / "setup_card_policy.py",
 )
+_TOOLS_MIGRATIONS = importlib.import_module("tools_and_jaws_library.data.migrations.tools_migrations")
+_JAWS_MIGRATIONS = importlib.import_module("tools_and_jaws_library.data.migrations.jaws_migrations")
 
 
 def _load_tool_library_main_window_module():
@@ -157,11 +160,10 @@ class _InMemDb:
 class TestToolServiceListTools(unittest.TestCase):
 
     def setUp(self):
-        from data.migrations.tools_migrations import create_or_migrate_tools_schema
         from tools_and_jaws_library.services.tool_service import ToolService
 
         self._db = _InMemDb()
-        create_or_migrate_tools_schema(self._db.conn)
+        _TOOLS_MIGRATIONS.create_or_migrate_tools_schema(self._db.conn)
         self.svc = ToolService.__new__(ToolService)
         self.svc.db = self._db
 
@@ -233,11 +235,10 @@ class TestToolServiceListTools(unittest.TestCase):
 class TestJawServiceListJaws(unittest.TestCase):
 
     def setUp(self):
-        from data.migrations.jaws_migrations import create_or_migrate_jaws_schema
         from tools_and_jaws_library.services.jaw_service import JawService
 
         self._db = _InMemDb()
-        create_or_migrate_jaws_schema(self._db.conn)
+        _JAWS_MIGRATIONS.create_or_migrate_jaws_schema(self._db.conn)
         self.svc = JawService.__new__(JawService)
         self.svc.db = self._db
 
@@ -294,20 +295,18 @@ class TestJawServiceListJaws(unittest.TestCase):
 class TestMigrationIdempotence(unittest.TestCase):
 
     def test_tools_schema_twice_no_error(self):
-        from data.migrations.tools_migrations import create_or_migrate_tools_schema
         with sqlite3.connect(":memory:") as conn:
-            create_or_migrate_tools_schema(conn)
+            _TOOLS_MIGRATIONS.create_or_migrate_tools_schema(conn)
             # Running a second time must not raise.
-            create_or_migrate_tools_schema(conn)
+            _TOOLS_MIGRATIONS.create_or_migrate_tools_schema(conn)
             cols = {row[1] for row in conn.execute("PRAGMA table_info(tools)").fetchall()}
         self.assertIn("id", cols)
         self.assertIn("tool_type", cols)
 
     def test_jaws_schema_twice_no_error(self):
-        from data.migrations.jaws_migrations import create_or_migrate_jaws_schema
         with sqlite3.connect(":memory:") as conn:
-            create_or_migrate_jaws_schema(conn)
-            create_or_migrate_jaws_schema(conn)
+            _JAWS_MIGRATIONS.create_or_migrate_jaws_schema(conn)
+            _JAWS_MIGRATIONS.create_or_migrate_jaws_schema(conn)
             cols = {row[1] for row in conn.execute("PRAGMA table_info(jaws)").fetchall()}
         self.assertIn("jaw_id", cols)
 
@@ -591,6 +590,40 @@ class TestWorkService(unittest.TestCase):
         self.assertEqual(saved["notes"], "")
         self.assertEqual(saved["robot_info"], "")
 
+    def test_save_and_get_work_roundtrip_preserves_override_metadata(self):
+        saved = self.svc.save_work(
+            {
+                "work_id": "W-OVERRIDE",
+                "description": "Override persistence",
+                "head1_tool_assignments": [
+                    {
+                        "tool_id": "T1001",
+                        "tool_uid": "55",
+                        "spindle": "sub",
+                        "description": "Library description",
+                        "tool_type": "Drill",
+                        "default_pot": "7",
+                        "pot": "17",
+                        "comment": "Edited in selector",
+                        "override_id": "T9001",
+                        "override_description": "Edited description",
+                    }
+                ],
+            }
+        )
+
+        assignment = saved["head1_tool_assignments"][0]
+        self.assertEqual("T1001", assignment["tool_id"])
+        self.assertEqual(55, assignment["tool_uid"])
+        self.assertEqual("sub", assignment["spindle"])
+        self.assertEqual("Library description", assignment["description"])
+        self.assertEqual("Drill", assignment["tool_type"])
+        self.assertEqual("7", assignment["default_pot"])
+        self.assertEqual("17", assignment["pot"])
+        self.assertEqual("Edited in selector", assignment["comment"])
+        self.assertEqual("T9001", assignment["override_id"])
+        self.assertEqual("Edited description", assignment["override_description"])
+
     def test_legacy_tool_ids_fallback_when_assignments_missing(self):
         with self._db.conn:
             self._db.conn.execute(
@@ -683,6 +716,40 @@ class TestPrintServiceHelpers(unittest.TestCase):
         self.assertEqual(tool["id"], "T404")
         self.assertEqual(tool["description"], "")
         self.assertEqual(tool["spindle"], "sub")
+
+    def test_tool_entry_uses_assignment_snapshot_when_lookup_is_missing(self):
+        tool = self.svc._tool_entry_data(
+            {
+                "tool_id": "T404",
+                "spindle": "sub",
+                "description": "Stored description",
+                "tool_type": "Drill",
+            }
+        )
+        self.assertEqual(tool["id"], "T404")
+        self.assertEqual(tool["description"], "Stored description")
+        self.assertEqual(tool["tool_type"], "Drill")
+        self.assertEqual(tool["spindle"], "sub")
+
+    def test_tool_entry_prefers_assignment_snapshot_over_library_description(self):
+        self.svc._tool_data = lambda _tool_id, tool_uid=None: {
+            "id": "T700",
+            "description": "Library description",
+            "tool_type": "Turning",
+        }
+
+        tool = self.svc._tool_entry_data(
+            {
+                "tool_id": "T700",
+                "spindle": "main",
+                "description": "Stored edited description",
+                "tool_type": "Drill",
+            }
+        )
+
+        self.assertEqual(tool["id"], "T700")
+        self.assertEqual(tool["description"], "Stored edited description")
+        self.assertEqual(tool["tool_type"], "Drill")
 
     def test_get_logbook_color_invalid_date_uses_fallback(self):
         color = self.svc._get_logbook_color_for_date("not-a-date")
@@ -1091,6 +1158,80 @@ class TestSelectorMixins(unittest.TestCase):
         self.assertEqual(slots["main"]["jaw_id"], "J001")
         self.assertEqual(slots["sub"]["jaw_id"], "J002")
 
+    def test_active_assignment_spindle_prefers_last_interacted_spindle(self):
+        from ui.selectors.tool_selector_state import ToolSelectorStateMixin
+
+        class _StubList:
+            def __init__(self, row=-1, has_focus=False):
+                self._row = row
+                self._focus = has_focus
+
+            def currentRow(self):
+                return self._row
+
+            def hasFocus(self):
+                return self._focus
+
+        class _DummyToolState(ToolSelectorStateMixin):
+            def _has_single_spindle_profile(self):
+                return False
+
+        dummy = _DummyToolState()
+        dummy._current_spindle = "main"
+        dummy._last_active_assignment_spindle = "sub"
+        dummy.assignment_lists = {
+            "main": _StubList(row=0, has_focus=False),
+            "sub": _StubList(row=0, has_focus=True),
+        }
+
+        self.assertEqual("sub", dummy._active_assignment_spindle())
+
+    def test_remove_selected_requires_row_selection(self):
+        from ui.selectors.tool_selector_state import ToolSelectorStateMixin
+
+        class _StubList:
+            def __init__(self, row=-1):
+                self._row = row
+
+            def currentRow(self):
+                return self._row
+
+            def hasFocus(self):
+                return False
+
+            def count(self):
+                return 0
+
+            def setCurrentRow(self, row):
+                self._row = row
+
+        class _DummyToolState(ToolSelectorStateMixin):
+            def _has_single_spindle_profile(self):
+                return False
+
+        dummy = _DummyToolState()
+        dummy._current_spindle = "main"
+        dummy._last_active_assignment_spindle = "sub"
+        dummy.assignment_lists = {
+            "main": _StubList(row=-1),
+            "sub": _StubList(row=-1),
+        }
+        dummy.assignment_list = dummy.assignment_lists["main"]
+        dummy._assigned_tools_by_spindle = {
+            "main": [{"tool_id": "T001", "spindle": "main"}],
+            "sub": [{"tool_id": "T002", "spindle": "sub"}],
+        }
+        flags = {"stored": False, "rebuilt": False}
+        dummy._store_current_bucket = lambda: flags.__setitem__("stored", True)
+        dummy._rebuild_assignment_list = lambda _spindle=None: flags.__setitem__("rebuilt", True)
+
+        dummy._remove_selected()
+
+        self.assertEqual([{"tool_id": "T001", "spindle": "main"}], dummy._assigned_tools_by_spindle["main"])
+        self.assertEqual([{"tool_id": "T002", "spindle": "sub"}], dummy._assigned_tools_by_spindle["sub"])
+        self.assertFalse(flags["stored"])
+        self.assertFalse(flags["rebuilt"])
+
 
 class TestSelectorUiWiring(unittest.TestCase):
 
@@ -1181,6 +1322,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
             _selector_spindle="main",
             _selector_initial_assignments=[{"tool_id": "T001"}],
             _selector_initial_assignment_buckets={"HEAD1:main": [{"tool_id": "T001"}]},
+            _selector_print_pots=True,
             _tool_selector_dialog=None,
             _jaw_selector_dialog=None,
             _t=lambda _k, default=None, **_kwargs: default or "",
@@ -1197,6 +1339,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
         self.assertEqual(built["selector_head"], "HEAD1")
         self.assertEqual(built["selector_spindle"], "main")
         self.assertEqual(built["initial_assignments"][0]["tool_id"], "T001")
+        self.assertTrue(built["initial_print_pots"])
 
     def test_open_selector_dialog_for_jaws_builds_jaw_dialog(self):
         built = {}
@@ -1252,6 +1395,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
         dummy = types.SimpleNamespace(
             _selector_head="head2",
             _selector_spindle="sub",
+            _selector_print_pots=False,
             _send_selector_result_payload=lambda **kwargs: captured.update(kwargs),
         )
 
@@ -1263,6 +1407,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
                 "selector_head": "",
                 "selector_spindle": "",
                 "assignment_buckets_by_target": {"HEAD2:sub": [{"tool_id": "T001"}]},
+                "print_pots": True,
             },
         )
 
@@ -1270,6 +1415,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
         self.assertEqual(captured["selector_head"], "HEAD2")
         self.assertEqual(captured["selector_spindle"], "sub")
         self.assertIn("HEAD2:sub", captured["assignment_buckets_by_target"])
+        self.assertTrue(captured["print_pots"])
 
     def test_send_selector_result_payload_warns_when_callback_missing(self):
         dummy = types.SimpleNamespace(
@@ -1314,6 +1460,7 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
                 selector_head="HEAD1",
                 selector_spindle="main",
                 assignment_buckets_by_target={"HEAD1:main": [{"tool_id": "T001"}]},
+                print_pots=True,
             )
 
         self.assertIn("kind:tools", events)

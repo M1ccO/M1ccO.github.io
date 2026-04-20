@@ -76,6 +76,9 @@ class WorkService:
             pot = str(value.get("pot") or "").strip()
             override_id = str(value.get("override_id") or "").strip()
             override_description = str(value.get("override_description") or "").strip()
+            description = str(value.get("description") or "").strip()
+            tool_type = str(value.get("tool_type") or "").strip()
+            default_pot = str(value.get("default_pot") or "").strip()
         else:
             tool_id = str(value or "").strip()
             tool_uid = None
@@ -84,6 +87,9 @@ class WorkService:
             pot = ""
             override_id = ""
             override_description = ""
+            description = ""
+            tool_type = ""
+            default_pot = ""
         if not tool_id:
             return None
         if spindle not in cls._SPINDLES:
@@ -96,6 +102,12 @@ class WorkService:
             "override_id": override_id,
             "override_description": override_description,
         }
+        if description:
+            normalized["description"] = description
+        if tool_type:
+            normalized["tool_type"] = tool_type
+        if default_pot:
+            normalized["default_pot"] = default_pot
         if tool_uid is not None:
             normalized["tool_uid"] = tool_uid
         return normalized

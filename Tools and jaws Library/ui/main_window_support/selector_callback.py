@@ -18,6 +18,7 @@ def send_selector_result_payload(
     selector_spindle: str,
     assignment_buckets_by_target: dict | None = None,
     target_key: str = "",
+    print_pots: bool = False,
 ) -> bool:
     if kind == "tools" and not selected_items:
         QMessageBox.information(
@@ -54,6 +55,7 @@ def send_selector_result_payload(
     if kind == "tools":
         payload["selector_head"] = selector_head
         payload["selector_spindle"] = selector_spindle
+        payload["print_pots"] = bool(print_pots)
         if assignment_buckets_by_target:
             payload["assignment_buckets_by_target"] = assignment_buckets_by_target
         if target_key:

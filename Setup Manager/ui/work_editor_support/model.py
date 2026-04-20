@@ -24,6 +24,52 @@ def _tool_assignment_widgets_for_head(dialog, head_key: str):
     return [ordered_list] if ordered_list is not None else []
 
 
+def _collect_head_tool_assignments(dialog, head_key: str) -> list[dict]:
+    """Collect one merged assignment list for a head across all visible widgets.
+
+    Main/sub columns usually share one backing assignment map, but this helper
+    tolerates split widget state and always returns both spindle buckets.
+    """
+    widgets = [w for w in _tool_assignment_widgets_for_head(dialog, head_key) if w is not None]
+    if not widgets:
+        return []
+
+    merged_by_spindle: dict[str, list[dict]] = {"main": [], "sub": []}
+
+    for spindle in ("main", "sub"):
+        spindle_values: list[dict] = []
+        for widget in widgets:
+            try:
+                candidate_items = (getattr(widget, "_assignments_by_spindle", {}) or {}).get(spindle, [])
+            except Exception:
+                candidate_items = []
+            clean_items = [dict(item) for item in candidate_items if isinstance(item, dict)]
+            if clean_items:
+                spindle_values = clean_items
+                break
+
+        if not spindle_values:
+            for widget in widgets:
+                getter = getattr(widget, "get_tool_assignments", None)
+                if not callable(getter):
+                    continue
+                try:
+                    candidate = [
+                        dict(item)
+                        for item in (getter() or [])
+                        if isinstance(item, dict) and str(item.get("spindle") or "main").strip().lower() == spindle
+                    ]
+                except Exception:
+                    candidate = []
+                if candidate:
+                    spindle_values = candidate
+                    break
+
+        merged_by_spindle[spindle] = spindle_values
+
+    return [*merged_by_spindle["main"], *merged_by_spindle["sub"]]
+
+
 class WorkEditorPayloadAdapter:
     """Bridge the profile-driven dialog UI to the legacy work payload shape.
 
@@ -202,10 +248,13 @@ class WorkEditorPayloadAdapter:
         for head_key in KNOWN_HEAD_KEYS:
             ordered_widgets = _tool_assignment_widgets_for_head(dialog, head_key)
             if ordered_widgets and not is_mc:
-                ordered_list = ordered_widgets[0]
-                assignments = ordered_list.get_tool_assignments()
+                assignments = _collect_head_tool_assignments(dialog, head_key)
                 payload[self.tool_assignment_field(head_key)] = assignments
-                payload[self.tool_ids_field(head_key)] = ordered_list.get_tool_ids()
+                payload[self.tool_ids_field(head_key)] = [
+                    str(item.get("tool_id") or "").strip()
+                    for item in assignments
+                    if isinstance(item, dict) and str(item.get("tool_id") or "").strip()
+                ]
 
             program_input = dialog._sub_program_inputs.get(head_key)
             if program_input is not None:

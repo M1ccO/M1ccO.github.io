@@ -9,6 +9,8 @@ from PySide6.QtGui import QIcon, QStandardItem, QTransform
 from PySide6.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
 
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
+from shared.ui.tool_assignment_editing import edit_tool_assignment_dialog, open_tool_pot_editor_dialog
+from shared.ui.tool_assignment_display import build_badges, compose_title, effective_fields, library_label_fields
 from shared.ui.helpers.topbar_common import rebuild_filter_row
 from ..selector_ui_helpers import selector_spindle_label
 from .common import selected_rows_or_current
@@ -180,6 +182,9 @@ class ToolSelectorStateMixin:
         normalized['tool_head'] = head
         normalized['spindle'] = spindle
         normalized['spindle_orientation'] = spindle
+        pot = str(normalized.get('pot') or '').strip()
+        if pot and not str(normalized.get('default_pot') or '').strip():
+            normalized['default_pot'] = pot
         self._enrich_tool_metadata(normalized)
         return normalized
 
@@ -388,14 +393,24 @@ class ToolSelectorStateMixin:
     def _active_assignment_spindle(self) -> str:
         if self._has_single_spindle_profile():
             return self._normalize_spindle(self._current_spindle)
+        remembered = self._normalize_spindle(getattr(self, '_last_active_assignment_spindle', self._current_spindle))
+        remembered_list = self.assignment_lists.get(remembered)
+        if remembered_list is not None and (
+            remembered_list.currentRow() >= 0 or remembered_list.hasFocus()
+        ):
+            return remembered
         for spindle in ('main', 'sub'):
             lst = self.assignment_lists.get(spindle)
             if lst is not None and lst.currentRow() >= 0:
+                self._last_active_assignment_spindle = spindle
                 return spindle
         for spindle in ('main', 'sub'):
             lst = self.assignment_lists.get(spindle)
             if lst is not None and lst.hasFocus():
+                self._last_active_assignment_spindle = spindle
                 return spindle
+        if remembered in {'main', 'sub'}:
+            return remembered
         return 'main'
 
     def _tool_matches_spindle(self, tool: dict) -> bool:
@@ -465,19 +480,16 @@ class ToolSelectorStateMixin:
             row_counts[target_spindle] = len(assignments)
 
             for row, assignment in enumerate(assignments):
-                tool_id = str(assignment.get('tool_id') or assignment.get('id') or '').strip()
-                description = str(assignment.get('description') or '').strip()
                 comment = str(assignment.get('comment') or '').strip()
-                default_pot = str(assignment.get('default_pot') or '').strip()
-                title = f'{row + 1}. {tool_id}' if tool_id else f'{row + 1}.'
-                if description:
-                    title = f'{title}  -  {description}'
-
-                badges: list[str] = []
-                if default_pot:
-                    badges.append(f'P:{default_pot}')
-                if comment:
-                    badges.append('C')
+                effective_pot = str(assignment.get('pot') or assignment.get('default_pot') or '').strip()
+                effective_tool_id, effective_description, is_edited = effective_fields(assignment)
+                title = compose_title(row_index=row, tool_id=effective_tool_id, description=effective_description)
+                badges = build_badges(
+                    comment=comment,
+                    pot=effective_pot,
+                    edited=is_edited,
+                    show_pot=bool(getattr(self, '_print_pots_enabled', False)),
+                )
 
                 item = QListWidgetItem()
                 item.setData(Qt.UserRole, dict(assignment))
@@ -500,9 +512,12 @@ class ToolSelectorStateMixin:
                     title=title,
                     subtitle=comment,
                     badges=badges,
-                    editable=False,
+                    editable=True,
                     compact=True,
                     parent=row_host,
+                )
+                card.editRequested.connect(
+                    lambda target_spindle=target_spindle, row=row: self._edit_assignment_row(target_spindle, row)
                 )
                 row_layout.addWidget(card)
                 assignment_list.setItemWidget(item, row_host)
@@ -535,6 +550,7 @@ class ToolSelectorStateMixin:
                     card.set_selected(item.isSelected())
 
     def _on_assignment_selection_changed(self, spindle: str) -> None:
+        self._last_active_assignment_spindle = self._normalize_spindle(spindle)
         target_list = self._assignment_list_for_spindle(spindle)
         for other_spindle, other_list in self.assignment_lists.items():
             if other_list is target_list:
@@ -552,17 +568,13 @@ class ToolSelectorStateMixin:
         active_assignments = self._assigned_tools_for_spindle(active_spindle)
         has_row = active_list.currentRow() >= 0
         has_assignments = any(self._assigned_tools_for_spindle(sp) for sp in ('main', 'sub'))
-        has_comment = False
-        if has_row:
-            item = active_list.item(active_list.currentRow())
-            payload = item.data(Qt.UserRole) if item is not None else None
-            has_comment = bool(str((payload or {}).get('comment') or '').strip()) if isinstance(payload, dict) else False
         self.remove_btn.setEnabled(has_row or has_assignments)
         self.move_up_btn.setEnabled(has_row and active_list.currentRow() > 0)
         self.move_down_btn.setEnabled(has_row and active_list.currentRow() < active_list.count() - 1)
-        self.comment_btn.setEnabled(has_row)
-        self.delete_comment_btn.setVisible(has_comment)
-        self.delete_comment_btn.setEnabled(has_comment)
+        if hasattr(self, 'edit_btn'):
+            self.edit_btn.setEnabled(has_row)
+        if hasattr(self, 'pot_btn'):
+            self.pot_btn.setEnabled(has_assignments)
 
     def _sync_assignment_order_for_spindle(self, spindle: str) -> None:
         target_spindle = self._normalize_spindle(spindle)
@@ -618,10 +630,6 @@ class ToolSelectorStateMixin:
         target_assignments = self._assigned_tools_for_spindle(spindle)
         row = target_list.currentRow()
         if row < 0 or row >= len(target_assignments):
-            if target_assignments:
-                target_assignments.pop()
-                self._store_current_bucket()
-                self._rebuild_assignment_list(spindle)
             return
         target_assignments.pop(row)
         self._store_current_bucket()
@@ -665,40 +673,127 @@ class ToolSelectorStateMixin:
         self._rebuild_assignment_list(spindle)
         target_list.setCurrentRow(row + 1)
 
-    def _add_comment(self) -> None:
-        spindle = self._active_assignment_spindle()
-        target_list = self._assignment_list_for_spindle(spindle)
-        target_assignments = self._assigned_tools_for_spindle(spindle)
-        row = target_list.currentRow()
-        if row < 0 or row >= len(target_assignments):
-            return
-        from PySide6.QtWidgets import QInputDialog
+    def _tool_library_label_parts(self, assignment: dict) -> tuple[str, str]:
+        return library_label_fields(assignment)
 
-        current = str(target_assignments[row].get('comment') or '').strip()
-        text, ok = QInputDialog.getText(
+    def _edit_assignment_row(self, spindle: str, row_index: int) -> None:
+        target_spindle = self._normalize_spindle(spindle)
+        target_assignments = self._assigned_tools_for_spindle(target_spindle)
+        if row_index < 0 or row_index >= len(target_assignments):
+            return
+        assignment = target_assignments[row_index]
+        library_tool_id, library_description = self._tool_library_label_parts(assignment)
+        result = edit_tool_assignment_dialog(
             self,
-            self._t('tool_library.selector.add_comment', 'Lisää kommentti'),
-            self._t('tool_library.selector.comment_prompt', 'Kommentti:'),
-            text=current,
+            translate=self._t,
+            library_tool_id=library_tool_id,
+            library_description=library_description,
+            override_id=str(assignment.get('override_id') or '').strip(),
+            override_description=str(assignment.get('override_description') or '').strip(),
+            comment_value=str(assignment.get('comment') or '').strip(),
+            pot_value=str(assignment.get('pot') or '').strip(),
+            default_pot=str(assignment.get('default_pot') or '').strip(),
         )
-        if not ok:
+        if not isinstance(result, dict):
             return
-        target_assignments[row]['comment'] = text.strip()
+        assignment['override_id'] = str(result.get('override_id') or '').strip()
+        assignment['override_description'] = str(result.get('override_description') or '').strip()
+        assignment['comment'] = str(result.get('comment') or '').strip()
+        assignment['pot'] = str(result.get('pot') or '').strip()
         self._store_current_bucket()
-        self._rebuild_assignment_list(spindle)
-        target_list.setCurrentRow(row)
+        self._rebuild_assignment_list(target_spindle)
+        self._assignment_list_for_spindle(target_spindle).setCurrentRow(row_index)
 
-    def _delete_comment(self) -> None:
+    def _edit_selected_assignment(self) -> None:
         spindle = self._active_assignment_spindle()
-        target_list = self._assignment_list_for_spindle(spindle)
-        target_assignments = self._assigned_tools_for_spindle(spindle)
-        row = target_list.currentRow()
-        if row < 0 or row >= len(target_assignments):
+        row = self._assignment_list_for_spindle(spindle).currentRow()
+        if row < 0:
             return
-        target_assignments[row].pop('comment', None)
+        self._edit_assignment_row(spindle, row)
+
+    def _selector_pot_editor_sections(self) -> list[dict]:
+        sections: list[dict] = []
+        for head in self._profile_head_keys():
+            groups: list[dict] = []
+            for spindle in ('main', 'sub'):
+                rows: list[dict] = []
+                target_key = self._target_key(head, spindle)
+                for assignment in self._assignments_by_target.get(target_key, []):
+                    if not isinstance(assignment, dict):
+                        continue
+                    tool_id, description = self._tool_library_label_parts(assignment)
+                    label = tool_id
+                    if description:
+                        label = f'{label}  -  {description}'
+                    rows.append(
+                        {
+                            'assignment': assignment,
+                            'label': label,
+                            'icon': self._assignment_icon_for_spindle(
+                                str(assignment.get('tool_type') or '').strip(),
+                                spindle,
+                                head,
+                            ),
+                            'flip_vertical': self._normalize_head(head) == 'HEAD2',
+                            'pot': str(assignment.get('pot') or '').strip(),
+                            'placeholder': str(assignment.get('default_pot') or '').strip(),
+                        }
+                    )
+                groups.append(
+                    {
+                        'title': self._selector_spindle_title(spindle),
+                        'rows': rows,
+                    }
+                )
+            sections.append(
+                {
+                    'title': self._t(
+                        'tool_library.selector.head_lower' if self._normalize_head(head) == 'HEAD2'
+                        else 'tool_library.selector.head_upper',
+                        'Alarevolveri' if self._normalize_head(head) == 'HEAD2' else 'Yläkara',
+                    ),
+                    'groups': groups,
+                }
+            )
+        return sections
+
+    def _open_pot_editor(self) -> None:
+        if not bool(getattr(self, '_print_pots_enabled', False)):
+            self._print_pots_enabled = True
+            if hasattr(self, 'print_pots_checkbox'):
+                self.print_pots_checkbox.blockSignals(True)
+                self.print_pots_checkbox.setChecked(True)
+                self.print_pots_checkbox.blockSignals(False)
+            self._populate_default_pots_for_assignments()
+        changed = open_tool_pot_editor_dialog(
+            self,
+            sections=self._selector_pot_editor_sections(),
+            translate=self._t,
+            title=self._t('work_editor.tools.pot_editor_title', 'Pot Editor'),
+        )
+        if not changed:
+            self._rebuild_assignment_list()
+            return
         self._store_current_bucket()
-        self._rebuild_assignment_list(spindle)
-        target_list.setCurrentRow(row)
+        self._rebuild_assignment_list()
+
+    def _populate_default_pots_for_assignments(self) -> None:
+        for items in self._assignments_by_target.values():
+            for assignment in items or []:
+                if not isinstance(assignment, dict):
+                    continue
+                if str(assignment.get('pot') or '').strip():
+                    continue
+                default_pot = str(assignment.get('default_pot') or '').strip()
+                if default_pot:
+                    assignment['pot'] = default_pot
+
+    def _on_print_pots_toggled(self, checked: bool) -> None:
+        self._print_pots_enabled = bool(checked)
+        if self._print_pots_enabled:
+            self._populate_default_pots_for_assignments()
+            self._store_current_bucket()
+        self._rebuild_assignment_list()
 
     def _toggle_head(self) -> None:
         if self._has_single_head_profile():

@@ -7,6 +7,71 @@ from typing import Callable
 
 from PySide6.QtCore import Qt, QPoint
 from PySide6.QtGui import QIcon, QKeySequence, QShortcut, QGuiApplication
+from PySide6.QtWidgets import QDialog
+
+
+def uses_independent_detached_preview_host(page) -> bool:
+    """Return True when detached preview should not be parented to ``page``.
+
+    Standalone selector dialogs are top-level transient tool windows. Parenting
+    detached preview directly to them can cause focus/visibility churn on
+    Windows when the preview is opened. In that case, use an independent tool
+    window for preview while still tying lifetime back to the selector.
+    """
+    if page is None or not hasattr(page, "window"):
+        return False
+    try:
+        host_window = page.window()
+    except Exception:
+        return False
+    if host_window is None or host_window is not page:
+        return False
+    try:
+        return bool(host_window.windowFlags() & Qt.WindowStaysOnTopHint)
+    except Exception:
+        return False
+
+
+def create_detached_preview_dialog(page, *, title: str, on_finished: Callable[[int], None]) -> QDialog:
+    """Create a detached preview dialog with selector-safe ownership rules."""
+    independent_host = uses_independent_detached_preview_host(page)
+    dialog_parent = None if independent_host else page
+    dialog = QDialog(dialog_parent)
+    dialog.setProperty('detachedPreviewDialog', True)
+
+    host_window = None
+    if page is not None and hasattr(page, "window"):
+        try:
+            host_window = page.window()
+        except Exception:
+            host_window = None
+
+    if independent_host:
+        dialog.setWindowFlag(Qt.Tool, True)
+        dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        dialog.setAttribute(Qt.WA_StyledBackground, True)
+        dialog.setAutoFillBackground(True)
+        if host_window is not None:
+            try:
+                dialog.setPalette(host_window.palette())
+            except Exception:
+                pass
+            try:
+                stylesheet = str(host_window.styleSheet() or "")
+            except Exception:
+                stylesheet = ""
+            if stylesheet.strip():
+                dialog.setStyleSheet(stylesheet)
+        try:
+            page.destroyed.connect(dialog.close)
+        except Exception:
+            pass
+    elif host_window is not None and bool(host_window.windowFlags() & Qt.WindowStaysOnTopHint):
+        dialog.setWindowFlag(Qt.Tool, True)
+
+    dialog.setWindowTitle(title)
+    dialog.finished.connect(on_finished)
+    return dialog
 
 
 def bind_escape_close_shortcut(page, dialog, attr_name: str = "_close_preview_shortcut") -> None:

@@ -255,6 +255,8 @@ class PrintService:
             pot = ""
             override_id = ""
             override_description = ""
+            assignment_description = ""
+            assignment_tool_type = ""
         else:
             tool_id = self._to_text(assignment.get("tool_id") or assignment.get("id"))
             raw_uid = assignment.get("tool_uid", assignment.get("uid"))
@@ -268,6 +270,8 @@ class PrintService:
             pot = self._to_text(assignment.get("pot"))
             override_id = self._to_text(assignment.get("override_id"))
             override_description = self._to_text(assignment.get("override_description"))
+            assignment_description = self._to_text(assignment.get("description"))
+            assignment_tool_type = self._to_text(assignment.get("tool_type"))
         if not tool_id:
             return None
 
@@ -279,6 +283,10 @@ class PrintService:
                 "description": self._t("work_editor.tools.deleted_tool", "DELETED TOOL"),
                 "tool_type": "",
             }
+        if assignment_description:
+            tool["description"] = assignment_description
+        if assignment_tool_type:
+            tool["tool_type"] = assignment_tool_type
         # Apply overrides
         if override_id:
             tool["id"] = override_id

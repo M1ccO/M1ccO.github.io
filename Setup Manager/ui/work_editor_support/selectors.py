@@ -199,14 +199,23 @@ def build_tool_selector_bucket(
         entry = {
             "tool_id": tool_id,
             "spindle": spindle,
-            "comment": "",
-            "pot": "",
-            "override_id": "",
-            "override_description": "",
+            "comment": str(item.get("comment") or "").strip(),
+            "pot": str(item.get("pot") or item.get("default_pot") or "").strip(),
+            "override_id": str(item.get("override_id") or "").strip(),
+            "override_description": str(item.get("override_description") or "").strip(),
         }
         tool_uid = parse_optional_int(item.get("tool_uid", item.get("uid")))
         if tool_uid is not None:
             entry["tool_uid"] = tool_uid
+        description = str(item.get("description") or "").strip()
+        if description:
+            entry["description"] = description
+        tool_type = str(item.get("tool_type") or "").strip()
+        if tool_type:
+            entry["tool_type"] = tool_type
+        default_pot = str(item.get("default_pot") or "").strip()
+        if default_pot:
+            entry["default_pot"] = default_pot
         key = assignment_key_fn(entry)
         if not key or key in seen_keys:
             continue
@@ -342,17 +351,33 @@ def selector_initial_tool_assignments(ordered_list, spindle: str) -> list[dict]:
         comment = str(assignment.get("comment") or "").strip()
         if comment:
             merged["comment"] = comment
+        override_id = str(assignment.get("override_id") or "").strip()
+        if override_id:
+            merged["override_id"] = override_id
+        override_description = str(assignment.get("override_description") or "").strip()
+        if override_description:
+            merged["override_description"] = override_description
         pot = str(assignment.get("pot") or "").strip()
         if pot:
+            merged["pot"] = pot
             merged["default_pot"] = pot
 
         resolved = by_key.get(ordered_list._assignment_key(assignment), {})
+        description = str(assignment.get("description") or "").strip()
+        if description:
+            merged["description"] = description
+        tool_type = str(assignment.get("tool_type") or "").strip()
+        if tool_type:
+            merged["tool_type"] = tool_type
+        default_pot = str(assignment.get("default_pot") or "").strip()
+        if default_pot and "default_pot" not in merged:
+            merged["default_pot"] = default_pot
         if resolved:
             description = str(resolved.get("description") or "").strip()
-            if description:
+            if description and "description" not in merged:
                 merged["description"] = description
             tool_type = str(resolved.get("tool_type") or "").strip()
-            if tool_type:
+            if tool_type and "tool_type" not in merged:
                 merged["tool_type"] = tool_type
             if "default_pot" not in merged:
                 default_pot = str(resolved.get("default_pot") or "").strip()

@@ -44,6 +44,7 @@ class ToolSelectorDialog(
         selector_spindle: str,
         initial_assignments: list[dict] | None,
         initial_assignment_buckets: dict[str, list[dict]] | None,
+        initial_print_pots: bool = False,
         on_submit: Callable[[dict], None],
         on_cancel: Callable[[], None],
         parent=None,
@@ -62,6 +63,7 @@ class ToolSelectorDialog(
 
         self._current_head = self._normalize_head(selector_head)
         self._current_spindle = self._normalize_spindle(selector_spindle)
+        self._print_pots_enabled = bool(initial_print_pots)
         self._assigned_tools: list[dict] = []
         self.current_tool_id: str | None = None
         self.current_tool_uid: int | None = None
@@ -98,7 +100,7 @@ class ToolSelectorDialog(
             if not self._embedded_mode:
                 self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
                 self.setAttribute(Qt.WA_DeleteOnClose, True)
-                self.resize(1180, 720)
+                self.resize(1500, 860)
                 restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
             inner = self._make_themed_inner_layout()
@@ -120,6 +122,10 @@ class ToolSelectorDialog(
         if self._startup_initialized:
             return
         self._startup_initialized = True
+        if hasattr(self, 'print_pots_checkbox'):
+            self.print_pots_checkbox.blockSignals(True)
+            self.print_pots_checkbox.setChecked(bool(getattr(self, '_print_pots_enabled', False)))
+            self.print_pots_checkbox.blockSignals(False)
         self._load_current_bucket()
         self._refresh_catalog()
         self._rebuild_assignment_list()
@@ -142,7 +148,7 @@ class ToolSelectorDialog(
         if not self._embedded_mode:
             self.setWindowTitle(self._t('work_editor.selector.tools_dialog_title', 'Työkaluvalitsin'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
-            self.resize(1180, 720)
+            self.resize(1500, 860)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'tool_selector_dialog')
 
         inner = self._make_themed_inner_layout()
@@ -240,6 +246,7 @@ class EmbeddedToolSelectorWidget(
         selector_spindle: str,
         initial_assignments: list[dict] | None,
         initial_assignment_buckets: dict[str, list[dict]] | None,
+        initial_print_pots: bool = False,
         on_submit: Callable[[dict], None],
         on_cancel: Callable[[], None],
         parent=None,
@@ -252,6 +259,7 @@ class EmbeddedToolSelectorWidget(
 
         self._current_head = self._normalize_head(selector_head)
         self._current_spindle = self._normalize_spindle(selector_spindle)
+        self._print_pots_enabled = bool(initial_print_pots)
         self._assigned_tools: list[dict] = []
         self.current_tool_id: str | None = None
         self.current_tool_uid: int | None = None
@@ -281,6 +289,11 @@ class EmbeddedToolSelectorWidget(
             self._build_content(root)
             self._build_bottom_bar(root)
 
+            if hasattr(self, 'print_pots_checkbox'):
+                self.print_pots_checkbox.blockSignals(True)
+                self.print_pots_checkbox.setChecked(bool(self._print_pots_enabled))
+                self.print_pots_checkbox.blockSignals(False)
+
             self._load_current_bucket()
             self._refresh_catalog()
             self._rebuild_assignment_list()
@@ -298,6 +311,7 @@ class EmbeddedToolSelectorWidget(
         selector_spindle: str,
         initial_assignments: list[dict] | None,
         initial_assignment_buckets: dict[str, list[dict]] | None,
+        initial_print_pots: bool = False,
         on_submit: Callable[[dict], None],
         on_cancel: Callable[[], None],
     ) -> None:
@@ -307,6 +321,7 @@ class EmbeddedToolSelectorWidget(
             self._on_submit = on_submit
             self._current_head = self._normalize_head(selector_head)
             self._current_spindle = self._normalize_spindle(selector_spindle)
+            self._print_pots_enabled = bool(initial_print_pots)
             self._assigned_tools = []
             self.current_tool_id = None
             self.current_tool_uid = None
@@ -318,6 +333,10 @@ class EmbeddedToolSelectorWidget(
 
             if hasattr(self, 'search_toggle'):
                 self.search_toggle.setChecked(False)
+            if hasattr(self, 'print_pots_checkbox'):
+                self.print_pots_checkbox.blockSignals(True)
+                self.print_pots_checkbox.setChecked(bool(self._print_pots_enabled))
+                self.print_pots_checkbox.blockSignals(False)
             if hasattr(self, 'search_input'):
                 self.search_input.setVisible(False)
                 self.search_input.blockSignals(True)

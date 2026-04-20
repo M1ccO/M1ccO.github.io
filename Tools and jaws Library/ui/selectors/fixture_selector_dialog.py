@@ -343,7 +343,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             if not self._embedded_mode:
                 self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
                 self.setAttribute(Qt.WA_DeleteOnClose, True)
-                self.resize(1180, 720)
+                self.resize(1220, 780)
                 restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
 
             root = QVBoxLayout(self)
@@ -387,7 +387,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
         if not self._embedded_mode:
             self.setWindowTitle(self._t('fixture_library.selector.header_title', 'Fixture Selector'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
-            self.resize(1180, 720)
+            self.resize(1220, 780)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'fixture_selector_dialog')
 
         root = QVBoxLayout(self)

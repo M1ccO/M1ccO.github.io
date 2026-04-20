@@ -5055,3 +5055,120 @@ Traceback (most recent call last):
     raise JSONDecodeError("Expecting value", s, err.value) from None
 json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 2026-04-20 08:07:57,995 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-20 12:43:55,365 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,370 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,375 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,380 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,381 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-20 12:43:55,386 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,392 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,396 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,400 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,404 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,409 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,414 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,419 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,423 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,428 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,432 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,437 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,443 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,447 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,448 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+    ~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pz9079\NTX Setup Manager\tests\test_preload_manager.py", line 297, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-20 12:43:55,458 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,463 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,467 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:43:55,483 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+    ~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pz9079\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: fail
+2026-04-20 12:44:08,072 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,087 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,103 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,111 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,112 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-20 12:44:08,124 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,137 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,142 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,156 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,162 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,176 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,190 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,203 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,218 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,233 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,248 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,262 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,278 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,293 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,293 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+    ~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pz9079\NTX Setup Manager\tests\test_preload_manager.py", line 297, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-20 12:44:08,316 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,330 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,344 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:44:08,364 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+    ~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pz9079\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: fail
+2026-04-20 12:47:08,028 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,043 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,058 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,066 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,067 services.preload_manager WARNING PreloadManager.initialize: draw_service is None; skipping
+2026-04-20 12:47:08,080 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,094 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\a.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,099 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\b.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,114 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,119 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\other.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,133 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,147 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,161 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,174 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,188 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,202 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,215 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,229 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,243 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,243 services.preload_manager DEBUG invalidation listener raised
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\preload_manager.py", line 149, in _emit
+    listener(kind, ids)
+    ~~~~~~~~^^^^^^^^^^^
+  File "C:\Users\pz9079\NTX Setup Manager\tests\test_preload_manager.py", line 297, in boom
+    raise RuntimeError("listener failed")
+RuntimeError: listener failed
+2026-04-20 12:47:08,267 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,284 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,301 services.preload_manager INFO PreloadManager ready: tool_db=\tmp\tools.db jaw_db=\tmp\jaws.db
+2026-04-20 12:47:08,317 services.selector_session DEBUG transition listener raised
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\Setup Manager\services\selector_session.py", line 274, in _transition_to
+    listener(transition)
+    ~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\pz9079\NTX Setup Manager\tests\test_selector_session.py", line 264, in boom
+    def boom(_t): raise RuntimeError("fail")
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: fail

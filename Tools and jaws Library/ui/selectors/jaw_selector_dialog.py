@@ -82,7 +82,7 @@ class JawSelectorDialog(
             if not self._embedded_mode:
                 self.setWindowTitle(self._t('work_editor.selector.jaws_dialog_title', 'Leukavalitsin'))
                 self.setAttribute(Qt.WA_DeleteOnClose, True)
-                self.resize(1180, 720)
+                self.resize(1220, 780)
                 restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
             inner = self._make_themed_inner_layout()
@@ -123,7 +123,7 @@ class JawSelectorDialog(
         if not self._embedded_mode:
             self.setWindowTitle(self._t('work_editor.selector.jaws_dialog_title', 'Leukavalitsin'))
             self.setAttribute(Qt.WA_DeleteOnClose, True)
-            self.resize(1180, 720)
+            self.resize(1220, 780)
             restore_window_geometry(self, SHARED_UI_PREFERENCES_PATH, 'jaw_selector_dialog')
 
         inner = self._make_themed_inner_layout()

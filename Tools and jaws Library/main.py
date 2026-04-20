@@ -294,6 +294,11 @@ def main():
             # Selector requests are hosted in standalone dialogs; do not surface
             # the main library window behind them.
             if selector_active_request:
+                # Standalone selector sessions still need preview warmup so the
+                # first detached 3D preview open does not cold-start Chromium.
+                # The helper window is a Qt.Tool off-screen surface, so warming
+                # here does not force the main library window visible.
+                schedule_preview_warmup(80)
                 return
 
             # Warm up preview only when the main library window is actually

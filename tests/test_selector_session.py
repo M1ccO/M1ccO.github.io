@@ -16,8 +16,12 @@ from pathlib import Path
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 _SETUP_MANAGER_DIR = Path(__file__).resolve().parent.parent / "Setup Manager"
-if str(_SETUP_MANAGER_DIR) not in sys.path:
-    sys.path.insert(0, str(_SETUP_MANAGER_DIR))
+if str(_SETUP_MANAGER_DIR) in sys.path:
+    sys.path.remove(str(_SETUP_MANAGER_DIR))
+sys.path.insert(0, str(_SETUP_MANAGER_DIR))
+for _mod_name in list(sys.modules.keys()):
+    if _mod_name == "services" or _mod_name.startswith("services."):
+        sys.modules.pop(_mod_name, None)
 
 from services.selector_session import (  # noqa: E402
     InvalidSelectorTransitionError,
