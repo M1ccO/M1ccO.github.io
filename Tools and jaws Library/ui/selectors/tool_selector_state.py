@@ -334,15 +334,24 @@ class ToolSelectorStateMixin:
             )
         self._assigned_tools = self._assigned_tools_by_spindle.get('main', [])
 
-    def _assignment_icon_for_spindle(self, tool_type: str, spindle: str) -> QIcon:
+    def _assignment_icon_for_spindle(self, tool_type: str, spindle: str, head: str | None = None) -> QIcon:
         icon = tool_icon_for_type(str(tool_type or '').strip())
-        if self._normalize_spindle(spindle) != 'sub' or icon.isNull():
+        if icon.isNull():
+            return icon
+        normalized_head = self._normalize_head(head or self._current_head)
+        mirror_icon = self._normalize_spindle(spindle) == 'sub'
+        upside_down = normalized_head == 'HEAD2'
+        if not mirror_icon and not upside_down:
             return icon
         pixmap = icon.pixmap(QSize(22, 22))
         if pixmap.isNull():
             return icon
-        mirrored = pixmap.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
-        return QIcon(mirrored)
+        transformed = pixmap
+        if mirror_icon:
+            transformed = transformed.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+        if upside_down:
+            transformed = transformed.transformed(QTransform().scale(1, -1), Qt.SmoothTransformation)
+        return QIcon(transformed)
 
     def _assignment_list_for_spindle(self, spindle: str):
         return self.assignment_lists.get(self._normalize_spindle(spindle), self.assignment_list)
@@ -486,6 +495,7 @@ class ToolSelectorStateMixin:
                     icon=self._assignment_icon_for_spindle(
                         str(assignment.get('tool_type') or '').strip(),
                         target_spindle,
+                        str(assignment.get('tool_head') or self._current_head),
                     ),
                     title=title,
                     subtitle=comment,

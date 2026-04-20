@@ -41,6 +41,9 @@ def _library_payload(window, *, module: str, geometry: str, clear_master_filter:
         "jaws_db_path": str(window.draw_service.jaw_db_path),
         "fixtures_db_path": str(getattr(window.draw_service, "fixture_db_path", window.draw_service.jaw_db_path)),
     }
+    profile_key = str(getattr(window.work_service, "get_machine_profile_key", lambda: "")() or "").strip().lower()
+    if profile_key:
+        payload["machine_profile_key"] = profile_key
     if clear_master_filter:
         payload["clear_master_filter"] = True
     if safe_tools is not None:

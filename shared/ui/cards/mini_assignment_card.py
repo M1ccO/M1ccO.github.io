@@ -6,7 +6,7 @@ to render assignment rows with icon, title, subtitle, and badges.
 """
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QTransform
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -27,11 +27,13 @@ class MiniAssignmentCard(QFrame):
         badges: list[str] | None = None,
         editable: bool = False,
         compact: bool = False,
+        flip_vertical: bool = False,
         parent=None,
     ):
         super().__init__(parent)
         self._editable = bool(editable)
         self._compact = bool(compact)
+        self._flip_vertical = bool(flip_vertical)
         self._full_title = (title or "").strip()
         self._full_subtitle = (subtitle or "").strip()
         self.setProperty("toolListCard", True)
@@ -57,7 +59,10 @@ class MiniAssignmentCard(QFrame):
             pixmap_size = QSize(20, 20)
         self.icon_label.setAlignment(Qt.AlignCenter)
         if icon is not None and not icon.isNull():
-            self.icon_label.setPixmap(icon.pixmap(pixmap_size))
+            icon_pixmap = icon.pixmap(pixmap_size)
+            if self._flip_vertical and not icon_pixmap.isNull():
+                icon_pixmap = icon_pixmap.transformed(QTransform().scale(1, -1), Qt.SmoothTransformation)
+            self.icon_label.setPixmap(icon_pixmap)
         root.addWidget(self.icon_label, 0, Qt.AlignVCenter)
 
         text_col = QVBoxLayout()

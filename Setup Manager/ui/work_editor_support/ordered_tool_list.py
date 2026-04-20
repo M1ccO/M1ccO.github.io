@@ -116,6 +116,7 @@ class WorkEditorOrderedToolList(QWidget):
             comment: str = "",
             pot: str = "",
             edited: bool = False,
+            flip_vertical: bool = False,
             parent=None,
         ):
             badges: list[str] = []
@@ -132,6 +133,7 @@ class WorkEditorOrderedToolList(QWidget):
                 badges=badges,
                 editable=True,
                 compact=True,
+                flip_vertical=flip_vertical,
                 parent=parent,
             )
 
@@ -434,6 +436,7 @@ class WorkEditorOrderedToolList(QWidget):
         ref = self._tool_ref_for_assignment(assignment)
         if isinstance(ref, dict):
             icon = self._tool_icon_for_spindle_resolver(ref.get("tool_type", ""), self._current_spindle())
+        flip_vertical = self._head_key == "HEAD2"
         widget = self._ToolAssignmentRowWidget(
             icon=icon,
             text=display_text,
@@ -441,6 +444,7 @@ class WorkEditorOrderedToolList(QWidget):
             comment=assignment.get("comment", ""),
             pot=pot,
             edited=is_edited,
+            flip_vertical=flip_vertical,
             parent=self.tool_list,
         )
         # Keep assignment cards pure white regardless of surrounding panel tint.

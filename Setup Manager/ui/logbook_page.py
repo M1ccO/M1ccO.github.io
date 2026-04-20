@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shared.ui.layout_contract import get_container_layout_contract, get_toolbar_margins
 
 from ui.icon_helpers import toolbar_icon_with_svg_render_fallback as _toolbar_icon_with_svg_render_fallback
 
@@ -71,8 +72,16 @@ class LogbookPage(QWidget):
         self._header_highlight = None
         self._active_search_column = None
         self._column_keys = ["date", "batch_serial", "work_id", "order_number", "quantity", "notes"]
+        self._layout_contract = get_container_layout_contract()
 
         root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        content_column = QWidget()
+        content_layout = QVBoxLayout(content_column)
+        content_layout.setContentsMargins(0, self._layout_contract.content_top_inset, 0, 0)
+        content_layout.setSpacing(self._layout_contract.content_section_spacing)
 
         self.search_icon = _toolbar_icon_with_svg_render_fallback('search_icon', 28)
         self.close_icon = _toolbar_icon_with_svg_render_fallback('close_icon', 28)
@@ -102,8 +111,10 @@ class LogbookPage(QWidget):
         filters.addRow(self._t("logbook_page.search.label", "Search"), self.search_input)
         self.filters_host.setVisible(False)
 
-        actions = QHBoxLayout()
-        actions.setContentsMargins(0, 0, 0, 0)
+        controls_frame = QFrame()
+        controls_frame.setProperty("topBarContainer", True)
+        actions = QHBoxLayout(controls_frame)
+        actions.setContentsMargins(*get_toolbar_margins(self._layout_contract))
         actions.setSpacing(6)
         actions.addWidget(self.search_toggle_btn)
         actions.addWidget(self.search_input)
@@ -130,7 +141,7 @@ class LogbookPage(QWidget):
         actions.addWidget(self.export_btn)
         actions.addStretch(1)
         actions.addWidget(self.result_count)
-        root.addLayout(actions)
+        content_layout.addWidget(controls_frame)
 
         splitter = QSplitter(Qt.Horizontal)
         self.table = QTableWidget(0, 6)
@@ -218,7 +229,14 @@ class LogbookPage(QWidget):
         splitter.setStretchFactor(0, 5)
         splitter.setStretchFactor(1, 2)
 
-        root.addWidget(splitter, 1)
+        content_host = QWidget()
+        content_host_layout = QVBoxLayout(content_host)
+        content_host_layout.setContentsMargins(*self._layout_contract.frame_host_margins)
+        content_host_layout.setSpacing(0)
+        content_host_layout.addWidget(splitter, 1)
+
+        content_layout.addWidget(content_host, 1)
+        root.addWidget(content_column, 1)
 
         self.refresh_entries()
 

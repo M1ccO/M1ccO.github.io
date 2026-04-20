@@ -41,6 +41,9 @@ from shared.services.ui_preferences_service import UiPreferencesService
 from shared.services.localization_service import LocalizationService
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from ui.main_window_support import (
+    build_footer_actions_section,
+    build_primary_nav_section,
+    build_rail_header_section,
     clear_active_page_selection_on_background_click,
     clear_page_selection,
     complete_tool_library_handoff,
@@ -63,6 +66,7 @@ from ui.main_window_support import (
 )
 from ui.machine_family_runtime import is_machining_center_family, secondary_library_module
 from shared.ui.main_window_helpers import current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and
+from shared.ui.layout_contract import get_container_layout_contract, get_required_rail_width
 from shared.ui.theme import compile_app_stylesheet, get_active_theme_palette, install_application_theme_state
 class MainWindow(QMainWindow):
     _LOGGER = logging.getLogger(__name__)
@@ -194,6 +198,8 @@ class MainWindow(QMainWindow):
         clear_page_selection(page)
 
     def _build_ui(self):
+        layout_contract = get_container_layout_contract()
+        setup_rail_title = self._t("setup_manager.rail_title", "Setup Manager")
         central = QWidget()
         central.setObjectName("appRoot")
         self.setCentralWidget(central)
@@ -203,24 +209,30 @@ class MainWindow(QMainWindow):
 
         self.nav_rail = QFrame()
         self.nav_rail.setProperty("navRail", True)
-        self.nav_rail.setFixedWidth(210)
+        self.nav_rail.setFixedWidth(get_required_rail_width(setup_rail_title, layout_contract))
         nav_layout = QVBoxLayout(self.nav_rail)
-        nav_layout.setContentsMargins(12, 14, 12, 14)
-        nav_layout.setSpacing(8)
+        nav_layout.setContentsMargins(*layout_contract.rail_margins)
+        nav_layout.setSpacing(layout_contract.rail_section_spacing)
 
-        self.rail_title_label = QLabel(self._t("setup_manager.rail_title", "Setup Manager"))
-        self.rail_title_label.setStyleSheet("color: #000000; font-size: 20pt; font-weight: 700;")
-        self.rail_title_label.setWordWrap(False)
-        nav_layout.addWidget(self.rail_title_label)
-
-        self.nav_buttons = []
-        for idx, item_name in enumerate(NAV_ITEMS):
-            button = self._build_nav_button(idx, item_name)
-            nav_layout.addWidget(button)
-            self.nav_buttons.append(button)
+        nav_layout.addWidget(build_rail_header_section(self))
+        nav_layout.addWidget(
+            build_primary_nav_section(
+                self,
+                nav_items=list(NAV_ITEMS),
+                on_nav_click=self._set_page,
+            )
+        )
 
         nav_layout.addStretch(1)
-        nav_layout.addWidget(self._build_launch_card())
+        nav_layout.addWidget(
+            build_footer_actions_section(
+                self,
+                tool_icons_dir=TOOL_ICONS_DIR,
+                on_open_tools=lambda: open_tool_library_action(self),
+                on_open_jaws=lambda: open_jaws_library_action(self),
+                on_open_preferences=lambda: open_preferences_action(self),
+            )
+        )
 
         root.addWidget(self.nav_rail)
 
@@ -231,65 +243,11 @@ class MainWindow(QMainWindow):
 
         self._set_page(0)
 
-    def _build_nav_button(self, index: int, fallback_text: str) -> QPushButton:
-        key = (
-            "setup_manager.nav.setups"
-            if index == 0
-            else "setup_manager.nav.drawings"
-            if index == 1
-            else "setup_manager.nav.logbook"
-        )
-        button = QPushButton(self._t(key, fallback_text))
-        button.setProperty("navButton", True)
-        button.clicked.connect(lambda checked=False, i=index: self._set_page(i))
-        return button
-
-    def _build_launch_card(self) -> QFrame:
-        launch_card = QFrame()
-        launch_card.setProperty("launchCard", True)
-        launch_layout = QVBoxLayout(launch_card)
-        launch_layout.setContentsMargins(12, 12, 12, 12)
-        launch_layout.setSpacing(8)
-
-        self.launch_title = QLabel(self._t("setup_manager.launch.title", "Master Data"))
-        self.launch_title.setProperty("sectionTitle", True)
-        self.launch_body = QLabel(
-            self._t(
-                "setup_manager.launch.default_body",
-                "Open Tool Library or Jaws Library. Select a work in Setup to open filtered data.",
-            )
-        )
-        self.launch_body.setWordWrap(True)
-        self.launch_body.setProperty("navHint", True)
-
-        self.open_tools_btn = QPushButton(self._t("setup_manager.open_tool_library", "Open Tool Library"))
-        self.open_tools_btn.setProperty("panelActionButton", True)
-        self.open_tools_btn.setProperty("sidebarLaunchButton", True)
-        self.open_tools_btn.setMinimumWidth(154)
-        self.open_tools_btn.clicked.connect(lambda: open_tool_library_action(self))
-
-        self.open_jaws_btn = QPushButton(self._t("setup_manager.open_jaws_library", "Open Jaws Library"))
-        self.open_jaws_btn.setProperty("panelActionButton", True)
-        self.open_jaws_btn.setProperty("sidebarLaunchButton", True)
-        self.open_jaws_btn.setMinimumWidth(154)
-        self.open_jaws_btn.clicked.connect(lambda: open_jaws_library_action(self))
-
-        self.preferences_btn = QToolButton()
-        self.preferences_btn.setProperty("topBarIconButton", True)
-        self.preferences_btn.setIcon(QIcon(str(TOOL_ICONS_DIR / "menu_icon.svg")))
-        self.preferences_btn.setIconSize(QSize(30, 30))
-        self.preferences_btn.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.preferences_btn.setFixedSize(38, 38)
-        self.preferences_btn.setAutoRaise(True)
-        self.preferences_btn.setToolTip(self._t("common.preferences", "Preferences"))
-        self.preferences_btn.clicked.connect(lambda: open_preferences_action(self))
-
-        launch_layout.addWidget(self.launch_title)
-        launch_layout.addWidget(self.launch_body)
-        launch_layout.addWidget(self.open_tools_btn)
-        launch_layout.addWidget(self.open_jaws_btn)
-        launch_layout.addWidget(self.preferences_btn, 0, Qt.AlignHCenter)
-        return launch_card
+    def _set_rail_width_for_title(self, title_text: str) -> None:
+        if not hasattr(self, "nav_rail"):
+            return
+        contract = get_container_layout_contract()
+        self.nav_rail.setFixedWidth(get_required_rail_width(title_text, contract))
 
     def _initialize_pages(self):
         self.stack = QStackedWidget()
@@ -460,7 +418,9 @@ class MainWindow(QMainWindow):
         # launch/status text that depends on current context and translated strings.
         self.setWindowTitle(self._t("setup_manager.window_title", APP_TITLE))
         if hasattr(self, "rail_title_label"):
-            self.rail_title_label.setText(self._t("setup_manager.rail_title", "Setup Manager"))
+            rail_title = self._t("setup_manager.rail_title", "Setup Manager")
+            self.rail_title_label.setText(rail_title)
+            self._set_rail_width_for_title(rail_title)
         if hasattr(self, "launch_title"):
             self.launch_title.setText(self._t("setup_manager.launch.title", "Master Data"))
         if hasattr(self, "open_tools_btn"):
@@ -564,7 +524,12 @@ class MainWindow(QMainWindow):
         try:
             palette = install_application_theme_state(self.ui_preferences)
             apply_setup_delegate_theme(palette)
-            self.setStyleSheet(compile_app_stylesheet(STYLE_PATH, self.ui_preferences))
+            style_sheet = compile_app_stylesheet(STYLE_PATH, self.ui_preferences)
+            app = QApplication.instance()
+            if app is not None:
+                app.setStyleSheet(style_sheet)
+            else:
+                self.setStyleSheet(style_sheet)
         except Exception:
             pass
 

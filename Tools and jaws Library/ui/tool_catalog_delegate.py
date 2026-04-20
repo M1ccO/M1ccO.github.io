@@ -154,6 +154,10 @@ def _is_sub_spindle(value) -> bool:
     return normalized in {'sub', 'sub spindle', 'subspindle', 'counter spindle'}
 
 
+def _is_head2(value) -> bool:
+    return str(value or '').strip().upper() == 'HEAD2'
+
+
 def _nose_corner_or_angle_column(tool: dict, t: Callable) -> tuple[str, str]:
     raw_tool_type = (tool.get('tool_type', '') or '').strip()
     angle_tool_types = {'Drill', 'Spot Drill', 'Turn Drill', 'Turn Spot Drill', 'Turn Center Drill'}
@@ -365,6 +369,7 @@ class ToolCatalogDelegate(QStyledItemDelegate):
                 icon,
                 tool.get('tool_type', ''),
                 mirrored=_is_sub_spindle(tool.get('spindle_orientation', 'main')),
+                upside_down=_is_head2(tool.get('tool_head')),
             )
             if pm and not pm.isNull():
                 px = icon_rect.x() + (ICON_SLOT_W - pm.width()) // 2
@@ -541,13 +546,25 @@ class ToolCatalogDelegate(QStyledItemDelegate):
 
     # ── icon cache ──────────────────────────────────────────────────────
 
-    def _cached_pixmap(self, icon: QIcon, tool_type: str, mirrored: bool = False) -> QPixmap | None:
-        key = f"{tool_type or '__default__'}|{'mirrored' if mirrored else 'normal'}"
+    def _cached_pixmap(
+        self,
+        icon: QIcon,
+        tool_type: str,
+        mirrored: bool = False,
+        upside_down: bool = False,
+    ) -> QPixmap | None:
+        key = (
+            f"{tool_type or '__default__'}"
+            f"|{'mirrored' if mirrored else 'normal'}"
+            f"|{'upside_down' if upside_down else 'upright'}"
+        )
         if key not in self._icon_cache:
             pm = icon.pixmap(QSize(ICON_SIZE, ICON_SIZE))
             pm = self._normalized_icon_pixmap(pm)
             if mirrored and pm is not None and not pm.isNull():
                 pm = pm.transformed(QTransform().scale(-1, 1), Qt.SmoothTransformation)
+            if upside_down and pm is not None and not pm.isNull():
+                pm = pm.transformed(QTransform().scale(1, -1), Qt.SmoothTransformation)
             self._icon_cache[key] = pm
         return self._icon_cache.get(key)
 

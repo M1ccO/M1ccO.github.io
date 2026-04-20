@@ -248,6 +248,9 @@ class PreloadManager:
             return
         try:
             warmup = StlPreviewWidget()
+            # Keep warmup out of Alt+Tab/taskbar while still creating a real
+            # HWND/compositor surface for fast first-use rendering.
+            warmup.setWindowFlag(Qt.Tool)
             # Position far off-screen at real coordinates so Windows creates the
             # HWND + D3D compositor surface now, not on first user interaction.
             warmup.setGeometry(-32000, -32000, 8, 8)

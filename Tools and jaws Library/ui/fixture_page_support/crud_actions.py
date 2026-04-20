@@ -184,5 +184,6 @@ def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, b
     apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
     editor.setFocus()
     editor.selectAll()
-    return editor.text(), dlg.exec() == QDialog.Accepted
+    accepted = dlg.exec() == QDialog.Accepted
+    return editor.text(), accepted
 

@@ -14,7 +14,6 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QImage, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QApplication,
-    QButtonGroup,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -36,9 +35,6 @@ from config import (
     I18N_DIR,
     RAIL_HEAD_DROPDOWN_WIDTH,
     TOOL_ICONS_DIR,
-    NAV_ITEM_TO_ICON,
-    NAV_ICON_DEFAULT_SIZE,
-    NAV_ICON_RENDER_OVERRIDES,
     SETUP_MANAGER_SERVER_NAME,
 )
 from data.database import Database
@@ -69,6 +65,7 @@ from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from shared.ui.main_window_helpers import THEME_PALETTES, current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and, get_active_theme_palette
 from shared.ui.theme import compile_app_stylesheet, current_theme_color, install_application_theme_state
 from shared.ui.helpers.icon_loader import icon_from_path
+from shared.ui.layout_contract import get_container_layout_contract, get_required_rail_width
 
 
 class RailHeadToggleButton(QPushButton):
@@ -175,17 +172,7 @@ class MainWindow(QMainWindow):
         if hasattr(self.export_service, "set_translator"):
             self.export_service.set_translator(self._t)
         self._clamping_screen_bounds = False
-        self._nav_width = 48
-        self._nav_revealed = False
-        self._nav_anim_group = None
-        self._nav_button_effects = []
-        self._disabled_graphics_effects = []
-        self._nav_hide_timer = QTimer(self)
-        self._nav_hide_timer.setSingleShot(True)
-        self._nav_hide_timer.setInterval(160)
-        self._nav_hide_timer.timeout.connect(self._hide_nav_if_needed)
         self._active_module = 'tools'
-        self._active_nav_items = []
         launch_master_filter = launch_master_filter or {}
         self._master_filter_enabled = bool(launch_master_filter.get('enabled', False))
         self._master_filter_active = bool(launch_master_filter.get('active', False)) and self._master_filter_enabled
@@ -331,19 +318,6 @@ class MainWindow(QMainWindow):
             return icon_from_path(path, size=target_size)
         return QIcon(self._clean_icon_pixmap(str(path), target_size))
 
-    def _nav_icon_render_options(self, icon_name: str) -> tuple[QSize, int]:
-        size = QSize(*NAV_ICON_DEFAULT_SIZE)
-        rotation = 0
-
-        override = NAV_ICON_RENDER_OVERRIDES.get(icon_name)
-        if override:
-            size_override = override.get('size')
-            if size_override:
-                size = QSize(*size_override)
-            rotation = int(override.get('rotation', 0))
-
-        return size, rotation
-
     def _resolve_icon_path(self, icon_name: str):
         candidates = [icon_name]
         stem = Path(icon_name).stem
@@ -387,42 +361,6 @@ class MainWindow(QMainWindow):
         cropped = QPixmap.fromImage(img)
         return cropped.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
 
-    def _nav_icon_for_state(
-        self,
-        icon_name: str,
-        target_size: QSize,
-        mirrored: bool,
-        rotation: int,
-        selected: bool,
-    ) -> QIcon:
-        path = self._resolve_icon_path(icon_name)
-        if path is None:
-            return QIcon()
-
-        pm = self._pixmap_by_path(path, target_size)
-        if pm.isNull():
-            return QIcon()
-
-        transform = QTransform()
-        if mirrored:
-            transform = transform.scale(-1, 1)
-        if rotation:
-            transform = transform.rotate(rotation)
-        if not transform.isIdentity():
-            pm = pm.transformed(transform, Qt.SmoothTransformation)
-
-        return QIcon(pm)
-
-    def _refresh_nav_button_icons(self):
-        for idx, btn in enumerate(self.nav_buttons):
-            if idx >= len(self._active_nav_items):
-                continue
-            _title, icon_name, mirror, _callback = self._active_nav_items[idx]
-            icon_size, rotation = self._nav_icon_render_options(icon_name)
-            selected = btn.isChecked()
-            btn.setIcon(self._nav_icon_for_state(icon_name, icon_size, mirror, rotation, selected))
-            btn.setIconSize(icon_size)
-
     def _build_ui(self, tool_service, jaw_service, fixture_service, export_service, settings_service):
         central = QWidget()
         central.setObjectName("appRoot")
@@ -433,23 +371,39 @@ class MainWindow(QMainWindow):
         root.setContentsMargins(0, 0, 12, 0)
         root.setSpacing(0)
 
-        # ── Left navigation rail (210px, matches Setup Manager nav_rail) ─────
+        # ── Left navigation rail — geometry driven by shared layout contract ──
+        lc = get_container_layout_contract()
+        lib_rail_title = self._t("tool_library.rail_title.tools", "Tool Library")
         self.toggle_rail = QFrame()
         self.toggle_rail.setProperty('navRail', True)
-        self.toggle_rail.setFixedWidth(210)
+        self.toggle_rail.setFixedWidth(get_required_rail_width(lib_rail_title, lc))
         self.toggle_rail.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         toggle_layout = QVBoxLayout(self.toggle_rail)
-        toggle_layout.setContentsMargins(12, 14, 12, 14)
-        toggle_layout.setSpacing(8)
+        toggle_layout.setContentsMargins(*lc.rail_margins)
+        toggle_layout.setSpacing(lc.rail_section_spacing)
 
-        # Title label — in layout, not absolutely positioned
-        self.rail_title = QLabel(self._t("tool_library.rail_title.tools", "Tool Library"))
-        self.rail_title.setStyleSheet('color: #000000; font-size: 20pt; font-weight: 700;')
+        # ── Header section (matches build_rail_header_section geometry) ───────
+        header_section = QFrame()
+        header_section.setObjectName("libRailHeaderSection")
+        header_inner = QVBoxLayout(header_section)
+        header_inner.setContentsMargins(*lc.rail_header_inner_margins)
+        header_inner.setSpacing(0)
+        self.rail_title = QLabel(lib_rail_title)
+        self.rail_title.setStyleSheet(
+            f"color: #000000; font-size: {lc.rail_header_font_pt}pt; font-weight: 700;"
+        )
         self.rail_title.setWordWrap(False)
-        self.rail_title.setFixedHeight(36)
-        toggle_layout.addWidget(self.rail_title)
+        self.rail_title.setFixedHeight(lc.rail_header_height)
+        self.rail_title.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        header_inner.addWidget(self.rail_title)
+        toggle_layout.addWidget(header_section)
 
-        # HEAD1 / HEAD2 nav buttons — same style as ASETUKSET/LOKIKIRJA
+        # ── HEAD nav buttons — top-inset matches build_primary_nav_section ───
+        head_section = QFrame()
+        head_section.setObjectName("libRailHeadNavSection")
+        head_layout = QVBoxLayout(head_section)
+        head_layout.setContentsMargins(0, lc.rail_nav_section_top_inset, 0, 0)
+        head_layout.setSpacing(8)
         head_keys = self._profile_head_keys()
         self._head_nav_buttons: list[QPushButton] = []
         for head_key in head_keys:
@@ -458,42 +412,11 @@ class MainWindow(QMainWindow):
             btn.setProperty('navButton', True)
             btn.setProperty('active', head_key == head_keys[0])
             btn.clicked.connect(lambda checked=False, k=head_key: self._on_head_nav_clicked(k))
-            toggle_layout.addWidget(btn)
+            head_layout.addWidget(btn)
             self._head_nav_buttons.append(btn)
+        toggle_layout.addWidget(head_section)
 
         toggle_layout.addStretch(1)
-
-        # Icon nav buttons — hidden by default, shown as overlay on hover
-        self.nav_frame = QFrame()
-        self.nav_frame.setObjectName('navFrame')
-        self.nav_frame.setFixedWidth(self._nav_width)
-        nav_layout = QVBoxLayout(self.nav_frame)
-        nav_layout.setContentsMargins(0, 10, 0, 8)
-        nav_layout.setSpacing(10)
-        self.nav_buttons = []
-        self.nav_button_group = QButtonGroup(self)
-        self.nav_button_group.setExclusive(True)
-        self._nav_button_count = 6
-        for index in range(self._nav_button_count):
-            btn = QToolButton()
-            btn.setObjectName('sideNavButton')
-            btn.setIconSize(QSize(30, 30))
-            btn.setCheckable(True)
-            btn.setAutoExclusive(True)
-            btn.setFixedSize(42, 46)
-            btn.clicked.connect(lambda checked=False, idx=index: self._on_nav_button_clicked(idx))
-            self.nav_button_group.addButton(btn, index)
-            self.nav_buttons.append(btn)
-            nav_layout.addWidget(btn, 0, Qt.AlignHCenter | Qt.AlignTop)
-        nav_layout.addStretch(1)
-        nav_h = (len(self.nav_buttons) * 50) + ((len(self.nav_buttons) - 1) * nav_layout.spacing()) + 18
-        self.nav_frame.setFixedHeight(nav_h)
-
-        # Host the nav frame in a fixed slot for slide animation compatibility.
-        self.nav_slot = QWidget()
-        self.nav_slot.setFixedSize(self._nav_width, nav_h)
-        self.nav_frame.setParent(self.nav_slot)
-        self.nav_frame.move(0, 0)
 
         # Hidden RailHeadToggleButton kept for API compatibility with pages
         # that call bind_external_head_filter(). Not shown in UI.
@@ -507,6 +430,8 @@ class MainWindow(QMainWindow):
         self.footer_actions = QFrame()
         self.footer_actions.setObjectName('railFooterActions')
         self.footer_actions.setProperty('launchCard', True)
+        self.footer_actions.setFixedWidth(lc.rail_footer_card_width)
+        self.footer_actions.setMinimumHeight(lc.rail_footer_card_min_height)
         footer_layout = QVBoxLayout(self.footer_actions)
         footer_layout.setContentsMargins(12, 12, 12, 12)
         footer_layout.setSpacing(8)
@@ -557,7 +482,7 @@ class MainWindow(QMainWindow):
         self.back_to_setup_btn.clicked.connect(self._back_to_setup_manager)
         footer_layout.addWidget(self.back_to_setup_btn, 0, Qt.AlignHCenter)
 
-        toggle_layout.addWidget(self.footer_actions, 0)
+        toggle_layout.addWidget(self.footer_actions, 0, Qt.AlignHCenter | Qt.AlignBottom)
 
         root.addWidget(self.toggle_rail, 0)
 
@@ -649,60 +574,13 @@ class MainWindow(QMainWindow):
         self.master_filter_toggle.setChecked(self._master_filter_active)
         self._update_master_filter_toggle_visual()
 
-        # Nav stays always visible; hover logic remains for compatibility.
-        self._setup_nav_hover_animation()
         self._apply_module_mode('tools')
         current_db_name = Path(getattr(self.tool_service.db, 'path', '')).name
         self.home_page.set_active_database_name(current_db_name)
 
-    def _setup_nav_hover_animation(self):
-        self._nav_button_effects.clear()
-        self._nav_revealed = False
-
-        # Float nav_slot as an overlay inside the nav rail
-        self.nav_slot.setParent(self.toggle_rail)
-        self.nav_slot.setVisible(False)
-        self.nav_slot.raise_()
-
-        # Hover trigger zone: the entire nav rail
-        self._nav_hover_zone = self.toggle_rail
-        self._nav_hover_zone.installEventFilter(self)
-        self.nav_slot.installEventFilter(self)
-
-        self._nav_hover_widgets = [self._nav_hover_zone, self.nav_slot]
-        self.nav_frame.move(0, 0)
-
-    def _set_nav_button_opacity(self, opacity: float):
-        _ = opacity
-
-    def _show_nav(self):
-        self._nav_hide_timer.stop()
-        if not self._nav_revealed:
-            self._nav_revealed = True
-            self._position_nav_overlay()
-            self.nav_slot.setVisible(True)
-            self.nav_slot.raise_()
-
-    def _hide_nav_if_needed(self):
-        self._nav_revealed = False
-        self.nav_slot.setVisible(False)
-
-    def _position_nav_overlay(self):
-        """Position nav_slot overlay centered in the nav rail."""
-        if not hasattr(self, 'nav_slot') or not hasattr(self, 'toggle_rail'):
-            return
-        slot_h = self.nav_slot.height()
-        rail_w = self.toggle_rail.width()
-        rail_h = self.toggle_rail.height()
-        x = (rail_w - self._nav_width) // 2
-        y = max(0, (rail_h - slot_h) // 2)
-        self.nav_slot.setGeometry(x, y, self._nav_width, slot_h)
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._ensure_on_screen()
-        if hasattr(self, 'nav_slot'):
-            self._position_nav_overlay()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
@@ -712,11 +590,6 @@ class MainWindow(QMainWindow):
             if isinstance(obj, QWidget) and obj.window() is self:
                 self._back_to_setup_manager()
                 return True
-        if hasattr(self, '_nav_hover_widgets') and obj in self._nav_hover_widgets:
-            if event.type() == QEvent.Enter:
-                self._show_nav()
-            elif event.type() == QEvent.Leave:
-                self._nav_hide_timer.start()
         return super().eventFilter(obj, event)
 
     def _clear_active_page_selection_on_background_click(self, obj):
@@ -818,30 +691,6 @@ class MainWindow(QMainWindow):
         self.fixtures_page.refresh_list()
         self.fixtures_page.populate_details(None)
 
-    def _module_nav_items(self, module: str):
-        if module == 'jaws':
-            return [
-                (self._t("tool_library.nav.all_jaws", "All Jaws"), 'library.svg', False, lambda: self._open_jaws_view('all')),
-                (self._t("tool_library.nav.main_spindle", "Main Spindle"), 'arrow_circle_left.svg', False, lambda: self._open_jaws_view('main')),
-                (self._t("tool_library.nav.sub_spindle", "Sub Spindle"), 'arrow_circle_right.svg', False, lambda: self._open_jaws_view('sub')),
-                (self._t("tool_library.nav.export", "Export"), 'import_export.svg', False, lambda: self._open_jaws_view('export')),
-            ]
-
-        if module == 'fixtures':
-            return [
-                (self._t("tool_library.nav.all_fixtures", "All Fixtures"), 'library.svg', False, lambda: self._open_fixtures_view('all')),
-                (self._t("tool_library.nav.fixture_parts", "Parts"), 'arrow_circle_left.svg', False, lambda: self._open_fixtures_view('parts')),
-                (self._t("tool_library.nav.fixture_assemblies", "Assemblies"), 'arrow_circle_right.svg', False, lambda: self._open_fixtures_view('assemblies')),
-            ]
-
-        return [
-            (self._t("tool_library.nav.tools", "Tools"), NAV_ITEM_TO_ICON['TOOLS'], False, lambda: self._open_tool_page('tools')),
-            (self._t("tool_library.nav.assemblies", "Assemblies"), NAV_ITEM_TO_ICON['ASSEMBLIES'], False, lambda: self._open_tool_page('assemblies')),
-            (self._t("tool_library.nav.holders", "Holders"), NAV_ITEM_TO_ICON['HOLDERS'], False, lambda: self._open_tool_page('holders')),
-            (self._t("tool_library.nav.inserts", "Inserts"), NAV_ITEM_TO_ICON['INSERTS'], False, lambda: self._open_tool_page('inserts')),
-            (self._t("tool_library.nav.export", "Export"), NAV_ITEM_TO_ICON['EXPORT'], False, lambda: self._open_tool_page('export')),
-        ]
-
     def _open_tool_page(self, page_key: str):
         page_map = {
             'tools': self.home_page,
@@ -864,6 +713,23 @@ class MainWindow(QMainWindow):
         self.fixtures_page.set_view_mode(fixture_view_mode)
         self.stack.setCurrentWidget(self.fixtures_page)
 
+    def _open_import_export_view(self, library: str, *, run_import: bool = False, run_export: bool = False) -> None:
+        page = self.jaws_export_page if library == 'jaws' else self.export_page
+        self.stack.setCurrentWidget(page)
+        if not self.isVisible():
+            self.show()
+        self.raise_()
+        self.activateWindow()
+        try:
+            import ctypes
+            ctypes.windll.user32.SetForegroundWindow(int(self.winId()))
+        except Exception:
+            pass
+        if run_import:
+            QTimer.singleShot(150, page.import_excel)
+        elif run_export:
+            QTimer.singleShot(150, page.export_excel)
+
     def _apply_module_mode(self, module: str):
         if module == 'fixtures':
             self._active_module = 'fixtures'
@@ -871,50 +737,27 @@ class MainWindow(QMainWindow):
             self._active_module = 'jaws'
         else:
             self._active_module = 'tools'
-        self._active_nav_items = self._module_nav_items(self._active_module)
-
-        for idx, btn in enumerate(self.nav_buttons):
-            if idx < len(self._active_nav_items):
-                title, icon_name, mirror, _callback = self._active_nav_items[idx]
-                icon_size, rotation = self._nav_icon_render_options(icon_name)
-                btn.setIconSize(icon_size)
-                btn.setToolTip(title)
-                btn.setVisible(True)
-            else:
-                btn.setVisible(False)
 
         if self._active_module == 'jaws':
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
                 page.set_module_switch_target('TOOLS')
             self._open_jaws_view('all')
-            try:
-                self.rail_title.setText(self._t("tool_library.rail_title.jaws", "Jaws Library"))
-            except Exception:
-                pass
+            self._set_rail_title(self._t("tool_library.rail_title.jaws", "Jaws Library"))
             self._set_head_nav_visible(False)
         elif self._active_module == 'fixtures':
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
                 page.set_module_switch_target('TOOLS')
             self._open_fixtures_view('all')
-            try:
-                self.rail_title.setText(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
-            except Exception:
-                pass
+            self._set_rail_title(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
             self._set_head_nav_visible(False)
         else:
             sibling_target = 'FIXTURES' if self._is_machining_center() else 'JAWS'
             for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
                 page.set_module_switch_target(sibling_target)
             self._open_tool_page('tools')
-            try:
-                self.rail_title.setText(self._t("tool_library.rail_title.tools", "Tool Library"))
-            except Exception:
-                pass
+            self._set_rail_title(self._t("tool_library.rail_title.tools", "Tool Library"))
             self._set_head_nav_visible(not self._is_machining_center())
 
-        if self.nav_buttons:
-            self.nav_buttons[0].setChecked(True)
-        self._refresh_nav_button_icons()
         self._update_module_toggle_label()
 
     def _on_module_toggle_clicked(self):
@@ -960,6 +803,12 @@ class MainWindow(QMainWindow):
         for btn in self._head_nav_buttons:
             btn.setVisible(visible)
 
+    def _set_rail_title(self, text: str) -> None:
+        """Set rail title and resize the rail to fit."""
+        self.rail_title.setText(text)
+        lc = get_container_layout_contract()
+        self.toggle_rail.setFixedWidth(get_required_rail_width(text, lc))
+
     def _rebuild_head_filter_combo_items(self):
         head_keys = self._profile_head_keys()
         default_value = head_keys[0]
@@ -984,15 +833,6 @@ class MainWindow(QMainWindow):
         self.tool_head_filter_combo.set_options(items)
         self.tool_head_filter_combo.setCurrentData(current_data, emit_signal=False)
         self.tool_head_filter_combo.blockSignals(False)
-
-    def _on_nav_button_clicked(self, index: int):
-        if index < 0 or index >= len(self._active_nav_items):
-            return
-        _title, _icon, _mirror, callback = self._active_nav_items[index]
-        callback()
-        if 0 <= index < len(self.nav_buttons):
-            self.nav_buttons[index].setChecked(True)
-        self._refresh_nav_button_icons()
 
     def _on_global_tool_head_changed(self, _index: int):
         head_keys = self._profile_head_keys()
@@ -1058,17 +898,12 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         if hasattr(self, "back_to_setup_btn"):
             self.back_to_setup_btn.setToolTip(self._t("tool_library.back_to_setup_tip", "Switch back to Setup Manager"))
-        self._active_nav_items = self._module_nav_items(self._active_module)
-        if hasattr(self, "nav_buttons"):
-            for idx, btn in enumerate(self.nav_buttons):
-                if idx < len(self._active_nav_items):
-                    btn.setToolTip(self._active_nav_items[idx][0])
         if self._active_module == "jaws":
-            self.rail_title.setText(self._t("tool_library.rail_title.jaws", "Jaws Library"))
+            self._set_rail_title(self._t("tool_library.rail_title.jaws", "Jaws Library"))
         elif self._active_module == "fixtures":
-            self.rail_title.setText(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
+            self._set_rail_title(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
         else:
-            self.rail_title.setText(self._t("tool_library.rail_title.tools", "Tool Library"))
+            self._set_rail_title(self._t("tool_library.rail_title.tools", "Tool Library"))
         if hasattr(self, "master_filter_toggle"):
             self.master_filter_toggle.setToolTip(self._t("tool_library.master_filter.button", "MASTER FILTER"))
             self._update_master_filter_toggle_visual()
@@ -1377,6 +1212,17 @@ class MainWindow(QMainWindow):
         # During an active selector dialog, ignore generic non-selector IPC
         # requests so they cannot surface the main library window behind it.
         if selector_dialog_open and not selector_active:
+            return
+
+        # Handle import/export IPC commands from Setup Manager Preferences.
+        command = str((payload or {}).get('command') or '').strip().lower()
+        if command in ('open_import_dialog', 'open_export_dialog'):
+            library = str((payload or {}).get('library') or 'tools').strip().lower()
+            self._open_import_export_view(
+                library,
+                run_import=(command == 'open_import_dialog'),
+                run_export=(command == 'open_export_dialog'),
+            )
             return
 
         # Selector sessions can arrive before shared preferences are refreshed.

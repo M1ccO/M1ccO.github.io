@@ -65,6 +65,7 @@ except ModuleNotFoundError:
 
 from ui.icon_helpers import toolbar_icon_with_svg_render_fallback as _toolbar_icon_with_svg_render_fallback
 from shared.data.backup_helpers import prune_backups
+from shared.ui.layout_contract import get_container_layout_contract, get_toolbar_margins
 
 
 class SetupPage(QWidget):
@@ -101,6 +102,7 @@ class SetupPage(QWidget):
             "description": self._t("setup_page.row.description", "Description"),
             "last_run": self._t("setup_page.row.last_run", "Last run"),
         }
+        self._layout_contract = get_container_layout_contract()
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -108,7 +110,7 @@ class SetupPage(QWidget):
         controls_frame = QFrame()
         controls_frame.setProperty("topBarContainer", True)
         controls = QHBoxLayout(controls_frame)
-        controls.setContentsMargins(56, 6, 8, 6)
+        controls.setContentsMargins(*get_toolbar_margins(self._layout_contract))
         controls.setSpacing(8)
 
         self.search_icon = _toolbar_icon_with_svg_render_fallback("search_icon", 28)
@@ -180,14 +182,14 @@ class SetupPage(QWidget):
         list_shell_container = QWidget()
         list_shell_container.setProperty("pageFamilyHost", True)
         list_shell_container_layout = QVBoxLayout(list_shell_container)
-        list_shell_container_layout.setContentsMargins(56, 0, 0, 0)
+        list_shell_container_layout.setContentsMargins(*self._layout_contract.frame_host_margins)
         list_shell_container_layout.setSpacing(0)
         list_shell_container_layout.addWidget(list_shell)
 
         left_panel = QWidget()
         left_panel_layout = QVBoxLayout(left_panel)
-        left_panel_layout.setContentsMargins(0, 30, 0, 0)
-        left_panel_layout.setSpacing(6)
+        left_panel_layout.setContentsMargins(0, self._layout_contract.content_top_inset, 0, 0)
+        left_panel_layout.setSpacing(self._layout_contract.content_section_spacing)
         left_panel_layout.addWidget(controls_frame)
         left_panel_layout.addWidget(list_shell_container, 1)
         left_panel.setMinimumWidth(self._min_list_panel_width)
@@ -232,7 +234,7 @@ class SetupPage(QWidget):
         button_bar = QFrame()
         button_bar.setProperty("bottomBar", True)
         button_layout = QHBoxLayout(button_bar)
-        button_layout.setContentsMargins(10, 10, 10, 6)
+        button_layout.setContentsMargins(*self._layout_contract.bottom_bar_margins)
         button_layout.setSpacing(8)
         button_layout.addStretch(1)
 

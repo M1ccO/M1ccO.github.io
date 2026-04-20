@@ -57,6 +57,7 @@ def _build_assignment_row(
 
     icon = QIcon()
     ref = ordered_list._tool_ref_for_assignment(item)
+    is_head2 = str(getattr(ordered_list, "_head_key", "") or "").strip().upper() == "HEAD2"
     if isinstance(ref, dict):
         icon = ordered_list._tool_icon_for_spindle_resolver(ref.get("tool_type", ""), spindle)
 
@@ -67,6 +68,7 @@ def _build_assignment_row(
         badges=[],
         editable=False,
         compact=True,
+        flip_vertical=is_head2,
         parent=row,
     )
     card.setProperty("miniAssignmentCard", True)

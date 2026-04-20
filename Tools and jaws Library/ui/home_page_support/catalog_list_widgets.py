@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QMimeData, QSize, Qt
 from PySide6.QtGui import QDrag, QIcon, QTransform
-from PySide6.QtWidgets import QListView
+from PySide6.QtWidgets import QAbstractItemView, QListView
 
 from shared.ui.cards.mini_assignment_card import MiniAssignmentCard
 from shared.ui.helpers.dragdrop_helpers import (
@@ -32,6 +32,10 @@ def _drag_icon_for_payload(tool_type: str, spindle: str) -> QIcon:
 
 class ToolCatalogListView(QListView):
     """QListView that starts selector-compatible tool drags."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
     def mousePressEvent(self, event):
         clear_selection_on_blank_click(self, event)

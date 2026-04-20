@@ -115,6 +115,10 @@ def create_titled_section(title: str, parent: QWidget | None = None) -> QGroupBo
     group = QGroupBox(title, parent)
     apply_titled_section_style(group)
     group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+    group.setAttribute(Qt.WA_StyledBackground, True)
+    group.setAutoFillBackground(True)
+    group.style().unpolish(group)
+    group.style().polish(group)
     return group
 
 

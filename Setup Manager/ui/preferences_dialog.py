@@ -40,6 +40,7 @@ except ModuleNotFoundError:
 from ui.widgets.common import add_shadow, apply_tool_library_combo_style
 from machine_profiles import load_profile
 from shared.ui.helpers.editor_helpers import apply_shared_checkbox_style
+from ui.import_export_tab import ImportExportTab
 
 
 class PreferencesDialog(PreferencesDialogBase):
@@ -49,10 +50,14 @@ class PreferencesDialog(PreferencesDialogBase):
         translate: Callable[[str, str | None], str],
         parent=None,
         machine_config_svc: MachineConfigService | None = None,
+        on_import_clicked: Callable[[str], None] | None = None,
+        on_export_clicked: Callable[[str], None] | None = None,
     ):
         super().__init__(translate, parent)
         self._current = dict(current_preferences or {})
         self._machine_config_svc = machine_config_svc
+        self._on_import_clicked = on_import_clicked or (lambda _lib: None)
+        self._on_export_clicked = on_export_clicked or (lambda _lib: None)
 
         # When the user triggers a live config switch (via dropdown, Edit, or
         # New), we store the target config_id here and close the dialog via
@@ -75,9 +80,16 @@ class PreferencesDialog(PreferencesDialogBase):
         self.general_tab = self._build_general_tab()
         self.machines_tab = self._build_machines_tab()
         self.models_tab = self._build_models_tab()
+        self.import_export_tab = ImportExportTab(
+            machine_config_svc=machine_config_svc,
+            on_import_clicked=self._on_import_clicked,
+            on_export_clicked=self._on_export_clicked,
+            translate=self._t,
+        )
         self.tabs.addTab(self.general_tab, self._t("preferences.tab.general", "General"))
         self.tabs.addTab(self.machines_tab, self._t("preferences.tab.machines", "Machines"))
         self.tabs.addTab(self.models_tab, self._t("preferences.tab.models_3d", "3D Models"))
+        self.tabs.addTab(self.import_export_tab, self._t("preferences.tab.import_export", "Import / Export"))
 
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 6, 0, 0)

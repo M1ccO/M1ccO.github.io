@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from shared.ui.layout_contract import get_container_layout_contract, get_toolbar_margins
 
 from ui.widgets.common import styled_list_item_height
 from ui.drawing_page_support import (
@@ -70,6 +71,7 @@ class DrawingPage(QWidget):
         self._focus_viewer_dismissed = False
         self._manual_focus_viewer = False
         self._last_layout_signature: tuple[bool, int, int] | None = None
+        self._layout_contract = get_container_layout_contract()
 
         self._pdf_document = QPdfDocument(self)
         self._search_model = QPdfSearchModel(self)
@@ -88,7 +90,7 @@ class DrawingPage(QWidget):
         controls_frame = QFrame()
         controls_frame.setProperty("topBarContainer", True)
         controls = QHBoxLayout(controls_frame)
-        controls.setContentsMargins(8, 6, 8, 6)
+        controls.setContentsMargins(*get_toolbar_margins(self._layout_contract))
         controls.setSpacing(8)
 
         self.search_icon = _toolbar_icon_with_svg_render_fallback("search_icon", 28)
@@ -141,7 +143,11 @@ class DrawingPage(QWidget):
         self.close_focus_btn.setVisible(False)
         controls.addWidget(self.close_focus_btn, 0, Qt.AlignRight)
 
-        root.addWidget(controls_frame)
+        content_column = QWidget()
+        content_layout = QVBoxLayout(content_column)
+        content_layout.setContentsMargins(0, self._layout_contract.content_top_inset, 0, 0)
+        content_layout.setSpacing(self._layout_contract.content_section_spacing)
+        content_layout.addWidget(controls_frame)
 
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.setObjectName("drawingListSplitter")
@@ -155,7 +161,14 @@ class DrawingPage(QWidget):
         self.splitter.setStretchFactor(0, 2)
         self.splitter.setStretchFactor(1, 3)
 
-        root.addWidget(self.splitter, 1)
+        content_host = QWidget()
+        content_host_layout = QVBoxLayout(content_host)
+        content_host_layout.setContentsMargins(*self._layout_contract.frame_host_margins)
+        content_host_layout.setSpacing(0)
+        content_host_layout.addWidget(self.splitter, 1)
+
+        content_layout.addWidget(content_host, 1)
+        root.addWidget(content_column, 1)
 
         self._update_context_labels()
         self._show_empty_state(

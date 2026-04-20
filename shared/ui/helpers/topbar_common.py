@@ -10,16 +10,20 @@ from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QToolButton, QWidget
 
 from shared.ui.helpers.icon_loader import icon_from_path
+from shared.ui.layout_contract import get_container_layout_contract, get_toolbar_margins
 
 
-def build_filter_frame(*, parent: QWidget | None = None, left_margin: int = 56) -> tuple[QFrame, QHBoxLayout]:
+def build_filter_frame(*, parent: QWidget | None = None, left_margin: int | None = None) -> tuple[QFrame, QHBoxLayout]:
     """Create the standard filter frame and layout shell."""
     frame = QFrame(parent)
     frame.setObjectName('filterFrame')
     frame.setProperty('card', True)
 
     layout = QHBoxLayout(frame)
-    layout.setContentsMargins(left_margin, 6, 0, 6)
+    contract = get_container_layout_contract()
+    toolbar_margins = get_toolbar_margins(contract)
+    effective_left = toolbar_margins[0] if left_margin is None else int(left_margin)
+    layout.setContentsMargins(effective_left, toolbar_margins[1], toolbar_margins[2], toolbar_margins[3])
     layout.setSpacing(4)
     return frame, layout
 

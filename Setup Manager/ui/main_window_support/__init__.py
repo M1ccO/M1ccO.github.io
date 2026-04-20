@@ -31,6 +31,11 @@ from .preload_controller import (
     retry_tool_library_preload,
 )
 from .preferences_actions import open_preferences_action
+from .rail_sections import (
+    build_footer_actions_section,
+    build_primary_nav_section,
+    build_rail_header_section,
+)
 from .compatibility_dialog import show_compatibility_report_dialog
 from .compatibility_checks import (
     build_compatibility_report,
@@ -43,6 +48,9 @@ __all__ = [
     "allow_set_foreground",
     "build_compatibility_report",
     "build_compatibility_report_bundle",
+    "build_footer_actions_section",
+    "build_primary_nav_section",
+    "build_rail_header_section",
     "clear_active_page_selection_on_background_click",
     "clear_page_selection",
     "complete_tool_library_handoff",

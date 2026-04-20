@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
+from shared.ui.layout_contract import get_container_layout_contract
 from shared.ui.helpers.page_scaffold_common import (
     apply_catalog_list_view_defaults,
     build_catalog_list_shell,
@@ -54,6 +55,7 @@ def build_jaw_page_layout(page) -> None:
     detail container, selector card, bottom bars.  Called from
     JawPage._build_ui() so that the page file stays thin.
     """
+    contract = get_container_layout_contract()
     root = build_page_root(page)
 
     page.search_input = build_search_input(page)
@@ -61,8 +63,8 @@ def build_jaw_page_layout(page) -> None:
     _list_card_widget = _build_catalog_list_card(page)
     left_panel = QWidget()
     left_panel_layout = QVBoxLayout(left_panel)
-    left_panel_layout.setContentsMargins(0, 30, 0, 0)
-    left_panel_layout.setSpacing(6)
+    left_panel_layout.setContentsMargins(0, contract.content_top_inset, 0, 0)
+    left_panel_layout.setSpacing(contract.content_section_spacing)
     left_panel_layout.addWidget(page.filter_pane)
     left_panel_layout.addWidget(_list_card_widget, 1)
     root.setSpacing(0)
@@ -113,6 +115,7 @@ def build_jaw_page_layout(page) -> None:
 
 def _build_catalog_list_card(page) -> QWidget:
     """Build the catalog list card (list view + model wiring)."""
+    contract = get_container_layout_contract()
     list_card, list_layout = build_catalog_list_shell()
 
     page.list_view = JawCatalogListView()
@@ -133,7 +136,7 @@ def _build_catalog_list_card(page) -> QWidget:
     list_host = QWidget()
     list_host.setProperty('pageFamilyHost', True)
     list_host_layout = QVBoxLayout(list_host)
-    list_host_layout.setContentsMargins(80, 0, 0, 0)
+    list_host_layout.setContentsMargins(*contract.frame_host_margins)
     list_host_layout.setSpacing(0)
     list_host_layout.addWidget(list_card)
     return list_host
@@ -141,6 +144,7 @@ def _build_catalog_list_card(page) -> QWidget:
 
 def _build_detail_container(page) -> QWidget:
     """Build the detail container (scrollable detail panel + selector card)."""
+    contract = get_container_layout_contract()
     (
         page.detail_container,
         detail_layout,
@@ -150,7 +154,16 @@ def _build_detail_container(page) -> QWidget:
         page.detail_layout,
     ) = build_detail_container_shell()
     page._detail_container_layout = detail_layout
-    detail_layout.setContentsMargins(0, 8, 0, 0)
+    filter_height = 0
+    if getattr(page, 'filter_pane', None) is not None:
+        filter_height = max(0, page.filter_pane.sizeHint().height())
+    detail_top = (
+        contract.content_top_inset
+        + filter_height
+        + contract.content_section_spacing
+        + contract.frame_host_margins[1]
+    )
+    detail_layout.setContentsMargins(0, detail_top, 0, 0)
     detail_layout.addWidget(_build_selector_card(page), 1)
 
     page.populate_details(None)

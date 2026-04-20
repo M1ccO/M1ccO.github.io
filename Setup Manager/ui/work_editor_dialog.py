@@ -1104,7 +1104,7 @@ class WorkEditorDialog(QDialog):
 
         tool_id = str(assignment.get("tool_id") or assignment.get("id") or "").strip()
         resolved = self._resolve_tool_ref_via_resolver(tool_id)
-        if isinstance(resolved, dict):
+        if isinstance(resolved, dict) and str(resolved.get("tool_type") or "").strip():
             return resolved
 
         tool_uid = assignment.get("tool_uid", assignment.get("uid"))
@@ -1112,6 +1112,10 @@ class WorkEditorDialog(QDialog):
             if tool_uid is not None and str(tool_uid).strip():
                 ref = self.draw_service.get_tool_ref_by_uid(tool_uid)
                 if isinstance(ref, dict) and str(ref.get("id") or "").strip():
+                    if isinstance(resolved, dict):
+                        merged = dict(resolved)
+                        merged.update({k: v for k, v in ref.items() if v not in (None, "")})
+                        return merged
                     return ref
         except Exception:
             pass
@@ -1120,10 +1124,16 @@ class WorkEditorDialog(QDialog):
             try:
                 ref = self.draw_service.get_tool_ref(tool_id)
                 if isinstance(ref, dict) and str(ref.get("id") or "").strip():
+                    if isinstance(resolved, dict):
+                        merged = dict(resolved)
+                        merged.update({k: v for k, v in ref.items() if v not in (None, "")})
+                        return merged
                     return ref
             except Exception:
                 pass
 
+        if isinstance(resolved, dict):
+            return resolved
         if not tool_id:
             return None
         return None
@@ -1136,16 +1146,18 @@ class WorkEditorDialog(QDialog):
             resolved = resolver.resolve_tool(tool_id, bucket=ToolBucket.MAIN)
             if resolved is None:
                 return None
-            tool_type = ""
-            icon_key = str(getattr(resolved, "icon_key", "") or "").strip()
-            if icon_key.startswith("tool/"):
-                # Resolver icon keys are normalized lowercase identifiers, not
-                # the canonical Work Editor tool_type values needed for icon lookup.
-                tool_type = ""
+            metadata = getattr(resolved, "metadata", None) or {}
+            tool_type = str(
+                metadata.get("tool_type")
+                or metadata.get("type")
+                or ""
+            ).strip()
+            spindle_orientation = str(metadata.get("spindle_orientation") or "").strip()
             return {
                 "id": resolved.tool_id,
                 "description": resolved.display_name,
                 "tool_type": tool_type,
+                "spindle_orientation": spindle_orientation,
                 "pot_number": getattr(resolved, "pot_number", None),
                 "default_pot": str(getattr(resolved, "pot_number", "") or "").strip(),
             }

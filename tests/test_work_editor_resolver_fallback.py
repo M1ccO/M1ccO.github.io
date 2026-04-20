@@ -32,7 +32,13 @@ from shared.selector.payloads import ToolBucket  # noqa: E402
 class _FakeToolService:
     def __init__(self, records=None):
         self._records = records or {
-            "T01": {"id": "T01", "description": "Turn OD", "tool_type": "Turning", "pot_number": 7},
+            "T01": {
+                "id": "T01",
+                "description": "Turn OD",
+                "tool_type": "Turning",
+                "spindle_orientation": "main",
+                "pot_number": 7,
+            },
         }
 
     def get_tool(self, tool_id: str):
@@ -111,6 +117,15 @@ class ResolverFallbackTests(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertEqual(result["pot_number"], 7)
 
+    def test_result_has_tool_type_and_spindle_orientation_from_resolver_metadata(self):
+        resolver = LibraryBackedToolResolver(_FakeToolService())
+        set_resolver("tool", resolver)
+        stub = self._stub()
+        result = stub._resolve_tool_ref_via_resolver("T01")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["tool_type"], "Turning")
+        self.assertEqual(result["spindle_orientation"], "main")
+
     def test_returns_none_for_empty_tool_id(self):
         resolver = LibraryBackedToolResolver(_FakeToolService())
         set_resolver("tool", resolver)
@@ -137,6 +152,35 @@ class ResolverFallbackTests(unittest.TestCase):
         result = stub._resolve_tool_reference_for_assignment({"tool_id": "T01", "tool_uid": 42})
         self.assertIsNotNone(result)
         self.assertIn("Turn OD", result["description"])
+
+    def test_assignment_resolution_merges_draw_service_when_resolver_tool_type_missing(self):
+        resolver = LibraryBackedToolResolver(
+            _FakeToolService(
+                {
+                    "T01": {
+                        "id": "T01",
+                        "description": "Resolver Description",
+                        "tool_type": "",
+                        "pot_number": 7,
+                    }
+                }
+            )
+        )
+        set_resolver("tool", resolver)
+        stub = self._stub()
+        stub.draw_service = types.SimpleNamespace(
+            get_tool_ref_by_uid=lambda _uid: {
+                "id": "T01",
+                "description": "Draw Description",
+                "tool_type": "O.D Turning",
+                "default_pot": "12",
+            },
+            get_tool_ref=lambda _tool_id: None,
+        )
+        result = stub._resolve_tool_reference_for_assignment({"tool_id": "T01", "tool_uid": 42})
+        self.assertIsNotNone(result)
+        self.assertEqual(result["tool_type"], "O.D Turning")
+        self.assertEqual(result["default_pot"], "12")
 
 
 if __name__ == "__main__":

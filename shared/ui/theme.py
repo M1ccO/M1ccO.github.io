@@ -376,6 +376,13 @@ QGroupBox[editorSection="true"] {{
     padding-top: 8px;
 }}
 
+QDialog[workEditorDialog="true"] QGroupBox[editorSection="true"],
+QDialog[machineConfigDialog="true"] QGroupBox[editorSection="true"] {{
+    background-color: {p['section_bg']};
+    border: 1px solid {p['border']};
+    border-radius: 6px;
+}}
+
 QGroupBox[editorSection="true"]::title {{
     subcontrol-origin: margin;
     subcontrol-position: top left;
@@ -493,6 +500,32 @@ QPushButton[panelActionButton="true"],
 QPushButton[arrowMoveButton="true"] {{
     border: 1px solid {p['border']};
     color: {p['text_primary']};
+}}
+
+QPushButton[selectorToggleButton="true"] {{
+    min-height: 28px;
+    padding: 4px 12px;
+    border: 1px solid {p['border']};
+    border-radius: 6px;
+    color: {p['text_primary']};
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 {p['button_neutral_bottom']}, stop:1 {p['button_neutral_top']});
+}}
+
+QPushButton[selectorToggleButton="true"]:hover {{
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 {p['button_neutral_hover_bottom']}, stop:1 {p['button_neutral_hover_top']});
+}}
+
+QPushButton[selectorToggleButton="true"]:pressed {{
+    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
+                                      stop:0 {p['button_neutral_pressed_bottom']}, stop:1 {p['button_neutral_pressed_top']});
+}}
+
+QPushButton[selectorToggleButton="true"]:checked {{
+    color: {p['text_primary']};
+    border: 1px solid {p['accent']};
+    background-color: {_mix(p['section_bg'], p['editor_bg'], 0.35)};
 }}
 
 QPushButton[primaryAction="true"],

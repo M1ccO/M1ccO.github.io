@@ -489,22 +489,6 @@ QDialog[machineConfigDialog="true"] QComboBox[toolLibraryCombo="true"] QAbstract
     border: none;
 }
 
-QDialog[workEditorDialog="true"] QPushButton[selectorToggleButton="true"] {
-    min-height: 28px;
-    padding: 4px 12px;
-    border: 1px solid #c0c4c8;
-    border-radius: 6px;
-    color: #2b3640;
-    background-color: qlineargradient(x1:0, y1:1, x2:0, y2:0,
-                                      stop:0 #e2e2e2, stop:1 #fafafa);
-}
-
-QDialog[workEditorDialog="true"] QPushButton[selectorToggleButton="true"]:checked {
-    color: #16334e;
-    border: 1px solid #8db9df;
-    background-color: #edf5fc;
-}
-
 QDialog[workEditorDialog="true"] QPushButton[selectorActionButton="true"] {
     min-height: 28px;
     padding: 4px 12px;

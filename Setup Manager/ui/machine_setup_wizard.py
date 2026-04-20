@@ -22,9 +22,7 @@ from typing import Callable
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QButtonGroup,
     QCheckBox,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFrame,
@@ -52,8 +50,10 @@ from machine_profiles import (
     PROFILE_REGISTRY,
     load_profile,
 )
-from shared.ui.helpers.editor_helpers import create_titled_section
-from ui.widgets.common import apply_tool_library_combo_style, repolish_widget
+from shared.ui.helpers.editor_helpers import (
+    apply_shared_checkbox_style,
+    create_titled_section,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -306,7 +306,7 @@ class _HeadConfigPage(_Page):
 
     def __init__(self, state, translate, parent=None):
         super().__init__(state, translate, parent)
-        self._head_widgets: list[dict] = []   # [{type_combo, baxis_combo, rotating_combo}, ...]
+        self._head_widgets: list[dict] = []   # [{type_buttons, baxis_checkbox, rotating_checkbox}, ...]
 
         layout = QVBoxLayout(self)
         layout.setSpacing(16)
@@ -328,14 +328,42 @@ class _HeadConfigPage(_Page):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
-        scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
-        scroll.viewport().setStyleSheet("background: transparent;")
+        scroll.setProperty("hostTransparent", True)
+        scroll.viewport().setProperty("hostTransparent", True)
         self._heads_container = QWidget()
-        self._heads_container.setStyleSheet("background: transparent;")
+        self._heads_container.setProperty("hostTransparent", True)
         self._heads_layout = QVBoxLayout(self._heads_container)
         self._heads_layout.setSpacing(10)
         scroll.setWidget(self._heads_container)
         layout.addWidget(scroll, 1)
+
+    def _build_head_type_row(self, label_text: str) -> tuple[QHBoxLayout, QPushButton]:
+        row = QHBoxLayout()
+        label = QLabel(label_text)
+        label.setMinimumWidth(130)
+
+        toggle_btn = QPushButton(self._t("wizard.head.type.turret.short", "TURRET"))
+        toggle_btn.setCheckable(True)
+        toggle_btn.setProperty("selectorToggleButton", True)
+        toggle_btn.setMinimumHeight(32)
+        toggle_btn.setCursor(Qt.PointingHandCursor)
+        toggle_btn.clicked.connect(lambda: self._update_head_type_label(toggle_btn))
+        toggle_btn.style().unpolish(toggle_btn)
+        toggle_btn.style().polish(toggle_btn)
+
+        row.addWidget(label)
+        row.addWidget(toggle_btn, 1)
+        return row, toggle_btn
+
+    def _build_checkbox_row(self, label_text: str, checkbox: QCheckBox) -> QHBoxLayout:
+        row = QHBoxLayout()
+        label = QLabel(label_text)
+        label.setMinimumWidth(130)
+        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        row.addWidget(label)
+        row.addWidget(checkbox, 0, Qt.AlignVCenter | Qt.AlignLeft)
+        row.addStretch(1)
+        return row
 
     def on_enter(self):
         # Rebuild widgets to match current head count
@@ -352,60 +380,33 @@ class _HeadConfigPage(_Page):
             form_layout = QVBoxLayout(group)
             form_layout.setSpacing(6)
 
-            # Head type row
-            type_row = QHBoxLayout()
-            type_label = QLabel(self._t("wizard.head.type", "Head type:"))
-            type_label.setMinimumWidth(130)
-            type_combo = QComboBox()
-            type_combo.addItem(self._t("wizard.head.type.turret", "Turret (turning/grooving)"), "turret")
-            type_combo.addItem(self._t("wizard.head.type.milling", "Milling (powered tools)"), "milling")
-            apply_tool_library_combo_style(type_combo)
-            type_combo.setProperty("hovered", False)
-            repolish_widget(type_combo)
-            # Pre-select from state
+            type_row, type_toggle_btn = self._build_head_type_row(
+                self._t("wizard.head.type", "Head type:")
+            )
             if i < len(self._state.head_types) and self._state.head_types[i] == "milling":
-                type_combo.setCurrentIndex(1)
-            type_row.addWidget(type_label)
-            type_row.addWidget(type_combo, 1)
+                type_toggle_btn.setChecked(True)
+            else:
+                type_toggle_btn.setChecked(False)
+            self._update_head_type_label(type_toggle_btn)
             form_layout.addLayout(type_row)
 
-            # B-axis row
-            baxis_row = QHBoxLayout()
-            baxis_label = QLabel(self._t("wizard.head.b_axis", "B-axis angle:"))
-            baxis_label.setMinimumWidth(130)
-            baxis_combo = QComboBox()
-            baxis_combo.addItem(self._t("wizard.head.b_axis.disabled", "Disabled"), False)
-            baxis_combo.addItem(self._t("wizard.head.b_axis.enabled", "Enabled"), True)
-            apply_tool_library_combo_style(baxis_combo)
-            baxis_combo.setProperty("hovered", False)
-            repolish_widget(baxis_combo)
+            baxis_checkbox = QCheckBox()
+            apply_shared_checkbox_style(baxis_checkbox, min_height=22)
             if i < len(self._state.head_b_axis) and self._state.head_b_axis[i]:
-                baxis_combo.setCurrentIndex(1)
-            baxis_row.addWidget(baxis_label)
-            baxis_row.addWidget(baxis_combo, 1)
-            form_layout.addLayout(baxis_row)
+                baxis_checkbox.setChecked(True)
+            form_layout.addLayout(self._build_checkbox_row(self._t("wizard.head.b_axis", "B-axis"), baxis_checkbox))
 
-            # Rotating tools row (only meaningful for turret)
-            rotating_row = QHBoxLayout()
-            rotating_label = QLabel(self._t("wizard.head.rotating_tools", "Rotating tools:"))
-            rotating_label.setMinimumWidth(130)
-            rotating_combo = QComboBox()
-            rotating_combo.addItem(self._t("wizard.head.rotating_tools.disabled", "Not allowed (turret only)"), False)
-            rotating_combo.addItem(self._t("wizard.head.rotating_tools.enabled", "Allowed"), True)
-            apply_tool_library_combo_style(rotating_combo)
-            rotating_combo.setProperty("hovered", False)
-            repolish_widget(rotating_combo)
+            rotating_checkbox = QCheckBox()
+            apply_shared_checkbox_style(rotating_checkbox, min_height=22)
             if i < len(self._state.head_rotating) and self._state.head_rotating[i]:
-                rotating_combo.setCurrentIndex(1)
-            rotating_row.addWidget(rotating_label)
-            rotating_row.addWidget(rotating_combo, 1)
-            form_layout.addLayout(rotating_row)
+                rotating_checkbox.setChecked(True)
+            form_layout.addLayout(self._build_checkbox_row(self._t("wizard.head.rotating_tools", "Rotating tools"), rotating_checkbox))
 
             self._heads_layout.addWidget(group)
             self._head_widgets.append({
-                "type_combo": type_combo,
-                "baxis_combo": baxis_combo,
-                "rotating_combo": rotating_combo,
+                "type_toggle_btn": type_toggle_btn,
+                "baxis_checkbox": baxis_checkbox,
+                "rotating_checkbox": rotating_checkbox,
             })
 
         self._heads_layout.addStretch(1)
@@ -414,9 +415,16 @@ class _HeadConfigPage(_Page):
         for i, widgets in enumerate(self._head_widgets):
             if i >= 3:
                 break
-            self._state.head_types[i] = widgets["type_combo"].currentData() or "turret"
-            self._state.head_b_axis[i] = bool(widgets["baxis_combo"].currentData())
-            self._state.head_rotating[i] = bool(widgets["rotating_combo"].currentData())
+            self._state.head_types[i] = "milling" if widgets["type_toggle_btn"].isChecked() else "turret"
+            self._state.head_b_axis[i] = bool(widgets["baxis_checkbox"].isChecked())
+            self._state.head_rotating[i] = bool(widgets["rotating_checkbox"].isChecked())
+
+    def _update_head_type_label(self, button: QPushButton) -> None:
+        button.setText(
+            self._t("wizard.head.type.milling.short", "MILLING HEAD")
+            if button.isChecked()
+            else self._t("wizard.head.type.turret.short", "TURRET")
+        )
 
 
 class _MachiningCenterConfigPage(_Page):

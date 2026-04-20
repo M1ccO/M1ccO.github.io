@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
+from shared.ui.layout_contract import get_container_layout_contract
 from shared.ui.helpers.page_scaffold_common import (
     apply_catalog_list_view_defaults,
     build_catalog_list_shell,
@@ -38,6 +39,7 @@ __all__ = [
 
 def build_tool_page_layout(page) -> None:
     """Build the full HomePage layout; called from HomePage._build_ui()."""
+    contract = get_container_layout_contract()
     root = build_page_root(page)
 
     page.search_input = build_search_input(page)
@@ -47,8 +49,8 @@ def build_tool_page_layout(page) -> None:
     list_card_widget = build_catalog_list_card(page)
     left_panel = QWidget()
     left_panel_layout = QVBoxLayout(left_panel)
-    left_panel_layout.setContentsMargins(0, 30, 0, 0)
-    left_panel_layout.setSpacing(6)
+    left_panel_layout.setContentsMargins(0, contract.content_top_inset, 0, 0)
+    left_panel_layout.setSpacing(contract.content_section_spacing)
     left_panel_layout.addWidget(page.filter_pane)
     left_panel_layout.addWidget(list_card_widget, 1)
 
@@ -65,6 +67,7 @@ def build_tool_page_layout(page) -> None:
 
 def build_catalog_list_card(page) -> QFrame:
     """Build and return the catalog list card widget."""
+    contract = get_container_layout_contract()
     list_card, list_layout = build_catalog_list_shell()
 
     page.list_view = ToolCatalogListView()
@@ -80,7 +83,7 @@ def build_catalog_list_card(page) -> QFrame:
     list_host = QWidget()
     list_host.setProperty('pageFamilyHost', True)
     list_host_layout = QVBoxLayout(list_host)
-    list_host_layout.setContentsMargins(80, 0, 0, 0)
+    list_host_layout.setContentsMargins(*contract.frame_host_margins)
     list_host_layout.setSpacing(0)
     list_host_layout.addWidget(list_card)
     return list_host
@@ -88,6 +91,7 @@ def build_catalog_list_card(page) -> QFrame:
 
 def build_detail_container(page) -> QWidget:
     """Build and return the detail panel container widget."""
+    contract = get_container_layout_contract()
     (
         page.detail_container,
         detail_layout,
@@ -98,7 +102,16 @@ def build_detail_container(page) -> QWidget:
     ) = build_detail_container_shell()
 
     page._detail_container_layout = detail_layout
-    detail_layout.setContentsMargins(0, 8, 0, 0)
+    filter_height = 0
+    if getattr(page, "filter_pane", None) is not None:
+        filter_height = max(0, page.filter_pane.sizeHint().height())
+    detail_top = (
+        contract.content_top_inset
+        + filter_height
+        + contract.content_section_spacing
+        + contract.frame_host_margins[1]
+    )
+    detail_layout.setContentsMargins(0, detail_top, 0, 0)
 
     page.populate_details(None)
     return page.detail_container
@@ -106,10 +119,11 @@ def build_detail_container(page) -> QWidget:
 
 def build_bottom_bars(page, root: QVBoxLayout) -> None:
     """Build the action button bar and add it to root layout."""
+    contract = get_container_layout_contract()
     page.button_bar = QFrame()
     page.button_bar.setProperty('bottomBar', True)
     actions = QHBoxLayout(page.button_bar)
-    actions.setContentsMargins(10, 10, 10, 6)
+    actions.setContentsMargins(*contract.bottom_bar_margins)
     actions.setSpacing(8)
 
     page.edit_btn = QPushButton(page._t('tool_library.action.edit_tool', 'EDIT TOOL'))

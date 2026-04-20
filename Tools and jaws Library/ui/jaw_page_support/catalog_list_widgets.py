@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QMimeData, Qt
 from PySide6.QtGui import QDrag
-from PySide6.QtWidgets import QListView
+from PySide6.QtWidgets import QAbstractItemView, QListView
 
 from shared.ui.helpers.dragdrop_helpers import build_text_drag_ghost
 try:
@@ -16,6 +16,10 @@ except ImportError:
 
 
 class JawCatalogListView(QListView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
     def startDrag(self, supportedActions):
         selection_model = self.selectionModel()
         if selection_model is None:

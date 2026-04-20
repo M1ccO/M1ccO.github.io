@@ -199,10 +199,20 @@ class ToolSelectorDialog(
         return tool if isinstance(tool, dict) else None
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
+        if getattr(self, '_embedded_mode', False):
+            preview_btn = getattr(self, 'preview_window_btn', None)
+            if preview_btn is not None:
+                preview_btn.setChecked(False)
+            return False
         from ..home_page_support.detached_preview import sync_detached_preview
         return sync_detached_preview(self, show_errors=show_errors)
 
     def toggle_preview_window(self) -> None:
+        if getattr(self, '_embedded_mode', False):
+            preview_btn = getattr(self, 'preview_window_btn', None)
+            if preview_btn is not None:
+                preview_btn.setChecked(False)
+            return
         from ..home_page_support.detached_preview import toggle_preview_window
         toggle_preview_window(self)
 
@@ -368,10 +378,20 @@ class EmbeddedToolSelectorWidget(
         return tool if isinstance(tool, dict) else None
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
+        if getattr(self, '_embedded_mode', False):
+            preview_btn = getattr(self, 'preview_window_btn', None)
+            if preview_btn is not None:
+                preview_btn.setChecked(False)
+            return False
         from ..home_page_support.detached_preview import sync_detached_preview
         return sync_detached_preview(self, show_errors=show_errors)
 
     def toggle_preview_window(self) -> None:
+        if getattr(self, '_embedded_mode', False):
+            preview_btn = getattr(self, 'preview_window_btn', None)
+            if preview_btn is not None:
+                preview_btn.setChecked(False)
+            return
         from ..home_page_support.detached_preview import toggle_preview_window
         toggle_preview_window(self)
 

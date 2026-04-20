@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QMimeData, Qt
 from PySide6.QtGui import QDrag
-from PySide6.QtWidgets import QListView
+from PySide6.QtWidgets import QAbstractItemView, QListView
 
 from shared.ui.helpers.dragdrop_helpers import build_text_drag_ghost
 from ui.fixture_catalog_delegate import ROLE_FIXTURE_DATA, ROLE_FIXTURE_ID
@@ -12,6 +12,10 @@ from ui.selector_mime import SELECTOR_FIXTURE_MIME, encode_selector_payload
 
 
 class FixtureCatalogListView(QListView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
     def startDrag(self, supportedActions):
         selection_model = self.selectionModel()
         if selection_model is None:

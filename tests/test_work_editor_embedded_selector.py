@@ -5,12 +5,15 @@ import sys
 import unittest
 from unittest.mock import patch
 import importlib.util
+import importlib
 from pathlib import Path
+from types import SimpleNamespace
 
 
 _HERE = Path(__file__).resolve().parent
 _WORKSPACE = _HERE.parent
 _SETUP_ROOT = _WORKSPACE / "Setup Manager"
+_TOOLS_ROOT = _WORKSPACE / "Tools and jaws Library"
 for _candidate in (_WORKSPACE, _SETUP_ROOT):
     _text = str(_candidate)
     if _text not in sys.path:
@@ -54,6 +57,28 @@ def _load_work_editor_dialog_class():
             sys.path.remove(setup_root)
         except ValueError:
             pass
+
+
+def _import_tools_selector_class(module_name: str, class_name: str):
+    tools_root = str(_TOOLS_ROOT)
+    previous_config = sys.modules.pop("config", None)
+    if tools_root in sys.path:
+        sys.path.remove(tools_root)
+    sys.path.insert(0, tools_root)
+    sys.modules.pop(module_name, None)
+
+    try:
+        module = importlib.import_module(module_name)
+        return getattr(module, class_name)
+    finally:
+        try:
+            sys.path.remove(tools_root)
+        except ValueError:
+            pass
+        if previous_config is None:
+            sys.modules.pop("config", None)
+        else:
+            sys.modules["config"] = previous_config
 
 
 class _Profile:
@@ -210,6 +235,41 @@ class TestEmbeddedSelectorSubmit(unittest.TestCase):
         self.assertEqual([{"tool_id": "T001"}], captured["selected_items"])
         self.assertIn("assignment_buckets_by_target", captured["request"])
         self.assertIn("HEAD2:sub", captured["request"]["assignment_buckets_by_target"])
+
+
+class _DummyToggleButton:
+    def __init__(self, checked: bool = True):
+        self._checked = bool(checked)
+
+    def setChecked(self, checked: bool) -> None:
+        self._checked = bool(checked)
+
+    def isChecked(self) -> bool:
+        return self._checked
+
+
+class TestEmbeddedSelectorPreviewGuards(unittest.TestCase):
+    def test_tool_embedded_toggle_preview_is_blocked(self):
+        EmbeddedToolSelectorWidget = _import_tools_selector_class(
+            "tools_and_jaws_library.ui.selectors.tool_selector_dialog",
+            "EmbeddedToolSelectorWidget",
+        )
+
+        button = _DummyToggleButton(checked=True)
+        dummy = SimpleNamespace(_embedded_mode=True, preview_window_btn=button)
+        EmbeddedToolSelectorWidget.toggle_preview_window(dummy)
+        self.assertFalse(button.isChecked())
+
+    def test_jaw_embedded_toggle_preview_is_blocked(self):
+        EmbeddedJawSelectorWidget = _import_tools_selector_class(
+            "tools_and_jaws_library.ui.selectors.jaw_selector_dialog",
+            "EmbeddedJawSelectorWidget",
+        )
+
+        button = _DummyToggleButton(checked=True)
+        dummy = SimpleNamespace(_embedded_mode=True, preview_window_btn=button)
+        EmbeddedJawSelectorWidget.toggle_preview_window(dummy)
+        self.assertFalse(button.isChecked())
 
 
 if __name__ == "__main__":

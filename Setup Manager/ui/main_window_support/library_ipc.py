@@ -99,10 +99,10 @@ def launch_tool_library(
 
     if tool_library_main_path.exists() and not getattr(sys, "frozen", False):
         candidates = []
-        candidates.append(str(Path(sys.executable)))
         pythonw = Path(sys.executable).parent / "pythonw.exe"
         if pythonw.exists():
             candidates.append(str(pythonw))
+        candidates.append(str(Path(sys.executable)))
         py_cmd = shutil.which("python")
         if py_cmd:
             candidates.append(py_cmd)

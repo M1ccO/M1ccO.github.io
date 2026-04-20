@@ -116,14 +116,16 @@ def delete_jaw(page) -> None:
 
 
 def copy_jaw(page) -> None:
-    if not page.current_jaw_id:
+    selected_ids = page._selected_jaw_ids()
+    source_jaw_id = selected_ids[0] if selected_ids else page.current_jaw_id
+    if not source_jaw_id:
         QMessageBox.information(
             page,
             page._t('jaw_library.action.copy_jaw', 'Copy jaw'),
             page._t('jaw_library.message.select_jaw_first', 'Select a jaw first.'),
         )
         return
-    jaw = page.jaw_service.get_jaw(page.current_jaw_id)
+    jaw = page.jaw_service.get_jaw(source_jaw_id)
     if not jaw:
         return
 
@@ -178,4 +180,5 @@ def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, b
     apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
     editor.setFocus()
     editor.selectAll()
-    return editor.text(), dlg.exec() == QDialog.Accepted
+    accepted = dlg.exec() == QDialog.Accepted
+    return editor.text(), accepted

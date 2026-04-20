@@ -319,6 +319,9 @@ class MachineConfigDialog(QDialog):
 
     def _format_profile_display_lines(self, profile) -> str:
         display_name = self._display_profile_name(getattr(profile, "name", ""))
+        profile_key = str(getattr(profile, "key", "") or "").strip().lower()
+        if profile_key:
+            return self._t(f"machine_config.profile.{profile_key}", display_name)
         return display_name
 
     # ------------------------------------------------------------------ #

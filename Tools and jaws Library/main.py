@@ -222,9 +222,26 @@ def main():
         except Exception:
             app._preview_warmup_widget = None
 
-    # Warm up preview engine in both hidden and visible starts so first detail
-    # open is smooth after Setup Manager handoff.
-    QTimer.singleShot(250, warm_preview_after_startup)
+    app._preview_warmup_scheduled = False
+
+    def schedule_preview_warmup(delay_ms: int = 250) -> None:
+        if getattr(app, '_preview_warmup_widget', None) is not None:
+            return
+        if bool(getattr(app, '_preview_warmup_scheduled', False)):
+            return
+
+        app._preview_warmup_scheduled = True
+
+        def _run_warmup() -> None:
+            app._preview_warmup_scheduled = False
+            warm_preview_after_startup()
+
+        QTimer.singleShot(max(0, int(delay_ms)), _run_warmup)
+
+    # In hidden preload mode, defer warmup until the main window is surfaced to
+    # avoid a separate off-screen helper window appearing in task switching.
+    if not _known_args.hidden:
+        schedule_preview_warmup(250)
 
     if not _known_args.hidden:
         win.show()
@@ -278,6 +295,10 @@ def main():
             # the main library window behind them.
             if selector_active_request:
                 return
+
+            # Warm up preview only when the main library window is actually
+            # being shown.
+            schedule_preview_warmup(80)
 
             # Defer top-level visibility changes out of the socket callback so
             # selector/session transitions settle before foreground activation.

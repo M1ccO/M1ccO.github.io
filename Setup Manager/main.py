@@ -244,9 +244,13 @@ def main():
     if ENABLE_TOOL_LIBRARY_PRELOAD:
         tool_lib_process = None
         if TOOL_LIBRARY_MAIN_PATH.exists() and not getattr(sys, "frozen", False):
+            launch_python = Path(sys.executable)
+            pythonw_candidate = launch_python.parent / "pythonw.exe"
+            if pythonw_candidate.exists() and _is_runnable_python(pythonw_candidate):
+                launch_python = pythonw_candidate
             tool_lib_process = QProcess()
             tool_lib_process.startDetached(
-                str(Path(sys.executable)),
+                str(launch_python),
                 [str(TOOL_LIBRARY_MAIN_PATH)] + tool_lib_args,
                 str(TOOL_LIBRARY_PROJECT_DIR),
             )
@@ -268,9 +272,19 @@ def main():
     from ui.main_window import MainWindow
     from shared.services.machine_config_service import MachineConfigService
     from shared.services.ui_preferences_service import UiPreferencesService
+    from shared.ui.theme import compile_app_stylesheet, install_application_theme_state
 
     _prefs_svc = UiPreferencesService(SHARED_UI_PREFERENCES_PATH, include_setup_db_path=True)
     machine_config_svc = MachineConfigService(MACHINE_CONFIGS_PATH, RUNTIME_DIR)
+
+    # Apply the compiled shared theme at application scope before any modal
+    # startup dialogs (e.g. MachineSetupWizard) are shown.
+    try:
+        _startup_prefs = _prefs_svc.load()
+        install_application_theme_state(_startup_prefs)
+        app.setStyleSheet(compile_app_stylesheet(STYLE_PATH, _startup_prefs))
+    except Exception:
+        pass
 
     # Backfill any existing configs that still have empty tools/jaws DB paths
     # (created before per-config library isolation was introduced).
