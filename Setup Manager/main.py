@@ -19,6 +19,8 @@ from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
+from shared.ui.transition_shell import SENDER_TRANSITION_COMPLETE_COMMAND
+from shared.ui.transition_shell_config import init_transition_shell_config
 
 
 def _is_runnable_python(candidate: Path) -> bool:
@@ -124,6 +126,7 @@ def main():
         return str(_texts.get(key, default))
 
     app = QApplication(sys.argv)
+    init_transition_shell_config()
     app.setStyle("Fusion")
     app.setPalette(_build_fixed_light_palette())
     app.setStyle(FastTooltipStyle(app.style()))
@@ -475,9 +478,32 @@ def main():
         except Exception:
             pass
 
+    def _send_transition_complete_request(server_name: str) -> bool:
+        server_name = str(server_name or "").strip()
+        if not server_name:
+            return False
+
+        socket = QLocalSocket()
+        socket.connectToServer(server_name)
+        if not socket.waitForConnected(300):
+            return False
+        try:
+            socket.write(json.dumps({"command": SENDER_TRANSITION_COMPLETE_COMMAND}).encode("utf-8"))
+            socket.flush()
+            socket.waitForBytesWritten(300)
+            return True
+        except Exception:
+            return False
+        finally:
+            try:
+                socket.disconnectFromServer()
+            except Exception:
+                pass
+
     def show_setup_manager(request: dict | None = None):
         nonlocal _last_show_request_ts, _last_show_geometry
         geometry_text = str((request or {}).get("geometry", "")).strip()
+        handoff_hide_callback_server = str((request or {}).get("handoff_hide_callback_server", "")).strip()
         now = time.monotonic()
         # Debounce duplicate show requests from fast IPC bursts.
         if (now - _last_show_request_ts) < 0.25 and geometry_text == _last_show_geometry:
@@ -527,6 +553,11 @@ def main():
             except Exception:
                 pass
             _restore_work_editor_if_waiting(win)
+            if handoff_hide_callback_server:
+                QTimer.singleShot(
+                    40,
+                    lambda server_name=handoff_hide_callback_server: _send_transition_complete_request(server_name),
+                )
 
         _do_show()
 
@@ -557,10 +588,8 @@ def main():
 
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
-            elif request["command"] == "hide_for_library_handoff":
-                win.setWindowOpacity(1.0)
-                if win.isVisible():
-                    win.hide()
+            elif request["command"] in {"hide_for_library_handoff", SENDER_TRANSITION_COMPLETE_COMMAND}:
+                win._complete_tool_library_handoff()
             elif request["command"] == "selector_result":
                 _deliver_selector_result(win, request)
 

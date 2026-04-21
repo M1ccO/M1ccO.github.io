@@ -6472,3 +6472,102 @@ Traceback (most recent call last):
     raise JSONDecodeError("Expecting value", s, err.value) from None
 json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 2026-04-21 11:30:12,270 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-21 13:15:23,355 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-21 13:15:23,602 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-21 13:15:23,602 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-21 13:15:23,618 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-21 13:15:23,621 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-21 13:15:23,623 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-21 13:15:23,666 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpzlqp4czz\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-21 13:15:23,670 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpzlqp4czz\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-21 13:15:23,674 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-21 13:31:38,284 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-21 13:31:38,549 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-21 13:31:38,549 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-21 13:31:38,570 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-21 13:31:38,573 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-21 13:31:38,575 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-21 13:31:38,623 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmplog9xmty\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-21 13:31:38,626 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmplog9xmty\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-21 13:31:38,629 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-21 13:48:41,364 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-21 13:48:41,634 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'ipc'}
+2026-04-21 13:48:41,634 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'ipc', 'duration_ms': 0}
+2026-04-21 13:48:41,657 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-21 13:48:41,660 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-21 13:48:41,662 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-21 13:48:41,708 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpeso_8_nb\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-21 13:48:41,713 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpeso_8_nb\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-21 13:48:41,717 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}

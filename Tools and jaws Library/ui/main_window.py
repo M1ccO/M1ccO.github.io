@@ -36,6 +36,7 @@ from config import (
     RAIL_HEAD_DROPDOWN_WIDTH,
     TOOL_ICONS_DIR,
     SETUP_MANAGER_SERVER_NAME,
+    TOOL_LIBRARY_SERVER_NAME,
 )
 from data.database import Database
 from data.fixture_database import FixtureDatabase
@@ -1014,6 +1015,7 @@ class MainWindow(QMainWindow):
             self,
             setup_manager_server_name=SETUP_MANAGER_SERVER_NAME,
             source_dir=SOURCE_DIR,
+            callback_server_name=TOOL_LIBRARY_SERVER_NAME,
         )
 
     def _clear_selector_session(self, show: bool = True):

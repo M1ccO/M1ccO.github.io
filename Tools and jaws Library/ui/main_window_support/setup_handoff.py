@@ -8,15 +8,28 @@ from pathlib import Path
 from PySide6.QtCore import QProcess, QTimer
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import QMessageBox
+from shared.ui.transition_shell import (
+    SENDER_TRANSITION_COMPLETE_COMMAND,
+    cancel_sender_transition,
+    complete_sender_transition,
+    prepare_sender_transition,
+)
 
 _log = logging.getLogger(__name__)
 
 
-def handoff_to_setup_manager(window, *, setup_manager_server_name: str, source_dir: Path) -> None:
+def handoff_to_setup_manager(
+    window,
+    *,
+    setup_manager_server_name: str,
+    source_dir: Path,
+    callback_server_name: str = "",
+) -> None:
     import ctypes
     import ctypes.wintypes
 
     x, y, width, height = window._current_window_rect()
+    prepare_sender_transition(window, geometry=(x, y, width, height))
     geometry = f"{x},{y},{width},{height}"
     _log.debug("handoff_to_setup_manager: opacity=%.2f geometry=%s", window.windowOpacity(), geometry)
 
@@ -44,24 +57,35 @@ def handoff_to_setup_manager(window, *, setup_manager_server_name: str, source_d
 
     window.setWindowOpacity(1.0)
 
+    payload = _show_request_payload(
+        geometry=geometry,
+        callback_server_name=callback_server_name,
+    )
+
     _log.debug("handoff_to_setup_manager: sending IPC to server=%r", setup_manager_server_name)
     sent = _send_show_request(
         setup_manager_server_name=setup_manager_server_name,
-        geometry=geometry,
+        payload=payload,
     )
     _log.debug("handoff_to_setup_manager: IPC sent=%s", sent)
     if sent:
-        QTimer.singleShot(120, lambda: _complete_handoff(window))
+        if not callback_server_name:
+            QTimer.singleShot(120, lambda: complete_setup_manager_handoff(window))
         return
 
     launched = _launch_setup_manager(geometry=geometry, source_dir=source_dir)
     _log.debug("handoff_to_setup_manager: launch=%s", launched)
     if launched:
-        # Cold-launch path: keep the Library visible just long enough for the
-        # target process to surface its first window before we hide.
-        QTimer.singleShot(300, lambda: _complete_handoff(window))
+        _send_show_request_with_retry(
+            setup_manager_server_name=setup_manager_server_name,
+            payload=payload,
+            on_failed=lambda: _handle_setup_manager_start_timeout(window),
+        )
+        if not callback_server_name:
+            QTimer.singleShot(300, lambda: complete_setup_manager_handoff(window))
         return
 
+    cancel_sender_transition(window)
     QMessageBox.warning(
         window,
         "Setup Manager unavailable",
@@ -69,25 +93,37 @@ def handoff_to_setup_manager(window, *, setup_manager_server_name: str, source_d
     )
 
 
-def _complete_handoff(window) -> None:
-    window.hide()
-    window.setWindowOpacity(1.0)
+def complete_setup_manager_handoff(window) -> None:
+    complete_sender_transition(window)
 
 
-def _send_show_request(*, setup_manager_server_name: str, geometry: str) -> bool:
+def _handle_setup_manager_start_timeout(window) -> None:
+    cancel_sender_transition(window)
+    QMessageBox.warning(
+        window,
+        "Setup Manager unavailable",
+        "Setup Manager started but did not become ready in time. Please try again.",
+    )
+
+
+def _show_request_payload(*, geometry: str, callback_server_name: str) -> dict:
+    payload = {
+        "command": "show",
+        "geometry": geometry,
+    }
+    callback_server_name = str(callback_server_name or "").strip()
+    if callback_server_name:
+        payload["handoff_hide_callback_server"] = callback_server_name
+    return payload
+
+
+def _send_show_request(*, setup_manager_server_name: str, payload: dict) -> bool:
     socket = QLocalSocket()
     socket.connectToServer(setup_manager_server_name)
     if not socket.waitForConnected(300):
         return False
     try:
-        socket.write(
-            json.dumps(
-                {
-                    "command": "show",
-                    "geometry": geometry,
-                }
-            ).encode("utf-8")
-        )
+        socket.write(json.dumps(payload).encode("utf-8"))
         socket.flush()
         socket.waitForBytesWritten(300)
         return True
@@ -98,6 +134,34 @@ def _send_show_request(*, setup_manager_server_name: str, geometry: str) -> bool
             socket.disconnectFromServer()
         except Exception:
             pass
+
+
+def _send_show_request_with_retry(
+    *,
+    setup_manager_server_name: str,
+    payload: dict,
+    attempts: int = 36,
+    delay_ms: int = 300,
+    max_delay_ms: int = 1600,
+    on_failed=None,
+) -> None:
+    if _send_show_request(setup_manager_server_name=setup_manager_server_name, payload=payload):
+        return
+    if attempts <= 1:
+        if callable(on_failed):
+            on_failed()
+        return
+    QTimer.singleShot(
+        delay_ms,
+        lambda: _send_show_request_with_retry(
+            setup_manager_server_name=setup_manager_server_name,
+            payload=payload,
+            attempts=attempts - 1,
+            delay_ms=min(max_delay_ms, int(delay_ms * 1.25)),
+            max_delay_ms=max_delay_ms,
+            on_failed=on_failed,
+        ),
+    )
 
 
 def _launch_setup_manager(*, geometry: str, source_dir: Path) -> bool:

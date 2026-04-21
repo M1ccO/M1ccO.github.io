@@ -30,6 +30,7 @@ from shared.ui.helpers.detached_preview_common import (
     toggle_preview_window as _toggle_preview_window,
     update_measurement_toggle_icon,
 )
+from shared.ui.helpers.preview_runtime import claim_prewarmed_preview_widget, register_preview_runtime_widget
 from shared.ui.stl_preview import StlPreviewWidget
 from ui.fixture_page_support.preview_rules import (
     apply_fixture_preview_transform,
@@ -109,7 +110,10 @@ def ensure_detached_preview_dialog(page) -> None:
     controls_layout.addStretch(1)
     layout.addWidget(controls_host)
 
-    page._detached_preview_widget = StlPreviewWidget()
+    page._detached_preview_widget = claim_prewarmed_preview_widget(dialog)
+    if page._detached_preview_widget is None:
+        page._detached_preview_widget = StlPreviewWidget()
+        register_preview_runtime_widget(page._detached_preview_widget)
     page._detached_preview_widget.set_control_hint_text(
         page._t(
             'tool_editor.hint.rotate_pan_zoom',
@@ -118,6 +122,7 @@ def ensure_detached_preview_dialog(page) -> None:
     )
     page._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     layout.addWidget(page._detached_preview_widget, 1)
+    page._detached_preview_widget.show()
 
     page._detached_preview_dialog = dialog
 

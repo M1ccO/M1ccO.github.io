@@ -6,6 +6,7 @@ import ctypes
 import ctypes.wintypes
 
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QAbstractButton, QAbstractItemView, QComboBox, QLineEdit, QSplitter, QWidget
 
 from shared.ui.theme import THEME_PALETTES, get_active_theme_palette
@@ -182,6 +183,27 @@ def apply_frame_geometry_string(window, geometry_text: str, *, retry_delays_ms: 
 
     window._pending_frame_geometry_timers = pending
     return applied
+
+
+def capture_window_snapshot(window: QWidget | None) -> QPixmap | None:
+    """Capture a visible window snapshot for transition-shell animation."""
+    if window is None:
+        return None
+
+    try:
+        if not window.isVisible():
+            return None
+    except Exception:
+        return None
+
+    try:
+        pixmap = window.grab()
+    except Exception:
+        return None
+
+    if pixmap is None or pixmap.isNull():
+        return None
+    return pixmap
 
 
 def fade_out_and(window, callback, *, pre_callback=None):

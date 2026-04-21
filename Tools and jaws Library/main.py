@@ -14,7 +14,11 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
+from shared.ui.helpers.preview_runtime import preview_runtime_ready, register_preview_runtime_widget
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
+from shared.ui.transition_shell import SENDER_TRANSITION_COMPLETE_COMMAND
+from shared.ui.transition_shell_config import init_transition_shell_config
+from ui.main_window_support import complete_setup_manager_handoff
 
 
 def _split_csv(text: str) -> list[str]:
@@ -47,7 +51,7 @@ def _send_to_existing_instance(server_name: str, payload: dict) -> bool:
     return True
 
 
-def _send_handoff_hide_request(server_name: str) -> bool:
+def _send_transition_complete_request(server_name: str) -> bool:
     server_name = str(server_name or '').strip()
     if not server_name:
         return False
@@ -56,7 +60,7 @@ def _send_handoff_hide_request(server_name: str) -> bool:
     if not socket.waitForConnected(300):
         return False
     try:
-        socket.write(json.dumps({"command": "hide_for_library_handoff"}).encode("utf-8"))
+        socket.write(json.dumps({"command": SENDER_TRANSITION_COMPLETE_COMMAND}).encode("utf-8"))
         socket.flush()
         socket.waitForBytesWritten(300)
         return True
@@ -74,6 +78,7 @@ def main():
     )
 
     app = QApplication(sys.argv)
+    init_transition_shell_config()
     # Parse deep-link and geometry arguments before Qt consumes argv.
     import argparse
     parser = argparse.ArgumentParser(add_help=False)
@@ -175,6 +180,7 @@ def main():
 
     step(7, 'Preparing 3D preview...')
     app._preview_warmup_widget = None
+    app._preview_runtime_ready = False
 
     step(8, 'Opening main window...')
 
@@ -195,7 +201,7 @@ def main():
     )
 
     def warm_preview_after_startup():
-        if getattr(app, '_preview_warmup_widget', None) is not None:
+        if preview_runtime_ready():
             return
         try:
             from shared.ui.stl_preview import StlPreviewWidget
@@ -211,16 +217,17 @@ def main():
             # Keep alive for the full app session.  Destroying the last
             # QWebEngineView shuts down Chromium; any subsequent creation
             # would cold-start and freeze the UI.
-            app._preview_warmup_widget = warmup
+            register_preview_runtime_widget(warmup)
         except Exception:
             app._preview_warmup_widget = None
+            app._preview_runtime_ready = False
 
     app._background_asset_warmup_scheduled = False
     app._background_asset_warmup_completed = False
 
     def warm_background_assets(*, include_preview_runtime: bool = False) -> None:
         background_ready = bool(getattr(app, '_background_asset_warmup_completed', False))
-        preview_ready = getattr(app, '_preview_warmup_widget', None) is not None
+        preview_ready = preview_runtime_ready()
 
         if not background_ready:
             try:
@@ -237,7 +244,7 @@ def main():
 
     def schedule_background_asset_warmup(delay_ms: int = 250, *, include_preview_runtime: bool = False) -> None:
         if bool(getattr(app, '_background_asset_warmup_completed', False)):
-            if not include_preview_runtime or getattr(app, '_preview_warmup_widget', None) is not None:
+            if not include_preview_runtime or preview_runtime_ready():
                 return
         if bool(getattr(app, '_background_asset_warmup_scheduled', False)):
             return
@@ -259,7 +266,7 @@ def main():
 
     if not _known_args.hidden:
         win.show()
-        schedule_background_asset_warmup(1800, include_preview_runtime=True)
+        schedule_background_asset_warmup(250, include_preview_runtime=True)
     # Hidden mode: window stays hidden until an IPC show request arrives.
     # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
@@ -284,6 +291,9 @@ def main():
         command = str((payload or {}).get('command') or '').strip().lower()
         if command == 'shutdown':
             app.quit()
+            return
+        if command in {'hide_for_library_handoff', SENDER_TRANSITION_COMPLETE_COMMAND}:
+            complete_setup_manager_handoff(win)
             return
 
         # Capture visibility BEFORE apply_external_request so _show_main_window
@@ -366,7 +376,7 @@ def main():
                     pass
 
                 if handoff_hide_callback_server:
-                    QTimer.singleShot(40, lambda server_name=handoff_hide_callback_server: _send_handoff_hide_request(server_name))
+                    QTimer.singleShot(40, lambda server_name=handoff_hide_callback_server: _send_transition_complete_request(server_name))
 
             QTimer.singleShot(0, _show_main_window)
 

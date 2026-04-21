@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from config import SETUP_MANAGER_SERVER_NAME
 from PySide6.QtWidgets import QMessageBox
+from shared.ui.transition_shell import cancel_sender_transition, complete_sender_transition, prepare_sender_transition
 
 from .library_ipc import allow_set_foreground
 
@@ -10,8 +11,7 @@ _NO_MATCH_ID = "__NO_MATCH_LINKED_ITEMS__"
 
 
 def complete_tool_library_handoff(window) -> None:
-    window.hide()
-    window.setWindowOpacity(1.0)
+    complete_sender_transition(window)
 
 
 def _selected_module(module: str) -> str:
@@ -29,6 +29,17 @@ def _show_library_start_timeout(window) -> None:
         window._t(
             "setup_manager.library_unavailable.start_timeout",
             "Tool Library started but did not become ready in time. Please try again.",
+        ),
+    )
+
+
+def _show_library_unavailable(window) -> None:
+    QMessageBox.warning(
+        window,
+        window._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+        window._t(
+            "setup_manager.library_unavailable.body",
+            "Could not find a launchable Tool Library executable or source entry point.",
         ),
     )
 
@@ -56,9 +67,19 @@ def _library_payload(window, *, module: str, geometry: str, clear_master_filter:
     return payload
 
 
+def _cancel_transition_and_show_start_timeout(window) -> None:
+    cancel_sender_transition(window)
+    _show_library_start_timeout(window)
+
+
+def _begin_library_sender_transition(window, geometry_rect: tuple[int, int, int, int]) -> str:
+    prepare_sender_transition(window, geometry=geometry_rect)
+    x, y, width, height = geometry_rect
+    return f"{x},{y},{width},{height}"
+
+
 def open_tool_library_module(window, module: str) -> None:
-    x, y, width, height = window._current_window_rect()
-    geometry = f"{x},{y},{width},{height}"
+    geometry = _begin_library_sender_transition(window, window._current_window_rect())
     allow_set_foreground()
 
     payload = _library_payload(
@@ -75,37 +96,43 @@ def open_tool_library_module(window, module: str) -> None:
         window._send_request_with_retry(
             payload,
             on_success=lambda: None,
-            on_failed=lambda: _show_library_start_timeout(window),
+            on_failed=lambda: _cancel_transition_and_show_start_timeout(window),
         )
         return
 
-    QMessageBox.warning(
-        window,
-        window._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
-        window._t(
-            "setup_manager.library_unavailable.body",
-            "Could not find a launchable Tool Library executable or source entry point.",
-        ),
-    )
+    cancel_sender_transition(window)
+    _show_library_unavailable(window)
 
 
 def open_tool_library_deep_link(window, kind: str, item_id: str) -> None:
-    x, y, width, height = window._current_window_rect()
-    geometry = f"{x},{y},{width},{height}"
+    geometry = _begin_library_sender_transition(window, window._current_window_rect())
+    allow_set_foreground()
+    module = "jaws" if kind == "jaw" else "tools"
+    payload = _library_payload(
+        window,
+        module=module,
+        geometry=geometry,
+        clear_master_filter=True,
+    )
+    payload["kind"] = str(kind or "").strip()
+    payload["item_id"] = str(item_id or "").strip()
+    payload["handoff_hide_callback_server"] = SETUP_MANAGER_SERVER_NAME
+    if window._send_to_tool_library(payload):
+        return
+
     if kind == "jaw":
         args = ["--geometry", geometry, "--open-jaw", item_id] if item_id else []
     else:
         args = ["--geometry", geometry, "--open-tool", item_id] if item_id else []
     if window._launch_tool_library(args):
+        window._send_request_with_retry(
+            payload,
+            on_success=lambda: None,
+            on_failed=lambda: _cancel_transition_and_show_start_timeout(window),
+        )
         return
-    QMessageBox.warning(
-        window,
-        window._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
-        window._t(
-            "setup_manager.library_unavailable.body",
-            "Could not find a launchable Tool Library executable or source entry point.",
-        ),
-    )
+    cancel_sender_transition(window)
+    _show_library_unavailable(window)
 
 
 def open_tool_library_with_master_filter(window, tool_ids, jaw_ids, module: str = "tools") -> None:
@@ -134,8 +161,7 @@ def open_tool_library_with_master_filter(window, tool_ids, jaw_ids, module: str 
             window._t("setup_manager.viewer.no_fixtures", "No fixtures selected for this work."),
         )
 
-    x, y, width, height = window._current_window_rect()
-    geometry = f"{x},{y},{width},{height}"
+    geometry = _begin_library_sender_transition(window, window._current_window_rect())
     allow_set_foreground()
 
     payload = _library_payload(
@@ -163,15 +189,9 @@ def open_tool_library_with_master_filter(window, tool_ids, jaw_ids, module: str 
         window._send_request_with_retry(
             payload,
             on_success=lambda: None,
-            on_failed=lambda: _show_library_start_timeout(window),
+            on_failed=lambda: _cancel_transition_and_show_start_timeout(window),
         )
         return
 
-    QMessageBox.warning(
-        window,
-        window._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
-        window._t(
-            "setup_manager.library_unavailable.body",
-            "Could not find a launchable Tool Library executable or source entry point.",
-        ),
-    )
+    cancel_sender_transition(window)
+    _show_library_unavailable(window)

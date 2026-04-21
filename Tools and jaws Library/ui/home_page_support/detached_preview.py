@@ -33,6 +33,7 @@ from shared.ui.helpers.detached_preview_common import (
     toggle_preview_window as _toggle_preview_window,
     update_measurement_toggle_icon,
 )
+from shared.ui.helpers.preview_runtime import claim_prewarmed_preview_widget, register_preview_runtime_widget
 from shared.ui.stl_preview import StlPreviewWidget
 
 
@@ -106,8 +107,12 @@ def ensure_detached_preview_dialog(page):
     controls_layout.addStretch(1)
     layout.addWidget(controls_host)
 
-    if StlPreviewWidget is not None:
+    page._detached_preview_widget = claim_prewarmed_preview_widget(dialog)
+    if page._detached_preview_widget is None and StlPreviewWidget is not None:
         page._detached_preview_widget = StlPreviewWidget()
+        register_preview_runtime_widget(page._detached_preview_widget)
+
+    if page._detached_preview_widget is not None:
         page._detached_preview_widget.set_control_hint_text(
             page._t(
                 'tool_editor.hint.rotate_pan_zoom',
@@ -116,6 +121,7 @@ def ensure_detached_preview_dialog(page):
         )
         page._detached_preview_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         layout.addWidget(page._detached_preview_widget, 1)
+        page._detached_preview_widget.show()
     else:
         fallback = QLabel(page._t('tool_library.preview.unavailable', 'Preview component not available.'))
         fallback.setWordWrap(True)
