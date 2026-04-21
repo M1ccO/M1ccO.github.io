@@ -17,9 +17,6 @@ def perform_initial_load(page) -> None:
     page._initial_load_done = True
     page._deferred_refresh_needed = False
     page.refresh_catalog()
-    from ui.home_page_support.detached_preview import warmup_preview_engine
-
-    warmup_preview_engine(page)
 
 
 def on_show_event(page) -> None:

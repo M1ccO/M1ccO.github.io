@@ -24,9 +24,6 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
-from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
-
 from shared.ui.resolvers import (
     LibraryBackedJawResolver,
     LibraryBackedToolResolver,
@@ -48,8 +45,6 @@ class PreloadManager:
         self._fixture_service: Any = None
         self._tool_resolver: LibraryBackedToolResolver | None = None
         self._jaw_resolver: LibraryBackedJawResolver | None = None
-        self._preview_warmup_widget: Any = None
-        self._preview_warmup_armed: bool = False
         self._initialized: bool = False
         self._listeners: list[_InvalidationListener] = []
 
@@ -153,7 +148,6 @@ class PreloadManager:
     def shutdown(self) -> None:
         set_resolver("tool", None)
         set_resolver("jaw", None)
-        self._dispose_preview_warmup()
         self._close_handles()
         self._initialized = False
 
@@ -221,68 +215,11 @@ class PreloadManager:
         return True
 
     def _warm_preview_engine(self) -> None:
-        """Initialize the Chromium/WebEngine runtime at app startup.
-
-        Design contract:
-        - Called once during PreloadManager.initialize(), which runs while the
-          QProgressDialog splash is visible and processEvents() is being pumped.
-        - Shows the warmup QWebEngineView at real off-screen coordinates
-          (no WA_DontShowOnScreen).  This forces Windows to create the HWND and
-          the D3D11 compositor swap chain synchronously during startup, not
-          during a user button click.
-        - The widget is kept alive for the full app session.  Destroying the last
-          QWebEngineView shuts down the Chromium renderer/GPU processes; any
-          subsequent creation would cold-start again and freeze the UI.
-        """
-        if self._preview_warmup_armed:
-            return
-        app = QApplication.instance()
-        if app is None:
-            return
-        try:
-            from shared.ui.stl_preview import StlPreviewWidget
-        except Exception:
-            _log.debug("PreloadManager: STL preview import failed", exc_info=True)
-            return
-        if StlPreviewWidget is None:
-            return
-        try:
-            warmup = StlPreviewWidget()
-            # Keep warmup out of Alt+Tab/taskbar while still creating a real
-            # HWND/compositor surface for fast first-use rendering.
-            warmup.setWindowFlag(Qt.Tool)
-            # Position far off-screen at real coordinates so Windows creates the
-            # HWND + D3D compositor surface now, not on first user interaction.
-            warmup.setGeometry(-32000, -32000, 8, 8)
-            warmup.show()
-            # Pump the event loop so the OS can finish surface setup before we
-            # return.  The progress dialog's processEvents() chain covers this,
-            # but being explicit makes the contract self-contained.
-            app.processEvents()
-
-            self._preview_warmup_widget = warmup
-            self._preview_warmup_armed = True
-        except Exception:
-            _log.debug("PreloadManager: STL preview warmup skipped", exc_info=True)
+        """Compatibility hook kept for tests; Setup Manager no longer owns preview runtime warmup."""
+        return None
 
     def _dispose_preview_warmup(self) -> None:
-        widget = self._preview_warmup_widget
-        self._preview_warmup_widget = None
-        self._preview_warmup_armed = False
-        if widget is None:
-            return
-        try:
-            hide = getattr(widget, "hide", None)
-            if callable(hide):
-                hide()
-        except Exception:
-            pass
-        try:
-            delete_later = getattr(widget, "deleteLater", None)
-            if callable(delete_later):
-                delete_later()
-        except Exception:
-            pass
+        return None
 
     def _close_handles(self) -> None:
         self._tool_resolver = None

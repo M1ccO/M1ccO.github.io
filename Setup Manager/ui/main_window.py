@@ -358,7 +358,11 @@ class MainWindow(QMainWindow):
         retry_tool_library_preload(self)
 
     def _fade_out_and(self, callback):
-        _shared_fade_out_and(self, callback)
+        # Hide immediately — the Library/selector window appearing is the visual
+        # transition. A fade-out here fights fade-in on return and causes flashes.
+        self.hide()
+        self.setWindowOpacity(1.0)
+        callback()
 
     def fade_in(self):
         _shared_fade_in(self)
@@ -489,7 +493,11 @@ class MainWindow(QMainWindow):
             # Keep first show free of hidden dialog warmups; the old Work Editor
             # preload was the source of the launch-time hide/show flash.
             if not getattr(self, "_tool_library_preload_completed", False):
-                QTimer.singleShot(150, self._preload_tool_library_background)
+                # Delay hidden Library preload until Setup Manager has fully
+                # settled after splash close. Launching a second Qt process too
+                # close to the first paint still causes a visible startup hitch
+                # on Windows even when the Library stays hidden.
+                QTimer.singleShot(2200, self._preload_tool_library_background)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
 

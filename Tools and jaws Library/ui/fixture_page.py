@@ -109,7 +109,6 @@ class FixturePage(CatalogPageBase):
         self._detached_measurements_enabled = True
         self._measurement_toggle_btn = None
         self._close_preview_shortcut = None
-        self._inline_preview_warmup = None
 
         super().__init__(parent=parent, item_service=fixture_service, translate=self._translate)
 
@@ -131,8 +130,6 @@ class FixturePage(CatalogPageBase):
         self._initial_load_done = True
         self._deferred_refresh_needed = False
         self.refresh_catalog()
-        from ui.fixture_page_support.detached_preview import warmup_preview_engine
-        warmup_preview_engine(self)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)

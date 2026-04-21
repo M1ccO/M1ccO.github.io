@@ -1018,6 +1018,80 @@ class FixtureSelectorDialog(SelectorDialogBase):
             },
         }
 
+    def reset_for_session(
+        self,
+        *,
+        initial_assignments: list[dict] | None,
+        initial_assignment_buckets: dict[str, list[dict]] | None,
+        initial_target_key: str,
+        on_submit,
+        on_cancel,
+    ) -> None:
+        """Reconfigure this dialog for a new selector session without rebuilding
+        the widget tree or re-querying the catalog."""
+        self._submitted = False
+        self._cancel_notified = False
+        self._on_submit = on_submit
+        self._on_cancel = on_cancel
+
+        self._assignment_buckets_by_target = {}
+        if isinstance(initial_assignment_buckets, dict):
+            for raw_key, raw_items in initial_assignment_buckets.items():
+                target_key = str(raw_key or '').strip()
+                if not target_key or not isinstance(raw_items, list):
+                    continue
+                bucket_items: list[dict] = []
+                bucket_seen: set[str] = set()
+                for item in raw_items:
+                    normalized = self._normalize_fixture(item)
+                    if normalized is None:
+                        continue
+                    fixture_key = self._fixture_key(normalized)
+                    if not fixture_key or fixture_key in bucket_seen:
+                        continue
+                    bucket_seen.add(fixture_key)
+                    bucket_items.append(normalized)
+                self._assignment_buckets_by_target[target_key] = bucket_items
+
+        if not self._assignment_buckets_by_target:
+            fallback_items: list[dict] = []
+            fallback_seen: set[str] = set()
+            for item in initial_assignments or []:
+                normalized = self._normalize_fixture(item)
+                if normalized is None:
+                    continue
+                fixture_key = self._fixture_key(normalized)
+                if not fixture_key or fixture_key in fallback_seen:
+                    continue
+                fallback_seen.add(fixture_key)
+                fallback_items.append(normalized)
+            self._assignment_buckets_by_target['OP10'] = fallback_items
+
+        self._target_keys = list(self._assignment_buckets_by_target.keys())
+        resolved_target = str(initial_target_key or '').strip()
+        if resolved_target not in self._target_keys:
+            resolved_target = self._target_keys[0] if self._target_keys else ''
+        self._active_target_key = resolved_target
+
+        self._selected_items = [
+            dict(item)
+            for item in self._assignment_buckets_by_target.get(self._active_target_key, [])
+            if isinstance(item, dict)
+        ]
+        self._selected_ids = {self._fixture_key(item) for item in self._selected_items if self._fixture_key(item)}
+
+        self.target_filter.blockSignals(True)
+        self.target_filter.clear()
+        for key in self._target_keys:
+            self.target_filter.addItem(key, key)
+        target_index = self.target_filter.findData(self._active_target_key)
+        if target_index >= 0:
+            self.target_filter.setCurrentIndex(target_index)
+        self.target_filter.blockSignals(False)
+
+        self._rebuild_assignment_list()
+        self._update_assignment_buttons()
+
     def _cancel(self) -> None:
         self._cancel_dialog()
 

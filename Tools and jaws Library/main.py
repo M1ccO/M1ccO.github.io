@@ -1,7 +1,6 @@
 import json
 import sys
 import ctypes
-import ctypes.wintypes
 import traceback
 from pathlib import Path
 
@@ -15,6 +14,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
+from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
 
 
 def _split_csv(text: str) -> list[str]:
@@ -47,29 +47,24 @@ def _send_to_existing_instance(server_name: str, payload: dict) -> bool:
     return True
 
 
-def _apply_frame_geometry_string(widget, geometry_text: str) -> bool:
+def _send_handoff_hide_request(server_name: str) -> bool:
+    server_name = str(server_name or '').strip()
+    if not server_name:
+        return False
+    socket = QLocalSocket()
+    socket.connectToServer(server_name)
+    if not socket.waitForConnected(300):
+        return False
     try:
-        x, y, width, height = (int(v) for v in str(geometry_text or "").split(","))
-    except Exception:
-        return False
-    if width <= 0 or height <= 0:
-        return False
-    try:
-        hwnd = int(widget.winId())
-        SWP_NOZORDER = 0x0004
-        SWP_NOACTIVATE = 0x0010
-        ctypes.windll.user32.SetWindowPos(
-            hwnd,
-            0,
-            x,
-            y,
-            width,
-            height,
-            SWP_NOZORDER | SWP_NOACTIVATE,
-        )
-    except Exception:
-        return False
-    return True
+        socket.write(json.dumps({"command": "hide_for_library_handoff"}).encode("utf-8"))
+        socket.flush()
+        socket.waitForBytesWritten(300)
+        return True
+    finally:
+        try:
+            socket.disconnectFromServer()
+        except Exception:
+            pass
 
 
 def main():
@@ -199,8 +194,6 @@ def main():
         launch_master_filter=launch_master_filter,
     )
 
-    QTimer.singleShot(50, win.preload_catalog_pages)
-
     def warm_preview_after_startup():
         if getattr(app, '_preview_warmup_widget', None) is not None:
             return
@@ -222,29 +215,51 @@ def main():
         except Exception:
             app._preview_warmup_widget = None
 
-    app._preview_warmup_scheduled = False
+    app._background_asset_warmup_scheduled = False
+    app._background_asset_warmup_completed = False
 
-    def schedule_preview_warmup(delay_ms: int = 250) -> None:
-        if getattr(app, '_preview_warmup_widget', None) is not None:
+    def warm_background_assets(*, include_preview_runtime: bool = False) -> None:
+        background_ready = bool(getattr(app, '_background_asset_warmup_completed', False))
+        preview_ready = getattr(app, '_preview_warmup_widget', None) is not None
+
+        if not background_ready:
+            try:
+                win.preload_catalog_pages()
+            except Exception:
+                traceback.print_exc()
+            app._background_asset_warmup_completed = True
+
+        if include_preview_runtime and not preview_ready:
+            try:
+                warm_preview_after_startup()
+            except Exception:
+                traceback.print_exc()
+
+    def schedule_background_asset_warmup(delay_ms: int = 250, *, include_preview_runtime: bool = False) -> None:
+        if bool(getattr(app, '_background_asset_warmup_completed', False)):
+            if not include_preview_runtime or getattr(app, '_preview_warmup_widget', None) is not None:
+                return
+        if bool(getattr(app, '_background_asset_warmup_scheduled', False)):
             return
-        if bool(getattr(app, '_preview_warmup_scheduled', False)):
-            return
 
-        app._preview_warmup_scheduled = True
+        app._background_asset_warmup_scheduled = True
 
-        def _run_warmup() -> None:
-            app._preview_warmup_scheduled = False
-            warm_preview_after_startup()
+        def _run_background_warmup() -> None:
+            app._background_asset_warmup_scheduled = False
+            warm_background_assets(include_preview_runtime=include_preview_runtime)
 
-        QTimer.singleShot(max(0, int(delay_ms)), _run_warmup)
+        QTimer.singleShot(max(0, int(delay_ms)), _run_background_warmup)
 
-    # In hidden preload mode, defer warmup until the main window is surfaced to
-    # avoid a separate off-screen helper window appearing in task switching.
+    setup_manager_driven_launch = bool(str(_known_args.geometry or '').strip())
+
     if not _known_args.hidden:
-        schedule_preview_warmup(250)
+        warm_background_assets(include_preview_runtime=False)
+        if _known_args.geometry:
+            win._pending_external_frame_geometry = str(_known_args.geometry or '').strip()
 
     if not _known_args.hidden:
         win.show()
+        schedule_background_asset_warmup(1800, include_preview_runtime=True)
     # Hidden mode: window stays hidden until an IPC show request arrives.
     # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
@@ -279,8 +294,21 @@ def main():
         geometry_text = str(payload.get('geometry', '')).strip()
         selector_mode = str(payload.get('selector_mode', '')).strip().lower()
         selector_active_request = selector_mode in {'tools', 'jaws', 'fixtures'}
+        handoff_hide_callback_server = str(payload.get('handoff_hide_callback_server') or '').strip()
+        should_show = bool(payload.get('show', True))
 
-        if bool(payload.get('show', True)):
+        if not should_show:
+            # Silent preload/update requests should stay lightweight: keep the
+            # hidden process alive and optionally refresh catalog state, but do
+            # not create detached-preview runtime surfaces or hidden selector
+            # dialogs during Setup Manager startup.
+            schedule_background_asset_warmup(250, include_preview_runtime=False)
+            return
+
+        if should_show:
+            if not was_visible:
+                warm_background_assets(include_preview_runtime=False)
+
             # Selector sessions run in standalone dialogs while the main window
             # stays hidden. If quitOnLastWindowClosed is True here, closing the
             # selector dialog can terminate the background Tool Library process,
@@ -294,49 +322,51 @@ def main():
             # Selector requests are hosted in standalone dialogs; do not surface
             # the main library window behind them.
             if selector_active_request:
-                # Standalone selector sessions still need preview warmup so the
-                # first detached 3D preview open does not cold-start Chromium.
-                # The helper window is a Qt.Tool off-screen surface, so warming
-                # here does not force the main library window visible.
-                schedule_preview_warmup(80)
                 return
-
-            # Warm up preview only when the main library window is actually
-            # being shown.
-            schedule_preview_warmup(80)
 
             # Defer top-level visibility changes out of the socket callback so
             # selector/session transitions settle before foreground activation.
             def _show_main_window() -> None:
-                if not was_visible:
-                    # Ensure the window is hidden and transparent before geometry
-                    # is applied so it never flashes at the wrong position.
-                    win.hide()
-                    win.setWindowOpacity(0.0)
-                if geometry_text:
-                    # Apply geometry while still hidden (or before raising) so
-                    # the window appears at the correct position on first paint.
-                    _apply_frame_geometry_string(win, geometry_text)
+                _pending = getattr(win, "_pending_fade_in_timer", None)
+                if _pending is not None:
+                    try:
+                        _pending.stop()
+                    except Exception:
+                        pass
+                    win._pending_fade_in_timer = None
+
+                _fade_anim = getattr(win, "_fade_anim", None)
+                if _fade_anim is not None:
+                    try:
+                        _fade_anim.stop()
+                    except Exception:
+                        pass
+                    win._fade_anim = None
+
+                win.setWindowOpacity(1.0)
+                if geometry_text and not win.isVisible():
+                    win._pending_external_frame_geometry = geometry_text
                 if win.isMinimized():
                     win.showNormal()
-                if not win.isVisible():
+                elif not win.isVisible():
                     win.show()
-                if geometry_text:
-                    _apply_frame_geometry_string(win, geometry_text)
-                    QTimer.singleShot(0, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
-                    QTimer.singleShot(120, lambda text=geometry_text: _apply_frame_geometry_string(win, text))
-                if not was_visible:
-                    # Smooth fade-in instead of a hard opacity snap.
-                    win.fade_in()
+                elif geometry_text:
+                    suspend_clamp = getattr(win, '_suspend_external_geometry_clamp', None)
+                    if callable(suspend_clamp):
+                        suspend_clamp(520)
+                    _apply_frame_geometry_string(win, geometry_text, retry_delays_ms=(0, 120, 320))
+
                 win.raise_()
                 win.activateWindow()
-                # Belt-and-suspenders: use Win32 API for reliable foreground activation.
                 try:
                     import ctypes
                     hwnd = int(win.winId())
                     ctypes.windll.user32.SetForegroundWindow(hwnd)
                 except Exception:
                     pass
+
+                if handoff_hide_callback_server:
+                    QTimer.singleShot(40, lambda server_name=handoff_hide_callback_server: _send_handoff_hide_request(server_name))
 
             QTimer.singleShot(0, _show_main_window)
 
@@ -366,12 +396,6 @@ def main():
 
     if splash is not None:
         splash.close()
-
-    # Restore geometry if launched with --geometry X,Y,W,H
-    if _known_args.geometry:
-        _apply_frame_geometry_string(win, _known_args.geometry)
-        QTimer.singleShot(0, lambda text=_known_args.geometry: _apply_frame_geometry_string(win, text))
-        QTimer.singleShot(120, lambda text=_known_args.geometry: _apply_frame_geometry_string(win, text))
 
     # Navigate to a specific jaw or tool if requested.
     if _known_args.open_jaw:

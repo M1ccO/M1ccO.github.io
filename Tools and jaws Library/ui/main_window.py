@@ -62,7 +62,7 @@ from ui.selectors import FixtureSelectorDialog, JawSelectorDialog, ToolSelectorD
 from ui.jaw_catalog_delegate import apply_delegate_theme as apply_jaw_delegate_theme
 from ui.tool_catalog_delegate import apply_delegate_theme as apply_tool_delegate_theme
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
-from shared.ui.main_window_helpers import THEME_PALETTES, current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and, get_active_theme_palette
+from shared.ui.main_window_helpers import THEME_PALETTES, apply_frame_geometry_string, current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and, get_active_theme_palette
 from shared.ui.theme import compile_app_stylesheet, current_theme_color, install_application_theme_state
 from shared.ui.helpers.icon_loader import icon_from_path
 from shared.ui.layout_contract import get_container_layout_contract, get_required_rail_width
@@ -196,8 +196,13 @@ class MainWindow(QMainWindow):
         # Mirrors the Work Editor shared-dialog cache pattern.
         self._tool_selector_dialog_warmcache: ToolSelectorDialog | None = None
         self._jaw_selector_dialog_warmcache: JawSelectorDialog | None = None
+        self._fixture_selector_dialog_warmcache: FixtureSelectorDialog | None = None
         self._runtime_initialized = False
         self._background_catalog_preload_done = False
+        self._pending_external_frame_geometry = ''
+        self._applying_external_frame_geometry = False
+        self._external_geometry_clamp_suspended = False
+        self._external_geometry_clamp_release_timer = None
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.fixture_service, self.export_service, self.settings_service)
@@ -219,7 +224,25 @@ class MainWindow(QMainWindow):
 
     def moveEvent(self, event):
         super().moveEvent(event)
+        if self._applying_external_frame_geometry or self._external_geometry_clamp_suspended:
+            return
         self._ensure_on_screen()
+
+    def _release_external_geometry_clamp(self) -> None:
+        self._external_geometry_clamp_suspended = False
+
+    def _suspend_external_geometry_clamp(self, duration_ms: int = 0) -> None:
+        self._external_geometry_clamp_suspended = bool(duration_ms > 0)
+        timer = self._external_geometry_clamp_release_timer
+        if timer is None:
+            timer = QTimer(self)
+            timer.setSingleShot(True)
+            timer.timeout.connect(self._release_external_geometry_clamp)
+            self._external_geometry_clamp_release_timer = timer
+        else:
+            timer.stop()
+        if duration_ms > 0:
+            timer.start(max(0, int(duration_ms)))
 
     def showEvent(self, event):
         """Reload shared preferences when window is shown to sync with Setup Manager."""
@@ -228,13 +251,21 @@ class MainWindow(QMainWindow):
             self._runtime_initialized = True
             QApplication.instance().installEventFilter(self)
             QTimer.singleShot(0, self.preload_catalog_pages)
-            QTimer.singleShot(3000, self._pre_warm_selector_dialogs)
-            QTimer.singleShot(3000, self._pre_warm_selector_dialogs)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
+        pending_geometry = str(self._pending_external_frame_geometry or '').strip()
+        if pending_geometry:
+            self._pending_external_frame_geometry = ''
+            self._suspend_external_geometry_clamp(520)
+            self._applying_external_frame_geometry = True
+            try:
+                apply_frame_geometry_string(self, pending_geometry, retry_delays_ms=(0, 120, 320))
+            finally:
+                self._applying_external_frame_geometry = False
+            return
         self._ensure_on_screen()
 
-    def _preload_catalog_page(self, page, warmup_fn) -> None:
+    def _preload_catalog_page(self, page) -> None:
         if page is None:
             return
         try:
@@ -257,23 +288,14 @@ class MainWindow(QMainWindow):
         except Exception:
             logger.debug("Background catalog preload failed for %s", type(page).__name__, exc_info=True)
 
-        try:
-            warmup_fn(page)
-        except Exception:
-            logger.debug("Background preview warmup failed for %s", type(page).__name__, exc_info=True)
-
     def preload_catalog_pages(self) -> None:
         if self._background_catalog_preload_done:
             return
         self._background_catalog_preload_done = True
         try:
-            from ui.home_page_support.detached_preview import warmup_preview_engine as warmup_tool_preview
-            from ui.jaw_page_support.detached_preview import warmup_preview_engine as warmup_jaw_preview
-            from ui.fixture_page_support.detached_preview import warmup_preview_engine as warmup_fixture_preview
-
-            self._preload_catalog_page(self.home_page, warmup_tool_preview)
-            self._preload_catalog_page(self.jaws_page, warmup_jaw_preview)
-            self._preload_catalog_page(self.fixtures_page, warmup_fixture_preview)
+            self._preload_catalog_page(self.home_page)
+            self._preload_catalog_page(self.jaws_page)
+            self._preload_catalog_page(self.fixtures_page)
         except Exception:
             self._background_catalog_preload_done = False
             logger.debug("Background catalog preload failed", exc_info=True)
@@ -282,7 +304,7 @@ class MainWindow(QMainWindow):
         pass  # title is now in the layout rail
 
     def _ensure_on_screen(self):
-        if self._clamping_screen_bounds:
+        if self._clamping_screen_bounds or self._external_geometry_clamp_suspended:
             return
         screen = QGuiApplication.screenAt(self.frameGeometry().center()) or self.screen()
         if screen is None:
@@ -1030,6 +1052,7 @@ class MainWindow(QMainWindow):
         warm_cache = {
             id(self._tool_selector_dialog_warmcache),
             id(self._jaw_selector_dialog_warmcache),
+            id(self._fixture_selector_dialog_warmcache),
         } - {id(None)}
         dialogs = [self._tool_selector_dialog, self._jaw_selector_dialog, self._fixture_selector_dialog]
         self._tool_selector_dialog = None
@@ -1058,79 +1081,68 @@ class MainWindow(QMainWindow):
         self._closing_selector_dialogs = False
 
     def _pre_warm_selector_dialogs(self) -> None:
-        """Build selector dialogs once, hidden, so widget construction and catalog
-        load are already paid before the first IPC selector request arrives.
-        Mirrors Setup Manager's ``_get_or_create_shared_dialog`` pattern."""
-        if self._tool_selector_dialog_warmcache is None:
-            try:
-                self._tool_selector_dialog_warmcache = ToolSelectorDialog(
-                    tool_service=self.tool_service,
-                    machine_profile=self.machine_profile,
-                    translate=self._t,
-                    selector_head='H1',
-                    selector_spindle='main',
-                    initial_assignments=None,
-                    initial_assignment_buckets=None,
-                    initial_print_pots=False,
-                    on_submit=lambda _: None,
-                    on_cancel=lambda: None,
-                    parent=None,
-                )
-                # Apply Qt.Tool immediately so the HWND is already a tool window
-                # before the first IPC open — avoids a second HWND recreation when
-                # _open_selector_dialog_for_session sets Tool | StaysOnTop flags.
-                self._tool_selector_dialog_warmcache.setWindowFlags(
-                    self._tool_selector_dialog_warmcache.windowFlags()
-                    | Qt.Tool
-                    | Qt.WindowStaysOnTopHint
-                )
-                # Pre-size the dialog to Library's actual geometry while it's
-                # still hidden.  When show() is called during the real open,
-                # DWM creates a fresh surface at the correct size — no stale
-                # stretched texture, no HWND recreation side-effects from
-                # opacity/layered-window changes.
-                try:
-                    _lib_geo = self.geometry()
-                    self._tool_selector_dialog_warmcache.setGeometry(
-                        _lib_geo.x(), _lib_geo.y(),
-                        _lib_geo.width(), _lib_geo.height(),
-                    )
-                except Exception:
-                    pass
-                logger.debug('selector: tool dialog warm-cache ready')
-            except Exception:
-                logger.warning('selector: pre-warm failed for tool dialog', exc_info=True)
-                self._tool_selector_dialog_warmcache = None
+        """Build selector dialogs once, hidden off-screen, so construction and
+        catalog load are paid before the first IPC selector request arrives."""
+        _lib_geo = self.geometry()
+        _w = max(_lib_geo.width(), 1500)
+        _h = max(_lib_geo.height(), 860)
 
-        if self._jaw_selector_dialog_warmcache is None:
+        def _build(factory, attr):
+            if getattr(self, attr) is not None:
+                return
             try:
-                self._jaw_selector_dialog_warmcache = JawSelectorDialog(
-                    jaw_service=self.jaw_service,
-                    machine_profile=self.machine_profile,
-                    translate=self._t,
-                    selector_spindle='main',
-                    initial_assignments=None,
-                    on_submit=lambda _: None,
-                    on_cancel=lambda: None,
-                    parent=None,
-                )
-                self._jaw_selector_dialog_warmcache.setWindowFlags(
-                    self._jaw_selector_dialog_warmcache.windowFlags()
-                    | Qt.Tool
-                    | Qt.WindowStaysOnTopHint
-                )
-                try:
-                    _lib_geo = self.geometry()
-                    self._jaw_selector_dialog_warmcache.setGeometry(
-                        _lib_geo.x(), _lib_geo.y(),
-                        _lib_geo.width(), _lib_geo.height(),
-                    )
-                except Exception:
-                    pass
-                logger.debug('selector: jaw dialog warm-cache ready')
+                dlg = factory()
+                if hasattr(dlg, 'setAttribute'):
+                    dlg.setAttribute(Qt.WA_DeleteOnClose, False)
+                dlg.setGeometry(_lib_geo.x(), _lib_geo.y(), _w, _h)
+                setattr(self, attr, dlg)
+                logger.debug('selector: %s warm-cache ready', attr)
             except Exception:
-                logger.warning('selector: pre-warm failed for jaw dialog', exc_info=True)
-                self._jaw_selector_dialog_warmcache = None
+                logger.warning('selector: pre-warm failed for %s', attr, exc_info=True)
+                setattr(self, attr, None)
+
+        _build(
+            lambda: ToolSelectorDialog(
+                tool_service=self.tool_service,
+                machine_profile=self.machine_profile,
+                translate=self._t,
+                selector_head='H1',
+                selector_spindle='main',
+                initial_assignments=None,
+                initial_assignment_buckets=None,
+                initial_print_pots=False,
+                on_submit=lambda _: None,
+                on_cancel=lambda: None,
+                parent=None,
+            ),
+            '_tool_selector_dialog_warmcache',
+        )
+        _build(
+            lambda: JawSelectorDialog(
+                jaw_service=self.jaw_service,
+                machine_profile=self.machine_profile,
+                translate=self._t,
+                selector_spindle='main',
+                initial_assignments=None,
+                on_submit=lambda _: None,
+                on_cancel=lambda: None,
+                parent=None,
+            ),
+            '_jaw_selector_dialog_warmcache',
+        )
+        _build(
+            lambda: FixtureSelectorDialog(
+                fixture_service=self.fixture_service,
+                translate=self._t,
+                initial_assignments=None,
+                initial_assignment_buckets=None,
+                initial_target_key='',
+                on_submit=lambda _: None,
+                on_cancel=lambda: None,
+                parent=None,
+            ),
+            '_fixture_selector_dialog_warmcache',
+        )
 
     def _open_selector_dialog_for_session(self, should_show: bool) -> None:
         logger.debug("selector: opening %r dialog — head=%r spindle=%r show=%r", self._selector_mode, self._selector_head, self._selector_spindle, should_show)
@@ -1173,9 +1185,11 @@ class MainWindow(QMainWindow):
                     # the dialog (Windows HWND parent-child visibility propagation).
                     parent=None,
                 )
-                # Cache on first creation so subsequent sessions reuse the
-                # pre-built dialog without paying construction + catalog-load
-                # costs again.  Mirrors Work Editor shared-dialog cache.
+                # Disable auto-delete so the dialog survives hide() and can be
+                # reused across sessions. WA_DeleteOnClose is set by the dialog
+                # constructor — we must clear it before caching.
+                if hasattr(dialog, 'setAttribute'):
+                    dialog.setAttribute(Qt.WA_DeleteOnClose, False)
                 self._tool_selector_dialog_warmcache = dialog
             self._tool_selector_dialog = dialog
         elif self._selector_mode == 'jaws':
@@ -1199,19 +1213,35 @@ class MainWindow(QMainWindow):
                     on_cancel=self._on_selector_dialog_cancel,
                     parent=None,
                 )
+                if hasattr(dialog, 'setAttribute'):
+                    dialog.setAttribute(Qt.WA_DeleteOnClose, False)
                 self._jaw_selector_dialog_warmcache = dialog
             self._jaw_selector_dialog = dialog
         elif self._selector_mode == 'fixtures':
-            dialog = FixtureSelectorDialog(
-                fixture_service=self.fixture_service,
-                translate=self._t,
-                initial_assignments=self._selector_initial_assignments,
-                initial_assignment_buckets=self._selector_initial_assignment_buckets,
-                initial_target_key=getattr(self, '_selector_target_key', ''),
-                on_submit=self._on_selector_dialog_submit,
-                on_cancel=self._on_selector_dialog_cancel,
-                parent=None,
-            )
+            cached = self._fixture_selector_dialog_warmcache
+            if cached is not None:
+                _reset_kwargs = dict(
+                    initial_assignments=self._selector_initial_assignments,
+                    initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                    initial_target_key=getattr(self, '_selector_target_key', ''),
+                    on_submit=self._on_selector_dialog_submit,
+                    on_cancel=self._on_selector_dialog_cancel,
+                )
+                dialog = cached
+            else:
+                dialog = FixtureSelectorDialog(
+                    fixture_service=self.fixture_service,
+                    translate=self._t,
+                    initial_assignments=self._selector_initial_assignments,
+                    initial_assignment_buckets=self._selector_initial_assignment_buckets,
+                    initial_target_key=getattr(self, '_selector_target_key', ''),
+                    on_submit=self._on_selector_dialog_submit,
+                    on_cancel=self._on_selector_dialog_cancel,
+                    parent=None,
+                )
+                if hasattr(dialog, 'setAttribute'):
+                    dialog.setAttribute(Qt.WA_DeleteOnClose, False)
+                self._fixture_selector_dialog_warmcache = dialog
             self._fixture_selector_dialog = dialog
         else:
             return
@@ -1233,18 +1263,19 @@ class MainWindow(QMainWindow):
             # constructor runs _run_startup_initialization inside a frozen block.
             if _reset_kwargs is not None:
                 try:
-                    dialog.reset_for_session(**_reset_kwargs)
+                    reset_fn = getattr(dialog, 'reset_for_session', None) or getattr(dialog, 'prepare_for_session', None)
+                    if reset_fn is not None:
+                        reset_fn(**_reset_kwargs)
+                    else:
+                        logger.warning('selector: no reset method on %s', type(dialog).__name__)
                 except Exception:
-                    logger.warning('selector: reset_for_session failed', exc_info=True)
+                    logger.warning('selector: session reset failed', exc_info=True)
 
             if should_show:
                 # Qt.Tool | Qt.WindowStaysOnTopHint are already set at construction
                 # time, so the bitwise-OR is a no-op in the normal path (no HWND
                 # recreation).  The explicit inequality check guarantees we never
                 # call setWindowFlags when nothing changes.
-                _new_flags = dialog.windowFlags() | Qt.Tool | Qt.WindowStaysOnTopHint
-                if _new_flags != dialog.windowFlags():
-                    dialog.setWindowFlags(_new_flags)
                 dialog.setAttribute(Qt.WA_StyledBackground, True)
                 dialog.setAutoFillBackground(True)
                 from PySide6.QtGui import QPalette
@@ -1305,8 +1336,8 @@ class MainWindow(QMainWindow):
         # which corrupts the Three.js camera/renderer on first use.
 
         if should_show:
+            dialog.setWindowOpacity(1.0)
             dialog.show()
-            dialog.repaint()
             dialog.raise_()
             dialog.activateWindow()
 

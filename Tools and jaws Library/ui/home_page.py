@@ -212,7 +212,6 @@ class HomePage(CatalogPageBase):
         self._detached_preview_sync_request_id = 0
         self._detail_preview_widget = None
         self._detail_preview_model_key = None
-        self._inline_preview_warmup = None
 
         # Database + external state
         self._active_db_name = ''

@@ -361,6 +361,14 @@ class ToolSelectorStateMixin:
     def _assignment_list_for_spindle(self, spindle: str):
         return self.assignment_lists.get(self._normalize_spindle(spindle), self.assignment_list)
 
+    @staticmethod
+    def _set_row_preserving_scroll(assignment_list, row: int) -> None:
+        scrollbar = assignment_list.verticalScrollBar()
+        previous_scroll = scrollbar.value() if scrollbar is not None else 0
+        assignment_list.setCurrentRow(row)
+        if scrollbar is not None:
+            scrollbar.setValue(min(previous_scroll, scrollbar.maximum()))
+
     def _assigned_tools_for_spindle(self, spindle: str) -> list[dict]:
         key = self._normalize_spindle(spindle)
         return self._assigned_tools_by_spindle.setdefault(key, [])
@@ -474,6 +482,8 @@ class ToolSelectorStateMixin:
         for target_spindle in targets:
             assignment_list = self._assignment_list_for_spindle(target_spindle)
             current_row = assignment_list.currentRow()
+            scrollbar = assignment_list.verticalScrollBar()
+            previous_scroll = scrollbar.value() if scrollbar is not None else 0
             assignment_list.blockSignals(True)
             assignment_list.clear()
             assignments = self._assigned_tools_for_spindle(target_spindle)
@@ -524,8 +534,9 @@ class ToolSelectorStateMixin:
 
             assignment_list.blockSignals(False)
             if current_row >= 0 and current_row < assignment_list.count():
-                assignment_list.setCurrentRow(current_row)
-            assignment_list.scrollToTop()
+                self._set_row_preserving_scroll(assignment_list, current_row)
+            if scrollbar is not None:
+                scrollbar.setValue(min(previous_scroll, scrollbar.maximum()))
             self._update_assignment_list_height(target_spindle)
             self._update_assignment_empty_hint(target_spindle)
         self._sync_card_selection_states()
@@ -596,7 +607,14 @@ class ToolSelectorStateMixin:
         for spindle in ('main', 'sub'):
             self._sync_assignment_order_for_spindle(spindle)
 
-    def _add_tools(self, dropped_items: list[dict], insert_row: int | None = None, spindle: str | None = None) -> bool:
+    def _add_tools(
+        self,
+        dropped_items: list[dict],
+        insert_row: int | None = None,
+        spindle: str | None = None,
+        *,
+        select_inserted: bool = True,
+    ) -> bool:
         target_spindle = self._normalize_spindle(spindle or self._active_assignment_spindle())
         target_assignments = self._assigned_tools_for_spindle(target_spindle)
         existing = {self._tool_key(item) for item in target_assignments if self._tool_key(item)}
@@ -620,8 +638,8 @@ class ToolSelectorStateMixin:
         self._store_current_bucket()
         self._rebuild_assignment_list(target_spindle)
         target_list = self._assignment_list_for_spindle(target_spindle)
-        if target_list.count() > 0:
-            target_list.setCurrentRow(min(insert_at - 1, target_list.count() - 1))
+        if select_inserted and target_list.count() > 0:
+            self._set_row_preserving_scroll(target_list, min(insert_at - 1, target_list.count() - 1))
         return True
 
     def _remove_selected(self) -> None:
@@ -635,7 +653,7 @@ class ToolSelectorStateMixin:
         self._store_current_bucket()
         self._rebuild_assignment_list(spindle)
         if target_list.count() > 0:
-            target_list.setCurrentRow(min(row, target_list.count() - 1))
+            self._set_row_preserving_scroll(target_list, min(row, target_list.count() - 1))
 
     def _remove_by_drop(self, dropped_items: list[dict]) -> None:
         keys = {self._tool_key(self._normalize_tool(item)) for item in (dropped_items or []) if isinstance(item, dict)}
@@ -659,7 +677,7 @@ class ToolSelectorStateMixin:
         target_assignments[row - 1], target_assignments[row] = target_assignments[row], target_assignments[row - 1]
         self._store_current_bucket()
         self._rebuild_assignment_list(spindle)
-        target_list.setCurrentRow(row - 1)
+        self._set_row_preserving_scroll(target_list, row - 1)
 
     def _move_down(self) -> None:
         spindle = self._active_assignment_spindle()
@@ -671,7 +689,7 @@ class ToolSelectorStateMixin:
         target_assignments[row], target_assignments[row + 1] = target_assignments[row + 1], target_assignments[row]
         self._store_current_bucket()
         self._rebuild_assignment_list(spindle)
-        target_list.setCurrentRow(row + 1)
+        self._set_row_preserving_scroll(target_list, row + 1)
 
     def _tool_library_label_parts(self, assignment: dict) -> tuple[str, str]:
         return library_label_fields(assignment)
@@ -702,7 +720,7 @@ class ToolSelectorStateMixin:
         assignment['pot'] = str(result.get('pot') or '').strip()
         self._store_current_bucket()
         self._rebuild_assignment_list(target_spindle)
-        self._assignment_list_for_spindle(target_spindle).setCurrentRow(row_index)
+        self._set_row_preserving_scroll(self._assignment_list_for_spindle(target_spindle), row_index)
 
     def _edit_selected_assignment(self) -> None:
         spindle = self._active_assignment_spindle()
@@ -866,13 +884,14 @@ class ToolSelectorStateMixin:
             tool_data = index.data(ROLE_TOOL_DATA)
             if isinstance(tool_data, dict):
                 dropped_items.append(dict(tool_data))
-        self._add_tools(dropped_items, spindle=self._active_assignment_spindle())
+        self._add_tools(dropped_items, spindle=self._active_assignment_spindle(), select_inserted=True)
 
     def _on_tools_dropped_for_spindle(self, spindle: str, dropped_items: list, insert_row: int) -> None:
         added = self._add_tools(
             dropped_items if isinstance(dropped_items, list) else [],
-            None,
+            insert_row,
             spindle=spindle,
+            select_inserted=False,
         )
         if not added:
             return

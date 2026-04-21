@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from config import SETUP_MANAGER_SERVER_NAME
 from PySide6.QtWidgets import QMessageBox
 
 from .library_ipc import allow_set_foreground
@@ -66,14 +67,14 @@ def open_tool_library_module(window, module: str) -> None:
         geometry=geometry,
         clear_master_filter=True,
     )
+    payload["handoff_hide_callback_server"] = SETUP_MANAGER_SERVER_NAME
     if window._send_to_tool_library(payload):
-        window._fade_out_and(lambda: complete_tool_library_handoff(window))
         return
 
     if window._launch_tool_library(["--geometry", geometry]):
         window._send_request_with_retry(
             payload,
-            on_success=lambda: window._fade_out_and(lambda: complete_tool_library_handoff(window)),
+            on_success=lambda: None,
             on_failed=lambda: _show_library_start_timeout(window),
         )
         return
@@ -144,8 +145,8 @@ def open_tool_library_with_master_filter(window, tool_ids, jaw_ids, module: str 
         safe_tools=safe_tools,
         safe_jaws=safe_jaws,
     )
+    payload["handoff_hide_callback_server"] = SETUP_MANAGER_SERVER_NAME
     if window._send_to_tool_library(payload):
-        window._fade_out_and(lambda: complete_tool_library_handoff(window))
         return
 
     args = [
@@ -161,7 +162,7 @@ def open_tool_library_with_master_filter(window, tool_ids, jaw_ids, module: str 
     if window._launch_tool_library(args):
         window._send_request_with_retry(
             payload,
-            on_success=lambda: window._fade_out_and(lambda: complete_tool_library_handoff(window)),
+            on_success=lambda: None,
             on_failed=lambda: _show_library_start_timeout(window),
         )
         return

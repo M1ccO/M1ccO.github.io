@@ -18,6 +18,7 @@ from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
+from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
 
 
 def _is_runnable_python(candidate: Path) -> bool:
@@ -91,35 +92,6 @@ def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--geometry", default="", dest="geometry")
     _known_args, _remaining = parser.parse_known_args()
-
-    def apply_frame_geometry_string(widget, geometry_text: str) -> bool:
-        try:
-            parts = [int(part) for part in str(geometry_text or "").strip().split(",")]
-        except Exception:
-            return False
-        if len(parts) != 4:
-            return False
-        x, y, width, height = parts
-        if width <= 0 or height <= 0:
-            return False
-        if x == -32000 and y == -32000:
-            return False
-        try:
-            hwnd = int(widget.winId())
-            SWP_NOZORDER = 0x0004
-            SWP_NOACTIVATE = 0x0010
-            ctypes.windll.user32.SetWindowPos(
-                hwnd,
-                0,
-                x,
-                y,
-                width,
-                height,
-                SWP_NOZORDER | SWP_NOACTIVATE,
-            )
-        except Exception:
-            return False
-        return True
 
     def is_safe_tool_library_target(candidate: Path) -> bool:
         try:
@@ -342,11 +314,9 @@ def main():
     print_service = PrintService(APP_TITLE)
     print_service.set_reference_service(draw_service)
 
-    step(8, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_preview', 'Warming up 3D preview...')}")
-    # PreloadManager.initialize() now owns preview warmup. Keep the loading
-    # step for user feedback, but avoid creating a second transient preview
-    # widget here because that can surface as a stray popup on Windows.
-    app._preview_warmup_widget = None
+    step(8, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_preview', 'Preparing 3D preview support...')}")
+    # Preview runtime ownership lives in the Tool Library process. Setup
+    # Manager keeps this loading step only as part of the startup sequence.
 
     # ----------------------------------------------------------------
     # Machine profile bootstrap
@@ -434,7 +404,7 @@ def main():
     step(10, f"{loading_header}\n\n{_lt('setup_manager.loading.open_main', 'Opening Setup Manager...')}")
     win = MainWindow(work_service, logbook_service, draw_service, print_service, machine_config_svc)
     if launch_geometry:
-        apply_frame_geometry_string(win, launch_geometry)
+        _apply_frame_geometry_string(win, launch_geometry, retry_delays_ms=(0, 120))
 
     # ----------------------------------------------------------------
     # IPC server (lives on the QApplication, survives live switches)
@@ -516,37 +486,49 @@ def main():
         _last_show_geometry = geometry_text
 
         was_visible = bool(win.isVisible() and not win.isMinimized())
-        win.setWindowOpacity(1.0)
-        if win.isMinimized():
-            win.showNormal()
-        elif not win.isVisible():
-            win.show()
 
         def _apply_handoff_bounds():
             if geometry_text:
-                return apply_frame_geometry_string(win, geometry_text)
+                return _apply_frame_geometry_string(win, geometry_text, retry_delays_ms=(0, 120, 320))
             return False
 
-        if geometry_text and not was_visible:
-            # Only reposition when SM was hidden/minimized — this is the
-            # launch or restore-from-tray path.  When SM is already visible
-            # (e.g. during a selector-close handoff) its position must NOT
-            # be overwritten with the Library window's geometry.
-            _apply_handoff_bounds()
-            QTimer.singleShot(0, _apply_handoff_bounds)
-            QTimer.singleShot(120, _apply_handoff_bounds)
-            QTimer.singleShot(320, _apply_handoff_bounds)
-        win.raise_()
-        win.activateWindow()
-        try:
-            import ctypes
-            hwnd = int(win.winId())
-            ctypes.windll.user32.SetForegroundWindow(hwnd)
-        except Exception:
-            pass
-        if not was_visible:
-            win.fade_in()
-        _restore_work_editor_if_waiting(win)
+        def _do_show():
+            _pending = getattr(win, "_pending_fade_in_timer", None)
+            if _pending is not None:
+                try:
+                    _pending.stop()
+                except Exception:
+                    pass
+                win._pending_fade_in_timer = None
+
+            _fade_anim = getattr(win, "_fade_anim", None)
+            if _fade_anim is not None:
+                try:
+                    _fade_anim.stop()
+                except Exception:
+                    pass
+                win._fade_anim = None
+
+            win.setWindowOpacity(1.0)
+
+            if not was_visible:
+                if geometry_text:
+                    _apply_handoff_bounds()
+                if win.isMinimized():
+                    win.showNormal()
+                else:
+                    win.show()
+            win.raise_()
+            win.activateWindow()
+            try:
+                import ctypes
+                hwnd = int(win.winId())
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+            except Exception:
+                pass
+            _restore_work_editor_if_waiting(win)
+
+        _do_show()
 
     def process_show_requests():
         while server.hasPendingConnections():
@@ -575,6 +557,10 @@ def main():
 
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
+            elif request["command"] == "hide_for_library_handoff":
+                win.setWindowOpacity(1.0)
+                if win.isVisible():
+                    win.hide()
             elif request["command"] == "selector_result":
                 _deliver_selector_result(win, request)
 
@@ -751,12 +737,9 @@ def main():
             except Exception:
                 restore_geom = ""
         if restore_geom:
-            apply_frame_geometry_string(new_win, restore_geom)
+            _apply_frame_geometry_string(new_win, restore_geom, retry_delays_ms=(0, 120))
 
         new_win.show()
-        if restore_geom:
-            QTimer.singleShot(0, lambda g=restore_geom: apply_frame_geometry_string(new_win, g))
-            QTimer.singleShot(120, lambda g=restore_geom: apply_frame_geometry_string(new_win, g))
         new_win.raise_()
         new_win.activateWindow()
         try:
@@ -795,9 +778,6 @@ def main():
     splash.close()
 
     win.show()
-    if launch_geometry:
-        QTimer.singleShot(0, lambda text=launch_geometry: apply_frame_geometry_string(win, text))
-        QTimer.singleShot(120, lambda text=launch_geometry: apply_frame_geometry_string(win, text))
     win.raise_()
     win.activateWindow()
 
@@ -805,9 +785,6 @@ def main():
     _startup_cfg = machine_config_svc.get_active_config()
     if _startup_cfg is not None:
         QTimer.singleShot(800, lambda: _maybe_show_shared_db_notice(win, _startup_cfg))
-
-    if getattr(app, "_preview_warmup_widget", None) is not None:
-        QTimer.singleShot(1200, app._preview_warmup_widget.deleteLater)
 
     def _cleanup_server():
         QLocalServer.removeServer(SETUP_MANAGER_SERVER_NAME)

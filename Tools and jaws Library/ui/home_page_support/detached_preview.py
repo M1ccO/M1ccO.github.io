@@ -303,36 +303,3 @@ def toggle_preview_window(page):
         sync_callback=lambda show_errors: sync_detached_preview(page, show_errors=show_errors),
         close_callback=lambda: close_detached_preview(page),
     )
-
-
-def warmup_preview_engine(page) -> None:
-    """Pre-create a hidden preview widget to reduce first detail-open latency."""
-    from PySide6.QtCore import QTimer
-
-    if StlPreviewWidget is None:
-        return
-    if getattr(page, '_inline_preview_warmup', None) is not None:
-        return
-
-    page._inline_preview_warmup = StlPreviewWidget(parent=page)
-    page._inline_preview_warmup.set_control_hint_text(
-        page._t(
-            'tool_editor.hint.rotate_pan_zoom',
-            'Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel',
-        )
-    )
-
-    # Force Chromium/WebEngine GPU context initialization.  The widget must
-    # stay alive for the entire app lifetime so the GPU context is never
-    # torn down — destroying it allows Chromium to release the D3D11 swap
-    # chain, which causes a visible glitch when a new QWebEngineView is
-    # created later (e.g. when opening a selector dialog).
-    #
-    # We keep the widget shown permanently at far off-screen coordinates.
-    # WA_DontShowOnScreen would skip the native surface entirely and
-    # Chromium would never initialise its GPU compositor.  Keeping a tiny
-    # real surface alive is the only reliable way to pre-warm the D3D11
-    # swap chain on Windows.
-    page._inline_preview_warmup.setFixedSize(1, 1)
-    page._inline_preview_warmup.move(-9999, -9999)
-    page._inline_preview_warmup.show()

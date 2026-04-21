@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QFrame,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -23,7 +24,7 @@ except ImportError:
     from config import ALL_TOOL_TYPES, TOOL_ICONS_DIR
 from shared.ui.helpers.editor_helpers import (
     apply_shared_checkbox_style,
-    create_titled_section,
+    apply_titled_section_style,
     style_icon_action_button,
     style_move_arrow_button,
     style_panel_action_button,
@@ -52,6 +53,7 @@ from ..home_page_support.selector_widgets import (
     ToolAssignmentListWidget,
     ToolSelectorRemoveDropButton,
 )
+from ..selectors.selector_mime import SELECTOR_TOOL_MIME, decode_tool_payload
 from ..shared.selector_panel_builders import (
     build_selector_actions_row,
     build_selector_card_shell,
@@ -61,6 +63,55 @@ from ..shared.selector_panel_builders import (
 )
 from .common import build_selector_bottom_bar
 from ..tool_catalog_delegate import ToolCatalogDelegate
+
+
+class ToolAssignmentDropSection(QGroupBox):
+    """A titled assignment section that accepts external tool drops."""
+
+    def __init__(self, title: str, assignment_list: ToolAssignmentListWidget, parent=None):
+        super().__init__(title, parent)
+        apply_titled_section_style(self)
+        self._assignment_list = assignment_list
+        self.setAcceptDrops(True)
+
+    def _emit_drop(self, event):
+        dropped = decode_tool_payload(event.mimeData())
+        if not dropped:
+            event.ignore()
+            return False
+        point = self._assignment_list.mapFrom(self, event.pos())
+        row = self._assignment_list.indexAt(point).row()
+        if row < 0:
+            row = self._assignment_list.count()
+        self._assignment_list.externalToolsDropped.emit(dropped if isinstance(dropped, list) else [], row)
+        return True
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
+            self._assignment_list._set_external_drag_state(True)
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat(SELECTOR_TOOL_MIME):
+            self._assignment_list._set_external_drag_state(True)
+            event.acceptProposedAction()
+            return
+        super().dragMoveEvent(event)
+
+    def dragLeaveEvent(self, event):
+        self._assignment_list._set_external_drag_state(False)
+        super().dragLeaveEvent(event)
+
+    def dropEvent(self, event):
+        if event.mimeData().hasFormat(SELECTOR_TOOL_MIME) and event.source() is not self._assignment_list:
+            if self._emit_drop(event):
+                self._assignment_list._set_external_drag_state(False)
+                event.acceptProposedAction()
+                return
+        self._assignment_list._set_external_drag_state(False)
+        super().dropEvent(event)
 
 
 class ToolSelectorLayoutMixin:
@@ -288,16 +339,18 @@ class ToolSelectorLayoutMixin:
         self.assignment_hints: dict[str, QLabel] = {}
         # ResponsiveColumnsHost: stacks vertically when narrow, side-by-side when wide.
         spindle_host = ResponsiveColumnsHost(switch_width=620)
+        host_layout = spindle_host.layout()
+        if host_layout is not None:
+            host_layout.setAlignment(Qt.AlignTop)
         for spindle in ('main', 'sub'):
             assignment_list = ToolAssignmentListWidget()
             assignment_list.setObjectName('toolIdsOrderList')
-            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-            assignment_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+            assignment_list.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+            assignment_list.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             assignment_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            assignment_list.setSizeAdjustPolicy(QAbstractScrollArea.AdjustToContents)
             assignment_list.setProperty('selectorAssignmentList', True)
             assignment_list.setViewportMargins(0, 0, 2, 0)
-            assignment_list.setMinimumHeight(80)
+            assignment_list.setMinimumHeight(56)
             assignment_list.externalToolsDropped.connect(
                 lambda dropped, row, target_spindle=spindle: self._on_tools_dropped_for_spindle(target_spindle, dropped, row)
             )
@@ -308,19 +361,20 @@ class ToolSelectorLayoutMixin:
                 lambda target_spindle=spindle: self._on_assignment_selection_changed(target_spindle)
             )
 
-            assignment_frame = create_titled_section(
+            assignment_frame = ToolAssignmentDropSection(
                 self._t('work_editor.tools.sub_spindle_tools', 'Vastakaran työkalut')
                 if spindle == 'sub'
-                else self._t('work_editor.tools.main_spindle_tools', 'Pääkaran työkalut')
-                , parent=selector_panel
+                else self._t('work_editor.tools.main_spindle_tools', 'Pääkaran työkalut'),
+                assignment_list,
+                parent=selector_panel,
             )
             assignment_frame.setProperty('selectorAssignmentsFrame', True)
             assignment_frame.setProperty('toolIdsPanel', True)
-            assignment_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+            assignment_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             assignment_layout = QVBoxLayout(assignment_frame)
             assignment_layout.setContentsMargins(8, 10, 8, 8)
             assignment_layout.setSpacing(4)
-            assignment_layout.addWidget(assignment_list, 1)
+            assignment_layout.addWidget(assignment_list, 0)
 
             empty_hint = build_selector_hint_label(
                 text=self._t(
@@ -337,7 +391,9 @@ class ToolSelectorLayoutMixin:
             empty_hint.setContentsMargins(2, 0, 2, 0)
             assignment_layout.addWidget(empty_hint, 0, Qt.AlignTop)
 
-            spindle_host.add_widget(assignment_frame, 1)
+            spindle_host.add_widget(assignment_frame, 0)
+            if host_layout is not None:
+                host_layout.setAlignment(assignment_frame, Qt.AlignTop)
 
             self.assignment_lists[spindle] = assignment_list
             self.assignment_frames[spindle] = assignment_frame
@@ -346,7 +402,7 @@ class ToolSelectorLayoutMixin:
         # Compatibility alias for existing call sites that still read assignment_list/frame.
         self.assignment_list = self.assignment_lists['main']
         self.assignment_frame = self.assignment_frames['main']
-        selector_layout.addWidget(spindle_host, 1)
+        selector_layout.addWidget(spindle_host, 0, Qt.AlignTop)
 
         actions = build_selector_actions_row(spacing=4)
 

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QProcess
+from PySide6.QtCore import QProcess, QTimer
 from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtWidgets import QMessageBox
+
+_log = logging.getLogger(__name__)
 
 
 def handoff_to_setup_manager(window, *, setup_manager_server_name: str, source_dir: Path) -> None:
@@ -14,25 +17,49 @@ def handoff_to_setup_manager(window, *, setup_manager_server_name: str, source_d
     import ctypes.wintypes
 
     x, y, width, height = window._current_window_rect()
+    geometry = f"{x},{y},{width},{height}"
+    _log.debug("handoff_to_setup_manager: opacity=%.2f geometry=%s", window.windowOpacity(), geometry)
 
     try:
         ctypes.windll.user32.AllowSetForegroundWindow(ctypes.wintypes.DWORD(-1))
     except Exception:
         pass
 
-    if _send_show_request(
+    # Cancel any in-flight fade-in timer so Library doesn't re-appear.
+    _pending = getattr(window, "_pending_fade_in_timer", None)
+    if _pending is not None:
+        try:
+            _pending.stop()
+        except Exception:
+            pass
+        window._pending_fade_in_timer = None
+    # Also stop any running fade animation.
+    _fade_anim = getattr(window, "_fade_anim", None)
+    if _fade_anim is not None:
+        try:
+            _fade_anim.stop()
+        except Exception:
+            pass
+        window._fade_anim = None
+
+    window.setWindowOpacity(1.0)
+
+    _log.debug("handoff_to_setup_manager: sending IPC to server=%r", setup_manager_server_name)
+    sent = _send_show_request(
         setup_manager_server_name=setup_manager_server_name,
-        geometry=f"{x},{y},{width},{height}",
-    ):
-        window._fade_out_and(lambda: _complete_handoff(window))
+        geometry=geometry,
+    )
+    _log.debug("handoff_to_setup_manager: IPC sent=%s", sent)
+    if sent:
+        QTimer.singleShot(120, lambda: _complete_handoff(window))
         return
 
-    launched = _launch_setup_manager(
-        geometry=f"{x},{y},{width},{height}",
-        source_dir=source_dir,
-    )
+    launched = _launch_setup_manager(geometry=geometry, source_dir=source_dir)
+    _log.debug("handoff_to_setup_manager: launch=%s", launched)
     if launched:
-        window._fade_out_and(lambda: _complete_handoff(window))
+        # Cold-launch path: keep the Library visible just long enough for the
+        # target process to surface its first window before we hide.
+        QTimer.singleShot(300, lambda: _complete_handoff(window))
         return
 
     QMessageBox.warning(
