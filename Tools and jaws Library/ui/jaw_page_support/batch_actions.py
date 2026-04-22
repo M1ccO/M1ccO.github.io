@@ -7,7 +7,63 @@ from pathlib import Path
 from PySide6.QtWidgets import QDialog, QMessageBox
 
 from shared.data.backup_helpers import create_db_backup
+from shared.ui.transition_shell import cancel_receiver_ready_signal
+from shared.ui.main_window_helpers import exec_dialog_with_blur
 from ui.jaw_editor_dialog import AddEditJawDialog
+
+
+def _editor_parent(page):
+    host_window_getter = getattr(page, 'window', None)
+    if callable(host_window_getter):
+        try:
+            host_window = host_window_getter()
+            if host_window is not None:
+                return host_window
+        except Exception:
+            pass
+    return page
+
+
+def _prepare_modal_host_window(page):
+    host = _editor_parent(page)
+
+    pending_receiver_signal = getattr(host, '_pending_receiver_ready_signal', None)
+    pending_receiver_callback = getattr(pending_receiver_signal, 'callback', None)
+    cancel_receiver_ready_signal(host)
+    if callable(pending_receiver_callback):
+        try:
+            pending_receiver_callback()
+        except Exception:
+            pass
+
+    pending_fade_timer = getattr(host, '_pending_fade_in_timer', None)
+    if pending_fade_timer is not None:
+        try:
+            pending_fade_timer.stop()
+        except Exception:
+            pass
+        try:
+            host._pending_fade_in_timer = None
+        except Exception:
+            pass
+
+    fade_anim = getattr(host, '_fade_anim', None)
+    if fade_anim is not None:
+        try:
+            fade_anim.stop()
+        except Exception:
+            pass
+        try:
+            host._fade_anim = None
+        except Exception:
+            pass
+
+    try:
+        host.setWindowOpacity(1.0)
+    except Exception:
+        pass
+
+    return host
 
 
 def _backup(page, tag: str) -> Path:
@@ -43,6 +99,7 @@ def prompt_batch_cancel_behavior(page) -> str:
 
 
 def batch_edit_jaws(page, jaw_ids: list[str]) -> None:
+    parent = _prepare_modal_host_window(page)
     saved_before: list[dict] = []
     total = len(jaw_ids)
     for idx, jaw_id in enumerate(jaw_ids, 1):
@@ -50,7 +107,7 @@ def batch_edit_jaws(page, jaw_ids: list[str]) -> None:
         if not jaw:
             continue
         dlg = AddEditJawDialog(
-            page,
+            parent=parent,
             jaw=jaw,
             translate=page._t,
             batch_label=f"{idx}/{total}",
@@ -69,8 +126,9 @@ def batch_edit_jaws(page, jaw_ids: list[str]) -> None:
 
 
 def group_edit_jaws(page, jaw_ids: list[str]) -> None:
+    parent = _prepare_modal_host_window(page)
     dlg = AddEditJawDialog(
-        page,
+        parent=parent,
         translate=page._t,
         group_edit_mode=True,
         group_count=len(jaw_ids),

@@ -393,7 +393,7 @@ class MeasurementEditorDialog(QDialog):
         left_layout.addWidget(self._edit_stack)
 
         # â”€â”€ PREVIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        self._preview_widget = StlPreviewWidget()
+        self._preview_widget = StlPreviewWidget(parent=self)
         self._preview_widget.set_control_hint_text(
             self._t(
                 'tool_editor.hint.rotate_pan_zoom',

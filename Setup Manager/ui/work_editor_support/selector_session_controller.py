@@ -547,31 +547,45 @@ class WorkEditorSelectorController:
 
         self._stop_selector_expand_anim()
 
-        anim = QPropertyAnimation(dialog, b"geometry", dialog)
-        anim.setDuration(300)
-        anim.setStartValue(from_geom)
-        anim.setEndValue(to_geom)
-        anim.setEasingCurve(QEasingCurve.OutQuart)
+        from PySide6.QtCore import QTimer
+        frame_interval_ms = 5  # ~200fps
+        steps = int(80 / frame_interval_ms)
+        step_size_x = (to_geom.width() - from_geom.width()) / steps
+        step_size_y = (to_geom.height() - from_geom.height()) / steps
+        step_size_x_pos = (to_geom.x() - from_geom.x()) / steps
+        step_size_y_pos = (to_geom.y() - from_geom.y()) / steps
+        current_step = [0]
 
-        def _on_finished():
-            self._preexpanded_for_selector_open = True
-            try:
-                dl = dialog.layout()
-                if dl is not None:
-                    dl.activate()
-                dialog.updateGeometry()
-                root_stack = getattr(dialog, "_root_stack", None)
-                if isinstance(root_stack, QStackedWidget):
-                    sl = root_stack.layout()
-                    if sl is not None:
-                        sl.activate()
-                    root_stack.updateGeometry()
-            except Exception:
-                pass
+        def _tick():
+            current_step[0] += 1
+            if current_step[0] >= steps:
+                dialog.setGeometry(to_geom)
+                self._preexpanded_for_selector_open = True
+                try:
+                    dl = dialog.layout()
+                    if dl is not None:
+                        dl.activate()
+                    dialog.updateGeometry()
+                    root_stack = getattr(dialog, "_root_stack", None)
+                    if isinstance(root_stack, QStackedWidget):
+                        sl = root_stack.layout()
+                        if sl is not None:
+                            sl.activate()
+                        root_stack.updateGeometry()
+                except Exception:
+                    pass
+                return
+            new_x = from_geom.x() + int(step_size_x_pos * current_step[0])
+            new_y = from_geom.y() + int(step_size_y_pos * current_step[0])
+            new_w = from_geom.width() + int(step_size_x * current_step[0])
+            new_h = from_geom.height() + int(step_size_y * current_step[0])
+            dialog.setGeometry(new_x, new_y, new_w, new_h)
 
-        anim.finished.connect(_on_finished)
-        setattr(dialog, "_selector_expand_anim", anim)
-        anim.start()
+        timer = QTimer(dialog)
+        timer.setInterval(frame_interval_ms)
+        timer.timeout.connect(_tick)
+        setattr(dialog, "_selector_expand_anim", timer)
+        timer.start()
 
     def _animate_collapse_for_selector(self) -> None:
         """Animate the dialog back to its pre-selector geometry on close."""
@@ -594,7 +608,7 @@ class WorkEditorSelectorController:
             return
 
         anim = QPropertyAnimation(dialog, b"geometry", dialog)
-        anim.setDuration(250)
+        anim.setDuration(40)
         anim.setStartValue(from_geom)
         anim.setEndValue(target_geom)
         anim.setEasingCurve(QEasingCurve.InOutQuart)
@@ -1270,7 +1284,7 @@ class WorkEditorSelectorController:
             widget.activateWindow()
             # Selector is visible at Work Editor size. After a short pause so
             # the user registers the open, animate the dialog to full width.
-            QTimer.singleShot(180, self._animate_expand_for_selector)
+            QTimer.singleShot(40, self._animate_expand_for_selector)
             self._schedule_preview_host_preload()
             self._log("open.embedded.ready", kind=kind_key, session_id=str(session_id))
             return True

@@ -118,6 +118,8 @@ class StlPreviewWidget(QWidget):
         self._axis_orbit_visible = False
         self._selection_caption = ''
         self._status_overlay_enabled = False
+        self._active_load_request_id = 0
+        self._defer_model_state_apply = False
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -285,14 +287,20 @@ class StlPreviewWidget(QWidget):
         self._apply_hint_text()
         self._apply_status_overlay_mode()
 
+        deferred_model_state = False
         if self._pending_parts:
-            self._send_parts_to_viewer(self._pending_parts)
+            request_id = self._next_load_request_id()
+            self._send_parts_to_viewer(self._pending_parts, request_id=request_id)
+            deferred_model_state = True
         elif self._pending_stl_path:
-            self._send_model_to_viewer(self._pending_stl_path, self._pending_label)
+            request_id = self._next_load_request_id()
+            self._send_model_to_viewer(self._pending_stl_path, self._pending_label, request_id=request_id)
+            deferred_model_state = True
 
-        self._apply_preview_transform_state()
-        self._apply_transform_editor_state()
-        self._apply_measurement_state()
+        if not deferred_model_state:
+            self._apply_preview_transform_state()
+            self._apply_transform_editor_state()
+            self._apply_measurement_state()
         self._apply_axis_orbit_state()
         self._sync_rendering_state()
 
@@ -305,13 +313,25 @@ class StlPreviewWidget(QWidget):
         self._status_overlay_enabled = bool(enabled)
         self._apply_status_overlay_mode()
 
-    def _send_model_to_viewer(self, stl_path: Path, label: str | None = None):
+    def _next_load_request_id(self) -> int:
+        self._active_load_request_id += 1
+        self._defer_model_state_apply = True
+        return self._active_load_request_id
+
+    def _send_model_to_viewer(self, stl_path: Path, label: str | None = None, *, request_id: int | None = None):
         stl_url = QUrl.fromLocalFile(str(stl_path)).toString()
+        request_value = int(request_id or self._active_load_request_id or 0)
 
         if label:
-            js = f"window.loadModel && window.loadModel({json.dumps(stl_url)}, {json.dumps(label)});"
+            js = (
+                f"window.loadModel && window.loadModel({json.dumps(stl_url)}, "
+                f"{json.dumps(label)}, {json.dumps(request_value)});"
+            )
         else:
-            js = f"window.loadModel && window.loadModel({json.dumps(stl_url)});"
+            js = (
+                f"window.loadModel && window.loadModel({json.dumps(stl_url)}, "
+                f"null, {json.dumps(request_value)});"
+            )
 
         self._web.page().runJavaScript(js)
 
@@ -346,11 +366,15 @@ class StlPreviewWidget(QWidget):
 
         return payload
 
-    def _send_parts_to_viewer(self, payload: list[dict]):
+    def _send_parts_to_viewer(self, payload: list[dict], *, request_id: int | None = None):
         self._loaded_part_files = [str(part.get('file') or '') for part in payload]
+        request_value = int(request_id or self._active_load_request_id or 0)
 
         js_payload = json.dumps(payload)
-        js = f"window.loadAssembly && window.loadAssembly({js_payload});"
+        js = (
+            f"window.loadAssembly && window.loadAssembly({js_payload}, "
+            f"{json.dumps(request_value)});"
+        )
         self._call_js_raw(js)
 
     def _update_parts_in_viewer(self, payload: list[dict]):
@@ -373,6 +397,8 @@ class StlPreviewWidget(QWidget):
         self._call_js('setPartNames', names_payload)
 
     def clear(self):
+        self._active_load_request_id += 1
+        self._defer_model_state_apply = False
         self._pending_stl_path = None
         self._pending_label = None
         self._pending_parts = None
@@ -415,7 +441,8 @@ class StlPreviewWidget(QWidget):
         self._show_web()
 
         if self._page_ready:
-            self._send_model_to_viewer(stl_path, label)
+            request_id = self._next_load_request_id()
+            self._send_model_to_viewer(stl_path, label, request_id=request_id)
 
     def load_parts(self, parts: list[dict] | None):
         self._web.reset_wheel_mode()
@@ -449,12 +476,11 @@ class StlPreviewWidget(QWidget):
             same_files_loaded = part_files == self._loaded_part_files
 
             if same_files_loaded:
+                self._defer_model_state_apply = False
                 self._update_parts_in_viewer(payload)
             else:
-                self._send_parts_to_viewer(payload)
-                self._apply_preview_transform_state()
-                self._apply_transform_editor_state()
-                self._apply_measurement_state()
+                request_id = self._next_load_request_id()
+                self._send_parts_to_viewer(payload, request_id=request_id)
 
     def _apply_preview_transform_state(self):
         if not self._page_ready:
@@ -814,6 +840,22 @@ class StlPreviewWidget(QWidget):
             return
 
         if event_name == 'MODEL_READY':
+            request_id = None
+            if isinstance(payload, dict):
+                try:
+                    request_id = int(payload.get('request_id'))
+                except Exception:
+                    request_id = None
+
+            if request_id is not None and request_id != self._active_load_request_id:
+                return
+
+            if self._defer_model_state_apply:
+                self._defer_model_state_apply = False
+                self._apply_preview_transform_state()
+                self._apply_transform_editor_state()
+                self._apply_measurement_state()
+
             self.model_loaded.emit(payload if isinstance(payload, dict) else {})
 
     def set_transform_edit_enabled(self, enabled: bool):

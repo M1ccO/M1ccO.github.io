@@ -97,11 +97,39 @@ class ResponsiveColumnsHost(QWidget):
         self._update_separator_shapes()
 
 
+from shared.ui.theme import current_theme_palette, compile_app_stylesheet
+
+
 # ── Dialog setup ─────────────────────────────────────────────────────────
 
 def setup_editor_dialog(dialog: QDialog):
     """Apply the standard work-editor property so QSS scoping rules match."""
     dialog.setProperty('workEditorDialog', True)
+
+
+def apply_host_visual_style(dialog: QDialog, host: QWidget | None = None) -> None:
+    """Adopt host's visual identity (palette, font, style) to ensure seamless appearance."""
+    if not isinstance(dialog, QDialog):
+        return
+
+    # 1. Enable styled background for major containers
+    for widget in [dialog]:
+        widget.setAttribute(Qt.WA_StyledBackground, True)
+
+    # 2. Inherit from host if provided
+    style_sheet = ""
+    if isinstance(host, QWidget):
+        style_sheet = str(host.styleSheet() or "")
+        dialog.setPalette(host.palette())
+        dialog.setFont(host.font())
+
+    # 3. Apply stylesheet if found
+    if style_sheet.strip():
+        current = str(dialog.styleSheet() or "")
+        if current != style_sheet:
+            dialog.setStyleSheet(style_sheet)
+            dialog.style().unpolish(dialog)
+            dialog.style().polish(dialog)
 
 
 def apply_titled_section_style(group: QGroupBox) -> QGroupBox:

@@ -8950,3 +8950,792 @@ AttributeError: 'types.SimpleNamespace' object has no attribute 'setUpdatesEnabl
 2026-04-22 11:28:26,561 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
 2026-04-22 11:28:26,564 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
 2026-04-22 11:28:26,565 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 15:25:22,374 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:25:22,377 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:25:22,649 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 15:25:22,649 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 15:25:22,672 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 15:25:22,676 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 15:25:22,679 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 15:25:22,733 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp3mb2gfyp\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:25:22,733 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp3mb2gfyp\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:25:22,737 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 15:34:00,525 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:34:00,527 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:34:00,756 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 15:34:00,756 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 15:34:00,774 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 15:34:00,797 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 15:34:00,800 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 15:34:00,835 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpxcgw2wch\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:34:00,836 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpxcgw2wch\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:34:00,838 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 15:46:42,085 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 15:46:42,087 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:46:42,087 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:46:42,088 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:46:42,088 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:46:42,088 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:46:42,088 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:46:42,088 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:46:42,088 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:46:42,303 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 15:46:42,304 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 15:46:42,320 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 15:46:42,341 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 15:46:42,344 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 15:46:42,376 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp6y2qv0pl\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:46:42,377 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp6y2qv0pl\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:46:42,379 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 15:52:21,473 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 15:52:21,475 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:52:21,476 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:52:21,686 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 15:52:21,687 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 15:52:21,703 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 15:52:21,725 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 15:52:21,728 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 15:52:21,760 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp2h4c2x5n\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:52:21,761 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp2h4c2x5n\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:52:21,763 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 15:57:48,971 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 15:57:48,973 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:57:48,973 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:57:48,973 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:57:48,974 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:57:48,974 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 15:57:48,974 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:57:48,974 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:57:48,974 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 15:57:49,218 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 15:57:49,218 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 15:57:49,239 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 15:57:49,266 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 15:57:49,270 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 15:57:49,304 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp5c84xul_\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:57:49,305 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp5c84xul_\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 15:57:49,307 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 16:02:17,017 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 16:02:17,019 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 16:02:17,019 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 16:02:17,019 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 16:02:17,019 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 16:02:17,019 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 16:02:17,019 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 16:02:17,020 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 16:02:17,020 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 16:02:17,237 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 16:02:17,237 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 16:02:17,254 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 16:02:17,274 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 16:02:17,278 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 16:02:17,312 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpjflvdg9u\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 16:02:17,313 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpjflvdg9u\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 16:02:17,315 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 19:26:12,538 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'embedded', 'host_diagnostic_mode': 'overlay'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'embedded', 'duration_ms': 0, 'host_diagnostic_mode': 'overlay'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'embedded', 'current_page': 'overlay'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'embedded', 'duration_ms': 0, 'current_page': 'overlay'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.begin', 'transport': 'embedded', 'host_diagnostic_mode': 'auto'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.enter.end', 'transport': 'embedded', 'duration_ms': 0, 'host_diagnostic_mode': 'auto'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'embedded', 'current_page': 'selector'}
+2026-04-22 19:26:12,539 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'embedded', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-22 19:26:12,540 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.begin', 'transport': 'embedded', 'current_page': 'selector'}
+2026-04-22 19:26:12,540 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'selector_mode.exit.end', 'transport': 'embedded', 'duration_ms': 0, 'current_page': 'selector'}
+2026-04-22 19:26:12,540 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'trace.enabled', 'transport': 'embedded', 'host_diagnostic_mode': 'auto', 'targets': ['dialog', 'root_stack', 'normal_page', 'selector_page', 'selector_mount_container', 'selector_overlay_container', 'selector_overlay_mount_container', 'selector_transition_shield']}
+2026-04-22 19:26:12,541 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'surface.event', 'transport': 'embedded', 'watched': 'selector_page', 'qt_event': 'Paint', 'visible': False, 'updates_enabled': True, 'current_page': 'selector', 'x': 0, 'y': 0, 'width': 100, 'height': 30}
+2026-04-22 19:44:16,538 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:44:16,540 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:44:16,771 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 19:44:16,772 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 19:44:16,792 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 19:44:16,815 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 19:44:16,818 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 19:44:16,932 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpywim0shi\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:44:16,933 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpywim0shi\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:44:16,934 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 19:45:20,724 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 19:45:20,726 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:45:20,726 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:45:20,726 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:45:20,727 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:45:20,727 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:45:20,727 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:45:20,727 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:45:20,727 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:45:20,955 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 19:45:20,955 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 19:45:20,976 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 19:45:20,994 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 19:45:20,998 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 19:45:21,030 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp25mfh1od\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:45:21,030 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp25mfh1od\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:45:21,033 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 19:49:59,840 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 19:49:59,842 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:49:59,842 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:49:59,843 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:49:59,843 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:49:59,843 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:49:59,843 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:49:59,843 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:49:59,843 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:50:00,109 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 19:50:00,109 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 19:50:00,129 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 19:50:00,160 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 19:50:00,164 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 19:50:00,199 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp4_b1m_zj\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:50:00,199 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp4_b1m_zj\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:50:00,201 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 19:53:25,531 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 19:53:25,532 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:53:25,533 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:53:25,774 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 19:53:25,774 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 19:53:25,792 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 19:53:25,813 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 19:53:25,816 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 19:53:25,851 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp2idnqmei\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:53:25,852 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp2idnqmei\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:53:25,854 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 19:57:13,883 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 19:57:13,884 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:57:13,885 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 19:57:14,152 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 19:57:14,152 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 19:57:14,173 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 19:57:14,202 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 19:57:14,206 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 19:57:14,241 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpiskog2lf\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:57:14,242 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpiskog2lf\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 19:57:14,244 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:05:14,679 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:05:14,681 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:05:14,682 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:05:14,933 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:05:14,933 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:05:14,953 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:05:14,975 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:05:14,980 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:05:15,015 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpc207i8k8\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:05:15,016 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpc207i8k8\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:05:15,019 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:06:43,976 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:06:43,978 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:06:43,979 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:06:44,198 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:06:44,198 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:06:44,215 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:06:44,236 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:06:44,239 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:06:44,271 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpv0nlm8mi\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:06:44,272 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpv0nlm8mi\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:06:44,275 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:07:29,776 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:07:29,778 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:07:29,778 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:07:29,778 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:07:29,779 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:07:29,779 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:07:29,779 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:07:29,779 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:07:29,779 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:07:30,057 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:07:30,058 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:07:30,086 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:07:30,123 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:07:30,127 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:07:30,178 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp3qs3487z\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:07:30,179 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp3qs3487z\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:07:30,182 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:18:49,094 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:18:49,096 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:18:49,096 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:18:49,096 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:18:49,097 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:18:49,097 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:18:49,097 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:18:49,097 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:18:49,097 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:18:49,343 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:18:49,343 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:18:49,361 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:18:49,380 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:18:49,384 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:18:49,422 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp1uvs7mbj\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:18:49,423 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp1uvs7mbj\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:18:49,428 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:29:52,148 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:29:52,150 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:29:52,150 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:29:52,150 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:29:52,151 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:29:52,151 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:29:52,151 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:29:52,151 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:29:52,151 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:29:52,354 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:29:52,355 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:29:52,370 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:29:52,389 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:29:52,393 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:29:52,424 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpanx2t53q\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:29:52,425 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpanx2t53q\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:29:52,427 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:34:47,614 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:34:47,618 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:34:47,619 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:34:47,993 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:34:47,993 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:34:48,013 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:34:48,056 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:34:48,062 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:34:48,137 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpgdbso1iz\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:34:48,137 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpgdbso1iz\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:34:48,141 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:35:49,161 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:35:49,163 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:35:49,372 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:35:49,372 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:35:49,388 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:35:49,407 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:35:49,410 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:35:49,442 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpsxd9tpi8\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:35:49,443 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpsxd9tpi8\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:35:49,446 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:44:38,984 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:44:38,986 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:44:39,190 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:44:39,190 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:44:39,206 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:44:39,226 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:44:39,230 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:44:39,262 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp5jcno25m\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:44:39,262 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp5jcno25m\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:44:39,264 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 20:52:29,914 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 20:52:29,915 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:52:29,916 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 20:52:30,161 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 20:52:30,161 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 20:52:30,179 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 20:52:30,198 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 20:52:30,201 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 20:52:30,240 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpm3_z50i5\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:52:30,241 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpm3_z50i5\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 20:52:30,243 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-22 21:05:57,735 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 21:05:57,737 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-22 21:05:57,949 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-22 21:05:57,949 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-22 21:05:57,966 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-22 21:05:57,988 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-22 21:05:57,991 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-22 21:05:58,024 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpm8zmcuoe\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 21:05:58,024 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmpm8zmcuoe\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-22 21:05:58,027 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}

@@ -1,4 +1,4 @@
-﻿import json
+import json
 from typing import Callable
 
 from PySide6.QtCore import QEvent, Qt, QTimer
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
     QWidget,
+    QTextEdit,
 )
 
 # NOTE: FIXTURE_MODELS_ROOT_DEFAULT will be added to config.py by the parent task;
@@ -61,16 +62,33 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._group_count = int(group_count or 0)
         self._general_field_columns = None
 
-        self._init_editor_state()
+        self.setUpdatesEnabled(False)
+        try:
+            # ROOT CAUSE FIX: Adopt host style early so background is themed on first paint.
+            from shared.ui.helpers.editor_helpers import apply_host_visual_style
+            apply_host_visual_style(self, parent)
 
-        self.setWindowTitle(self._dialog_title())
-        self.resize(1120, 760)
-        self.setMinimumSize(900, 660)
-        self.setModal(True)
-        setup_editor_dialog(self)
-        self._build_ui()
-        self._install_local_event_filters()
-        self._load_fixture()
+            self._init_editor_state()
+
+            self.setWindowTitle(self._dialog_title())
+            self.resize(1120, 760)
+            self.setMinimumSize(900, 660)
+            self.setModal(True)
+            setup_editor_dialog(self)
+            self._build_ui()
+            self._install_local_event_filters()
+            self._load_fixture()
+            self._update_transform_row_sizes()
+            if hasattr(self, 'notes'):
+                if isinstance(self.notes, QTextEdit):
+                    self._update_notes_editor_height()
+
+            # DEEP POLISH: Ensure all child widgets have the correct stylesheet/palette applied
+            # before the window is ever shown, preventing the white flash.
+            for widget in self.findChildren(QWidget):
+                widget.ensurePolished()
+        finally:
+            self.setUpdatesEnabled(True)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
@@ -362,7 +380,6 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
-        self._update_transform_row_sizes()
         self._ensure_on_screen()
 
     def moveEvent(self, event):

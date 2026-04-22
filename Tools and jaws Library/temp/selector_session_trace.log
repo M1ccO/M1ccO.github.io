@@ -83,3 +83,6 @@
 {"ts": "2026-04-22T11:36:44.623099+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "opening", "to": "active", "caller": "embedded.mounted"}
 {"ts": "2026-04-22T11:36:45.946746+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "active", "to": "closing", "caller": "embedded.submit"}
 {"ts": "2026-04-22T11:36:45.977246+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "closing", "to": "idle", "caller": "embedded.submit.teardown"}
+{"ts": "2026-04-22T16:26:12.537777+00:00", "session": "bfc7321d-a577-49d2-a981-4106cf7b7f7e", "from": "idle", "to": "opening", "caller": "tools"}
+{"ts": "2026-04-22T16:40:57.512745+00:00", "session": "b7875cdb-0d00-467e-a23c-dd9c7d398514", "from": "idle", "to": "opening", "caller": "tools"}
+{"ts": "2026-04-22T16:41:53.839719+00:00", "session": "e684c34d-ea9e-4db5-bf6a-d671ecd1eee6", "from": "idle", "to": "opening", "caller": "tools"}
