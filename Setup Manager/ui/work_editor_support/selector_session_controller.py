@@ -548,7 +548,7 @@ class WorkEditorSelectorController:
         self._stop_selector_expand_anim()
 
         anim = QPropertyAnimation(dialog, b"geometry", dialog)
-        anim.setDuration(180)
+        anim.setDuration(300)
         anim.setStartValue(from_geom)
         anim.setEndValue(to_geom)
         anim.setEasingCurve(QEasingCurve.OutQuart)
@@ -594,7 +594,7 @@ class WorkEditorSelectorController:
             return
 
         anim = QPropertyAnimation(dialog, b"geometry", dialog)
-        anim.setDuration(150)
+        anim.setDuration(250)
         anim.setStartValue(from_geom)
         anim.setEndValue(target_geom)
         anim.setEasingCurve(QEasingCurve.InOutQuart)
@@ -1270,7 +1270,7 @@ class WorkEditorSelectorController:
             widget.activateWindow()
             # Selector is visible at Work Editor size. After a short pause so
             # the user registers the open, animate the dialog to full width.
-            QTimer.singleShot(120, self._animate_expand_for_selector)
+            QTimer.singleShot(180, self._animate_expand_for_selector)
             self._schedule_preview_host_preload()
             self._log("open.embedded.ready", kind=kind_key, session_id=str(session_id))
             return True
