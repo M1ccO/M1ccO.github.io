@@ -128,6 +128,10 @@ def _ensure_selector_detached_preview_dialog(
         page._detached_preview_widget = StlPreviewWidget()
 
     if page._detached_preview_widget is not None:
+        try:
+            page._detached_preview_widget.clear()
+        except Exception:
+            pass
         page._detached_preview_widget.set_control_hint_text(
             page._t(
                 "tool_editor.hint.rotate_pan_zoom",
@@ -315,6 +319,10 @@ def sync_tool_selector_detached_preview(page, *, show_errors: bool = False) -> b
     )
     loaded = True
     if getattr(page, "_detached_preview_last_model_key", None) != model_key:
+        try:
+            page._detached_preview_widget.clear()
+        except Exception:
+            pass
         loaded = page._load_preview_content(page._detached_preview_widget, stl_path, label=label)
         if loaded:
             page._detached_preview_last_model_key = model_key
@@ -474,6 +482,10 @@ def sync_fixture_selector_detached_preview(page, show_errors: bool = False) -> b
     model_key = page._preview_model_key(fixture)
     loaded = True
     if getattr(page, "_detached_preview_last_model_key", None) != model_key:
+        try:
+            page._detached_preview_widget.clear()
+        except Exception:
+            pass
         loaded = page._load_preview_content(
             page._detached_preview_widget,
             fixture,
@@ -598,6 +610,10 @@ def sync_jaw_selector_detached_preview(page, show_errors: bool = False) -> bool:
     model_key = page._preview_model_key(jaw)
     loaded = True
     if getattr(page, "_detached_preview_last_model_key", None) != model_key:
+        try:
+            page._detached_preview_widget.clear()
+        except Exception:
+            pass
         loaded = page._load_preview_content(page._detached_preview_widget, jaw, label=jaw_preview_label(jaw, page._t))
         if loaded:
             apply_jaw_preview_transform(page._detached_preview_widget, jaw)

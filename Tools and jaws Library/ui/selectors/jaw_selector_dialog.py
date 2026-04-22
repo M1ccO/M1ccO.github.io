@@ -67,10 +67,6 @@ class JawSelectorDialog(
         self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
         self._selected_slots: set[str] = set()
 
-        # Required by jaw detail builder (build_jaw_preview_card / _clear_details)
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
-
         # Detached preview state (toolbar preview toggle parity with JawPage)
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
@@ -217,8 +213,6 @@ class EmbeddedJawSelectorWidget(
         self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
         self._selected_slots: set[str] = set()
 
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._detached_preview_last_model_key = None

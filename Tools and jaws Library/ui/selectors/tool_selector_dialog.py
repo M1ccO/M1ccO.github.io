@@ -81,10 +81,6 @@ class ToolSelectorDialog(
             initial_assignment_buckets,
         )
 
-        # Required by detail panel builder (detail_panel_builder.py / _clear_details)
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
-
         # Detached preview state (toolbar preview toggle parity with HomePage)
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
@@ -266,8 +262,6 @@ class EmbeddedToolSelectorWidget(
             initial_assignment_buckets,
         )
 
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._close_preview_shortcut = None

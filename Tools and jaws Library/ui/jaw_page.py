@@ -101,8 +101,6 @@ class JawPage(CatalogPageBase):
         self._initial_load_scheduled = False
         self._deferred_refresh_needed = False
 
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._detached_preview_last_model_key = None

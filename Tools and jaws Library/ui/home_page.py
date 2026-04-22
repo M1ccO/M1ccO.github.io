@@ -199,7 +199,7 @@ class HomePage(CatalogPageBase):
         self._details_hidden = True
         self._last_splitter_sizes = None
 
-        # Preview state (detached window + inline warmup)
+        # Preview state (detached window only)
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._close_preview_shortcut = None
@@ -210,8 +210,6 @@ class HomePage(CatalogPageBase):
         self._detached_preview_last_model_key = None
         self._detached_preview_sync_delay_ms = 60
         self._detached_preview_sync_request_id = 0
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
 
         # Database + external state
         self._active_db_name = ''

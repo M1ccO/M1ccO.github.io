@@ -1181,3 +1181,11 @@
 {"ts": "2026-04-22T08:29:51.740850+00:00", "session": "ffa72027-c5aa-4202-9c57-251a8fe70c70", "from": "opening", "to": "active", "caller": "embedded.mounted"}
 {"ts": "2026-04-22T08:29:55.756812+00:00", "session": "ffa72027-c5aa-4202-9c57-251a8fe70c70", "from": "active", "to": "closing", "caller": "shutdown:forced-closing"}
 {"ts": "2026-04-22T08:29:55.758064+00:00", "session": "ffa72027-c5aa-4202-9c57-251a8fe70c70", "from": "closing", "to": "idle", "caller": "shutdown"}
+{"ts": "2026-04-22T09:48:12.550822+00:00", "session": "9d3d49d7-8016-459a-be7b-8aa5c07b52f9", "from": "idle", "to": "opening", "caller": "embedded.jaws"}
+{"ts": "2026-04-22T09:48:12.792177+00:00", "session": "9d3d49d7-8016-459a-be7b-8aa5c07b52f9", "from": "opening", "to": "active", "caller": "embedded.mounted"}
+{"ts": "2026-04-22T09:48:15.417168+00:00", "session": "9d3d49d7-8016-459a-be7b-8aa5c07b52f9", "from": "active", "to": "closing", "caller": "embedded.submit"}
+{"ts": "2026-04-22T09:48:15.464238+00:00", "session": "9d3d49d7-8016-459a-be7b-8aa5c07b52f9", "from": "closing", "to": "idle", "caller": "embedded.submit.teardown"}
+{"ts": "2026-04-22T09:48:31.758273+00:00", "session": "b6d6ea77-1496-41fc-85b5-45c19ee750bb", "from": "idle", "to": "opening", "caller": "embedded.tools"}
+{"ts": "2026-04-22T09:48:32.401567+00:00", "session": "b6d6ea77-1496-41fc-85b5-45c19ee750bb", "from": "opening", "to": "active", "caller": "embedded.mounted"}
+{"ts": "2026-04-22T09:48:39.300943+00:00", "session": "b6d6ea77-1496-41fc-85b5-45c19ee750bb", "from": "active", "to": "closing", "caller": "embedded.submit"}
+{"ts": "2026-04-22T09:48:39.749510+00:00", "session": "b6d6ea77-1496-41fc-85b5-45c19ee750bb", "from": "closing", "to": "idle", "caller": "embedded.submit.teardown"}

@@ -1051,6 +1051,12 @@ class MainWindow(QMainWindow):
         # make subsequent non-selector IPC requests be ignored as if selector
         # mode were still active.
         library_was_visible = bool(getattr(self, "_selector_session_library_was_visible", False))
+        logger.debug(
+            "selector: _back_to_setup_manager library_was_visible=%r mode=%r request_id=%r",
+            library_was_visible,
+            getattr(self, "_selector_mode", ""),
+            getattr(self, "_selector_request_id", ""),
+        )
         self._selector_session_library_was_visible = False
         _close_selector_detached_preview(self)
         _close_library_detached_previews(self)
@@ -1058,12 +1064,14 @@ class MainWindow(QMainWindow):
         self._set_selector_session_state(empty_selector_session_state())
         if library_was_visible:
             # Library was already open before the selector session — stay visible.
+            logger.debug("selector: return path keeps library visible (skip handoff)")
             if self.windowFlags() & Qt.WindowStaysOnTopHint:
                 self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
             self.show()
             self.raise_()
             self.activateWindow()
             return
+        logger.debug("selector: return path performs handoff_to_setup_manager (hide sender)")
         handoff_to_setup_manager(
             self,
             setup_manager_server_name=SETUP_MANAGER_SERVER_NAME,
@@ -1519,6 +1527,13 @@ class MainWindow(QMainWindow):
                 self._selector_session_library_was_visible = bool(
                     self.isVisible() and not self.isMinimized()
                 )
+            logger.debug(
+                "selector: apply_external_request active mode=%r caller_was_visible=%r stored_visible=%r should_show=%r",
+                self._selector_mode,
+                caller_was_visible,
+                self._selector_session_library_was_visible,
+                should_show,
+            )
             # Open selector on top of the Library window.  The selector has
             # WindowStaysOnTopHint and is sized to cover the Library exactly,
             # so the Library stays visible underneath without any gap or flash.

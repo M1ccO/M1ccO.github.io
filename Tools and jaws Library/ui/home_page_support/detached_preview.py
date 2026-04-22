@@ -114,6 +114,10 @@ def ensure_detached_preview_dialog(page):
         page._detached_preview_widget = StlPreviewWidget()
 
     if page._detached_preview_widget is not None:
+        try:
+            page._detached_preview_widget.clear()
+        except Exception:
+            pass
         page._detached_preview_widget.set_control_hint_text(
             page._t(
                 'tool_editor.hint.rotate_pan_zoom',
@@ -281,6 +285,10 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     )
     loaded = True
     if page._detached_preview_last_model_key != model_key:
+        try:
+            page._detached_preview_widget.clear()
+        except Exception:
+            pass
         loaded = load_preview_content(page._detached_preview_widget, stl_path, label=label)
         if loaded:
             page._detached_preview_last_model_key = model_key

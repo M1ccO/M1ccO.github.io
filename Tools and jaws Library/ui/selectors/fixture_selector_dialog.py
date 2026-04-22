@@ -351,8 +351,6 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self._startup_initialized = False
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
         self._close_preview_shortcut = None
         self._measurement_toggle_btn = None
         self._detached_measurements_enabled = True

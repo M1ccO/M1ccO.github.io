@@ -2,6 +2,7 @@ import json
 import sys
 import ctypes
 import traceback
+import logging
 from pathlib import Path
 
 # Add parent directory to path so shared module can be imported
@@ -25,6 +26,9 @@ from shared.ui.transition_shell import (
 from shared.ui.transition_shell_config import get_transition_shell_config, init_transition_shell_config
 from ui.main_window_support import complete_setup_manager_handoff
 from ui.selectors.external_preview_host import close_external_selector_preview, show_external_selector_preview
+
+
+logger = logging.getLogger(__name__)
 
 
 def _split_csv(text: str) -> list[str]:
@@ -324,12 +328,25 @@ def main():
         # has the true pre-handoff state even if apply_external_request shows the
         # window as a side effect.
         was_visible = bool(win.isVisible() and not win.isMinimized())
+        logger.debug(
+            "ipc: request received command=%r selector_mode=%r show=%r was_visible=%r",
+            command,
+            str(payload.get('selector_mode', '')).strip().lower(),
+            bool(payload.get('show', True)),
+            was_visible,
+        )
         win.apply_external_request(payload, caller_was_visible=was_visible)
         geometry_text = str(payload.get('geometry', '')).strip()
         selector_mode = str(payload.get('selector_mode', '')).strip().lower()
         selector_active_request = selector_mode in {'tools', 'jaws', 'fixtures'}
         handoff_hide_callback_server = str(payload.get('handoff_hide_callback_server') or '').strip()
         should_show = bool(payload.get('show', True))
+        logger.debug(
+            "ipc: selector_active_request=%r handoff_hide_callback_server=%r should_show=%r",
+            selector_active_request,
+            bool(handoff_hide_callback_server),
+            should_show,
+        )
 
         if not should_show:
             # Silent preload/update requests should stay lightweight: keep the

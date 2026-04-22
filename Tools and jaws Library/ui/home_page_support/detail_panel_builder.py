@@ -18,7 +18,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Qt, QSize, QTimer
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QColor, QFontMetrics, QPainter, QPixmap, QTransform
 from PySide6.QtWidgets import (
     QFrame,
@@ -33,7 +33,6 @@ from PySide6.QtWidgets import (
 )
 
 from shared.ui.helpers.editor_helpers import create_titled_section
-from shared.ui.stl_preview import StlPreviewWidget
 from config import MILLING_TOOL_TYPES, TURNING_TOOL_TYPES
 
 if TYPE_CHECKING:
@@ -407,93 +406,6 @@ class DetailPanelBuilder:
         layout.addWidget(body_host)
         return frame
 
-    def _build_preview_panel(self, stl_path: str | None = None) -> QFrame:
-        """Build the 3D Preview section with STL viewer."""
-        frame = create_titled_section(
-            self.page._t("tool_library.section.preview", "Preview")
-        )
-        frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        layout = QVBoxLayout(frame)
-        layout.setSpacing(10)
-        layout.setContentsMargins(6, 4, 6, 6)
-
-        diagram = QWidget()
-        diagram.setObjectName("detailPreviewGradientHost")
-        diagram.setAttribute(Qt.WA_StyledBackground, True)
-        diagram.setStyleSheet(
-            "QWidget#detailPreviewGradientHost {"
-            "  background-color: #d6d9de;"
-            "  border: none;"
-            "  border-radius: 6px;"
-            "}"
-        )
-        diagram.setMinimumHeight(300)
-        diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        dlay = QVBoxLayout(diagram)
-        dlay.setContentsMargins(6, 6, 6, 6)
-        dlay.setSpacing(0)
-
-        viewer = getattr(self.page, '_detail_preview_widget', None)
-        if viewer is None and StlPreviewWidget is not None:
-            viewer = StlPreviewWidget()
-            self.page._detail_preview_widget = viewer
-
-        if viewer is not None:
-            if viewer.parent() is not diagram:
-                viewer.setParent(diagram)
-            viewer.setStyleSheet("background: transparent; border: none;")
-            viewer.set_status_overlay_enabled(False)
-            viewer.set_control_hint_text(
-                self.page._t(
-                    "tool_editor.hint.rotate_pan_zoom",
-                    "Rotate: left mouse • Pan: right mouse • Zoom: mouse wheel",
-                )
-            )
-
-        loaded = False
-        if viewer is not None and stl_path:
-            current_key = str(stl_path)
-            if self.page._detail_preview_model_key != current_key:
-                loaded = self.page._load_preview_content(viewer, stl_path, label="Detail Preview")
-                self.page._detail_preview_model_key = current_key if loaded else None
-            else:
-                loaded = True
-        else:
-            self.page._detail_preview_model_key = None
-
-        if viewer is not None:
-            viewer.setMinimumHeight(260)
-            viewer.set_measurement_overlays([])
-            viewer.set_measurements_visible(False)
-
-        if loaded:
-            dlay.addWidget(viewer, 1)
-            viewer.show()
-        else:
-            if viewer is not None:
-                viewer.clear()
-                viewer.hide()
-            txt = QLabel(
-                self.page._t(
-                    "tool_library.preview.invalid_data",
-                    "No valid 3D model data found.",
-                )
-                if stl_path
-                else self.page._t(
-                    "tool_library.preview.none_assigned", "No 3D model assigned."
-                )
-            )
-            txt.setWordWrap(True)
-            txt.setAlignment(Qt.AlignCenter)
-            dlay.addStretch(1)
-            dlay.addWidget(txt)
-            dlay.addStretch(1)
-
-        layout.addWidget(diagram, 1)
-        return frame
-
     def _build_placeholder_details(self) -> QFrame:
         """Build empty state when no tool is selected."""
         card = QFrame()
@@ -785,11 +697,6 @@ class DetailPanelBuilder:
 
     def _clear_details(self) -> None:
         """Clear all widgets from detail_layout."""
-        cached_viewer = getattr(self.page, '_detail_preview_widget', None)
-        if cached_viewer is not None:
-            cached_viewer.hide()
-            cached_viewer.setParent(None)
-
         while self.page.detail_layout.count():
             item = self.page.detail_layout.takeAt(0)
             widget = item.widget()
