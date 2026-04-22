@@ -214,25 +214,26 @@ def main():
 
     # Launch Tool Library immediately only when explicitly enabled.
     if ENABLE_TOOL_LIBRARY_PRELOAD:
-        tool_lib_process = None
+        preload_started = False
         if TOOL_LIBRARY_MAIN_PATH.exists() and not getattr(sys, "frozen", False):
             launch_python = Path(sys.executable)
             pythonw_candidate = launch_python.parent / "pythonw.exe"
             if pythonw_candidate.exists() and _is_runnable_python(pythonw_candidate):
                 launch_python = pythonw_candidate
-            tool_lib_process = QProcess()
-            tool_lib_process.startDetached(
-                str(launch_python),
-                [str(TOOL_LIBRARY_MAIN_PATH)] + tool_lib_args,
-                str(TOOL_LIBRARY_PROJECT_DIR),
+            preload_started = bool(
+                QProcess.startDetached(
+                    str(launch_python),
+                    [str(TOOL_LIBRARY_MAIN_PATH)] + tool_lib_args,
+                    str(TOOL_LIBRARY_PROJECT_DIR),
+                )
             )
-        if tool_lib_process is None:
+        if not preload_started:
             for exe_path in TOOL_LIBRARY_EXE_CANDIDATES:
                 if not is_safe_tool_library_target(exe_path):
                     continue
-                tool_lib_process = QProcess()
-                tool_lib_process.startDetached(str(exe_path), tool_lib_args, str(exe_path.parent))
-                break
+                if QProcess.startDetached(str(exe_path), tool_lib_args, str(exe_path.parent)):
+                    preload_started = True
+                    break
 
     step(2, f"{loading_header}\n\n{_lt('setup_manager.loading.load_modules', 'Loading modules...')}")
     from data.database import Database

@@ -8,6 +8,33 @@ def _is_visible_work_editor(widget) -> bool:
     return bool(widget is not None and widget.isVisible() and widget.property("workEditorDialog"))
 
 
+def _build_silent_preload_payload(window) -> dict:
+    payload = {"show": False}
+
+    draw_service = getattr(window, "draw_service", None)
+    if draw_service is not None:
+        tools_db_path = str(getattr(draw_service, "tool_db_path", "") or "").strip()
+        jaws_db_path = str(getattr(draw_service, "jaw_db_path", "") or "").strip()
+        fixtures_db_path = str(
+            getattr(draw_service, "fixture_db_path", getattr(draw_service, "jaw_db_path", "")) or ""
+        ).strip()
+        if tools_db_path:
+            payload["tools_db_path"] = tools_db_path
+        if jaws_db_path:
+            payload["jaws_db_path"] = jaws_db_path
+        if fixtures_db_path:
+            payload["fixtures_db_path"] = fixtures_db_path
+
+    work_service = getattr(window, "work_service", None)
+    get_machine_profile_key = getattr(work_service, "get_machine_profile_key", None)
+    if callable(get_machine_profile_key):
+        machine_profile_key = str(get_machine_profile_key() or "").strip().lower()
+        if machine_profile_key:
+            payload["machine_profile_key"] = machine_profile_key
+
+    return payload
+
+
 def initialize_preload_state(window) -> None:
     window._tool_library_preload_completed = False
     window._tool_library_preload_retries = 0
@@ -63,7 +90,7 @@ def preload_tool_library_background(window) -> None:
                 QTimer.singleShot(700, lambda: retry_tool_library_preload(window))
         return
 
-    if window._send_to_tool_library({"show": False}):
+    if window._send_to_tool_library(_build_silent_preload_payload(window)):
         window._tool_library_preload_completed = True
         window._tool_library_preload_launch_started = False
         return

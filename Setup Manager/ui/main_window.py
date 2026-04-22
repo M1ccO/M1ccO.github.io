@@ -493,11 +493,11 @@ class MainWindow(QMainWindow):
             # Keep first show free of hidden dialog warmups; the old Work Editor
             # preload was the source of the launch-time hide/show flash.
             if not getattr(self, "_tool_library_preload_completed", False):
-                # Delay hidden Library preload until Setup Manager has fully
-                # settled after splash close. Launching a second Qt process too
-                # close to the first paint still causes a visible startup hitch
-                # on Windows even when the Library stays hidden.
-                QTimer.singleShot(2200, self._preload_tool_library_background)
+                # The hidden Library process is already launched during startup.
+                # This follow-up pass only syncs the active DB/profile payload and
+                # warms the hidden instance, so it can run much sooner than the
+                # original cold-start launch without causing a visible hitch.
+                QTimer.singleShot(900, self._preload_tool_library_background)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
 

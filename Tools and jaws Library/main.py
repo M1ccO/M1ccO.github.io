@@ -260,6 +260,12 @@ def main():
     if not _known_args.hidden:
         win.show()
         schedule_background_asset_warmup(1800, include_preview_runtime=True)
+    else:
+        # Hidden preload mode should still build catalog state soon after
+        # startup so the first foreground open does not pay the full refresh
+        # cost. Keep preview warmup disabled here to avoid unnecessary GPU/
+        # Chromium work before the user asks for a preview.
+        schedule_background_asset_warmup(350, include_preview_runtime=False)
     # Hidden mode: window stays hidden until an IPC show request arrives.
     # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
