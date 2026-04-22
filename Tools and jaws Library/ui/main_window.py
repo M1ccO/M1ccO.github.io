@@ -59,6 +59,7 @@ from ui.main_window_support import (
     selector_session_from_payload,
     send_selector_result_payload,
 )
+from ui.selectors.external_preview_host import close_external_selector_preview
 from ui.selectors import FixtureSelectorDialog, JawSelectorDialog, ToolSelectorDialog
 from ui.jaw_catalog_delegate import apply_delegate_theme as apply_jaw_delegate_theme
 from ui.tool_catalog_delegate import apply_delegate_theme as apply_tool_delegate_theme
@@ -150,6 +151,46 @@ class PlaceholderPage(QWidget):
         layout.addWidget(heading)
         layout.addWidget(card)
         layout.addStretch(1)
+
+
+_LIBRARY_DETACHED_PREVIEW_PAGE_ATTRS = (
+    'home_page',
+    'jaws_page',
+    'fixtures_page',
+    'assemblies_page',
+    'holders_page',
+    'inserts_page',
+)
+
+
+def _close_library_detached_previews(window) -> None:
+    for attr_name in _LIBRARY_DETACHED_PREVIEW_PAGE_ATTRS:
+        page = getattr(window, attr_name, None)
+        if page is None:
+            continue
+
+        close_preview = getattr(page, '_close_detached_preview', None)
+        if callable(close_preview):
+            try:
+                close_preview()
+            except Exception:
+                pass
+            continue
+
+        dialog = getattr(page, '_detached_preview_dialog', None)
+        if dialog is None:
+            continue
+        try:
+            dialog.close()
+        except Exception:
+            pass
+
+
+def _close_selector_detached_preview(window) -> None:
+    try:
+        close_external_selector_preview(window)
+    except Exception:
+        pass
 
 
 class MainWindow(QMainWindow):
@@ -1009,8 +1050,20 @@ class MainWindow(QMainWindow):
         # Also close any standalone selector dialogs; leaving them open can
         # make subsequent non-selector IPC requests be ignored as if selector
         # mode were still active.
+        library_was_visible = bool(getattr(self, "_selector_session_library_was_visible", False))
+        self._selector_session_library_was_visible = False
+        _close_selector_detached_preview(self)
+        _close_library_detached_previews(self)
         self._close_selector_dialogs()
         self._set_selector_session_state(empty_selector_session_state())
+        if library_was_visible:
+            # Library was already open before the selector session — stay visible.
+            if self.windowFlags() & Qt.WindowStaysOnTopHint:
+                self.setWindowFlag(Qt.WindowStaysOnTopHint, False)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            return
         handoff_to_setup_manager(
             self,
             setup_manager_server_name=SETUP_MANAGER_SERVER_NAME,
@@ -1019,6 +1072,7 @@ class MainWindow(QMainWindow):
         )
 
     def _clear_selector_session(self, show: bool = True):
+        _close_selector_detached_preview(self)
         self._close_selector_dialogs()
         self._set_selector_session_state(empty_selector_session_state())
         # Only remove stay-on-top when it is actually set — unconditionally
@@ -1404,7 +1458,7 @@ class MainWindow(QMainWindow):
             if item_id:
                 self.home_page.select_tool_by_id(item_id)
 
-    def apply_external_request(self, payload: dict, reload_preferences: bool = True):
+    def apply_external_request(self, payload: dict, reload_preferences: bool = True, *, caller_was_visible: bool | None = None):
         selector_state = selector_session_from_payload(payload)
         selector_mode = str(selector_state.get('mode') or '')
         should_show = bool(payload.get('show', True))
@@ -1455,6 +1509,16 @@ class MainWindow(QMainWindow):
 
         if selector_active:
             self._set_selector_session_state(selector_state)
+            # Track whether Library was already visible before this selector
+            # session. If so, _back_to_setup_manager should not hide it.
+            # caller_was_visible is set by main.py before apply_external_request
+            # is called, capturing the true pre-handoff visibility state.
+            if caller_was_visible is not None:
+                self._selector_session_library_was_visible = caller_was_visible
+            else:
+                self._selector_session_library_was_visible = bool(
+                    self.isVisible() and not self.isMinimized()
+                )
             # Open selector on top of the Library window.  The selector has
             # WindowStaysOnTopHint and is sized to cover the Library exactly,
             # so the Library stays visible underneath without any gap or flash.

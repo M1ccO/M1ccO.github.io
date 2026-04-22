@@ -14,9 +14,10 @@ class TransitionShellMode(str, Enum):
 class TransitionShellConfig:
     mode: TransitionShellMode
     capture_timeout_ms: int = 100
-    fade_duration_ms: int = 250
+    fade_duration_ms: int = 360
     reveal_delay_ms: int = 0
     shell_min_show_ms: int = 50
+    sender_complete_delay_ms: int = 100
     preload_gate_enabled: bool = True
 
     @property

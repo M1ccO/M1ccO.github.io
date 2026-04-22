@@ -21,9 +21,13 @@ import time
 from contextlib import contextmanager
 from uuid import uuid4
 
-from PySide6.QtCore import QSize, QTimer, Qt
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QSize, QTimer, Qt
+from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
+    QApplication,
+    QGraphicsOpacityEffect,
     QHBoxLayout,
+    QLabel,
     QMessageBox,
     QStackedWidget,
     QWidget,
@@ -60,12 +64,24 @@ from ui.work_editor_support.selectors import (
 from ui.work_editor_support.selector_state import selector_target_ordered_list
 
 from config import (
+    TOOL_LIBRARY_EXE_CANDIDATES,
+    TOOL_LIBRARY_MAIN_PATH,
+    TOOL_LIBRARY_PROJECT_DIR,
+    TOOL_LIBRARY_READY_PATH,
+    TOOL_LIBRARY_SERVER_NAME,
     WORK_EDITOR_SELECTOR_DIAGNOSTIC_KIND,
     WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE,
+    WORK_EDITOR_SELECTOR_MODE,
     WORK_EDITOR_SELECTOR_TRACE_PAINT,
 )
 
 from services.selector_session import SelectorSessionCoordinator, make_file_trace_listener
+from ui.main_window_support.library_ipc import (
+    is_tool_library_ready,
+    launch_tool_library,
+    send_request_with_retry,
+    send_to_tool_library,
+)
 
 from PySide6.QtCore import QEvent
 
@@ -110,12 +126,19 @@ class WorkEditorSelectorController:
 
         # Transition shield
         self._transition_shield_pending_hide = False
+        self._defer_transition_reveal_once = False
+        self._pending_enter_fade_surface: QWidget | None = None
+        self._preexpanded_for_selector_open = False
 
         # Diagnostic trace
         self._trace_widgets: dict[int, tuple[str, QWidget]] = {}
 
         # Embedded selector widget
         self._active_embedded_widget: QWidget | None = None
+
+        # Hidden preview host preload
+        self._preview_host_preload_scheduled = False
+        self._preview_host_launch_started = False
 
         # IPC state
         self._pending_ipc_request_id: str | None = None
@@ -279,10 +302,19 @@ class WorkEditorSelectorController:
 
     def reset_for_reuse(self) -> None:
         """Reset controller state when the dialog is reused for a new work."""
+        if self._mode_active:
+            try:
+                self._exit_mode()
+            except Exception:
+                _log.debug("work_editor.selector failed to exit mode during reset_for_reuse", exc_info=True)
         if self._coordinator.is_busy:
             self._coordinator.force_shutdown()
+        self._detach_active_embedded_widget()
+        dispose_embedded_selector_runtime(self._dialog)
         self._mode_active = False
         self._open_requested = False
+        self._transition_shield_pending_hide = False
+        self._hidden_editor_widgets = []
         self._pending_ipc_request_id = None
         self._pending_ipc_kind = None
         self._ipc_saved_geometry = None
@@ -294,7 +326,10 @@ class WorkEditorSelectorController:
 
     @staticmethod
     def _resolve_transport_mode() -> str:
-        return "ipc"
+        mode = str(WORK_EDITOR_SELECTOR_MODE or "").strip().lower()
+        if mode in {"ipc", "external", "library"}:
+            return "ipc"
+        return "embedded"
 
     # ------------------------------------------------------------------
     # Logging
@@ -401,6 +436,9 @@ class WorkEditorSelectorController:
         if not isinstance(shield, QWidget):
             return
         self._transition_shield_pending_hide = False
+        snapshot_label = getattr(dialog, "_selector_transition_snapshot_label", None)
+        if isinstance(snapshot_label, QLabel):
+            snapshot_label.clear()
         shield.setVisible(False)
 
     def _set_shield_visible(self, visible: bool) -> None:
@@ -415,6 +453,153 @@ class WorkEditorSelectorController:
             shield.raise_()
             return
         self._hide_shield()
+
+    def _reveal_mode_transition(self, fade_surface: QWidget | None = None) -> None:
+        self._pending_enter_fade_surface = None
+        self._animate_transition_shield_out()
+
+    def _preexpand_dialog_for_selector_open(self) -> None:
+        dialog = self._dialog
+        if not bool(getattr(dialog, "_RESIZE_FOR_SELECTOR_MODE", False)):
+            return
+        if bool(getattr(self, "_preexpanded_for_selector_open", False)):
+            return
+        if self._restore_state is None:
+            self._restore_state = self._capture_restore_state()
+        self._expand_for_mode()
+
+        dialog_layout = getattr(dialog, "layout", None)
+        if callable(dialog_layout):
+            layout = dialog_layout()
+            if layout is not None:
+                layout.activate()
+        try:
+            dialog.updateGeometry()
+        except Exception:
+            pass
+
+        root_stack = getattr(dialog, "_root_stack", None)
+        if isinstance(root_stack, QStackedWidget):
+            stack_layout = root_stack.layout()
+            if stack_layout is not None:
+                stack_layout.activate()
+            root_stack.updateGeometry()
+
+        self._preexpanded_for_selector_open = True
+
+    def _compute_expanded_geometry(self):
+        """Return the target QRect for the expanded selector dialog, or None."""
+        from PySide6.QtCore import QRect
+        dialog = self._dialog
+        from_geom = dialog.geometry()
+        target_width = max(
+            dialog.width() + dialog._SELECTOR_EXPAND_DELTA,
+            dialog._SELECTOR_MIN_WIDTH,
+            int(getattr(dialog, "_SELECTOR_DIALOG_DEFAULT_WIDTH", dialog.width())),
+        )
+        screen = dialog.screen()
+        available = screen.availableGeometry() if screen is not None else None
+        if available is not None:
+            target_width = min(target_width, available.width())
+        target_height = max(
+            dialog.height(),
+            int(getattr(dialog, "_SELECTOR_DIALOG_DEFAULT_HEIGHT", dialog.height())),
+        )
+        if available is not None:
+            target_height = min(target_height, available.height())
+        x = from_geom.x() - max(0, (target_width - from_geom.width()) // 2)
+        y = from_geom.y() - max(0, (target_height - from_geom.height()) // 2)
+        if available is not None:
+            x = min(max(x, available.left()), available.right() - target_width + 1)
+            y = min(max(y, available.top()), available.bottom() - target_height + 1)
+        return QRect(x, y, target_width, target_height)
+
+    def _stop_selector_expand_anim(self) -> None:
+        dialog = self._dialog
+        anim = getattr(dialog, "_selector_expand_anim", None)
+        if anim is not None:
+            try:
+                anim.stop()
+            except Exception:
+                pass
+            setattr(dialog, "_selector_expand_anim", None)
+
+    def _animate_expand_for_selector(self) -> None:
+        """Animate the dialog from current size to selector size after open."""
+        from PySide6.QtCore import QEasingCurve as EC, QPointF
+        dialog = self._dialog
+        if not self._mode_active:
+            return
+        if bool(getattr(self, "_preexpanded_for_selector_open", False)):
+            return
+        if not bool(getattr(dialog, "_RESIZE_FOR_SELECTOR_MODE", False)):
+            return
+
+        if self._restore_state is None:
+            self._restore_state = self._capture_restore_state()
+
+        from_geom = dialog.geometry()
+        to_geom = self._compute_expanded_geometry()
+
+        if from_geom == to_geom:
+            self._preexpanded_for_selector_open = True
+            return
+
+        self._stop_selector_expand_anim()
+
+        anim = QPropertyAnimation(dialog, b"geometry", dialog)
+        anim.setDuration(180)
+        anim.setStartValue(from_geom)
+        anim.setEndValue(to_geom)
+        anim.setEasingCurve(QEasingCurve.OutQuart)
+
+        def _on_finished():
+            self._preexpanded_for_selector_open = True
+            try:
+                dl = dialog.layout()
+                if dl is not None:
+                    dl.activate()
+                dialog.updateGeometry()
+                root_stack = getattr(dialog, "_root_stack", None)
+                if isinstance(root_stack, QStackedWidget):
+                    sl = root_stack.layout()
+                    if sl is not None:
+                        sl.activate()
+                    root_stack.updateGeometry()
+            except Exception:
+                pass
+
+        anim.finished.connect(_on_finished)
+        setattr(dialog, "_selector_expand_anim", anim)
+        anim.start()
+
+    def _animate_collapse_for_selector(self) -> None:
+        """Animate the dialog back to its pre-selector geometry on close."""
+        from PySide6.QtCore import QRect
+        dialog = self._dialog
+        state = self._restore_state
+        if not isinstance(state, dict):
+            return
+        target_geom = state.get("geometry")
+        if not isinstance(target_geom, QRect):
+            return
+
+        self._stop_selector_expand_anim()
+
+        from_geom = dialog.geometry()
+        if from_geom == target_geom:
+            return
+
+        if not bool(getattr(self, "_preexpanded_for_selector_open", False)):
+            return
+
+        anim = QPropertyAnimation(dialog, b"geometry", dialog)
+        anim.setDuration(150)
+        anim.setStartValue(from_geom)
+        anim.setEndValue(target_geom)
+        anim.setEasingCurve(QEasingCurve.InOutQuart)
+        setattr(dialog, "_selector_expand_anim", anim)
+        anim.start()
 
     # ------------------------------------------------------------------
     # Diagnostic trace filters
@@ -507,17 +692,37 @@ class WorkEditorSelectorController:
             if was_enabled:
                 dialog.setUpdatesEnabled(False)
             try:
-                self._restore_state = self._capture_restore_state()
+                if self._restore_state is None:
+                    self._restore_state = self._capture_restore_state()
                 self._mode_active = True
+                fade_surface = None
                 if self._uses_transition_shield():
                     self._set_shield_visible(True)
                 if self._host_uses_overlay_mode():
                     self._set_normal_surface_hidden(True)
                     self._set_overlay_visible(True)
+                    fade_surface = getattr(dialog, "_selector_overlay_container", None)
                 else:
                     dialog._root_stack.setCurrentWidget(dialog._selector_page)
-                if dialog._RESIZE_FOR_SELECTOR_MODE:
-                    self._expand_for_mode()
+                    fade_surface = getattr(dialog, "_selector_page", None)
+                    # Flush selector page layout while painting is still
+                    # suppressed so the mount container has its final size
+                    # before the first repaint fires on setUpdatesEnabled(True).
+                    selector_page = getattr(dialog, "_selector_page", None)
+                    if isinstance(selector_page, QWidget):
+                        page_layout = selector_page.layout()
+                        if page_layout is not None:
+                            page_layout.activate()
+                        mount = getattr(dialog, "_selector_mount_container", None)
+                        if isinstance(mount, QWidget):
+                            mount_layout = mount.layout()
+                            if mount_layout is not None:
+                                mount_layout.activate()
+                if self._defer_transition_reveal_once:
+                    self._defer_transition_reveal_once = False
+                    self._pending_enter_fade_surface = fade_surface
+                else:
+                    self._reveal_mode_transition(fade_surface)
             finally:
                 if was_enabled:
                     dialog.setUpdatesEnabled(True)
@@ -536,42 +741,280 @@ class WorkEditorSelectorController:
             if was_enabled:
                 dialog.setUpdatesEnabled(False)
             try:
+                fade_surface = None
                 if self._mode_active and isinstance(getattr(dialog, "_root_stack", None), QStackedWidget):
                     if self._host_uses_overlay_mode():
                         self._set_overlay_visible(False)
                         self._set_normal_surface_hidden(False)
+                        fade_surface = getattr(dialog, "_normal_page", None)
                     else:
                         dialog._root_stack.setCurrentWidget(dialog._normal_page)
+                        fade_surface = getattr(dialog, "_normal_page", None)
                     if self._uses_transition_shield():
                         self._set_shield_visible(False)
 
                 if self._mode_active:
-                    self._restore_from_state()
+                    # Restore min/max size constraints immediately, then let
+                    # the geometry animate back separately after the stack switch.
+                    state = self._restore_state
+                    if isinstance(state, dict):
+                        min_size = state.get("minimum_size")
+                        if isinstance(min_size, QSize):
+                            dialog.setMinimumSize(min_size)
+                        max_size = state.get("maximum_size")
+                        if isinstance(max_size, QSize):
+                            dialog.setMaximumSize(max_size)
+                    self._animate_surface_fade(fade_surface)
                 self._restore_state = None
                 self._mode_active = False
                 self._open_requested = False
+                self._defer_transition_reveal_once = False
+                self._pending_enter_fade_surface = None
+                self._preexpanded_for_selector_open = False
             finally:
                 if was_enabled:
                     dialog.setUpdatesEnabled(True)
 
     def _expand_for_mode(self) -> None:
         dialog = self._dialog
-        target_width = max(dialog.width() + dialog._SELECTOR_EXPAND_DELTA, dialog._SELECTOR_MIN_WIDTH)
+        original_geom = dialog.geometry()
+        target_width = max(
+            dialog.width() + dialog._SELECTOR_EXPAND_DELTA,
+            dialog._SELECTOR_MIN_WIDTH,
+            int(getattr(dialog, "_SELECTOR_DIALOG_DEFAULT_WIDTH", dialog.width())),
+        )
         screen = dialog.screen()
         available = screen.availableGeometry() if screen is not None else None
         if available is not None:
             target_width = min(target_width, available.width())
 
-        target_height = dialog.height()
+        target_height = max(dialog.height(), int(getattr(dialog, "_SELECTOR_DIALOG_DEFAULT_HEIGHT", dialog.height())))
         if available is not None:
             target_height = min(target_height, available.height())
 
-        dialog.resize(target_width, target_height)
+        x = original_geom.x() - max(0, (target_width - original_geom.width()) // 2)
+        y = original_geom.y() - max(0, (target_height - original_geom.height()) // 2)
         if available is not None:
-            geom = dialog.geometry()
-            x = min(max(geom.x(), available.left()), available.right() - geom.width() + 1)
-            y = min(max(geom.y(), available.top()), available.bottom() - geom.height() + 1)
-            dialog.move(x, y)
+            x = min(max(x, available.left()), available.right() - target_width + 1)
+            y = min(max(y, available.top()), available.bottom() - target_height + 1)
+        dialog.setGeometry(x, y, target_width, target_height)
+
+    def _animate_surface_fade(self, surface: QWidget | None) -> None:
+        if surface is None:
+            return
+        duration_ms = max(0, int(getattr(self._dialog, "_SELECTOR_LOCAL_FADE_MS", 0)))
+        if duration_ms <= 0:
+            return
+
+        effect = getattr(surface, "_selector_fade_effect", None)
+        if effect is None:
+            effect = QGraphicsOpacityEffect(surface)
+            surface.setGraphicsEffect(effect)
+            setattr(surface, "_selector_fade_effect", effect)
+
+        animation = getattr(surface, "_selector_fade_anim", None)
+        if animation is not None:
+            try:
+                animation.stop()
+            except Exception:
+                pass
+
+        effect.setOpacity(0.0)
+        animation = QPropertyAnimation(effect, b"opacity", surface)
+        animation.setDuration(duration_ms)
+        animation.setStartValue(0.0)
+        animation.setEndValue(1.0)
+        animation.setEasingCurve(QEasingCurve.OutCubic)
+        animation.finished.connect(lambda eff=effect: eff.setOpacity(1.0))
+        setattr(surface, "_selector_fade_anim", animation)
+        animation.start()
+
+    def _ensure_transition_snapshot_label(self) -> QLabel | None:
+        dialog = self._dialog
+        shield = getattr(dialog, "_selector_transition_shield", None)
+        if not isinstance(shield, QWidget):
+            return None
+
+        label = getattr(dialog, "_selector_transition_snapshot_label", None)
+        if not isinstance(label, QLabel):
+            label = QLabel(shield)
+            label.setObjectName("workEditorSelectorTransitionSnapshot")
+            label.setScaledContents(True)
+            label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+            setattr(dialog, "_selector_transition_snapshot_label", label)
+
+        label.setGeometry(shield.rect())
+        return label
+
+    def _prepare_open_transition_shield(self) -> None:
+        if self._host_uses_overlay_mode():
+            return
+
+        dialog = self._dialog
+        shield = getattr(dialog, "_selector_transition_shield", None)
+        root_stack = getattr(dialog, "_root_stack", None)
+        if not isinstance(shield, QWidget) or not isinstance(root_stack, QWidget):
+            return
+
+        self._sync_shield_geometry()
+        snapshot_label = self._ensure_transition_snapshot_label()
+        if not isinstance(snapshot_label, QLabel):
+            return
+
+        pixmap = root_stack.grab()
+        if pixmap.isNull():
+            return
+
+        tinted = pixmap.copy()
+        painter = QPainter(tinted)
+        painter.fillRect(tinted.rect(), QColor(255, 255, 255, 18))
+        painter.end()
+
+        snapshot_label.setGeometry(shield.rect())
+        snapshot_label.setPixmap(tinted)
+        snapshot_label.raise_()
+
+        effect = getattr(shield, "_selector_shield_effect", None)
+        if effect is None:
+            effect = QGraphicsOpacityEffect(shield)
+            shield.setGraphicsEffect(effect)
+            setattr(shield, "_selector_shield_effect", effect)
+        effect.setOpacity(1.0)
+
+        animation = getattr(shield, "_selector_shield_anim", None)
+        if animation is not None:
+            try:
+                animation.stop()
+            except Exception:
+                pass
+
+        shield.setVisible(True)
+        shield.raise_()
+
+    def _animate_transition_shield_out(self) -> bool:
+        dialog = self._dialog
+        shield = getattr(dialog, "_selector_transition_shield", None)
+        if not isinstance(shield, QWidget) or not shield.isVisible():
+            return False
+
+        effect = getattr(shield, "_selector_shield_effect", None)
+        if effect is None:
+            self._hide_shield()
+            return False
+
+        duration_ms = max(
+            0,
+            int(
+                getattr(
+                    dialog,
+                    "_SELECTOR_OPEN_REVEAL_MS",
+                    getattr(dialog, "_SELECTOR_LOCAL_FADE_MS", 0),
+                )
+            ),
+        )
+        if duration_ms <= 0:
+            self._hide_shield()
+            return True
+
+        animation = getattr(shield, "_selector_shield_anim", None)
+        if animation is not None:
+            try:
+                animation.stop()
+            except Exception:
+                pass
+
+        animation = QPropertyAnimation(effect, b"opacity", shield)
+        animation.setDuration(duration_ms)
+        animation.setStartValue(float(effect.opacity()))
+        animation.setEndValue(0.0)
+        animation.setEasingCurve(QEasingCurve.OutCubic)
+
+        def _finish() -> None:
+            effect.setOpacity(1.0)
+            self._hide_shield()
+
+        animation.finished.connect(_finish)
+        setattr(shield, "_selector_shield_anim", animation)
+        animation.start()
+        return True
+
+    def _settle_embedded_selector_surface(
+        self,
+        widget: QWidget | None,
+        mount: QWidget | None,
+        *,
+        show_widget: bool = True,
+    ) -> None:
+        if widget is None:
+            return
+
+        ensure_polished = getattr(widget, "ensurePolished", None)
+        if callable(ensure_polished):
+            ensure_polished()
+
+        if show_widget:
+            widget.show()
+        widget.updateGeometry()
+
+        widget_layout = widget.layout()
+        if widget_layout is not None:
+            widget_layout.activate()
+
+        if mount is not None:
+            mount_layout = mount.layout()
+            if mount_layout is not None:
+                mount_layout.activate()
+            mount.updateGeometry()
+
+        root_stack = getattr(self._dialog, "_root_stack", None)
+        if isinstance(root_stack, QStackedWidget):
+            stack_layout = root_stack.layout()
+            if stack_layout is not None:
+                stack_layout.activate()
+            root_stack.updateGeometry()
+
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
+
+    def _schedule_preview_host_preload(self) -> None:
+        if self._transport_mode != "embedded" or self._preview_host_preload_scheduled:
+            return
+
+        self._preview_host_preload_scheduled = True
+
+        def _run() -> None:
+            self._preview_host_preload_scheduled = False
+            self._preload_preview_host()
+
+        QTimer.singleShot(0, _run)
+
+    def _preload_preview_host(self) -> None:
+        payload = {"command": "warm_preview_runtime", "show": False}
+        if is_tool_library_ready(TOOL_LIBRARY_SERVER_NAME, TOOL_LIBRARY_READY_PATH):
+            self._preview_host_launch_started = False
+            send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, payload)
+            return
+
+        if not self._preview_host_launch_started:
+            launched = launch_tool_library(
+                TOOL_LIBRARY_MAIN_PATH,
+                TOOL_LIBRARY_EXE_CANDIDATES,
+                TOOL_LIBRARY_PROJECT_DIR,
+                extra_args=["--hidden"],
+                ready_path=TOOL_LIBRARY_READY_PATH,
+            )
+            self._preview_host_launch_started = bool(launched)
+            if not launched:
+                return
+
+        send_request_with_retry(
+            lambda request_payload: send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, request_payload),
+            payload,
+            on_success=lambda: setattr(self, "_preview_host_launch_started", False),
+            on_failed=lambda: setattr(self, "_preview_host_launch_started", False),
+            ready_check=lambda: is_tool_library_ready(TOOL_LIBRARY_SERVER_NAME, TOOL_LIBRARY_READY_PATH),
+        )
 
     def _capture_restore_state(self) -> dict:
         dialog = self._dialog
@@ -620,7 +1063,19 @@ class WorkEditorSelectorController:
                 initial_assignments=initial_assignments,
                 initial_assignment_buckets=initial_assignment_buckets,
             )
-        return self._try_open_embedded(
+        opened = self._try_open_embedded(
+            kind=kind,
+            head=head,
+            spindle=spindle,
+            target_key=target_key,
+            initial_assignments=initial_assignments,
+            initial_assignment_buckets=initial_assignment_buckets,
+        )
+        if opened or self._coordinator.is_busy:
+            return opened
+
+        self._log("open.embedded.fallback_to_ipc", kind=kind, head=head, spindle=spindle, target_key=target_key)
+        return self._try_open_via_ipc(
             kind=kind,
             head=head,
             spindle=spindle,
@@ -733,10 +1188,15 @@ class WorkEditorSelectorController:
                 self._coordinator.confirm(batch, caller="embedded.submit")
             except Exception:
                 _log.debug("coordinator confirm failed, applying directly", exc_info=True)
+            collapse_anim = self._restore_state is not None and bool(
+                getattr(self._dialog, "_RESIZE_FOR_SELECTOR_MODE", False)
+            )
             try:
                 self._apply_selector_result(request, payload)
             finally:
                 self._detach_active_embedded_widget()
+                if collapse_anim:
+                    self._animate_collapse_for_selector()
                 self._exit_mode()
                 try:
                     self._coordinator.mark_teardown_complete(caller="embedded.submit.teardown")
@@ -748,7 +1208,12 @@ class WorkEditorSelectorController:
                 self._coordinator.cancel(caller="embedded.cancel")
             except Exception:
                 pass
+            collapse_anim = self._restore_state is not None and bool(
+                getattr(self._dialog, "_RESIZE_FOR_SELECTOR_MODE", False)
+            )
             self._detach_active_embedded_widget()
+            if collapse_anim:
+                self._animate_collapse_for_selector()
             self._exit_mode()
             self._log("cancel.embedded.request")
             try:
@@ -760,39 +1225,62 @@ class WorkEditorSelectorController:
             mount = self._current_mount_container()
             self._detach_active_embedded_widget()
             dialog = self._dialog
-            widget = build_embedded_selector_parity_widget(
-                dialog,
-                mount_container=mount,
-                kind=kind_key,
-                head=head,
-                spindle=spindle,
-                follow_up={"target_key": target_key},
-                initial_assignments=[dict(item) for item in (initial_assignments or []) if isinstance(item, dict)],
-                initial_assignment_buckets={
-                    str(k): [dict(item) for item in v if isinstance(item, dict)]
-                    for k, v in dict(initial_assignment_buckets or {}).items()
-                    if isinstance(v, list)
-                },
-                on_submit=_on_submit,
-                on_cancel=_on_cancel,
-            )
-            layout = mount.layout()
-            if layout is None:
-                layout = QHBoxLayout(mount)
-                layout.setContentsMargins(0, 0, 0, 0)
-                layout.setSpacing(0)
-            layout.addWidget(widget)
-            self._active_embedded_widget = widget
 
-            self._coordinator.mark_mount_complete(caller="embedded.mounted")
-            self._enter_mode()
-            widget.show()
+            # Suppress repaints for the stack switch and widget show.
+            # No resize happens (dialog already at selector size) so
+            # setUpdatesEnabled is sufficient — one composed frame on re-enable.
+            _set_updates = getattr(dialog, "setUpdatesEnabled", None)
+            if callable(_set_updates):
+                _set_updates(False)
+            try:
+                widget = build_embedded_selector_parity_widget(
+                    dialog,
+                    mount_container=mount,
+                    kind=kind_key,
+                    head=head,
+                    spindle=spindle,
+                    follow_up={"target_key": target_key},
+                    initial_assignments=[dict(item) for item in (initial_assignments or []) if isinstance(item, dict)],
+                    initial_assignment_buckets={
+                        str(k): [dict(item) for item in v if isinstance(item, dict)]
+                        for k, v in dict(initial_assignment_buckets or {}).items()
+                        if isinstance(v, list)
+                    },
+                    on_submit=_on_submit,
+                    on_cancel=_on_cancel,
+                )
+                layout = mount.layout()
+                if layout is None:
+                    layout = QHBoxLayout(mount)
+                    layout.setContentsMargins(0, 0, 0, 0)
+                    layout.setSpacing(0)
+                layout.addWidget(widget)
+                self._active_embedded_widget = widget
+
+                self._coordinator.mark_mount_complete(caller="embedded.mounted")
+
+                widget.show()
+                widget.updateGeometry()
+                self._enter_mode()
+            finally:
+                if callable(_set_updates):
+                    _set_updates(True)
+
             widget.raise_()
             widget.activateWindow()
+            # Selector is visible at Work Editor size. After a short pause so
+            # the user registers the open, animate the dialog to full width.
+            QTimer.singleShot(120, self._animate_expand_for_selector)
+            self._schedule_preview_host_preload()
             self._log("open.embedded.ready", kind=kind_key, session_id=str(session_id))
             return True
         except Exception:
             _log.exception("work_editor.selector embedded open failed kind=%s", kind_key)
+            self._pending_enter_fade_surface = None
+            if bool(getattr(self, "_preexpanded_for_selector_open", False)) and not self._mode_active:
+                self._restore_from_state()
+                self._restore_state = None
+                self._preexpanded_for_selector_open = False
             self._detach_active_embedded_widget()
             self._exit_mode()
             try:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 
 from PySide6.QtCore import QRect
-from PySide6.QtWidgets import QApplication, QDialog, QWidget
+from PySide6.QtWidgets import QApplication, QDialog, QGraphicsBlurEffect, QWidget
 
 try:
     from ui.main_window_support import pause_tool_library_preload, resume_tool_library_preload
@@ -181,6 +181,16 @@ def exec_work_editor_dialog(dialog) -> int:
             )
         return final_result
 
+    # Blur the main window while the Work Editor is open.
+    _blur_effect = None
+    if isinstance(preload_host, QWidget) and preload_host.isVisible():
+        try:
+            _blur_effect = QGraphicsBlurEffect(preload_host)
+            _blur_effect.setBlurRadius(6)
+            preload_host.setGraphicsEffect(_blur_effect)
+        except Exception:
+            _blur_effect = None
+
     try:
         result = dialog.exec()
 
@@ -236,6 +246,12 @@ def exec_work_editor_dialog(dialog) -> int:
             trace_event("post_exec", result=result)
         return result
     finally:
+        if _blur_effect is not None and isinstance(preload_host, QWidget):
+            try:
+                preload_host.setGraphicsEffect(None)
+            except Exception:
+                pass
+
         if callable(resume_tool_library_preload) and isinstance(preload_host, QWidget):
             dialog_still_visible = False
             try:

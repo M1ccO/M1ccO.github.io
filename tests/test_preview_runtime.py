@@ -7,7 +7,7 @@ from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, Qt
 from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
 _HERE = Path(__file__).resolve().parent
@@ -20,6 +20,7 @@ for _candidate in (_WORKSPACE,):
 from shared.ui.helpers.preview_runtime import (  # noqa: E402
     claim_prewarmed_preview_widget,
     preview_runtime_ready,
+    release_preview_runtime_widget,
     register_preview_runtime_widget,
 )
 
@@ -33,6 +34,7 @@ class _PreviewWidget(QWidget):
 class TestPreviewRuntime(unittest.TestCase):
     def setUp(self) -> None:
         _APP._preview_warmup_widget = None
+        _APP._preview_runtime_available_widgets = []
         _APP._preview_runtime_ready = False
         self._widgets: list[QWidget] = []
         self._dialogs: list[QDialog] = []
@@ -53,6 +55,7 @@ class TestPreviewRuntime(unittest.TestCase):
         QCoreApplication.sendPostedEvents(None, 0)
         _APP.processEvents()
         _APP._preview_warmup_widget = None
+        _APP._preview_runtime_available_widgets = []
         _APP._preview_runtime_ready = False
 
     def test_register_marks_runtime_ready(self) -> None:
@@ -63,9 +66,11 @@ class TestPreviewRuntime(unittest.TestCase):
 
         self.assertTrue(preview_runtime_ready())
         self.assertIs(widget, _APP._preview_warmup_widget)
+        self.assertEqual([widget], _APP._preview_runtime_available_widgets)
 
     def test_claim_reparents_top_level_warmup_widget(self) -> None:
         warmup = _PreviewWidget()
+        warmup.setWindowFlag(Qt.Tool, True)
         self._widgets.append(warmup)
         register_preview_runtime_widget(warmup)
         dialog = QDialog()
@@ -75,7 +80,9 @@ class TestPreviewRuntime(unittest.TestCase):
 
         self.assertIs(warmup, claimed)
         self.assertIs(dialog, warmup.parentWidget())
-        self.assertTrue(preview_runtime_ready())
+        self.assertFalse(warmup.isWindow())
+        self.assertFalse(preview_runtime_ready())
+        self.assertEqual([], _APP._preview_runtime_available_widgets)
 
     def test_claim_does_not_steal_parented_preview_widget(self) -> None:
         parent_dialog = QDialog()
@@ -90,6 +97,39 @@ class TestPreviewRuntime(unittest.TestCase):
 
         self.assertIsNone(claimed)
         self.assertIs(parent_dialog, warmup.parentWidget())
+
+    def test_release_returns_claimed_widget_to_runtime_pool(self) -> None:
+        warmup = _PreviewWidget()
+        self._widgets.append(warmup)
+        register_preview_runtime_widget(warmup)
+        first_dialog = QDialog()
+        second_dialog = QDialog()
+        self._dialogs.extend([first_dialog, second_dialog])
+
+        claimed = claim_prewarmed_preview_widget(first_dialog)
+        self.assertIs(warmup, claimed)
+        self.assertFalse(preview_runtime_ready())
+
+        release_preview_runtime_widget(warmup)
+
+        self.assertTrue(preview_runtime_ready())
+        self.assertIsNone(warmup.parentWidget())
+
+        reclaimed = claim_prewarmed_preview_widget(second_dialog)
+
+        self.assertIs(warmup, reclaimed)
+        self.assertIs(second_dialog, warmup.parentWidget())
+
+    def test_register_ignores_parented_widget_availability(self) -> None:
+        parent_dialog = QDialog()
+        self._dialogs.append(parent_dialog)
+        warmup = _PreviewWidget(parent_dialog)
+        self._widgets.append(warmup)
+
+        register_preview_runtime_widget(warmup)
+
+        self.assertFalse(preview_runtime_ready())
+        self.assertEqual([], _APP._preview_runtime_available_widgets)
 
 
 if __name__ == "__main__":

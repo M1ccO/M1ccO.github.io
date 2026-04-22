@@ -4,7 +4,7 @@ import json
 import os
 from typing import Callable
 
-from PySide6.QtCore import QMimeData, QSize, Qt, Signal
+from PySide6.QtCore import QMimeData, QModelIndex, QSize, Qt, Signal
 from PySide6.QtGui import QDrag, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -56,6 +56,17 @@ from shared.ui.helpers.topbar_common import (
 )
 from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
 from shared.ui.selectors import FixtureSelectorWidget
+from .detached_preview import (
+    load_fixture_selector_preview_content,
+    on_fixture_selector_detached_measurements_toggled,
+    on_fixture_selector_detached_preview_closed,
+    sync_fixture_selector_detached_preview,
+    toggle_fixture_selector_preview_window,
+)
+from .external_preview_ipc import (
+    sync_embedded_fixture_selector_preview,
+    toggle_embedded_fixture_selector_preview_window,
+)
 from ..fixture_catalog_delegate import (
     ROLE_FIXTURE_DATA,
     ROLE_FIXTURE_ICON,
@@ -63,6 +74,7 @@ from ..fixture_catalog_delegate import (
     FixtureCatalogDelegate,
     fixture_icon_for_row,
 )
+from ..fixture_preview_rules import fixture_preview_transform_signature
 from .selector_mime import (
     SELECTOR_JAW_MIME,
     decode_jaw_payload,
@@ -337,6 +349,14 @@ class FixtureSelectorDialog(SelectorDialogBase):
         ]
         self._selected_ids = {self._fixture_key(item) for item in self._selected_items if self._fixture_key(item)}
         self._startup_initialized = False
+        self._detached_preview_dialog = None
+        self._detached_preview_widget = None
+        self._detail_preview_widget = None
+        self._detail_preview_model_key = None
+        self._close_preview_shortcut = None
+        self._measurement_toggle_btn = None
+        self._detached_measurements_enabled = True
+        self._detached_preview_last_model_key = None
 
         self.setUpdatesEnabled(False)
         try:
@@ -450,6 +470,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             self.toggle_preview_window,
         )
         self.preview_window_btn.setVisible(True)
+        self.preview_window_btn.setEnabled(True)
 
         self.detail_header_container, self.detail_section_label, self.detail_close_btn = build_detail_header(
             close_icon,
@@ -718,7 +739,50 @@ class FixtureSelectorDialog(SelectorDialogBase):
         self.detail_layout.addStretch(1)
 
     def toggle_preview_window(self) -> None:
-        self.preview_window_btn.setChecked(False)
+        if getattr(self, '_embedded_mode', False):
+            toggle_embedded_fixture_selector_preview_window(self)
+            return
+        toggle_fixture_selector_preview_window(self)
+
+    def _get_selected_fixture(self) -> dict | None:
+        index = self.list_view.currentIndex()
+        if index.isValid():
+            fixture = index.data(ROLE_FIXTURE_DATA)
+            if isinstance(fixture, dict):
+                return fixture
+        indexes = selected_rows_or_current(self.list_view)
+        if not indexes:
+            return None
+        fixture = indexes[0].data(ROLE_FIXTURE_DATA)
+        return fixture if isinstance(fixture, dict) else None
+
+    def _load_preview_content(self, viewer, fixture: dict, *, label: str | None = None) -> bool:
+        return load_fixture_selector_preview_content(self, viewer, fixture, label=label)
+
+    def _preview_model_key(self, fixture: dict | None):
+        if not isinstance(fixture, dict):
+            return None
+        fixture_id = str(fixture.get('fixture_id') or '').strip()
+        try:
+            stl_key = json.dumps(fixture.get('stl_path'), ensure_ascii=False, sort_keys=True)
+        except Exception:
+            stl_key = str(fixture.get('stl_path'))
+        try:
+            meas_key = json.dumps(fixture.get('measurement_overlays', []), ensure_ascii=False, sort_keys=True)
+        except Exception:
+            meas_key = str(fixture.get('measurement_overlays', []))
+        return fixture_id, stl_key, meas_key, fixture_preview_transform_signature(fixture)
+
+    def _on_detached_measurements_toggled(self, checked: bool) -> None:
+        on_fixture_selector_detached_measurements_toggled(self, checked)
+
+    def _on_detached_preview_closed(self, result) -> None:
+        on_fixture_selector_detached_preview_closed(self, result)
+
+    def _sync_detached_preview(self, show_errors: bool = False) -> bool:
+        if getattr(self, '_embedded_mode', False):
+            return sync_embedded_fixture_selector_preview(self, show_errors=show_errors)
+        return sync_fixture_selector_detached_preview(self, show_errors=show_errors)
 
     @staticmethod
     def _normalize_part_ids(raw) -> list[str]:
@@ -1080,6 +1144,23 @@ class FixtureSelectorDialog(SelectorDialogBase):
         ]
         self._selected_ids = {self._fixture_key(item) for item in self._selected_items if self._fixture_key(item)}
 
+        if hasattr(self, 'search_toggle'):
+            self.search_toggle.setChecked(False)
+        if hasattr(self, 'search_input'):
+            self.search_input.setVisible(False)
+            self.search_input.blockSignals(True)
+            self.search_input.clear()
+            self.search_input.blockSignals(False)
+        if hasattr(self, 'view_filter') and self.view_filter.count():
+            self.view_filter.setCurrentIndex(0)
+        if hasattr(self, 'preview_window_btn'):
+            self.preview_window_btn.setChecked(False)
+        if hasattr(self, 'detail_card') and self.detail_card.isVisible():
+            self._switch_to_selector_panel()
+        if hasattr(self, 'list_view'):
+            self.list_view.clearSelection()
+            self.list_view.setCurrentIndex(QModelIndex())
+
         self.target_filter.blockSignals(True)
         self.target_filter.clear()
         for key in self._target_keys:
@@ -1089,6 +1170,7 @@ class FixtureSelectorDialog(SelectorDialogBase):
             self.target_filter.setCurrentIndex(target_index)
         self.target_filter.blockSignals(False)
 
+        self._refresh_catalog()
         self._rebuild_assignment_list()
         self._update_assignment_buttons()
 

@@ -5,14 +5,14 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QTimer
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QTimer, QPoint
+from PySide6.QtGui import QPixmap, QGuiApplication
 from PySide6.QtWidgets import QAbstractButton, QAbstractItemView, QComboBox, QLineEdit, QSplitter, QWidget
 
 from shared.ui.theme import THEME_PALETTES, get_active_theme_palette
 
-_FADE_IN_MS = 250
-_FADE_OUT_MS = 250
+_FADE_IN_MS = 360
+_FADE_OUT_MS = 360
 _DWMWA_EXTENDED_FRAME_BOUNDS = 9
 
 
@@ -196,10 +196,37 @@ def capture_window_snapshot(window: QWidget | None) -> QPixmap | None:
     except Exception:
         return None
 
+    pixmap = None
+
     try:
-        pixmap = window.grab()
+        rect = current_window_rect(window)
+        probe = QPoint(int(rect[0] + max(1, rect[2] // 2)), int(rect[1] + max(1, rect[3] // 2)))
+        screen = QGuiApplication.screenAt(probe) or QGuiApplication.primaryScreen()
+        if screen is not None:
+            native_pixmap = screen.grabWindow(0, int(rect[0]), int(rect[1]), int(rect[2]), int(rect[3]))
+            if native_pixmap is not None and not native_pixmap.isNull():
+                pixmap = native_pixmap
     except Exception:
-        return None
+        pixmap = None
+
+    if pixmap is None or pixmap.isNull():
+        try:
+            hwnd = int(window.winId())
+            rect = current_window_rect(window)
+            probe = QPoint(int(rect[0] + max(1, rect[2] // 2)), int(rect[1] + max(1, rect[3] // 2)))
+            screen = QGuiApplication.screenAt(probe) or QGuiApplication.primaryScreen()
+            if screen is not None:
+                native_pixmap = screen.grabWindow(hwnd)
+                if native_pixmap is not None and not native_pixmap.isNull():
+                    pixmap = native_pixmap
+        except Exception:
+            pixmap = None
+
+    if pixmap is None or pixmap.isNull():
+        try:
+            pixmap = window.grab()
+        except Exception:
+            return None
 
     if pixmap is None or pixmap.isNull():
         return None

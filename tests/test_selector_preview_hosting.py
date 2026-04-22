@@ -42,7 +42,7 @@ class TestSelectorPreviewHosting(unittest.TestCase):
         dialog.deleteLater()
         selector.deleteLater()
 
-    def test_regular_page_keeps_parented_preview_host(self):
+    def test_regular_page_uses_top_level_host_window_as_parent(self):
         main_window = QMainWindow()
         page = QWidget(main_window)
 
@@ -54,7 +54,24 @@ class TestSelectorPreviewHosting(unittest.TestCase):
             on_finished=lambda _result: None,
         )
 
-        self.assertIs(dialog.parent(), page)
+        self.assertIs(dialog.parent(), main_window)
+        dialog.deleteLater()
+        page.deleteLater()
+        main_window.deleteLater()
+
+    def test_regular_page_can_request_independent_preview_host(self):
+        main_window = QMainWindow()
+        page = QWidget(main_window)
+        page._detached_preview_force_independent_host = True
+
+        dialog = create_detached_preview_dialog(
+            page,
+            title="3D Preview",
+            on_finished=lambda _result: None,
+        )
+
+        self.assertIsNone(dialog.parent())
+        self.assertTrue(bool(dialog.windowFlags() & Qt.Tool))
         dialog.deleteLater()
         page.deleteLater()
         main_window.deleteLater()

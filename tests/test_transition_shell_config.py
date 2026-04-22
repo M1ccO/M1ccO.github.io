@@ -31,6 +31,7 @@ class TestTransitionShellConfig(unittest.TestCase):
 
         self.assertEqual(TransitionShellMode.SENDER_FADE, config.mode)
         self.assertTrue(config.enabled)
+        self.assertEqual(100, config.sender_complete_delay_ms)
         self.assertIs(config, get_transition_shell_config())
 
     def test_disabled_mode_is_supported(self) -> None:

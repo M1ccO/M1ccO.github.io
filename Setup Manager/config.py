@@ -265,6 +265,9 @@ WORK_EDITOR_SELECTOR_TRACE_PAINT = str(
 WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE = str(
     os.environ.get("NTX_WORK_EDITOR_SELECTOR_HOST_DIAGNOSTIC_MODE", "auto")
 ).strip().lower()
+WORK_EDITOR_SELECTOR_MODE = str(
+    os.environ.get("NTX_WORK_EDITOR_SELECTOR_MODE", "embedded")
+).strip().lower()
 
 JAW_TYPES = ["Soft jaws", "Hard jaws", "Spiked jaws", "Special jaws"]
 SPINDLE_SIDES = ["SP1", "SP2", "Both"]

@@ -16,9 +16,15 @@ from PySide6.QtWidgets import QApplication, QProgressDialog
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
 from shared.ui.helpers.preview_runtime import preview_runtime_ready, register_preview_runtime_widget
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
-from shared.ui.transition_shell import SENDER_TRANSITION_COMPLETE_COMMAND
-from shared.ui.transition_shell_config import init_transition_shell_config
+from shared.ui.transition_shell import (
+    SENDER_TRANSITION_COMPLETE_COMMAND,
+    prepare_receiver_transition,
+    reveal_receiver_transition,
+    schedule_sender_transition_complete_on_receiver_ready,
+)
+from shared.ui.transition_shell_config import get_transition_shell_config, init_transition_shell_config
 from ui.main_window_support import complete_setup_manager_handoff
+from ui.selectors.external_preview_host import close_external_selector_preview, show_external_selector_preview
 
 
 def _split_csv(text: str) -> list[str]:
@@ -180,6 +186,7 @@ def main():
 
     step(7, 'Preparing 3D preview...')
     app._preview_warmup_widget = None
+    app._preview_runtime_available_widgets = []
     app._preview_runtime_ready = False
 
     step(8, 'Opening main window...')
@@ -214,12 +221,18 @@ def main():
             warmup.setGeometry(-32000, -32000, 8, 8)
             warmup.show()
             app.processEvents()
+            # Keep the native surface and Chromium process alive, but do not
+            # leave the warmup widget as a live top-level window. The first
+            # claim/reparent from a shown off-screen window can still cause
+            # visible window churn on Windows.
+            warmup.hide()
             # Keep alive for the full app session.  Destroying the last
             # QWebEngineView shuts down Chromium; any subsequent creation
             # would cold-start and freeze the UI.
             register_preview_runtime_widget(warmup)
         except Exception:
             app._preview_warmup_widget = None
+            app._preview_runtime_available_widgets = []
             app._preview_runtime_ready = False
 
     app._background_asset_warmup_scheduled = False
@@ -267,6 +280,8 @@ def main():
     if not _known_args.hidden:
         win.show()
         schedule_background_asset_warmup(250, include_preview_runtime=True)
+    else:
+        schedule_background_asset_warmup(250, include_preview_runtime=True)
     # Hidden mode: window stays hidden until an IPC show request arrives.
     # No brief show/hide cycle to avoid taskbar flashing on Windows.
 
@@ -292,6 +307,15 @@ def main():
         if command == 'shutdown':
             app.quit()
             return
+        if command == 'warm_preview_runtime':
+            schedule_background_asset_warmup(0, include_preview_runtime=True)
+            return
+        if command == 'open_selector_preview':
+            show_external_selector_preview(win, payload.get('preview'))
+            return
+        if command == 'close_selector_preview':
+            close_external_selector_preview(win)
+            return
         if command in {'hide_for_library_handoff', SENDER_TRANSITION_COMPLETE_COMMAND}:
             complete_setup_manager_handoff(win)
             return
@@ -300,7 +324,7 @@ def main():
         # has the true pre-handoff state even if apply_external_request shows the
         # window as a side effect.
         was_visible = bool(win.isVisible() and not win.isMinimized())
-        win.apply_external_request(payload)
+        win.apply_external_request(payload, caller_was_visible=was_visible)
         geometry_text = str(payload.get('geometry', '')).strip()
         selector_mode = str(payload.get('selector_mode', '')).strip().lower()
         selector_active_request = selector_mode in {'tools', 'jaws', 'fixtures'}
@@ -353,7 +377,10 @@ def main():
                         pass
                     win._fade_anim = None
 
-                win.setWindowOpacity(1.0)
+                if handoff_hide_callback_server:
+                    prepare_receiver_transition(win)
+                else:
+                    win.setWindowOpacity(1.0)
                 if geometry_text and not win.isVisible():
                     win._pending_external_frame_geometry = geometry_text
                 if win.isMinimized():
@@ -376,7 +403,19 @@ def main():
                     pass
 
                 if handoff_hide_callback_server:
-                    QTimer.singleShot(40, lambda server_name=handoff_hide_callback_server: _send_transition_complete_request(server_name))
+                    def _reveal_and_notify(server_name=handoff_hide_callback_server) -> None:
+                        reveal_receiver_transition(win)
+                        delay_ms = max(0, int(get_transition_shell_config().sender_complete_delay_ms))
+                        if delay_ms <= 0:
+                            _send_transition_complete_request(server_name)
+                        else:
+                            QTimer.singleShot(delay_ms, lambda: _send_transition_complete_request(server_name))
+
+                    schedule_sender_transition_complete_on_receiver_ready(
+                        win,
+                        callback=_reveal_and_notify,
+                        geometry_text=geometry_text,
+                    )
 
             QTimer.singleShot(0, _show_main_window)
 

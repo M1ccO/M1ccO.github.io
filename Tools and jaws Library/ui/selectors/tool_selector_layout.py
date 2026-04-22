@@ -173,9 +173,8 @@ class ToolSelectorLayoutMixin:
             self._t('tool_library.preview.toggle', 'Näytä irrotettava 3D-esikatselu'),
             self.toggle_preview_window,
         )
-        preview_allowed = not bool(getattr(self, '_embedded_mode', False))
-        self.preview_window_btn.setVisible(preview_allowed)
-        self.preview_window_btn.setEnabled(preview_allowed)
+        self.preview_window_btn.setVisible(True)
+        self.preview_window_btn.setEnabled(True)
 
         # Right-side detail header: shows "Tool details" + ✕ when detail panel is active
         self.detail_header_container, self.detail_section_label, self.detail_close_btn = \

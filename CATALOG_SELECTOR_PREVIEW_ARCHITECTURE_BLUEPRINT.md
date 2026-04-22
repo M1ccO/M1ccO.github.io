@@ -35,6 +35,7 @@ Restructure the application so that:
 
 - Opening Tool Library or Jaw Library from Setup Manager shows a visible, stable fade without jitter.
 - Opening Tool Selector, Jaw Selector, or Fixture Selector from Work Editor does not involve a cross-process top-level dialog handoff.
+- Embedded selector mode may temporarily grow larger than the base Work Editor dialog, but exiting selector mode must restore the original Work Editor geometry.
 - Selector DONE and CANCEL paths return instantly and deterministically.
 - First detached preview open is hot in:
   - Library pages
@@ -86,6 +87,7 @@ Restructure the application so that:
 
 - Transition-shell fades apply only to true cross-process catalog window handoff.
 - Selector open and selector close must not depend on cross-process top-level fade choreography.
+- Embedded selector open and close may use a local in-process snapshot or page fade, but that transition must stay inside the Work Editor surface and must not reuse the catalog transition shell.
 - The transition subsystem must use a persistent transition host per process, not a fresh helper top-level window per handoff.
 - Reveal may begin only after receiver-ready is true.
 - Receiver-ready means all of the following are complete:
@@ -94,13 +96,17 @@ Restructure the application so that:
   - raise / activate / foreground work completed
   - one stable compositor-visible frame boundary reached
 - Sender-side blind timers are not an acceptable substitute for receiver-ready.
+- If catalog handoff feels slow to start, tune `shared/ui/transition_shell_config.py::sender_complete_delay_ms` first. That is the safest latency reduction because it shortens dead time before the visible sender fade starts without weakening the receiver-ready contract.
+- If the transition still feels lazy after that safe reduction, the next aggressive step is an immediate sender-side visual cue on click. That cue may begin before receiver-ready, but actual sender completion / hide must still remain bound to the receiver-ready boundary.
 
 ### Preview Rules
 
 - Preview runtime is allowed to be local to the process that hosts the visible preview UI.
 - Preview data ownership still remains Library-owned.
+- Embedded selector open should proactively warm the Library-process preview runtime before the first selector preview click whenever the Library host is hidden or not yet ready.
 - Replace `shared/ui/helpers/preview_runtime.py` single-widget reparenting with an explicit preview runtime pool or preview host manager.
 - No preview open action may hide, close, or recreate the surrounding page or selector UI.
+- Catalog-page detached preview dialogs should avoid direct parent-window ownership churn during preview open. Independent tool-window hosting is allowed when it produces more stable Windows behavior than page-owned or host-owned parenting.
 - No selector should import page detached-preview helpers as the long-term architecture if those helpers assume catalog-page ownership or lifecycle.
 - Claim / release semantics must be explicit. A preview runtime instance must not be implicitly stolen by reparenting.
 
@@ -167,12 +173,26 @@ That mixed model is the root reason for the current symptom pattern:
   - `shared/ui/transition_shell_config.py`
 - DWM-aware geometry path already exists in:
   - `shared/ui/main_window_helpers.py`
-- Preview warmup now starts early in `Tools and jaws Library/main.py`, but preview runtime is still modeled as one app-level widget claimed by reparenting in `shared/ui/helpers/preview_runtime.py`.
-- Library catalog-page detached preview helpers still claim the singleton widget in:
+- Preview warmup now starts early in `Tools and jaws Library/main.py`, and `shared/ui/helpers/preview_runtime.py` now uses an explicit available-widget pool with claim / release semantics.
+- Embedded selector open now preloads the hidden Library preview host through an explicit `warm_preview_runtime` command, and selector mode can temporarily resize larger than Work Editor while restoring the original dialog geometry on exit.
+- Hidden Library preload now also schedules preview-runtime warmup for catalog-page preview opens, so Library preview latency does not lag behind selector preview latency.
+- Library catalog-page detached preview helpers now return detached viewers to the runtime pool on close in:
   - `Tools and jaws Library/ui/home_page_support/detached_preview.py`
   - `Tools and jaws Library/ui/jaw_page_support/detached_preview.py`
   - `Tools and jaws Library/ui/fixture_page_support/detached_preview.py`
-- Selector dialogs still reuse those page detached-preview helpers directly instead of using selector-specific host contracts.
+- Selector dialogs now use selector-local detached preview hosting in:
+  - `Tools and jaws Library/ui/selectors/detached_preview.py`
+  - `Tools and jaws Library/ui/selectors/tool_selector_dialog.py`
+  - `Tools and jaws Library/ui/selectors/jaw_selector_dialog.py`
+  - `Tools and jaws Library/ui/selectors/fixture_selector_dialog.py`
+- Fixture preview normalization was split into the selector-safe shared module:
+  - `Tools and jaws Library/ui/fixture_preview_rules.py`
+- Transition-shell completion is no longer driven by a fixed receiver timer. Receiver-side reveal completion now waits for visible, geometry-stable frames through `shared/ui/transition_shell.py`, and the shell host is reused per sender window instead of recreated per handoff.
+- Embedded selector open now starts with an immediate local snapshot shield and fades that shield out only after the selector subtree is mounted and settled, so the transition begins on click without exposing live widget jitter.
+- Catalog-page detached preview dialogs now use independent tool-window hosting for stable Windows behavior instead of remaining coupled to the Library shell ownership chain.
+- Current latency-tuning order for catalog handoff is now explicit:
+  - first reduce only the post-ready sender completion delay in `shared/ui/transition_shell_config.py`
+  - only if the handoff still feels too lazy, add a subtle sender-side visual cue that starts immediately on click while keeping sender hide on the receiver-ready boundary
 
 ### Code Path Index
 
@@ -242,12 +262,12 @@ That mixed model is the root reason for the current symptom pattern:
 | Phase | Name | Depends On | Primary Files / Directories | Target Outcome | Status |
 | --- | --- | --- | --- | --- | --- |
 | 0 | Freeze Architecture | none | root blueprint docs | confirm selector host, preview ownership, fade scope | Approved |
-| 1 | Promote Embedded Selectors | 0 | `Setup Manager/ui/work_editor_support/selector_session_controller.py`, `Setup Manager/ui/work_editor_support/selector_parity_factory.py`, `Tools and jaws Library/ui/selectors/` | Setup Manager becomes production selector host | Not started |
-| 2 | Harden Embedded Selector Parity | 1 | `Setup Manager/ui/work_editor_support/embedded_selector_host.py`, `Setup Manager/ui/work_editor_support/selector_adapter.py`, `Setup Manager/ui/work_editor_support/selector_provider.py`, `Tools and jaws Library/ui/selectors/` | embedded selectors reach production parity for submit, cancel, reset, and detail state | Not started |
-| 3 | Extract Selector Preview Host Contract | 1, 2 | `shared/ui/helpers/`, `Tools and jaws Library/ui/selectors/`, detached preview helpers | selectors stop borrowing catalog-page preview lifecycle implicitly | Not started |
-| 4 | Replace Preview Singleton With Pool | 1, 3 | `shared/ui/helpers/preview_runtime.py`, `shared/ui/stl_preview.py`, detached preview modules in both apps | preview becomes truly hot and reusable without UI bounce | Not started |
-| 5 | Narrow Fades To Catalog Only | 1 | `shared/ui/transition_shell.py`, `shared/ui/transition_shell_config.py`, `Setup Manager/main.py`, `Tools and jaws Library/main.py` | selector opening removed from cross-process fade surface | Not started |
-| 6 | Add Persistent Transition Host + Receiver-Ready Reveal | 5 | catalog handoff files plus `shared/ui/main_window_helpers.py` | visible stable fades with no helper-window feeling and no jitter | Not started |
+| 1 | Promote Embedded Selectors | 0 | `Setup Manager/ui/work_editor_support/selector_session_controller.py`, `Setup Manager/ui/work_editor_support/selector_parity_factory.py`, `Tools and jaws Library/ui/selectors/` | Setup Manager becomes production selector host | In progress - embedded is the default production path; IPC remains fallback only |
+| 2 | Harden Embedded Selector Parity | 1 | `Setup Manager/ui/work_editor_support/embedded_selector_host.py`, `Setup Manager/ui/work_editor_support/selector_adapter.py`, `Setup Manager/ui/work_editor_support/selector_provider.py`, `Tools and jaws Library/ui/selectors/` | embedded selectors reach production parity for submit, cancel, reset, and detail state | In progress - cached fixture reuse, reset cleanup, preview guards, and preview-host preload are implemented |
+| 3 | Extract Selector Preview Host Contract | 1, 2 | `shared/ui/helpers/`, `Tools and jaws Library/ui/selectors/`, detached preview helpers | selectors stop borrowing catalog-page preview lifecycle implicitly | Substantially complete - selector-local detached preview host exists for tool, jaw, and fixture selectors |
+| 4 | Replace Preview Singleton With Pool | 1, 3 | `shared/ui/helpers/preview_runtime.py`, `shared/ui/stl_preview.py`, detached preview modules in both apps | preview becomes truly hot and reusable without UI bounce | In progress - runtime pool claim / release is implemented, and embedded selectors now proactively warm the Library preview runtime before first preview open |
+| 5 | Narrow Fades To Catalog Only | 1 | `shared/ui/transition_shell.py`, `shared/ui/transition_shell_config.py`, `Setup Manager/main.py`, `Tools and jaws Library/main.py` | selector opening removed from cross-process fade surface | In progress - catalog handoff remains the only cross-process fade boundary; embedded selectors now use a local in-process page fade |
+| 6 | Add Persistent Transition Host + Receiver-Ready Reveal | 5 | catalog handoff files plus `shared/ui/main_window_helpers.py` | visible stable fades with no helper-window feeling and no jitter | In progress - receiver-ready gating and persistent shell reuse are implemented; manual Windows verification still required |
 | 7 | Retire Legacy Cross-Process Selector Path | 2, 3, 4 | `Setup Manager/ui/work_editor_support/selector_session_controller.py`, `Tools and jaws Library/ui/main_window.py`, `Tools and jaws Library/main.py` | one production selector path remains | Not started |
 | 8 | Diagnostics, Tests, Cleanup | 1-7 | `tests/`, shared helpers, logging points | measurable latency, green quality gate, final cleanup | Not started |
 
@@ -341,12 +361,16 @@ Primary implementation targets:
   - `Tools and jaws Library/main.py`
   - `Setup Manager/ui/main_window_support/library_handoff_controller.py`
   - `Tools and jaws Library/ui/main_window_support/setup_handoff.py`
+- apply transition tuning in this order:
+  - first reduce dead time before the visible fade by trimming `sender_complete_delay_ms`
+  - only after that, consider an immediate sender-side click cue if real Windows validation still shows perceptible startup lag
 
 Exit criteria:
 
 - fade is visible
 - no extra helper-window feeling
 - no jitter at reveal
+- transition starts promptly after click without regressing receiver-ready correctness
 
 #### Phase 7 - Retire Legacy Paths
 

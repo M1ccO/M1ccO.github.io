@@ -34,11 +34,6 @@ def uses_independent_detached_preview_host(page) -> bool:
 
 def create_detached_preview_dialog(page, *, title: str, on_finished: Callable[[int], None]) -> QDialog:
     """Create a detached preview dialog with selector-safe ownership rules."""
-    independent_host = uses_independent_detached_preview_host(page)
-    dialog_parent = None if independent_host else page
-    dialog = QDialog(dialog_parent)
-    dialog.setProperty('detachedPreviewDialog', True)
-
     host_window = None
     if page is not None and hasattr(page, "window"):
         try:
@@ -46,9 +41,17 @@ def create_detached_preview_dialog(page, *, title: str, on_finished: Callable[[i
         except Exception:
             host_window = None
 
+    independent_host = bool(getattr(page, "_detached_preview_force_independent_host", False))
+    if not independent_host:
+        independent_host = uses_independent_detached_preview_host(page)
+    dialog_parent = None if independent_host else (host_window if host_window is not None else page)
+    dialog = QDialog(dialog_parent)
+    dialog.setProperty('detachedPreviewDialog', True)
+
     if independent_host:
         dialog.setWindowFlag(Qt.Tool, True)
-        dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
+        if host_window is not None and bool(host_window.windowFlags() & Qt.WindowStaysOnTopHint):
+            dialog.setWindowFlag(Qt.WindowStaysOnTopHint, True)
         dialog.setAttribute(Qt.WA_StyledBackground, True)
         dialog.setAutoFillBackground(True)
         if host_window is not None:
@@ -68,6 +71,11 @@ def create_detached_preview_dialog(page, *, title: str, on_finished: Callable[[i
             pass
     elif host_window is not None and bool(host_window.windowFlags() & Qt.WindowStaysOnTopHint):
         dialog.setWindowFlag(Qt.Tool, True)
+    elif page is not None and dialog_parent is not page:
+        try:
+            page.destroyed.connect(dialog.close)
+        except Exception:
+            pass
 
     dialog.setWindowTitle(title)
     dialog.finished.connect(on_finished)

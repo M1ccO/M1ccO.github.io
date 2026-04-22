@@ -35,7 +35,10 @@ _APP = QApplication.instance() or QApplication([])
 class _GeometryDialog(QDialog):
     _SELECTOR_MIN_WIDTH = 1100
     _SELECTOR_EXPAND_DELTA = 480
-    _RESIZE_FOR_SELECTOR_MODE = False
+    _SELECTOR_DIALOG_DEFAULT_WIDTH = 1500
+    _SELECTOR_DIALOG_DEFAULT_HEIGHT = 860
+    _RESIZE_FOR_SELECTOR_MODE = True
+    _SELECTOR_LOCAL_FADE_MS = 0
     _SELECTOR_TRANSITION_SHIELD_DELAY_MS = 32
     _LOGGER = logging.getLogger(__name__)
 
@@ -115,17 +118,41 @@ class TestWorkEditorGeometryPhase6(unittest.TestCase):
         ctrl = dlg._selector_ctrl
         original_geometry = QRect(dlg.geometry())
         ctrl._open_requested = True
+        screen = dlg.screen()
+        available = screen.availableGeometry() if screen is not None else None
+        expected_width = dlg._SELECTOR_DIALOG_DEFAULT_WIDTH
+        expected_height = dlg._SELECTOR_DIALOG_DEFAULT_HEIGHT
+        if available is not None:
+            expected_width = min(expected_width, available.width())
+            expected_height = min(expected_height, available.height())
 
+        ctrl._preexpand_dialog_for_selector_open()
         ctrl._enter_mode()
         self.assertTrue(ctrl._mode_active)
         self.assertIs(dlg._root_stack.currentWidget(), dlg._selector_page)
-        self.assertGreater(dlg.width(), 0)
+        self.assertGreaterEqual(dlg.width(), expected_width)
+        self.assertGreaterEqual(dlg.height(), expected_height)
 
         ctrl._exit_mode()
+        # Geometry is now animated back by _animate_collapse_for_selector in
+        # the submit/cancel paths.  _exit_mode alone no longer snaps geometry.
+        # Verify the non-geometry state is correctly reset.
         self.assertFalse(ctrl._mode_active)
         self.assertIs(dlg._root_stack.currentWidget(), dlg._normal_page)
-        self.assertEqual(original_geometry, dlg.geometry())
         self.assertFalse(ctrl._open_requested)
+
+    def test_expand_for_mode_preserves_dialog_center_when_not_clamped(self):
+        dlg = _GeometryDialog()
+        dlg.setGeometry(300, 200, 900, 640)
+        ctrl = dlg._selector_ctrl
+        original_center = QRect(dlg.geometry()).center()
+
+        with mock.patch.object(dlg, "screen", return_value=None):
+            ctrl._expand_for_mode()
+
+        self.assertEqual(original_center, dlg.geometry().center())
+        self.assertGreaterEqual(dlg.width(), dlg._SELECTOR_DIALOG_DEFAULT_WIDTH)
+        self.assertGreaterEqual(dlg.height(), dlg._SELECTOR_DIALOG_DEFAULT_HEIGHT)
 
     def test_enter_and_exit_selector_mode_can_use_overlay_diagnostic_path(self):
         dlg = _GeometryDialog()

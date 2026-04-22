@@ -13,6 +13,15 @@ except ImportError:
 from shared.ui.helpers.window_geometry_memory import restore_window_geometry, save_window_geometry
 from shared.ui.selectors import ToolSelectorWidget
 from .common import SelectorDialogBase, SelectorWidgetBase
+from .detached_preview import (
+    load_tool_selector_preview_content,
+    sync_tool_selector_detached_preview,
+    toggle_tool_selector_preview_window,
+)
+from .external_preview_ipc import (
+    sync_embedded_tool_selector_preview,
+    toggle_embedded_tool_selector_preview_window,
+)
 from .tool_selector_layout import ToolSelectorLayoutMixin
 from .tool_selector_payload import ToolSelectorPayloadMixin
 from .tool_selector_state import ToolSelectorStateMixin
@@ -177,8 +186,7 @@ class ToolSelectorDialog(
         return normalized in {'Turn Drill', 'Turn Spot Drill', 'Turn Center Drill'}
 
     def _load_preview_content(self, viewer, stl_path: str | None, *, label: str | None = None) -> bool:
-        from ..home_page_support.detached_preview import load_preview_content
-        return load_preview_content(viewer, stl_path, label=label)
+        return load_tool_selector_preview_content(viewer, stl_path, label=label)
 
     def part_clicked(self, part: dict) -> None:
         # Navigation not applicable in selector context — no-op.
@@ -203,21 +211,14 @@ class ToolSelectorDialog(
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
-            return False
-        from ..home_page_support.detached_preview import sync_detached_preview
-        return sync_detached_preview(self, show_errors=show_errors)
+            return sync_embedded_tool_selector_preview(self, show_errors=show_errors)
+        return sync_tool_selector_detached_preview(self, show_errors=show_errors)
 
     def toggle_preview_window(self) -> None:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
+            toggle_embedded_tool_selector_preview_window(self)
             return
-        from ..home_page_support.detached_preview import toggle_preview_window
-        toggle_preview_window(self)
+        toggle_tool_selector_preview_window(self)
 
     def closeEvent(self, event) -> None:
         if not getattr(self, '_embedded_mode', False):
@@ -372,8 +373,7 @@ class EmbeddedToolSelectorWidget(
         return normalized in {'Turn Drill', 'Turn Spot Drill', 'Turn Center Drill'}
 
     def _load_preview_content(self, viewer, stl_path: str | None, *, label: str | None = None) -> bool:
-        from ..home_page_support.detached_preview import load_preview_content
-        return load_preview_content(viewer, stl_path, label=label)
+        return load_tool_selector_preview_content(viewer, stl_path, label=label)
 
     def part_clicked(self, part: dict) -> None:
         pass
@@ -395,19 +395,12 @@ class EmbeddedToolSelectorWidget(
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
-            return False
-        from ..home_page_support.detached_preview import sync_detached_preview
-        return sync_detached_preview(self, show_errors=show_errors)
+            return sync_embedded_tool_selector_preview(self, show_errors=show_errors)
+        return sync_tool_selector_detached_preview(self, show_errors=show_errors)
 
     def toggle_preview_window(self) -> None:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
+            toggle_embedded_tool_selector_preview_window(self)
             return
-        from ..home_page_support.detached_preview import toggle_preview_window
-        toggle_preview_window(self)
+        toggle_tool_selector_preview_window(self)
 

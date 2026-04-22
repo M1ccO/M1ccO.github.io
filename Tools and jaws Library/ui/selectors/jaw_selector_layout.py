@@ -88,15 +88,13 @@ class JawSelectorLayoutMixin:
         self.view_filter.currentIndexChanged.connect(self._refresh_catalog)
         apply_shared_dropdown_style(self.view_filter)
 
-        # Preview toggle: hidden — no detached window in selector yet
         self.preview_window_btn = build_preview_toggle(
             TOOL_ICONS_DIR,
             self._t('tool_library.preview.toggle', 'Näytä irrotettava 3D-esikatselu'),
             self.toggle_preview_window,
         )
-        preview_allowed = not bool(getattr(self, '_embedded_mode', False))
-        self.preview_window_btn.setVisible(preview_allowed)
-        self.preview_window_btn.setEnabled(preview_allowed)
+        self.preview_window_btn.setVisible(True)
+        self.preview_window_btn.setEnabled(True)
 
         # Right-side detail header shown when detail panel is active
         self.detail_header_container, self.detail_section_label, self.detail_close_btn = \

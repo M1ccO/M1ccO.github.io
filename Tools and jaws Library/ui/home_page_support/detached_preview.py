@@ -33,7 +33,7 @@ from shared.ui.helpers.detached_preview_common import (
     toggle_preview_window as _toggle_preview_window,
     update_measurement_toggle_icon,
 )
-from shared.ui.helpers.preview_runtime import claim_prewarmed_preview_widget, register_preview_runtime_widget
+from shared.ui.helpers.preview_runtime import claim_prewarmed_preview_widget, release_preview_runtime_widget
 from shared.ui.stl_preview import StlPreviewWidget
 
 
@@ -65,6 +65,8 @@ def set_preview_button_checked(page, checked: bool):
 def ensure_detached_preview_dialog(page):
     if page._detached_preview_dialog is not None:
         return
+
+    page._detached_preview_force_independent_host = True
 
     dialog = create_detached_preview_dialog(
         page,
@@ -110,7 +112,6 @@ def ensure_detached_preview_dialog(page):
     page._detached_preview_widget = claim_prewarmed_preview_widget(dialog)
     if page._detached_preview_widget is None and StlPreviewWidget is not None:
         page._detached_preview_widget = StlPreviewWidget()
-        register_preview_runtime_widget(page._detached_preview_widget)
 
     if page._detached_preview_widget is not None:
         page._detached_preview_widget.set_control_hint_text(
@@ -175,12 +176,21 @@ def update_detached_measurement_toggle_icon(page, enabled: bool):
 
 def on_detached_preview_closed(page):
     dialog = getattr(page, '_detached_preview_dialog', None)
+    widget = getattr(page, '_detached_preview_widget', None)
     if dialog is not None:
         save_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, 'tool_detached_preview_dialog')
-    if page._detached_preview_widget is not None:
-        page._detached_preview_widget.set_measurement_focus_index(-1)
+    if widget is not None:
+        widget.set_measurement_focus_index(-1)
+        release_preview_runtime_widget(widget)
+    page._detached_preview_widget = None
+    page._detached_preview_dialog = None
+    page._measurement_toggle_btn = None
+    page._measurement_filter_combo = None
+    page._close_preview_shortcut = None
     page._detached_preview_last_model_key = None
     set_preview_button_checked(page, False)
+    if dialog is not None:
+        dialog.deleteLater()
 
 
 def refresh_detached_measurement_controls(page, overlays):
@@ -297,8 +307,8 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     if not was_visible:
         apply_detached_preview_default_bounds(page)
         page._detached_preview_dialog.show()
-        page._detached_preview_dialog.raise_()
         page._detached_preview_dialog.activateWindow()
+    page._detached_preview_dialog.raise_()
     set_preview_button_checked(page, True)
     return True
 

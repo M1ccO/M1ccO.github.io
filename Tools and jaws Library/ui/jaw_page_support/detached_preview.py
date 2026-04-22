@@ -31,7 +31,7 @@ from shared.ui.helpers.detached_preview_common import (
     toggle_preview_window as _toggle_preview_window,
     update_measurement_toggle_icon,
 )
-from shared.ui.helpers.preview_runtime import claim_prewarmed_preview_widget, register_preview_runtime_widget
+from shared.ui.helpers.preview_runtime import claim_prewarmed_preview_widget, release_preview_runtime_widget
 from shared.ui.stl_preview import StlPreviewWidget
 from ui.jaw_page_support.preview_rules import (
     apply_jaw_preview_transform,
@@ -66,6 +66,8 @@ def load_preview_content(page, viewer: StlPreviewWidget, jaw: dict, *, label: st
 def ensure_detached_preview_dialog(page) -> None:
     if page._detached_preview_dialog is not None:
         return
+
+    page._detached_preview_force_independent_host = True
 
     dialog = create_detached_preview_dialog(
         page,
@@ -108,7 +110,6 @@ def ensure_detached_preview_dialog(page) -> None:
     page._detached_preview_widget = claim_prewarmed_preview_widget(dialog)
     if page._detached_preview_widget is None:
         page._detached_preview_widget = StlPreviewWidget()
-        register_preview_runtime_widget(page._detached_preview_widget)
     page._detached_preview_widget.set_control_hint_text(
         page._t(
             'tool_editor.hint.rotate_pan_zoom',
@@ -180,12 +181,20 @@ def apply_detached_measurement_state(page, jaw: dict) -> None:
 
 def on_detached_preview_closed(page, _result) -> None:
     dialog = getattr(page, '_detached_preview_dialog', None)
+    widget = getattr(page, '_detached_preview_widget', None)
     if dialog is not None:
         save_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, 'jaw_detached_preview_dialog')
-    if page._detached_preview_widget is not None:
-        page._detached_preview_widget.set_measurement_focus_index(-1)
+    if widget is not None:
+        widget.set_measurement_focus_index(-1)
+        release_preview_runtime_widget(widget)
+    page._detached_preview_widget = None
+    page._detached_preview_dialog = None
+    page._measurement_toggle_btn = None
+    page._close_preview_shortcut = None
     page._detached_preview_last_model_key = None
     set_preview_button_checked(page, False)
+    if dialog is not None:
+        dialog.deleteLater()
 
 
 def close_detached_preview(page) -> None:
@@ -244,8 +253,8 @@ def sync_detached_preview(page, show_errors: bool = False) -> bool:
     if not was_visible:
         apply_detached_preview_default_bounds(page)
         page._detached_preview_dialog.show()
-        page._detached_preview_dialog.raise_()
         page._detached_preview_dialog.activateWindow()
+    page._detached_preview_dialog.raise_()
     set_preview_button_checked(page, True)
     return True
 

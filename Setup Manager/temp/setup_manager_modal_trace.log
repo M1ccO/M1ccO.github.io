@@ -1,8 +1,8 @@
-2026-04-21 13:55:13 {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
-2026-04-21 13:55:13 {'event': 'pre_exec', 'dt_ms': 1, 'dialog_visible': False}
-2026-04-21 13:55:13 {'event': 'UpdateRequest', 'dt_ms': 21, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1012', 'modal': True}
-2026-04-21 13:55:13 {'event': 'Paint', 'dt_ms': 22, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1012', 'modal': True}
-2026-04-21 13:55:13 {'event': 'WindowDeactivate', 'dt_ms': 24, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
-2026-04-21 13:55:13 {'event': 'UpdateRequest', 'dt_ms': 33, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
-2026-04-21 13:55:13 {'event': 'Paint', 'dt_ms': 35, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
-2026-04-21 13:55:13 {'event': 'Paint', 'dt_ms': 42, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 11:29:49 {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-22 11:29:49 {'event': 'pre_exec', 'dt_ms': 1, 'dialog_visible': False}
+2026-04-22 11:29:49 {'event': 'UpdateRequest', 'dt_ms': 20, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 11:29:49 {'event': 'Paint', 'dt_ms': 41, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 11:29:49 {'event': 'WindowDeactivate', 'dt_ms': 55, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 11:29:49 {'event': 'UpdateRequest', 'dt_ms': 66, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 11:29:49 {'event': 'Paint', 'dt_ms': 68, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 11:29:55 {'event': 'modal_trace_end', 'dt_ms': 6560, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}

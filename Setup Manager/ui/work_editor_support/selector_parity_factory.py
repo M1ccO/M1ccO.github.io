@@ -596,19 +596,21 @@ def build_embedded_selector_parity_widget(
             )
             cache[kind_key] = widget
     else:
-        from tools_and_jaws_library.ui.selectors.fixture_selector_dialog import FixtureSelectorDialog
+        if widget is None:
+            from tools_and_jaws_library.ui.selectors.fixture_selector_dialog import FixtureSelectorDialog
 
-        widget = FixtureSelectorDialog(
-            fixture_service=services["fixture_service"],
-            translate=dialog._t,
-            initial_assignments=initial_assignments,
-            initial_assignment_buckets=initial_assignment_buckets,
-            initial_target_key=str((follow_up or {}).get("target_key") or ""),
-            on_submit=on_submit,
-            on_cancel=on_cancel,
-            parent=parent_widget,
-            embedded_mode=True,
-        )
+            widget = FixtureSelectorDialog(
+                fixture_service=services["fixture_service"],
+                translate=dialog._t,
+                initial_assignments=initial_assignments,
+                initial_assignment_buckets=initial_assignment_buckets,
+                initial_target_key=str((follow_up or {}).get("target_key") or ""),
+                on_submit=on_submit,
+                on_cancel=on_cancel,
+                parent=parent_widget,
+                embedded_mode=True,
+            )
+            cache[kind_key] = widget
 
     if kind_key == "tools":
         prepare = getattr(widget, "prepare_for_session", None)
@@ -628,6 +630,17 @@ def build_embedded_selector_parity_widget(
             prepare(
                 selector_spindle=str(spindle or ""),
                 initial_assignments=initial_assignments,
+                on_submit=on_submit,
+                on_cancel=on_cancel,
+            )
+        setattr(widget, "_reuse_cached_selector_widget", True)
+    else:
+        reset = getattr(widget, "reset_for_session", None)
+        if callable(reset):
+            reset(
+                initial_assignments=initial_assignments,
+                initial_assignment_buckets=initial_assignment_buckets,
+                initial_target_key=str((follow_up or {}).get("target_key") or ""),
                 on_submit=on_submit,
                 on_cancel=on_cancel,
             )

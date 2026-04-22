@@ -1470,6 +1470,182 @@ class TestMainWindowSelectorSessionFlow(unittest.TestCase):
         self.assertIn("kind:tools", events)
         self.assertIn("back", events)
 
+    def test_back_to_setup_manager_closes_previews_before_handoff(self):
+        events: list[str] = []
+
+        def _close_page_preview(name: str):
+            return lambda: events.append(f"page:{name}")
+
+        dummy = types.SimpleNamespace(
+            home_page=types.SimpleNamespace(_close_detached_preview=_close_page_preview("home")),
+            jaws_page=types.SimpleNamespace(_close_detached_preview=_close_page_preview("jaws")),
+            fixtures_page=types.SimpleNamespace(_close_detached_preview=_close_page_preview("fixtures")),
+            assemblies_page=None,
+            holders_page=None,
+            inserts_page=None,
+            _close_selector_dialogs=lambda: events.append("dialogs"),
+            _set_selector_session_state=lambda state: events.append(f"state:{state.get('mode', '')}"),
+        )
+
+        with mock.patch.object(
+            self.main_window_module,
+            "close_external_selector_preview",
+            side_effect=lambda window: events.append("selector-preview"),
+        ), mock.patch.object(
+            self.main_window_module,
+            "handoff_to_setup_manager",
+            side_effect=lambda *args, **kwargs: events.append("handoff"),
+        ), mock.patch.object(
+            self.main_window_module,
+            "empty_selector_session_state",
+            return_value={"mode": ""},
+        ):
+            self.MainWindow._back_to_setup_manager(dummy)
+
+        self.assertEqual(
+            ["selector-preview", "page:home", "page:jaws", "page:fixtures", "dialogs", "state:", "handoff"],
+            events,
+        )
+
+    def test_clear_selector_session_closes_selector_preview_before_show(self):
+        events: list[str] = []
+
+        dummy = types.SimpleNamespace(
+            _close_selector_dialogs=lambda: events.append("dialogs"),
+            _set_selector_session_state=lambda state: events.append(f"state:{state.get('mode', '')}"),
+            windowFlags=lambda: Qt.WindowStaysOnTopHint,
+            setWindowFlag=lambda flag, enabled: events.append(f"flag:{int(flag == Qt.WindowStaysOnTopHint)}:{enabled}"),
+            show=lambda: events.append("show"),
+        )
+
+        with mock.patch.object(
+            self.main_window_module,
+            "close_external_selector_preview",
+            side_effect=lambda window: events.append("selector-preview"),
+        ), mock.patch.object(
+            self.main_window_module,
+            "empty_selector_session_state",
+            return_value={"mode": ""},
+        ):
+            self.MainWindow._clear_selector_session(dummy, show=True)
+
+        self.assertEqual(
+            ["selector-preview", "dialogs", "state:", f"flag:1:{False}", "show"],
+            events,
+        )
+
+
+class TestHomePageSelectionPreviewSync(unittest.TestCase):
+
+    def setUp(self):
+        _prefer_tools_library_namespace()
+        for mod_name in list(sys.modules.keys()):
+            if mod_name == "ui" or mod_name.startswith("ui."):
+                sys.modules.pop(mod_name, None)
+        self.module = importlib.import_module("ui.home_page_support.selection_signal_handlers")
+
+    def test_current_item_changed_syncs_preview_when_checked(self):
+        events: list[object] = []
+        page = types.SimpleNamespace(
+            current_tool_id=None,
+            current_tool_uid=None,
+            _details_hidden=False,
+            preview_window_btn=types.SimpleNamespace(isChecked=lambda: True),
+            populate_details=lambda tool: events.append(("details", tool)),
+            _get_selected_tool=lambda: {"id": "T001"},
+            _sync_detached_preview=lambda show_errors=False: events.append(("sync", show_errors)),
+        )
+
+        def _data(role):
+            if role == self.module.ROLE_TOOL_ID:
+                return "T001"
+            if role == self.module.ROLE_TOOL_UID:
+                return 42
+            return None
+
+        current = types.SimpleNamespace(isValid=lambda: True, data=_data)
+
+        self.module.on_current_item_changed(page, current, None)
+
+        self.assertEqual("T001", page.current_tool_id)
+        self.assertEqual(42, page.current_tool_uid)
+        self.assertIn(("details", {"id": "T001"}), events)
+        self.assertIn(("sync", False), events)
+
+    def test_invalid_current_item_changed_clears_details_and_syncs_preview(self):
+        events: list[object] = []
+        page = types.SimpleNamespace(
+            current_tool_id="T001",
+            current_tool_uid=42,
+            _details_hidden=False,
+            preview_window_btn=types.SimpleNamespace(isChecked=lambda: True),
+            populate_details=lambda tool: events.append(("details", tool)),
+            _sync_detached_preview=lambda show_errors=False: events.append(("sync", show_errors)),
+        )
+        current = types.SimpleNamespace(isValid=lambda: False)
+
+        self.module.on_current_item_changed(page, current, None)
+
+        self.assertIsNone(page.current_tool_id)
+        self.assertIsNone(page.current_tool_uid)
+        self.assertIn(("details", None), events)
+        self.assertIn(("sync", False), events)
+
+
+class TestLibraryPreviewEditLifecycle(unittest.TestCase):
+
+    def setUp(self):
+        _prefer_tools_library_namespace()
+        self.home_crud = importlib.import_module("ui.home_page_support.crud_actions")
+        self.jaw_crud = importlib.import_module("ui.jaw_page_support.crud_actions")
+
+    def test_add_tool_closes_open_preview_before_dialog(self):
+        events: list[str] = []
+
+        class _DialogStub:
+            def __init__(self, **kwargs):
+                events.append("dialog")
+
+            def exec(self):
+                return 0
+
+        page = types.SimpleNamespace(
+            preview_window_btn=types.SimpleNamespace(isChecked=lambda: True),
+            tool_service=object(),
+            _t=lambda _k, default=None, **_kwargs: default or "",
+        )
+
+        with mock.patch.object(self.home_crud, "close_detached_preview", side_effect=lambda _page: events.append("close")), \
+             mock.patch.object(self.home_crud, "AddEditToolDialog", _DialogStub):
+            self.home_crud.add_tool(page)
+
+        self.assertEqual(["close", "dialog"], events)
+
+    def test_edit_jaw_closes_open_preview_before_dialog(self):
+        events: list[str] = []
+
+        class _DialogStub:
+            def __init__(self, *_args, **_kwargs):
+                events.append("dialog")
+
+            def exec(self):
+                return 0
+
+        page = types.SimpleNamespace(
+            preview_window_btn=types.SimpleNamespace(isChecked=lambda: True),
+            jaw_service=types.SimpleNamespace(get_jaw=lambda jaw_id: {"jaw_id": jaw_id}),
+            _selected_jaw_ids=lambda: ["J001"],
+            _t=lambda _k, default=None, **_kwargs: default or "",
+            _batch_edit_jaws=lambda _ids: None,
+            _group_edit_jaws=lambda _ids: None,
+        )
+
+        with mock.patch.object(self.jaw_crud, "close_detached_preview", side_effect=lambda _page: events.append("close")), \
+             mock.patch.object(self.jaw_crud, "AddEditJawDialog", _DialogStub):
+            self.jaw_crud.edit_jaw(page)
+
+        self.assertEqual(["close", "dialog"], events)
+
 
 # ===========================================================================
 
