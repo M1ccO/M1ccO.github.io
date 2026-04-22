@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import QSize, Qt, QTimer
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -222,6 +222,7 @@ def on_tool_selector_detached_preview_closed(page) -> None:
     page._measurement_filter_combo = None
     page._close_preview_shortcut = None
     page._detached_preview_last_model_key = None
+    page._detached_preview_pending_show = False
     _set_preview_button_checked(page, False)
     if dialog is not None:
         dialog.deleteLater()
@@ -317,8 +318,9 @@ def sync_tool_selector_detached_preview(page, *, show_errors: bool = False) -> b
         int(tool.get("uid")) if str(tool.get("uid", "")).strip().isdigit() else str(tool.get("id") or "").strip(),
         str(raw_model_key or ""),
     )
+    model_changed = getattr(page, "_detached_preview_last_model_key", None) != model_key
     loaded = True
-    if getattr(page, "_detached_preview_last_model_key", None) != model_key:
+    if model_changed:
         try:
             page._detached_preview_widget.clear()
         except Exception:
@@ -348,9 +350,35 @@ def sync_tool_selector_detached_preview(page, *, show_errors: bool = False) -> b
     )
     if not was_visible:
         _apply_preview_bounds(page, geometry_key="tool_detached_preview_dialog")
-        page._detached_preview_dialog.show()
-        page._detached_preview_dialog.raise_()
-        page._detached_preview_dialog.activateWindow()
+
+        page._detached_preview_pending_show = bool(model_changed)
+
+        def _show_when_ready() -> None:
+            viewer = getattr(page, "_detached_preview_widget", None)
+            if viewer is not None and hasattr(viewer, "model_loaded"):
+                try:
+                    viewer.model_loaded.disconnect(_show_when_ready)
+                except Exception:
+                    pass
+            if not getattr(page, "_detached_preview_pending_show", False):
+                return
+            page._detached_preview_pending_show = False
+            if getattr(page, "_detached_preview_dialog", None) is None:
+                return
+            page._detached_preview_dialog.show()
+            page._detached_preview_dialog.raise_()
+            page._detached_preview_dialog.activateWindow()
+
+        if model_changed:
+            viewer = getattr(page, "_detached_preview_widget", None)
+            if viewer is not None and hasattr(viewer, "model_loaded"):
+                viewer.model_loaded.connect(_show_when_ready)
+            QTimer.singleShot(1200, _show_when_ready)
+        else:
+            page._detached_preview_pending_show = False
+            page._detached_preview_dialog.show()
+            page._detached_preview_dialog.raise_()
+            page._detached_preview_dialog.activateWindow()
     _set_preview_button_checked(page, True)
     return True
 

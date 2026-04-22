@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QSize, Qt, QRect
+from PySide6.QtCore import QSize, Qt, QRect, QTimer
 from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QSizePolicy, QToolButton, QVBoxLayout
 
@@ -193,6 +193,7 @@ def _on_preview_dialog_finished(window, _result: int) -> None:
     window._external_selector_preview_close_shortcut = None
     window._external_selector_preview_overlays = []
     window._external_selector_preview_last_model_key = None
+    window._external_selector_preview_pending_show = False
 
 
 def _ensure_external_preview_dialog(window) -> tuple[QDialog, object | None]:
@@ -301,9 +302,10 @@ def show_external_selector_preview(window, payload: dict | None) -> bool:
     stl_path = str(payload.get("stl_path") or "").strip()
     label = str(payload.get("label") or payload.get("item_id") or "3D Preview").strip() or "3D Preview"
     model_key = payload.get("model_key")
+    model_changed = model_key != getattr(window, "_external_selector_preview_last_model_key", None)
 
     loaded = True
-    if model_key != getattr(window, "_external_selector_preview_last_model_key", None):
+    if model_changed:
         if isinstance(parts, list) and parts:
             viewer.load_parts([dict(item) for item in parts if isinstance(item, dict)])
         elif stl_path:
@@ -343,7 +345,32 @@ def show_external_selector_preview(window, payload: dict | None) -> bool:
     dialog.setWindowTitle(title)
     _apply_preferred_bounds(window, dialog, payload)
     if not dialog.isVisible():
-        dialog.show()
+        window._external_selector_preview_pending_show = bool(model_changed)
+
+        def _show_when_ready() -> None:
+            if hasattr(viewer, "model_loaded"):
+                try:
+                    viewer.model_loaded.disconnect(_show_when_ready)
+                except Exception:
+                    pass
+            if not getattr(window, "_external_selector_preview_pending_show", False):
+                return
+            window._external_selector_preview_pending_show = False
+            if getattr(window, "_external_selector_preview_dialog", None) is None:
+                return
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
+
+        if model_changed:
+            if hasattr(viewer, "model_loaded"):
+                viewer.model_loaded.connect(_show_when_ready)
+            QTimer.singleShot(1200, _show_when_ready)
+        else:
+            window._external_selector_preview_pending_show = False
+            dialog.show()
+            dialog.raise_()
+            dialog.activateWindow()
     dialog.raise_()
     dialog.activateWindow()
     return True

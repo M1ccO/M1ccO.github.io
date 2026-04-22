@@ -1592,6 +1592,46 @@ class TestHomePageSelectionPreviewSync(unittest.TestCase):
         self.assertIn(("sync", False), events)
 
 
+class TestHomePageSelectionHelpers(unittest.TestCase):
+
+    def setUp(self):
+        _prefer_tools_library_namespace()
+        for mod_name in list(sys.modules.keys()):
+            if mod_name == "ui" or mod_name.startswith("ui."):
+                sys.modules.pop(mod_name, None)
+        self.module = importlib.import_module("ui.home_page_support.selection_helpers")
+
+    def test_get_selected_tool_prefers_uid(self):
+        page = types.SimpleNamespace(
+            current_tool_id="T100",
+            current_tool_uid=42,
+            tool_service=types.SimpleNamespace(
+                get_tool_by_uid=lambda uid: {"id": "T100", "uid": uid, "description": "HEAD2 variant"},
+                get_tool=lambda tool_id: {"id": tool_id, "uid": 1, "description": "fallback"},
+            ),
+        )
+
+        tool = self.module.get_selected_tool(page)
+
+        self.assertEqual(42, tool.get("uid"))
+        self.assertEqual("HEAD2 variant", tool.get("description"))
+
+    def test_get_selected_tool_falls_back_to_tool_id_when_uid_missing(self):
+        page = types.SimpleNamespace(
+            current_tool_id="T200",
+            current_tool_uid=None,
+            tool_service=types.SimpleNamespace(
+                get_tool_by_uid=lambda _uid: None,
+                get_tool=lambda tool_id: {"id": tool_id, "uid": 7},
+            ),
+        )
+
+        tool = self.module.get_selected_tool(page)
+
+        self.assertEqual("T200", tool.get("id"))
+        self.assertEqual(7, tool.get("uid"))
+
+
 class TestLibraryPreviewEditLifecycle(unittest.TestCase):
 
     def setUp(self):

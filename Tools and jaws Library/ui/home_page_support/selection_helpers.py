@@ -17,9 +17,24 @@ __all__ = [
 
 def get_selected_tool(page) -> dict | None:
     """Return currently selected tool dict or None."""
-    if not page.current_tool_id:
+    tool_service = getattr(page, "tool_service", None)
+    if tool_service is None:
         return None
-    return page.tool_service.get_tool(page.current_tool_id)
+
+    # Prefer UID when available so duplicate tool IDs (same T-code) resolve to
+    # the exact selected row instead of the first ID match.
+    uid = getattr(page, "current_tool_uid", None)
+    if uid:
+        get_tool_by_uid = getattr(tool_service, "get_tool_by_uid", None)
+        if callable(get_tool_by_uid):
+            tool = get_tool_by_uid(uid)
+            if isinstance(tool, dict):
+                return tool
+
+    tool_id = str(getattr(page, "current_tool_id", "") or "").strip()
+    if not tool_id:
+        return None
+    return tool_service.get_tool(tool_id)
 
 
 def selected_tool_uids(page) -> list[int]:

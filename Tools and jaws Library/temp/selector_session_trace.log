@@ -79,3 +79,7 @@
 {"ts": "2026-04-22T08:16:58.666601+00:00", "session": "cbef4ea6-9eac-42e5-b386-b4fbed2721d6", "from": "idle", "to": "opening", "caller": "tools"}
 {"ts": "2026-04-22T08:24:27.541612+00:00", "session": "da9716b1-3c8a-4eb2-8014-be3fbc21ed96", "from": "idle", "to": "opening", "caller": "tools"}
 {"ts": "2026-04-22T08:28:26.487304+00:00", "session": "e14ae922-9b68-4667-aebe-d5e0de8ef0bc", "from": "idle", "to": "opening", "caller": "tools"}
+{"ts": "2026-04-22T11:36:44.532849+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "idle", "to": "opening", "caller": "embedded.jaws"}
+{"ts": "2026-04-22T11:36:44.623099+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "opening", "to": "active", "caller": "embedded.mounted"}
+{"ts": "2026-04-22T11:36:45.946746+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "active", "to": "closing", "caller": "embedded.submit"}
+{"ts": "2026-04-22T11:36:45.977246+00:00", "session": "01fde146-bfcb-4a38-b73a-514161c32564", "from": "closing", "to": "idle", "caller": "embedded.submit.teardown"}

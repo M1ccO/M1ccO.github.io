@@ -5,6 +5,20 @@ import { STLLoader } from './STLLoader.js';
 const canvas = document.getElementById('viewport');
 const status = document.getElementById('status');
 
+let _previewEventSeq = 0;
+function emitPreviewEvent(type, payload) {
+  const normalizedType = String(type || '').trim();
+  if (!normalizedType) return;
+  let body = '{}';
+  try {
+    body = JSON.stringify(payload ?? {});
+  } catch (_err) {
+    body = '{}';
+  }
+  _previewEventSeq += 1;
+  document.title = `${normalizedType}:${body}`;
+}
+
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
@@ -199,16 +213,125 @@ let currentGroup = null;
 let currentMaxDim = 1;
 let wheelZoomEnabled = false;
 let alignmentPlane = 'XZ';
+let statusOverlayEnabled = false;
+const MODEL_CROSSFADE_MS = 120;
 const manualRotation = new THREE.Vector3(0, 0, 0);
 const frameDirection = new THREE.Vector3(1, 0.62, 1).normalize();
 
 function showStatus(text) {
+  if (!statusOverlayEnabled) {
+    return;
+  }
   status.textContent = text;
   status.style.display = 'block';
 }
 
 function hideStatus() {
   status.style.display = 'none';
+}
+
+function _setMaterialOpacity(material, opacity, forceTransparent) {
+  if (!material) return;
+  material.userData = material.userData || {};
+  if (!Object.prototype.hasOwnProperty.call(material.userData, '_previewOrigOpacity')) {
+    material.userData._previewOrigOpacity = Number(material.opacity);
+    material.userData._previewOrigTransparent = !!material.transparent;
+  }
+  material.transparent = !!forceTransparent;
+  material.opacity = THREE.MathUtils.clamp(Number(opacity) || 0, 0, 1);
+  material.needsUpdate = true;
+}
+
+function _restoreMaterialOpacity(material) {
+  if (!material || !material.userData) return;
+  if (Object.prototype.hasOwnProperty.call(material.userData, '_previewOrigOpacity')) {
+    material.opacity = Number(material.userData._previewOrigOpacity);
+    delete material.userData._previewOrigOpacity;
+  }
+  if (Object.prototype.hasOwnProperty.call(material.userData, '_previewOrigTransparent')) {
+    material.transparent = !!material.userData._previewOrigTransparent;
+    delete material.userData._previewOrigTransparent;
+  }
+  material.needsUpdate = true;
+}
+
+function _setGroupOpacity(group, opacity, forceTransparent = true) {
+  if (!group) return;
+  group.traverse((node) => {
+    if (!node || !node.material) return;
+    if (Array.isArray(node.material)) {
+      node.material.forEach((material) => _setMaterialOpacity(material, opacity, forceTransparent));
+      return;
+    }
+    _setMaterialOpacity(node.material, opacity, forceTransparent);
+  });
+}
+
+function _restoreGroupOpacity(group) {
+  if (!group) return;
+  group.traverse((node) => {
+    if (!node || !node.material) return;
+    if (Array.isArray(node.material)) {
+      node.material.forEach((material) => _restoreMaterialOpacity(material));
+      return;
+    }
+    _restoreMaterialOpacity(node.material);
+  });
+}
+
+function _disposeMeshList(meshes) {
+  for (const mesh of meshes || []) {
+    if (!mesh) continue;
+    if (mesh.geometry) {
+      mesh.geometry.dispose();
+    }
+    if (mesh.material) {
+      if (Array.isArray(mesh.material)) {
+        mesh.material.forEach((m) => m?.dispose && m.dispose());
+      } else if (mesh.material.dispose) {
+        mesh.material.dispose();
+      }
+    }
+  }
+}
+
+function _transitionToGroup(nextGroup, nextMeshes, { refit = true, readyKind = 'model' } = {}) {
+  const previousGroup = currentGroup;
+  const previousMeshes = currentMeshes;
+
+  currentGroup = nextGroup;
+  currentMeshes = nextMeshes;
+  applyModelTransformAndFrame(refit);
+
+  if (!previousGroup) {
+    _markShadowMapDirty();
+    emitPreviewEvent('MODEL_READY', { kind: readyKind, mesh_count: nextMeshes.length });
+    return;
+  }
+
+  _setGroupOpacity(previousGroup, 1, true);
+  _setGroupOpacity(nextGroup, 0, true);
+  _markShadowMapDirty();
+
+  const startedAt = performance.now();
+  const step = (now) => {
+    const elapsed = Math.max(0, now - startedAt);
+    const t = Math.min(1, elapsed / MODEL_CROSSFADE_MS);
+    _setGroupOpacity(previousGroup, 1 - t, true);
+    _setGroupOpacity(nextGroup, t, true);
+
+    if (t < 1) {
+      requestAnimationFrame(step);
+      return;
+    }
+
+    _restoreGroupOpacity(nextGroup);
+    scene.remove(previousGroup);
+    _disposeMeshList(previousMeshes);
+    emitPreviewEvent('MODEL_READY', { kind: readyKind, mesh_count: nextMeshes.length });
+  };
+
+  requestAnimationFrame(step);
 }
 
 const MACHINED_SKIN_KEY = 'machined-metal-skin-v2';
@@ -516,11 +639,18 @@ function clearCurrentMeshes() {
 window.clearModel = function () {
   clearCurrentMeshes();
   _markShadowMapDirty();
-  showStatus('No model loaded.');
+  hideStatus();
 };
 
 window.setWheelZoomEnabled = function (enabled) {
   wheelZoomEnabled = !!enabled;
+};
+
+window.setStatusOverlayEnabled = function (enabled) {
+  statusOverlayEnabled = !!enabled;
+  if (!statusOverlayEnabled) {
+    hideStatus();
+  }
 };
 
 window.setAlignmentPlane = function (plane) {
@@ -561,31 +691,28 @@ window.loadModel = function (modelPath, label = null) {
     return;
   }
 
-  showStatus('Loading STL model...');
-
   loader.load(
     modelPath,
     (geometry) => {
-      clearCurrentMeshes();
-
       geometry.computeVertexNormals();
       geometry.center();
 
       const mesh = new THREE.Mesh(geometry, makeMaterial('#9ea7b3'));
       mesh.castShadow = true;
       mesh.receiveShadow = false;
-      currentMeshes = [mesh];
-      currentGroup = new THREE.Group();
-      currentGroup.add(mesh);
-      scene.add(currentGroup);
+      const nextGroup = new THREE.Group();
+      nextGroup.add(mesh);
+      scene.add(nextGroup);
 
-      applyModelTransformAndFrame(true);
+      _transitionToGroup(nextGroup, [mesh], { refit: true, readyKind: 'stl' });
       hideStatus();
     },
     undefined,
     (error) => {
       console.error('STL load failed:', error);
-      showStatus('Failed to load STL model.');
+      if (statusOverlayEnabled) {
+        showStatus('Failed to load STL model.');
+      }
     }
   );
 };
@@ -596,11 +723,9 @@ window.loadAssembly = function (parts) {
     return;
   }
 
-  clearCurrentMeshes();
-  showStatus('Loading assembly...');
-
-  currentGroup = new THREE.Group();
-  scene.add(currentGroup);
+  const nextGroup = new THREE.Group();
+  scene.add(nextGroup);
+  const nextMeshes = [];
 
   let remaining = parts.length;
   let loadedCount = 0;
@@ -613,11 +738,14 @@ window.loadAssembly = function (parts) {
     }
 
     if (loadedCount === 0) {
-      showStatus('Failed to load assembly.');
+      scene.remove(nextGroup);
+      if (statusOverlayEnabled) {
+        showStatus('Failed to load assembly.');
+      }
       return;
     }
 
-    applyModelTransformAndFrame(true);
+    _transitionToGroup(nextGroup, nextMeshes, { refit: true, readyKind: 'assembly' });
     hideStatus();
   };
 
@@ -638,8 +766,8 @@ window.loadAssembly = function (parts) {
         const mesh = new THREE.Mesh(geometry, makeMaterial(color));
         mesh.castShadow = true;
         mesh.receiveShadow = false;
-        currentMeshes.push(mesh);
-        currentGroup.add(mesh);
+        nextMeshes.push(mesh);
+        nextGroup.add(mesh);
         loadedCount += 1;
         finishIfDone();
       },
@@ -698,4 +826,4 @@ window.addEventListener('resize', () => {
   renderer.setSize(w, h);
 });
 
-showStatus('Viewer ready.');
+hideStatus();

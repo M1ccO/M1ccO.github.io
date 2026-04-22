@@ -88,6 +88,7 @@ class StlPreviewWidget(QWidget):
     part_selection_changed = Signal(list)
     point_picked = Signal(dict)
     measurement_updated = Signal(dict)
+    model_loaded = Signal(dict)
 
     def __init__(self, stl_path: str | None = None, parent=None):
         super().__init__(parent)
@@ -116,7 +117,7 @@ class StlPreviewWidget(QWidget):
         self._control_hint_text = ''
         self._axis_orbit_visible = False
         self._selection_caption = ''
-        self._status_overlay_enabled = True
+        self._status_overlay_enabled = False
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -810,6 +811,10 @@ class StlPreviewWidget(QWidget):
 
         if event_name == 'MEASUREMENT_UPDATED' and isinstance(payload, dict):
             self.measurement_updated.emit(payload)
+            return
+
+        if event_name == 'MODEL_READY':
+            self.model_loaded.emit(payload if isinstance(payload, dict) else {})
 
     def set_transform_edit_enabled(self, enabled: bool):
         self._transform_edit_enabled = bool(enabled)
