@@ -1,4 +1,4 @@
-﻿"""Shared 3D models tab builder for editor dialogs (Tool/Jaw)."""
+"""Shared 3D models tab builder for editor dialogs (Tool/Jaw)."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -206,11 +206,11 @@ def build_editor_models_tab(dialog: Any, root_tabs: QTabWidget, config: ModelsTa
     preview_panel_layout.setContentsMargins(8, 8, 8, 8)
     preview_panel_layout.setSpacing(8)
 
-    dialog.models_preview = StlPreviewWidget()
+    dialog.models_preview = StlPreviewWidget(parent=dialog)
     dialog.models_preview.set_control_hint_text(
         dialog._t(
             'tool_editor.hint.rotate_pan_zoom',
-            'Rotate: left mouse â€¢ Pan: right mouse â€¢ Zoom: mouse wheel',
+            'Rotate: left mouse . Pan: right mouse . Zoom: mouse wheel',
         )
     )
     preview_panel_layout.addWidget(dialog.models_preview, 1)

@@ -5,6 +5,8 @@ import time
 from PySide6.QtCore import QRect
 from PySide6.QtWidgets import QApplication, QDialog, QGraphicsBlurEffect, QWidget
 
+from shared.ui.main_window_helpers import exec_dialog_with_blur, prime_dialog
+
 try:
     from ui.main_window_support import pause_tool_library_preload, resume_tool_library_preload
 except Exception:
@@ -22,52 +24,26 @@ def resolve_work_editor_parent(page) -> QWidget | None:
 
 
 def prime_work_editor_dialog(dialog) -> None:
+    """Specialized priming for Work Editor, delegating to shared prime_dialog."""
     if not isinstance(dialog, QDialog):
         return
     if getattr(dialog, "_startup_open_primed", False):
         return
-
     dialog._startup_open_primed = True
-    ensure_polished = getattr(dialog, "ensurePolished", None)
-    if callable(ensure_polished):
-        ensure_polished()
 
-    app = QApplication.instance()
-    if app is not None:
-        app.processEvents()
+    # Shared priming (polished, updates disabled, layout activate) - includes standard hooks
+    prime_dialog(dialog)
 
-    # Build lazy tabs with updates disabled to avoid focus-stealing flashes
-    # on Windows during widget construction.
-    dialog.setUpdatesEnabled(False)
-    try:
-        activate_layout = getattr(dialog.layout(), "activate", None)
-        if callable(activate_layout):
-            activate_layout()
-
-        ensure_surface = getattr(dialog, "_ensure_normal_editor_surface_visible", None)
-        if callable(ensure_surface):
-            ensure_surface()
-
-        ensure_content = getattr(dialog, "_ensure_normal_editor_content_visible", None)
-        if callable(ensure_content):
-            ensure_content()
-
-        warmup_surfaces = getattr(dialog, "_warmup_initial_interaction_surfaces", None)
-        if callable(warmup_surfaces):
-            warmup_surfaces()
-
-        close_popups = getattr(dialog, "_close_transient_combo_popups", None)
-        if callable(close_popups):
-            close_popups()
-
-        update_geometry = getattr(dialog, "updateGeometry", None)
-        if callable(update_geometry):
-            update_geometry()
-    finally:
-        dialog.setUpdatesEnabled(True)
-
-    if app is not None:
-        app.processEvents()
+    # Additional work-editor-specific hooks NOT in prime_dialog's standard list
+    for hook in (
+        "_close_transient_combo_popups",
+    ):
+        method = getattr(dialog, hook, None)
+        if callable(method):
+            try:
+                method()
+            except Exception:
+                pass
 
 
 def _position_dialog_over_host(dialog, host: QWidget | None) -> None:
@@ -96,9 +72,7 @@ def exec_work_editor_dialog(dialog) -> int:
     preload_host = explicit_host if isinstance(explicit_host, QWidget) else None
     if preload_host is None and isinstance(parent_widget, QWidget):
         preload_host = parent_widget.window()
-    host_geometry = None
-    if isinstance(preload_host, QWidget):
-        host_geometry = preload_host.frameGeometry()
+
     begin_trace = getattr(preload_host, "_begin_modal_trace", None)
     if callable(begin_trace):
         begin_trace(
@@ -110,76 +84,23 @@ def exec_work_editor_dialog(dialog) -> int:
     if callable(pause_tool_library_preload) and isinstance(preload_host, QWidget):
         pause_tool_library_preload(preload_host)
     trace_event = getattr(preload_host, "_trace_modal_event", None)
-    prime_work_editor_dialog(dialog)
-    if isinstance(host_geometry, QRect):
-        _position_dialog_from_geometry(dialog, host_geometry)
-    else:
-        _position_dialog_over_host(dialog, preload_host)
+
+    # Prime layout/style
+    prime_dialog(dialog)
+
+    # Position dialog centered over the host
+    if isinstance(preload_host, QWidget) and preload_host.isVisible():
+        host_geom = preload_host.frameGeometry()
+        dlg_size = dialog.size()
+        if not dlg_size.isValid():
+            dlg_size = dialog.sizeHint()
+        if dlg_size.isValid():
+            x = host_geom.x() + max(0, (host_geom.width() - dlg_size.width()) // 2)
+            y = host_geom.y() + max(0, (host_geom.height() - dlg_size.height()) // 2)
+            dialog.move(x, y)
+
     if callable(trace_event):
         trace_event("pre_exec", dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()))
-
-    def _wait_for_real_close(previous_result: int) -> int:
-        """Keep the editor modal when Qt drops out of exec() too early.
-
-        Tool Selector can currently cause a premature exec() return even though the
-        Work Editor dialog is still visible and interactive. In that case we must
-        not let the caller resume as if the dialog really closed.
-        """
-        if not isinstance(dialog, QDialog):
-            return previous_result
-        if not dialog.isVisible():
-            return previous_result
-
-        _ctrl = getattr(dialog, "_selector_ctrl", None)
-        selector_active = bool(getattr(_ctrl, "mode_active", False)) if _ctrl is not None else False
-        host = getattr(dialog, "_embedded_selector_host", None)
-        host_widget = getattr(host, "active_widget", None) if host is not None else None
-        if callable(trace_event):
-            trace_event(
-                "spurious_exec_return",
-                result=previous_result,
-                dialog_visible=True,
-                selector_active=selector_active,
-                active_selector_widget=type(host_widget).__name__ if host_widget is not None else "",
-            )
-        app = QApplication.instance()
-        if app is None:
-            if callable(trace_event):
-                trace_event("spurious_exec_return_no_app")
-            return previous_result
-
-        wait_started_at = time.monotonic()
-        heartbeat_deadline = wait_started_at + 1.0
-        while True:
-            try:
-                if not dialog.isVisible():
-                    break
-            except RuntimeError:
-                break
-
-            app.processEvents()
-            if time.monotonic() >= heartbeat_deadline:
-                heartbeat_deadline = time.monotonic() + 1.0
-                if callable(trace_event):
-                    trace_event(
-                        "spurious_exec_return_waiting",
-                        elapsed_ms=int((time.monotonic() - wait_started_at) * 1000),
-                        dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()),
-                        selector_active=bool(getattr(getattr(dialog, "_selector_ctrl", None), "mode_active", False)),
-                    )
-
-        try:
-            final_result = int(getattr(dialog, "result", lambda: previous_result)())
-        except RuntimeError:
-            final_result = previous_result
-        if callable(trace_event):
-            trace_event(
-                "spurious_exec_return_resolved",
-                previous_result=previous_result,
-                final_result=final_result,
-                dialog_visible=bool(getattr(dialog, "isVisible", lambda: False)()),
-            )
-        return final_result
 
     # Blur the main window while the Work Editor is open.
     _blur_effect = None
@@ -192,19 +113,10 @@ def exec_work_editor_dialog(dialog) -> int:
             _blur_effect = None
 
     try:
+        # We use dialog.exec() directly here because work_editor has specialized
+        # post-exec loop logic (IPC selector wait) that we don't want to break.
         result = dialog.exec()
 
-        # IPC selector path: dialog hides itself while waiting for the Library
-        # process to send back a result.  exec() returns prematurely (Rejected)
-        # because Qt drops out of the event loop when the dialog is hidden.
-        # We must keep processing events until either:
-        #   (a) the IPC result arrives, the dialog shows again, and the user
-        #       clicks Save/Cancel (dialog becomes invisible again), or
-        #   (b) the pending request is cleared by a cancel or failure path.
-        # For the plain close path (no IPC pending, dialog already hidden), this
-        # loop exits immediately after the first processEvents() call.
-        # For the embedded selector path (dialog still visible), the loop also
-        # handles the spurious exec() return case (_wait_for_real_close behaviour).
         _app = QApplication.instance()
         if _app is not None:
             _app.processEvents()

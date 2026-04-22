@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from shared.data.backup_helpers import create_db_backup
+from shared.ui.transition_shell import cancel_receiver_ready_signal
 from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
     ask_multi_edit_mode,
@@ -28,6 +29,22 @@ from ui.home_page_support.detached_preview import close_detached_preview
 from ui.tool_editor_dialog import AddEditToolDialog
 
 __all__ = ["add_tool", "copy_tool", "delete_tool", "edit_tool", "save_from_dialog"]
+
+
+def _editor_parent(page):
+    host_window_getter = getattr(page, 'window', None)
+    if callable(host_window_getter):
+        try:
+            host_window = host_window_getter()
+            if host_window is not None:
+                return host_window
+        except Exception:
+            pass
+    return page
+
+
+def _prepare_modal_host_window(page):
+    return page
 
 
 def _close_open_preview(page) -> None:
@@ -55,15 +72,41 @@ def add_tool(page) -> None:
     """Open AddEditToolDialog in 'add' mode."""
     _close_open_preview(page)
     dlg = AddEditToolDialog(
-        parent=page,
         tool=None,
         tool_service=page.tool_service,
         translate=page._t,
     )
-    if dlg.exec() == QDialog.Accepted:
-        saved_uid = save_from_dialog(page, dlg)
-        if saved_uid:
-            page._restore_selection_by_uid(saved_uid)
+    host = getattr(page, 'window', lambda: None)()
+    if host is None:
+        try:
+            host = page.window()
+        except Exception:
+            host = None
+    _blur = None
+    if host and host.isVisible():
+        try:
+            from PySide6.QtWidgets import QGraphicsBlurEffect
+            _blur = QGraphicsBlurEffect(host)
+            _blur.setBlurRadius(6)
+            host.setGraphicsEffect(_blur)
+        except Exception:
+            _blur = None
+        geom = host.frameGeometry()
+        dlg.resize(1120, 760)
+        x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
+        y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
+        dlg.move(x, y)
+    try:
+        if dlg.exec() == QDialog.Accepted:
+            saved_uid = save_from_dialog(page, dlg)
+            if saved_uid:
+                page._restore_selection_by_uid(saved_uid)
+    finally:
+        if _blur and host:
+            try:
+                host.setGraphicsEffect(None)
+            except Exception:
+                pass
 
 
 def edit_tool(page) -> None:
@@ -101,13 +144,39 @@ def edit_tool(page) -> None:
 
     _close_open_preview(page)
     dlg = AddEditToolDialog(
-        parent=page,
         tool=tool,
         tool_service=page.tool_service,
         translate=page._t,
     )
-    if dlg.exec() == QDialog.Accepted:
-        saved_uid = save_from_dialog(page, dlg)
+    host = getattr(page, 'window', lambda: None)()
+    if host is None:
+        try:
+            host = page.window()
+        except Exception:
+            host = None
+    _blur = None
+    if host and host.isVisible():
+        try:
+            from PySide6.QtWidgets import QGraphicsBlurEffect
+            _blur = QGraphicsBlurEffect(host)
+            _blur.setBlurRadius(6)
+            host.setGraphicsEffect(_blur)
+        except Exception:
+            _blur = None
+        geom = host.frameGeometry()
+        dlg.resize(1120, 760)
+        x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
+        y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
+        dlg.move(x, y)
+    try:
+        if dlg.exec() == QDialog.Accepted:
+            saved_uid = save_from_dialog(page, dlg)
+    finally:
+        if _blur and host:
+            try:
+                host.setGraphicsEffect(None)
+            except Exception:
+                pass
         if saved_uid:
             page._restore_selection_by_uid(saved_uid)
 
@@ -269,6 +338,7 @@ def _prompt_batch_cancel_behavior(page) -> str:
 
 def _batch_edit_tools(page, tool_uids: list[int]) -> None:
     _close_open_preview(page)
+    parent = _prepare_modal_host_window(page)
     saved_before: list[dict] = []
     total = len(tool_uids)
     for idx, tool_uid in enumerate(tool_uids, 1):
@@ -276,7 +346,7 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
         if not tool:
             continue
         dlg = AddEditToolDialog(
-            parent=page,
+            parent=parent,
             tool=tool,
             tool_service=page.tool_service,
             translate=page._t,
@@ -299,8 +369,9 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
 
 def _group_edit_tools(page, tool_uids: list[int]) -> None:
     _close_open_preview(page)
+    parent = _prepare_modal_host_window(page)
     dlg = AddEditToolDialog(
-        parent=page,
+        parent=parent,
         tool_service=page.tool_service,
         translate=page._t,
         group_edit_mode=True,

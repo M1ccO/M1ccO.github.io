@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from shared.ui.transition_shell import cancel_receiver_ready_signal
 from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
     ask_multi_edit_mode,
@@ -32,6 +33,22 @@ __all__ = [
     "prompt_text",
     "save_from_dialog",
 ]
+
+
+def _editor_parent(page):
+    host_window_getter = getattr(page, 'window', None)
+    if callable(host_window_getter):
+        try:
+            host_window = host_window_getter()
+            if host_window is not None:
+                return host_window
+        except Exception:
+            pass
+    return page
+
+
+def _prepare_modal_host_window(page):
+    return page
 
 
 def _close_open_preview(page) -> None:
@@ -58,9 +75,36 @@ def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
 
 def add_jaw(page) -> None:
     _close_open_preview(page)
-    dlg = AddEditJawDialog(page, translate=page._t)
-    if dlg.exec() == QDialog.Accepted:
-        save_from_dialog(page, dlg)
+    dlg = AddEditJawDialog(translate=page._t)
+    host = getattr(page, 'window', lambda: None)()
+    if host is None:
+        try:
+            host = page.window()
+        except Exception:
+            host = None
+    _blur = None
+    if host and host.isVisible():
+        try:
+            from PySide6.QtWidgets import QGraphicsBlurEffect
+            _blur = QGraphicsBlurEffect(host)
+            _blur.setBlurRadius(6)
+            host.setGraphicsEffect(_blur)
+        except Exception:
+            _blur = None
+        geom = host.frameGeometry()
+        dlg.resize(1120, 760)
+        x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
+        y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
+        dlg.move(x, y)
+    try:
+        if dlg.exec() == QDialog.Accepted:
+            save_from_dialog(page, dlg)
+    finally:
+        if _blur and host:
+            try:
+                host.setGraphicsEffect(None)
+            except Exception:
+                pass
 
 
 def edit_jaw(page) -> None:
@@ -81,9 +125,36 @@ def edit_jaw(page) -> None:
         return
     jaw = page.jaw_service.get_jaw(selected_ids[0])
     _close_open_preview(page)
-    dlg = AddEditJawDialog(page, jaw=jaw, translate=page._t)
-    if dlg.exec() == QDialog.Accepted:
-        save_from_dialog(page, dlg, original_jaw_id=jaw.get('jaw_id', ''))
+    dlg = AddEditJawDialog(jaw=jaw, translate=page._t)
+    host = getattr(page, 'window', lambda: None)()
+    if host is None:
+        try:
+            host = page.window()
+        except Exception:
+            host = None
+    _blur = None
+    if host and host.isVisible():
+        try:
+            from PySide6.QtWidgets import QGraphicsBlurEffect
+            _blur = QGraphicsBlurEffect(host)
+            _blur.setBlurRadius(6)
+            host.setGraphicsEffect(_blur)
+        except Exception:
+            _blur = None
+        geom = host.frameGeometry()
+        dlg.resize(1120, 760)
+        x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
+        y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
+        dlg.move(x, y)
+    try:
+        if dlg.exec() == QDialog.Accepted:
+            save_from_dialog(page, dlg, original_jaw_id=jaw.get('jaw_id', ''))
+    finally:
+        if _blur and host:
+            try:
+                host.setGraphicsEffect(None)
+            except Exception:
+                pass
 
 
 def delete_jaw(page) -> None:

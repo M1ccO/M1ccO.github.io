@@ -1,4 +1,4 @@
-﻿from typing import Callable
+from typing import Callable
 from PySide6.QtCore import QEvent, Qt, QTimer
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
@@ -44,6 +44,7 @@ from ui.tool_editor_support.measurement_rules import (
 from ui.tool_editor_support.spare_parts_table_coordinator import SparePartsTableCoordinator
 from shared.ui.helpers.editor_helpers import (
     setup_editor_dialog,
+    apply_host_visual_style,
     create_dialog_buttons,
     apply_secondary_button_theme,
     make_arrow_button,
@@ -72,31 +73,46 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._batch_label = (batch_label or '').strip()
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
-        self._init_editor_state()
-        self._group_target_rows: list[int] = []
-        self._general_field_columns = None
-        self._turning_drill_geometry_mode = False
-        self._spindle_orientation_mode = 'main'
-        self._spare_parts_coordinator = None  # Initialized after _build_ui()
-        self._payload_codec = ToolEditorPayloadCodec(
-            translate=self._t,
-            localized_cutting_type=self._localized_cutting_type,
-            tool_id_editor_value=self._tool_id_editor_value,
-            tool_id_storage_value=self._tool_id_storage_value,
-            turning_tool_types=TURNING_TOOL_TYPES,
-            milling_tool_types=MILLING_TOOL_TYPES,
-        )
-        self.setWindowTitle(self._dialog_title())
-        self.resize(1120, 760)
-        self.setMinimumSize(900, 660)
-        self.setModal(True)
-        setup_editor_dialog(self)
-        self._build_ui()
-        self._install_local_event_filters()
-        self._init_spare_parts_coordinator()
-        self._load_tool()
-        self._update_cutting_label()
-        self._update_tool_type_fields()
+
+        self.setUpdatesEnabled(False)
+        try:
+            setup_editor_dialog(self)
+            from shared.ui.helpers.editor_helpers import apply_host_visual_style
+            apply_host_visual_style(self, parent)
+
+            self._init_editor_state()
+            self._group_target_rows: list[int] = []
+            self._general_field_columns = None
+            self._turning_drill_geometry_mode = False
+            self._spindle_orientation_mode = 'main'
+            self._spare_parts_coordinator = None
+            self._payload_codec = ToolEditorPayloadCodec(
+                translate=self._t,
+                localized_cutting_type=self._localized_cutting_type,
+                tool_id_editor_value=self._tool_id_editor_value,
+                tool_id_storage_value=self._tool_id_storage_value,
+                turning_tool_types=TURNING_TOOL_TYPES,
+                milling_tool_types=MILLING_TOOL_TYPES,
+            )
+            self.setWindowTitle(self._dialog_title())
+            self.resize(1120, 760)
+            self.setMinimumSize(900, 660)
+            self.setModal(True)
+            self._build_ui()
+            self._install_local_event_filters()
+            self._init_spare_parts_coordinator()
+            self._load_tool()
+            self._update_cutting_label()
+            self._update_tool_type_fields()
+            self._update_notes_editor_height()
+            self._update_transform_row_sizes()
+            for _child in self.findChildren(QWidget):
+                _child.style().unpolish(_child)
+                _child.style().polish(_child)
+                _child.ensurePolished()
+            self.layout().activate()
+        finally:
+            self.setUpdatesEnabled(True)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
@@ -774,8 +790,6 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
-        QTimer.singleShot(0, self._update_notes_editor_height)
-        self._update_transform_row_sizes()
         self._ensure_on_screen()
 
     # -------------------------
@@ -972,9 +986,6 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         if not self.tool:
             return
         self._payload_codec.load_into_dialog(self, self.tool)
-        QTimer.singleShot(0, self._update_notes_editor_height)
-        if self._assembly_transform_enabled:
-            QTimer.singleShot(0, lambda: self._request_preview_transform_snapshot(refresh_selection=True))
 
     def get_tool_data(self):
         return self._payload_codec.collect_from_dialog(self)

@@ -4,12 +4,21 @@ from __future__ import annotations
 
 import ctypes
 import ctypes.wintypes
-
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QTimer, QPoint
 from PySide6.QtGui import QPixmap, QGuiApplication
-from PySide6.QtWidgets import QAbstractButton, QAbstractItemView, QComboBox, QLineEdit, QSplitter, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QAbstractButton,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QGraphicsBlurEffect,
+    QLineEdit,
+    QSplitter,
+    QWidget,
+)
 
-from shared.ui.theme import THEME_PALETTES, get_active_theme_palette
+from shared.ui.theme import THEME_PALETTES, get_active_theme_palette, current_theme_color
 
 _FADE_IN_MS = 360
 _FADE_OUT_MS = 360
@@ -316,3 +325,126 @@ def is_interactive_widget_click(obj: QWidget, window: QWidget) -> bool:
             return True
         widget = widget.parentWidget()
     return False
+
+
+def exec_dialog(dialog: QDialog, host: QWidget | None = None) -> int:
+    """Prepare and execute a modal dialog without altering window geometry or focus behavior."""
+    if host is None:
+        try:
+            parent = dialog.parentWidget()
+            if parent is not None:
+                host = parent.window()
+        except Exception:
+            pass
+
+    # prime_dialog(dialog)
+
+    if host is not None and host.isVisible():
+        host_geom = host.frameGeometry()
+        dlg_size = dialog.size()
+        if not dlg_size.isValid():
+            dlg_size = dialog.sizeHint()
+        if dlg_size.isValid():
+            x = host_geom.x() + max(0, (host_geom.width() - dlg_size.width()) // 2)
+            y = host_geom.y() + max(0, (host_geom.height() - dlg_size.height()) // 2)
+            dialog.move(x, y)
+
+    try:
+        return dialog.exec()
+    except Exception:
+        return -1
+
+
+def exec_dialog_with_blur(dialog: QDialog, host: QWidget | None = None) -> int:
+    """Execute a modal dialog while blurring the *host* window."""
+    if host is None:
+        try:
+            parent = dialog.parentWidget()
+            if parent is not None:
+                host = parent.window()
+        except Exception:
+            pass
+
+    prime_dialog(dialog)
+
+    _blur_effect = None
+    if host is not None and host.isVisible():
+        try:
+            _blur_effect = QGraphicsBlurEffect(host)
+            _blur_effect.setBlurRadius(6)
+            host.setGraphicsEffect(_blur_effect)
+        except Exception:
+            _blur_effect = None
+
+        host_geom = host.frameGeometry()
+        dlg_size = dialog.size()
+        if not dlg_size.isValid():
+            dlg_size = dialog.sizeHint()
+        if dlg_size.isValid():
+            x = host_geom.x() + max(0, (host_geom.width() - dlg_size.width()) // 2)
+            y = host_geom.y() + max(0, (host_geom.height() - dlg_size.height()) // 2)
+            dialog.move(x, y)
+
+    try:
+        return dialog.exec()
+    finally:
+        if _blur_effect is not None and host is not None:
+            try:
+                host.setGraphicsEffect(None)
+            except Exception:
+                pass
+
+
+def prime_dialog(dialog: QDialog) -> None:
+    """Prepare a dialog's layout and style before it becomes visible to avoid flashes/jumps."""
+    if not isinstance(dialog, QDialog):
+        return
+
+    if getattr(dialog, "_primed", False):
+        return
+    dialog._primed = True
+
+    try:
+        dialog.ensurePolished()
+    except Exception:
+        pass
+
+    app = QApplication.instance()
+    if app is not None:
+        app.processEvents()
+
+    dialog.setUpdatesEnabled(False)
+    try:
+        layout = dialog.layout()
+        if layout is not None:
+            try:
+                layout.activate()
+            except Exception:
+                pass
+
+        for hook in (
+            "_ensure_normal_editor_surface_visible",
+            "_ensure_normal_editor_content_visible",
+            "_warmup_initial_interaction_surfaces",
+            "_update_notes_editor_height",
+            "_update_transform_row_sizes",
+            "_ensure_on_screen",
+        ):
+            method = getattr(dialog, hook, None)
+            if callable(method):
+                try:
+                    method()
+                except Exception:
+                    pass
+
+        try:
+            dialog.updateGeometry()
+        except Exception:
+            pass
+    finally:
+        dialog.setUpdatesEnabled(True)
+
+    if app is not None:
+        app.processEvents()
+
+
