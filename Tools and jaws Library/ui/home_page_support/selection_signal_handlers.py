@@ -82,9 +82,14 @@ def update_selection_count_label(page) -> None:
 def on_current_item_changed(page, current, previous) -> None:
     """Track current item and refresh detail panel selection state."""
     _ = previous
+    preview_btn = getattr(page, 'preview_window_btn', None)
     if not current.isValid():
         page.current_tool_id = None
         page.current_tool_uid = None
+        if not page._details_hidden:
+            page.populate_details(None)
+        if preview_btn and preview_btn.isChecked():
+            page._sync_detached_preview(show_errors=False)
         return
 
     tool_id = str(current.data(ROLE_TOOL_ID) or '').strip()
@@ -94,6 +99,8 @@ def on_current_item_changed(page, current, previous) -> None:
 
     if not page._details_hidden:
         page.populate_details(page._get_selected_tool())
+    if preview_btn and preview_btn.isChecked():
+        page._sync_detached_preview(show_errors=False)
 
 
 def on_item_double_clicked(page, index) -> None:

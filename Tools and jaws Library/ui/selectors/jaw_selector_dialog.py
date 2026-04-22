@@ -14,6 +14,17 @@ from shared.ui.helpers.window_geometry_memory import restore_window_geometry, sa
 from shared.ui.selectors import JawSelectorWidget
 from .selector_ui_helpers import normalize_selector_spindle
 from .common import SelectorDialogBase, SelectorWidgetBase
+from .detached_preview import (
+    load_jaw_selector_preview_content,
+    on_jaw_selector_detached_measurements_toggled,
+    on_jaw_selector_detached_preview_closed,
+    sync_jaw_selector_detached_preview,
+    toggle_jaw_selector_preview_window,
+)
+from .external_preview_ipc import (
+    sync_embedded_jaw_selector_preview,
+    toggle_embedded_jaw_selector_preview_window,
+)
 from .jaw_selector_layout import JawSelectorLayoutMixin
 from .jaw_selector_payload import JawSelectorPayloadMixin
 from .jaw_selector_state import JawSelectorStateMixin
@@ -55,10 +66,6 @@ class JawSelectorDialog(
         self.current_jaw_id: str | None = None
         self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
         self._selected_slots: set[str] = set()
-
-        # Required by jaw detail builder (build_jaw_preview_card / _clear_details)
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
 
         # Detached preview state (toolbar preview toggle parity with JawPage)
         self._detached_preview_dialog = None
@@ -144,9 +151,7 @@ class JawSelectorDialog(
         return self._t(f'jaw_library.jaw_type.{normalized}', raw_type)
 
     def _load_preview_content(self, viewer, jaw: dict, *, label: str | None = None) -> bool:
-        """Delegate to the jaw-specific preview loader (signature: page, viewer, jaw_dict)."""
-        from ..jaw_page_support.detached_preview import load_preview_content
-        return load_preview_content(self, viewer, jaw, label=label)
+        return load_jaw_selector_preview_content(self, viewer, jaw, label=label)
 
     def _preview_model_key(self, jaw: dict) -> str | None:
         """Return a stable dedup key for the jaw 3-D model so the viewer skips redundant reloads."""
@@ -155,30 +160,21 @@ class JawSelectorDialog(
     # ── Detached preview parity with JawPage toolbar ───────────────────
 
     def _on_detached_measurements_toggled(self, checked: bool) -> None:
-        from ..jaw_page_support.detached_preview import on_detached_measurements_toggled
-        on_detached_measurements_toggled(self, checked)
+        on_jaw_selector_detached_measurements_toggled(self, checked)
 
     def _on_detached_preview_closed(self, result) -> None:
-        from ..jaw_page_support.detached_preview import on_detached_preview_closed
-        on_detached_preview_closed(self, result)
+        on_jaw_selector_detached_preview_closed(self, result)
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
-            return False
-        from ..jaw_page_support.detached_preview import sync_detached_preview
-        return sync_detached_preview(self, show_errors)
+            return sync_embedded_jaw_selector_preview(self, show_errors=show_errors)
+        return sync_jaw_selector_detached_preview(self, show_errors)
 
     def toggle_preview_window(self) -> None:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
+            toggle_embedded_jaw_selector_preview_window(self)
             return
-        from ..jaw_page_support.detached_preview import toggle_preview_window
-        toggle_preview_window(self)
+        toggle_jaw_selector_preview_window(self)
 
     def closeEvent(self, event) -> None:
         if not getattr(self, '_embedded_mode', False):
@@ -217,8 +213,6 @@ class EmbeddedJawSelectorWidget(
         self._selector_assignments: dict[str, dict | None] = {'main': None, 'sub': None}
         self._selected_slots: set[str] = set()
 
-        self._detail_preview_widget = None
-        self._detail_preview_model_key = None
         self._detached_preview_dialog = None
         self._detached_preview_widget = None
         self._detached_preview_last_model_key = None
@@ -295,35 +289,25 @@ class EmbeddedJawSelectorWidget(
         return self._t(f'jaw_library.jaw_type.{normalized}', raw_type)
 
     def _load_preview_content(self, viewer, jaw: dict, *, label: str | None = None) -> bool:
-        from ..jaw_page_support.detached_preview import load_preview_content
-        return load_preview_content(self, viewer, jaw, label=label)
+        return load_jaw_selector_preview_content(self, viewer, jaw, label=label)
 
     def _preview_model_key(self, jaw: dict) -> str | None:
         return str(jaw.get('jaw_id') or '').strip() or None
 
     def _on_detached_measurements_toggled(self, checked: bool) -> None:
-        from ..jaw_page_support.detached_preview import on_detached_measurements_toggled
-        on_detached_measurements_toggled(self, checked)
+        on_jaw_selector_detached_measurements_toggled(self, checked)
 
     def _on_detached_preview_closed(self, result) -> None:
-        from ..jaw_page_support.detached_preview import on_detached_preview_closed
-        on_detached_preview_closed(self, result)
+        on_jaw_selector_detached_preview_closed(self, result)
 
     def _sync_detached_preview(self, show_errors: bool = False) -> bool:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
-            return False
-        from ..jaw_page_support.detached_preview import sync_detached_preview
-        return sync_detached_preview(self, show_errors)
+            return sync_embedded_jaw_selector_preview(self, show_errors=show_errors)
+        return sync_jaw_selector_detached_preview(self, show_errors)
 
     def toggle_preview_window(self) -> None:
         if getattr(self, '_embedded_mode', False):
-            preview_btn = getattr(self, 'preview_window_btn', None)
-            if preview_btn is not None:
-                preview_btn.setChecked(False)
+            toggle_embedded_jaw_selector_preview_window(self)
             return
-        from ..jaw_page_support.detached_preview import toggle_preview_window
-        toggle_preview_window(self)
+        toggle_jaw_selector_preview_window(self)
 

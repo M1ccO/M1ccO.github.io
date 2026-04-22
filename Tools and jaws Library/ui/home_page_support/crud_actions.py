@@ -24,9 +24,17 @@ from shared.ui.helpers.editor_helpers import (
     create_dialog_buttons,
     setup_editor_dialog,
 )
+from ui.home_page_support.detached_preview import close_detached_preview
 from ui.tool_editor_dialog import AddEditToolDialog
 
 __all__ = ["add_tool", "copy_tool", "delete_tool", "edit_tool", "save_from_dialog"]
+
+
+def _close_open_preview(page) -> None:
+    preview_btn = getattr(page, 'preview_window_btn', None)
+    if preview_btn is None or not preview_btn.isChecked():
+        return
+    close_detached_preview(page)
 
 
 def save_from_dialog(page, dlg) -> int | None:
@@ -45,6 +53,7 @@ def save_from_dialog(page, dlg) -> int | None:
 
 def add_tool(page) -> None:
     """Open AddEditToolDialog in 'add' mode."""
+    _close_open_preview(page)
     dlg = AddEditToolDialog(
         parent=page,
         tool=None,
@@ -90,6 +99,7 @@ def edit_tool(page) -> None:
         )
         return
 
+    _close_open_preview(page)
     dlg = AddEditToolDialog(
         parent=page,
         tool=tool,
@@ -258,6 +268,7 @@ def _prompt_batch_cancel_behavior(page) -> str:
 
 
 def _batch_edit_tools(page, tool_uids: list[int]) -> None:
+    _close_open_preview(page)
     saved_before: list[dict] = []
     total = len(tool_uids)
     for idx, tool_uid in enumerate(tool_uids, 1):
@@ -287,6 +298,7 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
 
 
 def _group_edit_tools(page, tool_uids: list[int]) -> None:
+    _close_open_preview(page)
     dlg = AddEditToolDialog(
         parent=page,
         tool_service=page.tool_service,

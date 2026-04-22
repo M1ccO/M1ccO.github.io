@@ -7,22 +7,14 @@ import sqlite3
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout
 
 from config import PROJECTS_DIR, SHARED_UI_PREFERENCES_PATH
 from shared.ui.helpers.editor_helpers import (
     build_titled_detail_field,
     build_titled_detail_list_field,
-    create_titled_section,
 )
-from shared.ui.stl_preview import StlPreviewWidget
 from ui.fixture_page_support.detail_layout_rules import apply_fixture_detail_grid_rules
-from ui.fixture_page_support.preview_rules import (
-    apply_fixture_preview_transform,
-    fixture_preview_label,
-    fixture_preview_measurement_overlays,
-    fixture_preview_stl_path,
-)
 
 
 def populate_detail_panel(page, fixture: dict | None) -> None:
@@ -153,87 +145,7 @@ def build_fixture_detail_header(page, fixture: dict) -> QFrame:
     return header
 
 
-def build_fixture_preview_card(page, fixture: dict) -> QWidget:
-    preview_card = create_titled_section(page._t('tool_library.section.preview', 'Preview'))
-    preview_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-    preview_layout = QVBoxLayout(preview_card)
-    preview_layout.setSpacing(10)
-    preview_layout.setContentsMargins(6, 4, 6, 6)
-
-    diagram = QWidget()
-    diagram.setObjectName('detailPreviewGradientHost')
-    diagram.setAttribute(Qt.WA_StyledBackground, True)
-    diagram.setStyleSheet(
-        'QWidget#detailPreviewGradientHost {'
-        '  background-color: #d6d9de;'
-        '  border: none;'
-        '  border-radius: 6px;'
-        '}'
-    )
-    diagram.setMinimumHeight(300)
-    diagram.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-    diagram_layout = QVBoxLayout(diagram)
-    diagram_layout.setContentsMargins(6, 6, 6, 6)
-    diagram_layout.setSpacing(0)
-
-    viewer = page._detail_preview_widget
-    if viewer is None:
-        viewer = StlPreviewWidget()
-        page._detail_preview_widget = viewer
-    if viewer.parent() is not diagram:
-        viewer.setParent(diagram)
-    viewer.setStyleSheet('background: transparent; border: none;')
-    viewer.set_status_overlay_enabled(False)
-    viewer.set_control_hint_text(
-        page._t(
-            'tool_editor.hint.rotate_pan_zoom',
-            'Rotate: left mouse | Pan: right mouse | Zoom: mouse wheel',
-        )
-    )
-
-    model_key = page._preview_model_key(fixture)
-    if page._detail_preview_model_key != model_key:
-        loaded = page._load_preview_content(viewer, fixture, label=fixture_preview_label(fixture, page._t))
-        if loaded:
-            page._detail_preview_model_key = model_key
-        else:
-            page._detail_preview_model_key = None
-    else:
-        loaded = True
-
-    if loaded:
-        apply_fixture_preview_transform(viewer, fixture)
-        overlays = fixture_preview_measurement_overlays(fixture)
-        viewer.set_measurement_overlays(overlays)
-        viewer.set_measurements_visible(bool(overlays))
-        diagram_layout.addWidget(viewer, 1)
-        viewer.show()
-    else:
-        viewer.clear()
-        viewer.hide()
-        stl_path = fixture_preview_stl_path(fixture)
-        placeholder = QLabel(
-            page._t('tool_library.preview.invalid_data', 'No valid 3D model data found.')
-            if stl_path
-            else page._t('tool_library.preview.none_assigned', 'No 3D model assigned.')
-        )
-        placeholder.setProperty('detailHint', True)
-        placeholder.setWordWrap(True)
-        placeholder.setAlignment(Qt.AlignCenter)
-        diagram_layout.addStretch(1)
-        diagram_layout.addWidget(placeholder)
-        diagram_layout.addStretch(1)
-
-    preview_layout.addWidget(diagram, 1)
-    return preview_card
-
-
 def _clear_details(page) -> None:
-    if page._detail_preview_widget is not None:
-        page._detail_preview_widget.hide()
-        page._detail_preview_widget.setParent(None)
     while page.detail_layout.count():
         item = page.detail_layout.takeAt(0)
         widget = item.widget()
@@ -281,6 +193,5 @@ def _lookup_setup_db_used_in_works(fixture_id: str) -> str:
 __all__ = [
     'build_empty_details_card',
     'build_fixture_detail_header',
-    'build_fixture_preview_card',
     'populate_detail_panel',
 ]

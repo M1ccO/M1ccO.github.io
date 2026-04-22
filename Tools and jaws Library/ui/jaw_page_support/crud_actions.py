@@ -21,6 +21,7 @@ from shared.ui.helpers.editor_helpers import (
     create_dialog_buttons,
     setup_editor_dialog,
 )
+from ui.jaw_page_support.detached_preview import close_detached_preview
 from ui.jaw_editor_dialog import AddEditJawDialog
 
 __all__ = [
@@ -31,6 +32,13 @@ __all__ = [
     "prompt_text",
     "save_from_dialog",
 ]
+
+
+def _close_open_preview(page) -> None:
+    preview_btn = getattr(page, 'preview_window_btn', None)
+    if preview_btn is None or not preview_btn.isChecked():
+        return
+    close_detached_preview(page)
 
 
 def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
@@ -49,6 +57,7 @@ def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
 
 
 def add_jaw(page) -> None:
+    _close_open_preview(page)
     dlg = AddEditJawDialog(page, translate=page._t)
     if dlg.exec() == QDialog.Accepted:
         save_from_dialog(page, dlg)
@@ -71,6 +80,7 @@ def edit_jaw(page) -> None:
             page._group_edit_jaws(selected_ids)
         return
     jaw = page.jaw_service.get_jaw(selected_ids[0])
+    _close_open_preview(page)
     dlg = AddEditJawDialog(page, jaw=jaw, translate=page._t)
     if dlg.exec() == QDialog.Accepted:
         save_from_dialog(page, dlg, original_jaw_id=jaw.get('jaw_id', ''))

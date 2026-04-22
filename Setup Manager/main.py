@@ -19,6 +19,13 @@ from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
+from shared.ui.transition_shell import (
+    SENDER_TRANSITION_COMPLETE_COMMAND,
+    prepare_receiver_transition,
+    reveal_receiver_transition,
+    schedule_sender_transition_complete_on_receiver_ready,
+)
+from shared.ui.transition_shell_config import get_transition_shell_config, init_transition_shell_config
 
 
 def _is_runnable_python(candidate: Path) -> bool:
@@ -124,6 +131,7 @@ def main():
         return str(_texts.get(key, default))
 
     app = QApplication(sys.argv)
+    init_transition_shell_config()
     app.setStyle("Fusion")
     app.setPalette(_build_fixed_light_palette())
     app.setStyle(FastTooltipStyle(app.style()))
@@ -476,9 +484,32 @@ def main():
         except Exception:
             pass
 
+    def _send_transition_complete_request(server_name: str) -> bool:
+        server_name = str(server_name or "").strip()
+        if not server_name:
+            return False
+
+        socket = QLocalSocket()
+        socket.connectToServer(server_name)
+        if not socket.waitForConnected(300):
+            return False
+        try:
+            socket.write(json.dumps({"command": SENDER_TRANSITION_COMPLETE_COMMAND}).encode("utf-8"))
+            socket.flush()
+            socket.waitForBytesWritten(300)
+            return True
+        except Exception:
+            return False
+        finally:
+            try:
+                socket.disconnectFromServer()
+            except Exception:
+                pass
+
     def show_setup_manager(request: dict | None = None):
         nonlocal _last_show_request_ts, _last_show_geometry
         geometry_text = str((request or {}).get("geometry", "")).strip()
+        handoff_hide_callback_server = str((request or {}).get("handoff_hide_callback_server", "")).strip()
         now = time.monotonic()
         # Debounce duplicate show requests from fast IPC bursts.
         if (now - _last_show_request_ts) < 0.25 and geometry_text == _last_show_geometry:
@@ -510,7 +541,10 @@ def main():
                     pass
                 win._fade_anim = None
 
-            win.setWindowOpacity(1.0)
+            if handoff_hide_callback_server:
+                prepare_receiver_transition(win)
+            else:
+                win.setWindowOpacity(1.0)
 
             if not was_visible:
                 if geometry_text:
@@ -528,6 +562,20 @@ def main():
             except Exception:
                 pass
             _restore_work_editor_if_waiting(win)
+            if handoff_hide_callback_server:
+                def _reveal_and_notify(server_name=handoff_hide_callback_server) -> None:
+                    reveal_receiver_transition(win)
+                    delay_ms = max(0, int(get_transition_shell_config().sender_complete_delay_ms))
+                    if delay_ms <= 0:
+                        _send_transition_complete_request(server_name)
+                    else:
+                        QTimer.singleShot(delay_ms, lambda: _send_transition_complete_request(server_name))
+
+                schedule_sender_transition_complete_on_receiver_ready(
+                    win,
+                    callback=_reveal_and_notify,
+                    geometry_text=geometry_text,
+                )
 
         _do_show()
 
@@ -558,10 +606,8 @@ def main():
 
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
-            elif request["command"] == "hide_for_library_handoff":
-                win.setWindowOpacity(1.0)
-                if win.isVisible():
-                    win.hide()
+            elif request["command"] in {"hide_for_library_handoff", SENDER_TRANSITION_COMPLETE_COMMAND}:
+                win._complete_tool_library_handoff()
             elif request["command"] == "selector_result":
                 _deliver_selector_result(win, request)
 

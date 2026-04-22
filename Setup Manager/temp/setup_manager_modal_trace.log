@@ -1,16 +1,8 @@
-2026-04-21 18:42:30 {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
-2026-04-21 18:42:30 {'event': 'pre_exec', 'dt_ms': 0, 'dialog_visible': False}
-2026-04-21 18:42:30 {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:30 {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:30 {'event': 'WindowDeactivate', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:30 {'event': 'UpdateRequest', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:30 {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:30 {'event': 'Paint', 'dt_ms': 16, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'WindowActivate', 'dt_ms': 3766, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'WindowDeactivate', 'dt_ms': 3766, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'WindowActivate', 'dt_ms': 3766, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'WindowDeactivate', 'dt_ms': 3766, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'UpdateRequest', 'dt_ms': 3766, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'Paint', 'dt_ms': 3782, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:34 {'event': 'Paint', 'dt_ms': 3782, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1014', 'modal': True}
-2026-04-21 18:42:35 {'event': 'modal_trace_end', 'dt_ms': 4782, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
+2026-04-22 12:48:29 {'event': 'modal_trace_begin', 'dt_ms': 0, 'label': 'work_editor_exec', 'dialog_class': 'LatheWorkEditorDialog', 'host_visible': True, 'host_active': True}
+2026-04-22 12:48:29 {'event': 'pre_exec', 'dt_ms': 1, 'dialog_visible': False}
+2026-04-22 12:48:29 {'event': 'UpdateRequest', 'dt_ms': 22, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 12:48:29 {'event': 'Paint', 'dt_ms': 26, 'visible': True, 'active': True, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 12:48:29 {'event': 'WindowDeactivate', 'dt_ms': 39, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 12:48:29 {'event': 'UpdateRequest', 'dt_ms': 49, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 12:48:29 {'event': 'Paint', 'dt_ms': 52, 'visible': True, 'active': False, 'minimized': False, 'size': '1645x1012', 'modal': True}
+2026-04-22 12:48:41 {'event': 'modal_trace_end', 'dt_ms': 11171, 'reason': 'work_editor_exec_complete', 'host_visible': True, 'host_active': True}
