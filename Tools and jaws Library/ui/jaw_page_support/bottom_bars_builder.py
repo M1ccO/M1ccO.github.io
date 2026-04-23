@@ -3,7 +3,49 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+
+from shared.ui.editor_launch_debug import (
+    cleanup_hidden_orphan_top_levels,
+    editor_launch_diag_enabled,
+    editor_launch_debug,
+    start_editor_window_probe,
+)
+
+
+def _connect_or_log(page, *, action_name: str, callback, log_event: str) -> None:
+    if editor_launch_diag_enabled("NOOP_BUTTONS"):
+        callback = lambda: editor_launch_debug(log_event)
+
+    def _wrapped_action() -> None:
+        host = None
+        try:
+            host = page.window()
+        except Exception:
+            host = page
+        cleanup_hidden_orphan_top_levels(host, reason=f"jaw.{action_name}")
+        start_editor_window_probe(host, f"jaw.{action_name}")
+        callback()
+
+    setattr(page, action_name, _wrapped_action)
+
+
+def _install_keyboard_only_actions(page) -> None:
+    if not editor_launch_diag_enabled("KEYBOARD_ONLY_ACTIONS"):
+        return
+
+    for btn in (page.add_btn, page.edit_btn, page.delete_btn, page.copy_btn):
+        btn.hide()
+        btn.setEnabled(False)
+
+    page._diag_jaw_edit_shortcut = QShortcut(QKeySequence("Ctrl+Alt+E"), page.button_bar)
+    page._diag_jaw_edit_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    page._diag_jaw_edit_shortcut.activated.connect(getattr(page, "_diag_edit_action"))
+
+    page._diag_jaw_add_shortcut = QShortcut(QKeySequence("Ctrl+Alt+N"), page.button_bar)
+    page._diag_jaw_add_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    page._diag_jaw_add_shortcut.activated.connect(getattr(page, "_diag_add_action"))
 
 
 def build_bottom_bars(page, root: QVBoxLayout) -> None:
@@ -22,10 +64,35 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     page.delete_btn.setProperty('dangerAction', True)
     page.add_btn.setProperty('primaryAction', True)
 
-    page.edit_btn.clicked.connect(page.edit_jaw)
-    page.delete_btn.clicked.connect(page.delete_jaw)
-    page.add_btn.clicked.connect(page.add_jaw)
-    page.copy_btn.clicked.connect(page.copy_jaw)
+    _connect_or_log(
+        page,
+        action_name="_diag_edit_action",
+        callback=page.edit_jaw,
+        log_event="diag.jaw.edit_btn.noop",
+    )
+    _connect_or_log(
+        page,
+        action_name="_diag_delete_action",
+        callback=page.delete_jaw,
+        log_event="diag.jaw.delete_btn.noop",
+    )
+    _connect_or_log(
+        page,
+        action_name="_diag_add_action",
+        callback=page.add_jaw,
+        log_event="diag.jaw.add_btn.noop",
+    )
+    _connect_or_log(
+        page,
+        action_name="_diag_copy_action",
+        callback=page.copy_jaw,
+        log_event="diag.jaw.copy_btn.noop",
+    )
+
+    page.edit_btn.clicked.connect(page._diag_edit_action)
+    page.delete_btn.clicked.connect(page._diag_delete_action)
+    page.add_btn.clicked.connect(page._diag_add_action)
+    page.copy_btn.clicked.connect(page._diag_copy_action)
 
     page.module_switch_label = QLabel('')
     page.module_switch_label.setVisible(False)
@@ -47,6 +114,7 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     actions.addWidget(page.edit_btn)
     actions.addWidget(page.delete_btn)
     actions.addWidget(page.copy_btn)
+    _install_keyboard_only_actions(page)
     root.addWidget(page.button_bar)
 
     page.selector_bottom_bar = QFrame()

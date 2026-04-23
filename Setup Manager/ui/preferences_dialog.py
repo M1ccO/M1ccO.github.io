@@ -430,6 +430,15 @@ class PreferencesDialog(PreferencesDialogBase):
             )
         )
 
+        self.preview_preload_cb = QCheckBox(
+            self._t(
+                "preferences.models.preview_preload",
+                "Preload 3D preview in background for faster first open",
+            )
+        )
+        apply_shared_checkbox_style(self.preview_preload_cb, indicator_size=16)
+        card_layout.addWidget(self.preview_preload_cb)
+
         layout.addStretch(1)
         return tab
 
@@ -447,6 +456,7 @@ class PreferencesDialog(PreferencesDialogBase):
             "jaws_models_root": self.jaws_models_root.text().strip(),
             "fixtures_models_root": self.fixtures_models_root.text().strip(),
             "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
+            "enable_preview_preload": self.preview_preload_cb.isChecked(),
             "enable_drawings_tab": self.drawings_tab_cb.isChecked(),
             "detached_preview_policy": {
                 "mode": self.detached_preview_mode_combo.currentData() or "follow_last",
@@ -476,6 +486,9 @@ class PreferencesDialog(PreferencesDialogBase):
         self.fixtures_models_root.setText(str(self._current.get("fixtures_models_root", "")))
         self.assembly_transform_cb.setChecked(
             bool(self._current.get("enable_assembly_transform", False))
+        )
+        self.preview_preload_cb.setChecked(
+            bool(self._current.get("enable_preview_preload", True))
         )
         self.drawings_tab_cb.setChecked(
             bool(self._current.get("enable_drawings_tab", True))

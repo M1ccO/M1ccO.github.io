@@ -19,6 +19,7 @@ from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
+from shared.ui.editor_launch_debug import editor_launch_debug
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
 from shared.ui.transition_shell import (
     SENDER_TRANSITION_COMPLETE_COMMAND,
@@ -630,8 +631,20 @@ def main():
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
             elif request["command"] == "hide_for_library_handoff":
+                editor_launch_debug(
+                    "ipc.setup.hide_for_library_handoff",
+                    window_visible=win.isVisible(),
+                    window_active=win.isActiveWindow(),
+                    pending_sender_transition=bool(getattr(win, "_pending_sender_transition", None)),
+                )
                 win._complete_tool_library_handoff()
             elif request["command"] == SENDER_TRANSITION_COMPLETE_COMMAND:
+                editor_launch_debug(
+                    "ipc.setup.complete_sender_transition",
+                    window_visible=win.isVisible(),
+                    window_active=win.isActiveWindow(),
+                    pending_sender_transition=bool(getattr(win, "_pending_sender_transition", None)),
+                )
                 if _has_pending_sender_transition(win):
                     win._complete_tool_library_handoff()
                 else:

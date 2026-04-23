@@ -28,6 +28,7 @@ from shared.ui.helpers.editor_helpers import (
     create_dialog_buttons,
     setup_editor_dialog,
 )
+from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_launch_debug, editor_launch_id
 from shared.data.model_paths import format_model_path_for_display, read_model_roots
 from ui.jaw_editor_support import build_models_tab
 from ui.shared.editor_dialog_helpers import EditorDialogMixin
@@ -59,19 +60,23 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
         self._general_field_columns = None
+        self.setAttribute(Qt.WA_DontShowOnScreen, True)
+        self.setWindowTitle(self._dialog_title())
+        self.resize(1120, 760)
+        self.setMinimumSize(900, 660)
+        self.setModal(True)
 
         self.setUpdatesEnabled(False)
         try:
-            # ROOT CAUSE FIX: Adopt host style early so background is themed on first paint.
-            from shared.ui.helpers.editor_helpers import apply_host_visual_style
-            apply_host_visual_style(self, parent)
+            if editor_launch_diag_enabled("BYPASS_HOST_STYLE"):
+                editor_launch_debug("dialog.jaw.host_style_bypassed", launch_id=editor_launch_id(self))
+            else:
+                # Adopt host style early so background is themed on first paint.
+                from shared.ui.helpers.editor_helpers import apply_host_visual_style
+                apply_host_visual_style(self, parent)
 
             self._init_editor_state()
 
-            self.setWindowTitle(self._dialog_title())
-            self.resize(1120, 760)
-            self.setMinimumSize(900, 660)
-            self.setModal(True)
             setup_editor_dialog(self)
             self._build_ui()
             self._install_local_event_filters()
@@ -87,6 +92,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
                 widget.ensurePolished()
         finally:
             self.setUpdatesEnabled(True)
+            self.setAttribute(Qt.WA_DontShowOnScreen, False)
 
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
@@ -402,7 +408,27 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
+        editor_launch_debug(
+            "dialog.jaw.show_event",
+            launch_id=editor_launch_id(self),
+            visible=self.isVisible(),
+            active=self.isActiveWindow(),
+            title=self.windowTitle(),
+        )
         self._ensure_on_screen()
+
+    def paintEvent(self, event):
+        first_paint = not bool(getattr(self, "_editor_launch_first_paint_logged", False))
+        super().paintEvent(event)
+        if first_paint:
+            self._editor_launch_first_paint_logged = True
+            editor_launch_debug(
+                "dialog.jaw.first_paint",
+                launch_id=editor_launch_id(self),
+                visible=self.isVisible(),
+                active=self.isActiveWindow(),
+                title=self.windowTitle(),
+            )
 
     def moveEvent(self, event):
         super().moveEvent(event)

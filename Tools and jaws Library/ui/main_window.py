@@ -66,6 +66,7 @@ from ui.tool_catalog_delegate import apply_delegate_theme as apply_tool_delegate
 from ui.widgets.common import clear_focused_dropdown_on_outside_click
 from shared.ui.main_window_helpers import THEME_PALETTES, apply_frame_geometry_string, current_window_rect, fade_in as _shared_fade_in, fade_out_and as _shared_fade_out_and, get_active_theme_palette
 from shared.ui.theme import compile_app_stylesheet, current_theme_color, install_application_theme_state
+from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_launch_debug
 from shared.ui.helpers.icon_loader import icon_from_path
 from shared.ui.layout_contract import get_container_layout_contract, get_required_rail_width
 
@@ -291,7 +292,10 @@ class MainWindow(QMainWindow):
         super().showEvent(event)
         if not self._runtime_initialized:
             self._runtime_initialized = True
-            QApplication.instance().installEventFilter(self)
+            if editor_launch_diag_enabled("DISABLE_APP_MOUSE_FILTER"):
+                editor_launch_debug("diag.main_window.skip_app_event_filter")
+            else:
+                QApplication.instance().installEventFilter(self)
             QTimer.singleShot(0, self.preload_catalog_pages)
         self.ui_preferences = self.ui_preferences_service.load()
         self.localization.set_language(self.ui_preferences.get("language", "en"))
@@ -656,6 +660,8 @@ class MainWindow(QMainWindow):
         self._ensure_on_screen()
 
     def eventFilter(self, obj, event):
+        if editor_launch_diag_enabled("DISABLE_APP_MOUSE_FILTER"):
+            return super().eventFilter(obj, event)
         if event.type() == QEvent.MouseButtonPress:
             clear_focused_dropdown_on_outside_click(obj, self)
             self._clear_active_page_selection_on_background_click(obj)

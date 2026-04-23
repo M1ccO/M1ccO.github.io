@@ -15,7 +15,8 @@ from shared.ui.helpers.window_geometry_memory import (
 from shared.ui.stl_preview import StlPreviewWidget
 
 
-_GEOMETRY_KEY = "selector_external_preview_dialog"
+_EXTERNAL_PREFIX = "_external_selector_preview"
+_EXTERNAL_GEOMETRY_KEY = "selector_external_preview_dialog"
 
 
 def _rect_from_payload(raw) -> QRect | None:
@@ -62,8 +63,20 @@ def _translate(window, key: str, default: str, **kwargs) -> str:
     return default.format(**kwargs) if kwargs else default
 
 
-def _set_toggle_icon(window, enabled: bool) -> None:
-    button = getattr(window, "_external_selector_preview_measurement_btn", None)
+def _state_attr(prefix: str, suffix: str) -> str:
+    return f"{prefix}_{suffix}"
+
+
+def _get_state(window, prefix: str, suffix: str, default=None):
+    return getattr(window, _state_attr(prefix, suffix), default)
+
+
+def _set_state(window, prefix: str, suffix: str, value) -> None:
+    setattr(window, _state_attr(prefix, suffix), value)
+
+
+def _set_toggle_icon(window, enabled: bool, *, measurement_button_attr: str) -> None:
+    button = getattr(window, measurement_button_attr, None)
     if button is None:
         return
     icon_name = "comment_disable.svg" if enabled else "comment.svg"
@@ -75,6 +88,42 @@ def _set_toggle_icon(window, enabled: bool) -> None:
             "Hide measurements" if enabled else "Show measurements",
         )
     )
+
+
+def _apply_embedded_host_bounds(window, dialog: QDialog) -> bool:
+    host_window = None
+    try:
+        if hasattr(window, "window"):
+            host_window = window.window()
+    except Exception:
+        host_window = None
+    if host_window is None:
+        host_window = window
+    if host_window is None or not hasattr(host_window, "frameGeometry"):
+        return False
+
+    try:
+        host_frame = host_window.frameGeometry()
+        host_geom = host_window.geometry()
+    except Exception:
+        return False
+    if host_frame.width() <= 0 or host_frame.height() <= 0:
+        return False
+
+    width = min(max(520, int(host_frame.width() * 0.37)), 700)
+    height = host_frame.bottom() - host_geom.top()
+    x = host_frame.right() - width + 1
+    y = host_geom.top()
+
+    probe = QGuiApplication.primaryScreen()
+    screen = QGuiApplication.screenAt(host_frame.center()) or probe
+    if screen is not None:
+        avail = screen.availableGeometry()
+        x = max(avail.left(), min(x, avail.right() - width + 1))
+        y = max(avail.top(), min(y, avail.bottom() - height + 1))
+
+    dialog.setGeometry(x, y, width, height)
+    return True
 
 
 def _apply_default_bounds(dialog: QDialog) -> None:
@@ -89,18 +138,20 @@ def _apply_default_bounds(dialog: QDialog) -> None:
     dialog.setGeometry(x, y, width, height)
 
 
-def _apply_preferred_bounds(window, dialog: QDialog, payload: dict | None = None) -> None:
+def _apply_preferred_bounds(window, dialog: QDialog, *, payload: dict | None = None, geometry_key: str) -> None:
     mode = get_detached_preview_open_mode(SHARED_UI_PREFERENCES_PATH)
     payload = payload if isinstance(payload, dict) else {}
     host_frame_rect = _rect_from_payload(payload.get("host_frame_geometry"))
     host_content_rect = _rect_from_payload(payload.get("host_content_geometry"))
     if mode == "follow_last":
-        if restore_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, _GEOMETRY_KEY):
+        if restore_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, geometry_key):
             return
         if host_frame_rect is not None and host_content_rect is not None:
             _apply_bounds_from_host_rects(dialog, host_frame_rect, host_content_rect, side="embedded")
-        else:
-            _apply_default_bounds(dialog)
+            return
+        if _apply_embedded_host_bounds(window, dialog):
+            return
+        _apply_default_bounds(dialog)
         return
 
     if mode == "left":
@@ -119,6 +170,9 @@ def _apply_preferred_bounds(window, dialog: QDialog, payload: dict | None = None
 
     if host_frame_rect is not None and host_content_rect is not None:
         _apply_bounds_from_host_rects(dialog, host_frame_rect, host_content_rect, side="embedded")
+        return
+
+    if _apply_embedded_host_bounds(window, dialog):
         return
 
     _apply_default_bounds(dialog)
@@ -170,35 +224,58 @@ def _apply_transform_payload(viewer, payload: dict | None) -> None:
     viewer.select_part(selected_part)
 
 
-def _on_measurements_toggled(window, checked: bool) -> None:
-    window._external_selector_preview_measurements_enabled = bool(checked)
-    _set_toggle_icon(window, bool(checked))
-    viewer = getattr(window, "_external_selector_preview_widget", None)
+def _on_measurements_toggled(window, checked: bool, *, state_prefix: str, measurement_button_attr: str, measurements_enabled_attr: str) -> None:
+    setattr(window, measurements_enabled_attr, bool(checked))
+    _set_toggle_icon(window, bool(checked), measurement_button_attr=measurement_button_attr)
+    viewer = _get_state(window, state_prefix, "widget")
     if viewer is not None:
-        has_measurements = bool(getattr(window, "_external_selector_preview_overlays", []))
+        has_measurements = bool(_get_state(window, state_prefix, "overlays", []))
         viewer.set_measurements_visible(bool(checked) and has_measurements)
 
 
-def _on_preview_dialog_finished(window, _result: int) -> None:
-    dialog = getattr(window, "_external_selector_preview_dialog", None)
-    viewer = getattr(window, "_external_selector_preview_widget", None)
+def _on_preview_dialog_finished(
+    window,
+    _result: int,
+    *,
+    state_prefix: str,
+    measurement_button_attr: str,
+    close_shortcut_attr: str,
+    geometry_key: str,
+    on_finished_callback=None,
+) -> None:
+    dialog = _get_state(window, state_prefix, "dialog")
+    viewer = _get_state(window, state_prefix, "widget")
     if dialog is not None:
-        save_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, _GEOMETRY_KEY)
+        save_window_geometry(dialog, SHARED_UI_PREFERENCES_PATH, geometry_key)
     if viewer is not None:
-        viewer.set_measurement_focus_index(-1)
+        try:
+            viewer.set_measurement_focus_index(-1)
+        except Exception:
+            pass
         release_preview_runtime_widget(viewer)
-    window._external_selector_preview_dialog = None
-    window._external_selector_preview_widget = None
-    window._external_selector_preview_measurement_btn = None
-    window._external_selector_preview_close_shortcut = None
-    window._external_selector_preview_overlays = []
-    window._external_selector_preview_last_model_key = None
-    window._external_selector_preview_pending_show = False
+    _set_state(window, state_prefix, "dialog", None)
+    _set_state(window, state_prefix, "widget", None)
+    setattr(window, measurement_button_attr, None)
+    setattr(window, close_shortcut_attr, None)
+    _set_state(window, state_prefix, "overlays", [])
+    _set_state(window, state_prefix, "last_model_key", None)
+    _set_state(window, state_prefix, "pending_show", False)
+    if callable(on_finished_callback):
+        on_finished_callback(window)
 
 
-def _ensure_external_preview_dialog(window) -> tuple[QDialog, object | None]:
-    dialog = getattr(window, "_external_selector_preview_dialog", None)
-    viewer = getattr(window, "_external_selector_preview_widget", None)
+def _ensure_preview_dialog(
+    window,
+    *,
+    state_prefix: str,
+    measurement_button_attr: str,
+    measurements_enabled_attr: str,
+    close_shortcut_attr: str,
+    geometry_key: str,
+    on_finished_callback=None,
+) -> tuple[QDialog, object | None]:
+    dialog = _get_state(window, state_prefix, "dialog")
+    viewer = _get_state(window, state_prefix, "widget")
     if dialog is not None:
         return dialog, viewer
 
@@ -232,12 +309,20 @@ def _ensure_external_preview_dialog(window) -> tuple[QDialog, object | None]:
 
     measurement_btn = QToolButton(controls_host)
     measurement_btn.setCheckable(True)
-    measurement_btn.setChecked(True)
+    measurement_btn.setChecked(bool(getattr(window, measurements_enabled_attr, True)))
     measurement_btn.setIconSize(QSize(28, 28))
     measurement_btn.setAutoRaise(True)
     measurement_btn.setProperty("topBarIconButton", True)
     measurement_btn.setFixedSize(36, 36)
-    measurement_btn.clicked.connect(lambda checked: _on_measurements_toggled(window, checked))
+    measurement_btn.clicked.connect(
+        lambda checked: _on_measurements_toggled(
+            window,
+            checked,
+            state_prefix=state_prefix,
+            measurement_button_attr=measurement_button_attr,
+            measurements_enabled_attr=measurements_enabled_attr,
+        )
+    )
     controls_layout.addWidget(measurement_btn)
 
     label = QLabel(_translate(window, "tool_library.preview.measurements_label", "Measurements"), controls_host)
@@ -269,29 +354,61 @@ def _ensure_external_preview_dialog(window) -> tuple[QDialog, object | None]:
         fallback.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         root.addWidget(fallback, 1)
 
-    dialog.finished.connect(lambda result: _on_preview_dialog_finished(window, result))
+    dialog.finished.connect(
+        lambda result: _on_preview_dialog_finished(
+            window,
+            result,
+            state_prefix=state_prefix,
+            measurement_button_attr=measurement_button_attr,
+            close_shortcut_attr=close_shortcut_attr,
+            geometry_key=geometry_key,
+            on_finished_callback=on_finished_callback,
+        )
+    )
     try:
         window.destroyed.connect(dialog.close)
     except Exception:
         pass
 
-    window._external_selector_preview_dialog = dialog
-    window._external_selector_preview_widget = viewer
-    window._external_selector_preview_measurement_btn = measurement_btn
-    window._external_selector_preview_overlays = []
-    window._external_selector_preview_last_model_key = None
-    window._external_selector_preview_measurements_enabled = True
-    _set_toggle_icon(window, True)
+    _set_state(window, state_prefix, "dialog", dialog)
+    _set_state(window, state_prefix, "widget", viewer)
+    setattr(window, measurement_button_attr, measurement_btn)
+    _set_state(window, state_prefix, "overlays", [])
+    _set_state(window, state_prefix, "last_model_key", None)
+    _set_state(window, state_prefix, "pending_show", False)
+    _set_toggle_icon(window, bool(getattr(window, measurements_enabled_attr, True)), measurement_button_attr=measurement_button_attr)
 
-    _apply_preferred_bounds(window, dialog)
+    _apply_preferred_bounds(window, dialog, geometry_key=geometry_key)
     return dialog, viewer
 
 
-def show_external_selector_preview(window, payload: dict | None) -> bool:
+def show_preview_host(
+    window,
+    payload: dict | None,
+    *,
+    state_prefix: str = _EXTERNAL_PREFIX,
+    geometry_key: str = _EXTERNAL_GEOMETRY_KEY,
+    measurement_button_attr: str | None = None,
+    measurements_enabled_attr: str | None = None,
+    close_shortcut_attr: str | None = None,
+    on_finished_callback=None,
+) -> bool:
     if window is None or not isinstance(payload, dict):
         return False
 
-    dialog, viewer = _ensure_external_preview_dialog(window)
+    measurement_button_attr = measurement_button_attr or _state_attr(state_prefix, "measurement_btn")
+    measurements_enabled_attr = measurements_enabled_attr or _state_attr(state_prefix, "measurements_enabled")
+    close_shortcut_attr = close_shortcut_attr or _state_attr(state_prefix, "close_shortcut")
+
+    dialog, viewer = _ensure_preview_dialog(
+        window,
+        state_prefix=state_prefix,
+        measurement_button_attr=measurement_button_attr,
+        measurements_enabled_attr=measurements_enabled_attr,
+        close_shortcut_attr=close_shortcut_attr,
+        geometry_key=geometry_key,
+        on_finished_callback=on_finished_callback,
+    )
     if viewer is None:
         dialog.show()
         dialog.raise_()
@@ -302,10 +419,29 @@ def show_external_selector_preview(window, payload: dict | None) -> bool:
     stl_path = str(payload.get("stl_path") or "").strip()
     label = str(payload.get("label") or payload.get("item_id") or "3D Preview").strip() or "3D Preview"
     model_key = payload.get("model_key")
-    model_changed = model_key != getattr(window, "_external_selector_preview_last_model_key", None)
+    model_changed = model_key != _get_state(window, state_prefix, "last_model_key", None)
+    suspend_rendering_fn = getattr(viewer, "set_rendering_suspended", None)
+    set_content_visible_fn = getattr(viewer, "set_view_content_visible", None)
+    dialog_was_visible = dialog.isVisible()
+
+    if callable(set_content_visible_fn):
+        try:
+            set_content_visible_fn(not (model_changed and not dialog_was_visible))
+        except Exception:
+            pass
+
+    if not dialog_was_visible:
+        dialog.show()
+        dialog.raise_()
+        dialog.activateWindow()
 
     loaded = True
     if model_changed:
+        if callable(suspend_rendering_fn):
+            try:
+                suspend_rendering_fn(True)
+            except Exception:
+                pass
         if isinstance(parts, list) and parts:
             viewer.load_parts([dict(item) for item in parts if isinstance(item, dict)])
         elif stl_path:
@@ -313,76 +449,84 @@ def show_external_selector_preview(window, payload: dict | None) -> bool:
         else:
             loaded = False
         if loaded:
-            window._external_selector_preview_last_model_key = model_key
+            _set_state(window, state_prefix, "last_model_key", model_key)
         else:
-            window._external_selector_preview_last_model_key = None
+            _set_state(window, state_prefix, "last_model_key", None)
 
     if not loaded:
-        close_external_selector_preview(window)
+        close_preview_host(window, state_prefix=state_prefix)
         return False
 
     overlays = payload.get("measurement_overlays", [])
     if not isinstance(overlays, list):
         overlays = []
-    window._external_selector_preview_overlays = [dict(item) for item in overlays if isinstance(item, dict)]
-    viewer.set_measurement_overlays(window._external_selector_preview_overlays)
+    normalized_overlays = [dict(item) for item in overlays if isinstance(item, dict)]
+    _set_state(window, state_prefix, "overlays", normalized_overlays)
+    viewer.set_measurement_overlays(normalized_overlays)
 
-    measurement_btn = getattr(window, "_external_selector_preview_measurement_btn", None)
-    has_measurements = bool(window._external_selector_preview_overlays)
+    measurement_btn = getattr(window, measurement_button_attr, None)
+    has_measurements = bool(normalized_overlays)
+    measurements_enabled = bool(getattr(window, measurements_enabled_attr, True))
     if measurement_btn is not None:
         measurement_btn.setEnabled(has_measurements)
         measurement_btn.blockSignals(True)
-        measurement_btn.setChecked(bool(getattr(window, "_external_selector_preview_measurements_enabled", True)) and has_measurements)
+        measurement_btn.setChecked(measurements_enabled and has_measurements)
         measurement_btn.blockSignals(False)
-        _set_toggle_icon(window, measurement_btn.isChecked())
+        _set_toggle_icon(window, measurement_btn.isChecked(), measurement_button_attr=measurement_button_attr)
 
-    viewer.set_measurements_visible(
-        has_measurements and bool(getattr(window, "_external_selector_preview_measurements_enabled", True))
-    )
+    viewer.set_measurements_visible(has_measurements and measurements_enabled)
     _apply_transform_payload(viewer, payload.get("transform"))
 
     title = str(payload.get("title") or _translate(window, "tool_library.preview.window_title", "3D Preview")).strip()
     dialog.setWindowTitle(title)
-    _apply_preferred_bounds(window, dialog, payload)
-    if not dialog.isVisible():
-        window._external_selector_preview_pending_show = bool(model_changed)
+    _apply_preferred_bounds(window, dialog, payload=payload, geometry_key=geometry_key)
 
-        def _show_when_ready() -> None:
-            if hasattr(viewer, "model_loaded"):
-                try:
-                    viewer.model_loaded.disconnect(_show_when_ready)
-                except Exception:
-                    pass
-            if not getattr(window, "_external_selector_preview_pending_show", False):
-                return
-            window._external_selector_preview_pending_show = False
-            if getattr(window, "_external_selector_preview_dialog", None) is None:
-                return
-            dialog.show()
-            dialog.raise_()
-            dialog.activateWindow()
+    def _finish_initial_visual_update() -> None:
+        if hasattr(viewer, "model_loaded"):
+            try:
+                viewer.model_loaded.disconnect(_finish_initial_visual_update)
+            except Exception:
+                pass
+        if callable(set_content_visible_fn):
+            try:
+                set_content_visible_fn(True)
+            except Exception:
+                pass
+        if callable(suspend_rendering_fn):
+            try:
+                suspend_rendering_fn(False)
+            except Exception:
+                pass
 
-        if model_changed:
-            if hasattr(viewer, "model_loaded"):
-                viewer.model_loaded.connect(_show_when_ready)
-            QTimer.singleShot(1200, _show_when_ready)
-        else:
-            window._external_selector_preview_pending_show = False
-            dialog.show()
-            dialog.raise_()
-            dialog.activateWindow()
+    if model_changed:
+        if hasattr(viewer, "model_loaded"):
+            viewer.model_loaded.connect(_finish_initial_visual_update)
+        QTimer.singleShot(1200, _finish_initial_visual_update)
+    else:
+        _finish_initial_visual_update()
+
     dialog.raise_()
     dialog.activateWindow()
     return True
 
 
-def close_external_selector_preview(window) -> None:
-    dialog = getattr(window, "_external_selector_preview_dialog", None)
+def close_preview_host(window, *, state_prefix: str = _EXTERNAL_PREFIX) -> None:
+    dialog = _get_state(window, state_prefix, "dialog", None)
     if dialog is not None:
         dialog.close()
 
 
+def show_external_selector_preview(window, payload: dict | None) -> bool:
+    return show_preview_host(window, payload)
+
+
+def close_external_selector_preview(window) -> None:
+    close_preview_host(window)
+
+
 __all__ = [
     "close_external_selector_preview",
+    "close_preview_host",
     "show_external_selector_preview",
+    "show_preview_host",
 ]

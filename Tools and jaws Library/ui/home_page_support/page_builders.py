@@ -7,6 +7,7 @@ Mirrors the jaw_page_support/page_builders.py pattern.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -17,6 +18,12 @@ from PySide6.QtWidgets import (
     QSizePolicy,
 )
 
+from shared.ui.editor_launch_debug import (
+    cleanup_hidden_orphan_top_levels,
+    editor_launch_diag_enabled,
+    editor_launch_debug,
+    start_editor_window_probe,
+)
 from shared.ui.layout_contract import get_container_layout_contract
 from shared.ui.helpers.page_scaffold_common import (
     apply_catalog_list_view_defaults,
@@ -35,6 +42,40 @@ __all__ = [
     "build_detail_container",
     "build_bottom_bars",
 ]
+
+
+def _connect_or_log(page, *, action_name: str, callback, log_event: str) -> None:
+    if editor_launch_diag_enabled("NOOP_BUTTONS"):
+        callback = lambda: editor_launch_debug(log_event)
+
+    def _wrapped_action() -> None:
+        host = None
+        try:
+            host = page.window()
+        except Exception:
+            host = page
+        cleanup_hidden_orphan_top_levels(host, reason=f"tool.{action_name}")
+        start_editor_window_probe(host, f"tool.{action_name}")
+        callback()
+
+    setattr(page, action_name, _wrapped_action)
+
+
+def _install_keyboard_only_actions(page) -> None:
+    if not editor_launch_diag_enabled("KEYBOARD_ONLY_ACTIONS"):
+        return
+
+    for btn in (page.add_btn, page.edit_btn, page.delete_btn, page.copy_btn):
+        btn.hide()
+        btn.setEnabled(False)
+
+    page._diag_tool_edit_shortcut = QShortcut(QKeySequence("Ctrl+Alt+E"), page.button_bar)
+    page._diag_tool_edit_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    page._diag_tool_edit_shortcut.activated.connect(getattr(page, "_diag_edit_action"))
+
+    page._diag_tool_add_shortcut = QShortcut(QKeySequence("Ctrl+Alt+N"), page.button_bar)
+    page._diag_tool_add_shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+    page._diag_tool_add_shortcut.activated.connect(getattr(page, "_diag_add_action"))
 
 
 def build_tool_page_layout(page) -> None:
@@ -135,10 +176,35 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     page.delete_btn.setProperty('dangerAction', True)
     page.add_btn.setProperty('primaryAction', True)
 
-    page.edit_btn.clicked.connect(page.edit_tool)
-    page.delete_btn.clicked.connect(page.delete_tool)
-    page.add_btn.clicked.connect(page.add_tool)
-    page.copy_btn.clicked.connect(page.copy_tool)
+    _connect_or_log(
+        page,
+        action_name="_diag_edit_action",
+        callback=page.edit_tool,
+        log_event="diag.home.edit_btn.noop",
+    )
+    _connect_or_log(
+        page,
+        action_name="_diag_delete_action",
+        callback=page.delete_tool,
+        log_event="diag.home.delete_btn.noop",
+    )
+    _connect_or_log(
+        page,
+        action_name="_diag_add_action",
+        callback=page.add_tool,
+        log_event="diag.home.add_btn.noop",
+    )
+    _connect_or_log(
+        page,
+        action_name="_diag_copy_action",
+        callback=page.copy_tool,
+        log_event="diag.home.copy_btn.noop",
+    )
+
+    page.edit_btn.clicked.connect(page._diag_edit_action)
+    page.delete_btn.clicked.connect(page._diag_delete_action)
+    page.add_btn.clicked.connect(page._diag_add_action)
+    page.copy_btn.clicked.connect(page._diag_copy_action)
 
     page.module_switch_label = QLabel('')
     page.module_switch_label.setVisible(False)
@@ -160,4 +226,5 @@ def build_bottom_bars(page, root: QVBoxLayout) -> None:
     actions.addWidget(page.edit_btn)
     actions.addWidget(page.delete_btn)
     actions.addWidget(page.copy_btn)
+    _install_keyboard_only_actions(page)
     root.addWidget(page.button_bar)

@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import TOOL_ICONS_DIR
+from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_launch_debug
 from shared.ui.layout_contract import get_container_layout_contract
 from shared.ui.helpers.page_scaffold_common import (
     apply_catalog_list_view_defaults,

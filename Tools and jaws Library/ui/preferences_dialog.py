@@ -35,7 +35,7 @@ class PreferencesDialog(PreferencesDialogBase):
         self.setProperty("preferencesDialog", True)
         self.setWindowTitle(self._t("preferences.title", "Preferences"))
         self.setModal(True)
-        self.resize(500, 280)
+        self.resize(500, 330)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(12, 12, 12, 12)
@@ -98,6 +98,15 @@ class PreferencesDialog(PreferencesDialogBase):
             )
         )
 
+        self.preview_preload_cb = QCheckBox(
+            self._t(
+                "preferences.models.preview_preload",
+                "Preload 3D preview in background for faster first open",
+            )
+        )
+        apply_shared_checkbox_style(self.preview_preload_cb, indicator_size=16)
+        card_layout.addWidget(self.preview_preload_cb)
+
         buttons = QHBoxLayout()
         buttons.setContentsMargins(0, 6, 0, 0)
         buttons.setSpacing(8)
@@ -123,6 +132,7 @@ class PreferencesDialog(PreferencesDialogBase):
             "language": self.language_combo.currentData() or "en",
             "color_theme": self.theme_combo.currentData() or "classic",
             "enable_assembly_transform": self.assembly_transform_cb.isChecked(),
+            "enable_preview_preload": self.preview_preload_cb.isChecked(),
             "detached_preview_policy": {
                 "mode": self.detached_preview_mode_combo.currentData() or "follow_last",
             },
@@ -132,6 +142,7 @@ class PreferencesDialog(PreferencesDialogBase):
         self._set_combo_by_data(self.language_combo, self._current.get("language", "en"))
         self._set_combo_by_data(self.theme_combo, self._current.get("color_theme", "classic"))
         self.assembly_transform_cb.setChecked(bool(self._current.get("enable_assembly_transform", False)))
+        self.preview_preload_cb.setChecked(bool(self._current.get("enable_preview_preload", True)))
         policy = self._current.get("detached_preview_policy")
         mode = str((policy or {}).get("mode") if isinstance(policy, dict) else "follow_last").strip().lower()
         # Support legacy 'current' mode by converting to 'embedded'

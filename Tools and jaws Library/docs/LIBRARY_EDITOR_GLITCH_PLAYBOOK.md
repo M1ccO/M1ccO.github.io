@@ -195,6 +195,98 @@ After commit:
 Implement Stage 1 instrumentation only (no behavior changes), gather 10+ glitch samples, then choose one minimal Stage 3 fix based on measured timing.
 
 
+## Instrumentation Added
+Stage 1 instrumentation is now available behind `NTX_EDITOR_GLITCH_DEBUG`.
+
+How to capture a sample:
+- Start the relevant app with `NTX_EDITOR_GLITCH_DEBUG=1`.
+- Reproduce Tool Editor and Jaw Editor opens.
+- Inspect `%TEMP%\ntx_editor_glitch.log`, or set `NTX_EDITOR_GLITCH_LOG` to choose a specific log file.
+
+Events captured:
+- CRUD launch begin, blur application, dialog construction, positioning, and `exec()` result.
+- Tool/Jaw editor `showEvent` and first paint.
+- Models tab build, transform toolbar construction, deferred transform signal connection, and 3D preview creation.
+- `StlPreviewWidget` WebEngine creation, HTML load start/end, `showEvent`, and load-finished readiness.
+- Library/Setup Manager `hide_for_library_handoff` and `complete_sender_transition` IPC receipt.
+
+2026-04-23 clue to preserve:
+- The transform toolbar/dialog once appeared alone at the same screen position as the PYTHONW3/Python flash when the editor failed to open, increasing confidence that the remaining glitch is tied to preview/transform first-paint timing rather than ordinary dialog focus alone.
+
+## Current Fix Under Test
+`StlPreviewWidget` now supports disabling automatic native `QWebEngineView` creation/loading. Tool/Jaw editor model tabs use that mode, and the shared models tab builder activates the preview only when the 3D Models tab becomes the current tab. This keeps ordinary editor opening on the General tab from spawning Chromium/WebEngine at all. The expected tradeoff is that the 3D preview initializes on first visit to the 3D Models tab.
+
+User-confirmed isolation on April 23, 2026:
+- `NTX_EDITOR_DIAG_BYPASS_MODELS_TAB=1` removes the glitch.
+- That makes the models-tab construction path the primary root-cause target again.
+- The normal builder now mirrors that evidence more closely: editor construction keeps only the model table and placeholder widgets, and the real preview/transform/actions UI is materialized only on the first actual visit to the `3D models` tab.
+- Detached/external preview recovery is now separated from editor launch:
+  - preview-runtime warmup is restored only for the shared detached/external preview pool
+  - Libraries and Selectors now use the same preview host implementation for detached/external 3D windows
+  - visible detached/external previews favor stable rendering over focus-driven pause/resume churn
+
+Automatic Library startup preview-runtime warmup is also disabled. The old startup timer could create an offscreen preview 250 ms after launch, causing Chromium/D3D surface creation to overlap a normal editor open. Explicit `warm_preview_runtime` IPC remains available for flows that intentionally request it.
+
+QtWebEngine imports are lazy now as well: `shared/ui/stl_preview.py` no longer imports `QWebEnginePage`/`QWebEngineView` at module import time. The WebEngine classes load only when a preview is explicitly activated.
+
+Tool/Jaw editor construction is guarded with `Qt.WA_DontShowOnScreen` until heavy initialization completes, and the real editor title/size/modal metadata is assigned immediately after `QDialog.__init__()`. This suppresses any accidental early top-level surface before `exec()` opens the completed editor.
+
+## Diagnostic Bypass Tests
+Use these switches one at a time. Do not combine them unless a single-switch result already identifies a suspect.
+
+1. `NTX_EDITOR_DIAG_BYPASS_MODELS_TAB=1`
+- Replaces the 3D Models tab with a lightweight placeholder/table.
+- Expected isolation: if the flash disappears, the root cause is in models-tab construction, preview, transform controls, or model-table support.
+
+2. `NTX_EDITOR_DIAG_BYPASS_BLUR=1`
+- Skips the host `QGraphicsBlurEffect` during editor open.
+- Expected isolation: if the flash disappears, the root cause is blur/effect compositor timing.
+
+3. `NTX_EDITOR_DIAG_BYPASS_HOST_STYLE=1`
+- Skips host palette/font/stylesheet adoption in Tool/Jaw editor constructors.
+- Expected isolation: if the flash disappears, the root cause is style/polish/palette propagation during construction.
+
+4. `NTX_EDITOR_DIAG_STUB_EDITOR=1`
+- Opens a tiny generic diagnostic dialog instead of importing/constructing the real Tool/Jaw editor class.
+- Expected isolation: if the flash disappears, the root cause is inside real editor import/construction. If it remains, investigate CRUD launch choreography, generic `QDialog` top-level creation, blur/activation, detached preview close, or process/window-manager behavior.
+
+5. `NTX_EDITOR_DIAG_NO_DIALOG=1`
+- Returns from the Tool/Jaw CRUD handler before any editor dialog is created.
+- Expected isolation: if the flash still appears, the root cause is earlier than dialog creation and likely outside the editor stack.
+
+6. `NTX_EDITOR_DIAG_NOOP_BUTTONS=1`
+- Rewires the Tool/Jaw bottom-bar action buttons so click only emits a debug log and does not call add/edit/delete/copy handlers.
+- Expected isolation: if the flash still appears, the root cause is outside CRUD launch entirely and likely tied to click/focus/window-manager behavior or another non-CRUD side effect.
+
+7. `NTX_EDITOR_DIAG_DISABLE_APP_MOUSE_FILTER=1`
+- Disables the Library main window's `QApplication`-level event filter for mouse handling.
+- Expected isolation: if the flash disappears, the culprit is in global pre-handler click processing such as dropdown focus clearing or background-selection clearing, not in the button slot or editor stack.
+
+8. `NTX_EDITOR_DIAG_KEYBOARD_ONLY_ACTIONS=1`
+- Hides/disables the bottom-bar action buttons and installs keyboard shortcuts instead.
+- `Ctrl+Alt+E` triggers Edit and `Ctrl+Alt+N` triggers Add.
+- Expected isolation: if the flash disappears when the action is triggered from keyboard instead of a physical button click, the remaining culprit is strongly tied to the native button-click/focus path rather than CRUD/editor launch.
+
+Recommended sequence:
+- Restart the app between diagnostic runs.
+- Start with `NTX_EDITOR_DIAG_STUB_EDITOR=1` because it gives the strongest split.
+- Test Tool Editor first with 10-20 opens, then Jaw Editor if Tool results are ambiguous.
+- Keep `NTX_EDITOR_GLITCH_DEBUG=1` enabled during diagnostic runs if timing logs are needed.
+
+
 ## Change Log
 - 2026-04-23: Initial playbook created from verified regressions and handoff race fixes.
-
+- 2026-04-23: Added opt-in Stage 1 trace instrumentation and recorded transform-toolbar/PYTHONW3 position clue.
+- 2026-04-23: Added lazy WebEngine surface creation in `StlPreviewWidget` as the current focused fix under test.
+- 2026-04-23: Tightened the fix so editor previews activate WebEngine only after the 3D Models tab is selected.
+- 2026-04-23: Disabled automatic startup preview-runtime warmup to avoid unrelated background Chromium surface creation during editor open.
+- 2026-04-23: Moved QtWebEngine imports behind explicit preview activation so editor construction cannot initialize WebEngine.
+- 2026-04-23: Added an editor construction visibility guard and removed pre-construction event pumping in `add_tool()`.
+- 2026-04-23: Added default-off diagnostic bypass switches for models tab, blur, and host style.
+- 2026-04-23: Added `NTX_EDITOR_DIAG_STUB_EDITOR=1` and lazy real-editor imports for the strongest root-cause split.
+- 2026-04-23: Added `NTX_EDITOR_DIAG_NO_DIALOG=1` to prove whether the flash survives without any dialog creation.
+- 2026-04-23: Added `NTX_EDITOR_DIAG_NOOP_BUTTONS=1` so the bottom-bar click can be tested without entering CRUD/editor launch code at all.
+- 2026-04-23: Added `NTX_EDITOR_DIAG_DISABLE_APP_MOUSE_FILTER=1` to bypass the Library's app-wide pre-handler mouse event filter.
+- 2026-04-23: Added `NTX_EDITOR_DIAG_KEYBOARD_ONLY_ACTIONS=1` to compare mouse button clicks against keyboard-only action triggering.
+- 2026-04-23: User confirmed `NTX_EDITOR_DIAG_BYPASS_MODELS_TAB=1` removes the glitch; normal models-tab builder now uses first-activation lazy materialization for preview, transforms, and model actions.
+- 2026-04-23: Restored safe shared preview prewarm and unified Library + Selector detached/external preview windows on one payload-driven host, while keeping editor models-tab lazy.

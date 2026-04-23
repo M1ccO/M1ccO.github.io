@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QEventLoop, QTimer, Qt
 from PySide6.QtWidgets import QApplication, QDialog, QWidget
 
 
@@ -33,6 +33,14 @@ def preview_runtime_ready() -> bool:
         return False
     _sync_runtime_state(app)
     return bool(getattr(app, "_preview_runtime_ready", False))
+
+
+def preview_runtime_count() -> int:
+    app = QApplication.instance()
+    if app is None:
+        return 0
+    _sync_runtime_state(app)
+    return len(_runtime_widgets(app))
 
 
 def register_preview_runtime_widget(widget: QWidget | None) -> None:
@@ -115,3 +123,51 @@ def release_preview_runtime_widget(widget: QWidget | None) -> None:
         return
 
     register_preview_runtime_widget(widget)
+
+
+def ensure_preview_runtime_widgets(factory, *, count: int = 1) -> list[QWidget]:
+    """Create and register prewarmed preview widgets until the pool reaches ``count``.
+
+    The created widget is briefly shown off-screen so Windows/QtWebEngine realize
+    the native surface before the first user-visible preview claims it.
+    """
+    app = QApplication.instance()
+    if app is None:
+        return []
+
+    widgets = _runtime_widgets(app)
+    created: list[QWidget] = []
+    target = max(0, int(count))
+    if target <= 0:
+        _sync_runtime_state(app)
+        return created
+
+    while len(widgets) < target:
+        widget = factory()
+        if widget is None:
+            break
+        widget.setWindowFlag(Qt.Tool, True)
+        widget.setGeometry(-32000, -32000, 8, 8)
+        widget.show()
+        activate_fn = getattr(widget, "activate_web_view", None)
+        if callable(activate_fn):
+            try:
+                activate_fn()
+            except Exception:
+                pass
+        app.processEvents()
+        loop = QEventLoop()
+        timer = QTimer()
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
+        timer.start(140)
+        loop.exec()
+        timer.stop()
+        app.processEvents()
+        widget.hide()
+        register_preview_runtime_widget(widget)
+        created.append(widget)
+        widgets = _runtime_widgets(app)
+
+    _sync_runtime_state(app)
+    return created

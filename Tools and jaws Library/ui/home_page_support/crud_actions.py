@@ -6,6 +6,7 @@ All public functions take the page object as their first argument.
 
 from __future__ import annotations
 
+from uuid import uuid4
 from pathlib import Path
 
 from PySide6.QtWidgets import (
@@ -18,6 +19,13 @@ from PySide6.QtWidgets import (
 )
 
 from shared.data.backup_helpers import create_db_backup
+from shared.ui.editor_launch_debug import (
+    attach_editor_launch_id,
+    clear_editor_launch_context,
+    editor_launch_diag_enabled,
+    editor_launch_debug,
+    set_editor_launch_context,
+)
 from shared.ui.transition_shell import cancel_receiver_ready_signal
 from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
@@ -26,9 +34,43 @@ from shared.ui.helpers.editor_helpers import (
     setup_editor_dialog,
 )
 from ui.home_page_support.detached_preview import close_detached_preview
-from ui.tool_editor_dialog import AddEditToolDialog
 
 __all__ = ["add_tool", "copy_tool", "delete_tool", "edit_tool", "save_from_dialog"]
+
+
+def _tool_editor_dialog_class():
+    from ui.tool_editor_dialog import AddEditToolDialog
+    return AddEditToolDialog
+
+
+def _build_stub_editor_dialog(page, title: str, launch_id: str, parent=None) -> QDialog:
+    editor_launch_debug("crud.tool.stub_dialog.build", launch_id=launch_id, title=title)
+    dlg = QDialog(parent)
+    setup_editor_dialog(dlg)
+    dlg.setWindowTitle(title)
+    dlg.resize(520, 220)
+    dlg.setModal(True)
+
+    root = QVBoxLayout(dlg)
+    root.setContentsMargins(18, 18, 18, 18)
+    root.setSpacing(10)
+    label = QLabel(
+        "Diagnostic stub editor.\n\n"
+        "The real Tool Editor class was not imported or constructed because "
+        "NTX_EDITOR_DIAG_STUB_EDITOR=1 is enabled."
+    )
+    label.setWordWrap(True)
+    label.setProperty('detailHint', True)
+    root.addWidget(label, 1)
+    buttons = create_dialog_buttons(
+        dlg,
+        save_text=page._t('common.close', 'Close'),
+        cancel_text=page._t('common.cancel', 'Cancel'),
+        on_save=dlg.reject,
+        on_cancel=dlg.reject,
+    )
+    root.addWidget(buttons)
+    return dlg
 
 
 def _editor_parent(page):
@@ -70,41 +112,87 @@ def save_from_dialog(page, dlg) -> int | None:
 
 def add_tool(page) -> None:
     """Open AddEditToolDialog in 'add' mode."""
+    launch_id = f"tool-add-{uuid4().hex[:8]}"
+    if editor_launch_diag_enabled("NO_DIALOG"):
+        editor_launch_debug("crud.add_tool.no_dialog_bypass", launch_id=launch_id)
+        return
     _close_open_preview(page)
-    dlg = AddEditToolDialog(
-        tool=None,
-        tool_service=page.tool_service,
-        translate=page._t,
-    )
     host = getattr(page, 'window', lambda: None)()
     if host is None:
         try:
             host = page.window()
         except Exception:
             host = None
+    editor_launch_debug(
+        "crud.add_tool.begin",
+        launch_id=launch_id,
+        host_visible=bool(host and host.isVisible()),
+        host_active=bool(host and host.isActiveWindow()) if host else False,
+        pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
+    )
+
     _blur = None
-    if host and host.isVisible():
+    if editor_launch_diag_enabled("BYPASS_BLUR"):
+        editor_launch_debug("crud.add_tool.blur_bypassed", launch_id=launch_id)
+    elif host and host.isVisible():
         try:
             from PySide6.QtWidgets import QGraphicsBlurEffect
             _blur = QGraphicsBlurEffect(host)
             _blur.setBlurRadius(6)
             host.setGraphicsEffect(_blur)
+            editor_launch_debug(
+                "crud.add_tool.blur_applied",
+                launch_id=launch_id,
+                host_visible=host.isVisible(),
+                host_active=host.isActiveWindow(),
+                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+            )
         except Exception:
             _blur = None
+            editor_launch_debug("crud.add_tool.blur_failed", launch_id=launch_id)
+
+    editor_launch_debug("crud.add_tool.dialog_init.before", launch_id=launch_id)
+    set_editor_launch_context(launch_id)
+    try:
+        if editor_launch_diag_enabled("STUB_EDITOR"):
+            parent = host if editor_launch_diag_enabled("PARENTED_STUB_EDITOR") else None
+            dlg = _build_stub_editor_dialog(page, page._t('tool_editor.window_title.add', 'Add Tool'), launch_id, parent=parent)
+            stub_editor = True
+        else:
+            dlg = _tool_editor_dialog_class()(
+                tool=None,
+                tool_service=page.tool_service,
+                translate=page._t,
+            )
+            stub_editor = False
+    finally:
+        clear_editor_launch_context(launch_id)
+    attach_editor_launch_id(dlg, launch_id)
+    editor_launch_debug("crud.add_tool.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+
+    if host and host.isVisible():
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
         y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
         dlg.move(x, y)
+        editor_launch_debug("crud.add_tool.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     try:
-        if dlg.exec() == QDialog.Accepted:
+        editor_launch_debug("crud.add_tool.exec.before", launch_id=launch_id, visible=dlg.isVisible())
+        if dlg.exec() == QDialog.Accepted and not stub_editor:
+            editor_launch_debug("crud.add_tool.exec.accepted", launch_id=launch_id)
             saved_uid = save_from_dialog(page, dlg)
             if saved_uid:
                 page._restore_selection_by_uid(saved_uid)
+        elif stub_editor:
+            editor_launch_debug("crud.add_tool.stub.closed", launch_id=launch_id)
+        else:
+            editor_launch_debug("crud.add_tool.exec.rejected", launch_id=launch_id)
     finally:
         if _blur and host:
             try:
                 host.setGraphicsEffect(None)
+                editor_launch_debug("crud.add_tool.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
 
@@ -142,39 +230,84 @@ def edit_tool(page) -> None:
         )
         return
 
+    launch_id = f"tool-edit-{uuid4().hex[:8]}"
+    if editor_launch_diag_enabled("NO_DIALOG"):
+        editor_launch_debug("crud.edit_tool.no_dialog_bypass", launch_id=launch_id, tool_id=tool.get("id", ""), uid=tool.get("uid", ""))
+        return
     _close_open_preview(page)
-    dlg = AddEditToolDialog(
-        tool=tool,
-        tool_service=page.tool_service,
-        translate=page._t,
-    )
     host = getattr(page, 'window', lambda: None)()
     if host is None:
         try:
             host = page.window()
         except Exception:
             host = None
+    editor_launch_debug("crud.edit_tool.begin", launch_id=launch_id, tool_id=tool.get("id", ""), uid=tool.get("uid", ""))
+    editor_launch_debug("crud.edit_tool.dialog_init.before", launch_id=launch_id)
+    set_editor_launch_context(launch_id)
+    try:
+        if editor_launch_diag_enabled("STUB_EDITOR"):
+            tool_id = str(tool.get('id') or '').strip()
+            parent = host if editor_launch_diag_enabled("PARENTED_STUB_EDITOR") else None
+            dlg = _build_stub_editor_dialog(page, page._t('tool_editor.window_title.edit', 'Edit Tool - {tool_id}', tool_id=tool_id), launch_id, parent=parent)
+            stub_editor = True
+        else:
+            dlg = _tool_editor_dialog_class()(
+                tool=tool,
+                tool_service=page.tool_service,
+                translate=page._t,
+            )
+            stub_editor = False
+    finally:
+        clear_editor_launch_context(launch_id)
+    attach_editor_launch_id(dlg, launch_id)
+    editor_launch_debug("crud.edit_tool.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    editor_launch_debug(
+        "crud.edit_tool.host",
+        launch_id=launch_id,
+        host_visible=bool(host and host.isVisible()),
+        host_active=bool(host and host.isActiveWindow()) if host else False,
+        pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
+    )
     _blur = None
-    if host and host.isVisible():
+    if editor_launch_diag_enabled("BYPASS_BLUR"):
+        editor_launch_debug("crud.edit_tool.blur_bypassed", launch_id=launch_id)
+    elif host and host.isVisible():
         try:
             from PySide6.QtWidgets import QGraphicsBlurEffect
             _blur = QGraphicsBlurEffect(host)
             _blur.setBlurRadius(6)
             host.setGraphicsEffect(_blur)
+            editor_launch_debug(
+                "crud.edit_tool.blur_applied",
+                launch_id=launch_id,
+                host_visible=host.isVisible(),
+                host_active=host.isActiveWindow(),
+                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+            )
         except Exception:
             _blur = None
+            editor_launch_debug("crud.edit_tool.blur_failed", launch_id=launch_id)
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
         y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
         dlg.move(x, y)
+        editor_launch_debug("crud.edit_tool.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
+    saved_uid = None
     try:
-        if dlg.exec() == QDialog.Accepted:
+        editor_launch_debug("crud.edit_tool.exec.before", launch_id=launch_id, visible=dlg.isVisible())
+        if dlg.exec() == QDialog.Accepted and not stub_editor:
+            editor_launch_debug("crud.edit_tool.exec.accepted", launch_id=launch_id)
             saved_uid = save_from_dialog(page, dlg)
+        elif stub_editor:
+            editor_launch_debug("crud.edit_tool.stub.closed", launch_id=launch_id)
+        else:
+            editor_launch_debug("crud.edit_tool.exec.rejected", launch_id=launch_id)
     finally:
         if _blur and host:
             try:
                 host.setGraphicsEffect(None)
+                editor_launch_debug("crud.edit_tool.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
         if saved_uid:
@@ -345,7 +478,7 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
         tool = page.tool_service.get_tool_by_uid(int(tool_uid))
         if not tool:
             continue
-        dlg = AddEditToolDialog(
+        dlg = _tool_editor_dialog_class()(
             parent=parent,
             tool=tool,
             tool_service=page.tool_service,
@@ -370,7 +503,7 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
 def _group_edit_tools(page, tool_uids: list[int]) -> None:
     _close_open_preview(page)
     parent = _prepare_modal_host_window(page)
-    dlg = AddEditToolDialog(
+    dlg = _tool_editor_dialog_class()(
         parent=parent,
         tool_service=page.tool_service,
         translate=page._t,

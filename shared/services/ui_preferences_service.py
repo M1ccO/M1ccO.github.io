@@ -29,6 +29,7 @@ def _base_defaults() -> dict:
         "jaws_models_root": str(_DEFAULT_JAWS_ROOT),
         "fixtures_models_root": str(_DEFAULT_FIXTURES_ROOT),
         "enable_assembly_transform": False,
+        "enable_preview_preload": True,
         "enable_drawings_tab": True,
         "detached_preview_policy": {"mode": "follow_last"},
         "show_shared_db_notice": False,
@@ -93,6 +94,7 @@ class UiPreferencesService:
             data.pop("setup_db_path", None)
 
         data["enable_assembly_transform"] = bool(data.get("enable_assembly_transform", False))
+        data["enable_preview_preload"] = bool(data.get("enable_preview_preload", True))
         data["enable_drawings_tab"] = bool(data.get("enable_drawings_tab", True))
         data["show_shared_db_notice"] = bool(data.get("show_shared_db_notice", False))
         data["op20_jaws_default"] = bool(data.get("op20_jaws_default", False))

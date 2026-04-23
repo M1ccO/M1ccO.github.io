@@ -15,8 +15,11 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication, QProgressDialog
 
 from shared.ui.bootstrap_visual import FastTooltipStyle, build_fixed_light_palette as _build_fixed_light_palette
-from shared.ui.helpers.preview_runtime import preview_runtime_ready, register_preview_runtime_widget
+from shared.ui.helpers.preview_runtime import ensure_preview_runtime_widgets, preview_runtime_ready
+from shared.ui.editor_launch_debug import cleanup_hidden_orphan_top_levels
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
+from shared.ui.editor_launch_debug import editor_launch_debug
+from shared.services.ui_preferences_service import UiPreferencesService
 from shared.ui.transition_shell import (
     SENDER_TRANSITION_COMPLETE_COMMAND,
     prepare_receiver_transition,
@@ -166,7 +169,7 @@ def main():
         app.processEvents()
 
     step(1, 'Loading modules...')
-    from config import DB_PATH, FIXTURES_DB_PATH, JAWS_DB_PATH, SETTINGS_PATH, TOOL_LIBRARY_READY_PATH, TOOL_LIBRARY_SERVER_NAME
+    from config import DB_PATH, FIXTURES_DB_PATH, JAWS_DB_PATH, SETTINGS_PATH, SHARED_UI_PREFERENCES_PATH, TOOL_LIBRARY_READY_PATH, TOOL_LIBRARY_SERVER_NAME
     from data.database import Database
     from services.export_service import ExportService
     from services.fixture_service import FixtureService
@@ -194,6 +197,17 @@ def main():
 
     step(6, 'Loading settings...')
     settings_service = SettingsService(SETTINGS_PATH)
+    ui_preferences_service = UiPreferencesService(
+        SHARED_UI_PREFERENCES_PATH,
+        include_setup_db_path=False,
+    )
+
+    def preview_preload_enabled() -> bool:
+        try:
+            prefs = ui_preferences_service.load()
+        except Exception:
+            return True
+        return bool(prefs.get("enable_preview_preload", True))
 
     step(7, 'Preparing 3D preview...')
     app._preview_warmup_widget = None
@@ -219,10 +233,14 @@ def main():
     )
 
     def warm_preview_after_startup():
+        if not preview_preload_enabled():
+            return
         if preview_runtime_ready():
             return
         try:
             from shared.ui.stl_preview import StlPreviewWidget
+            ensure_preview_runtime_widgets(lambda: StlPreviewWidget(), count=1)
+            return
             warmup = StlPreviewWidget()
             # Qt.Tool suppresses the taskbar entry for this invisible warmup window.
             warmup.setWindowFlag(Qt.Tool)
@@ -260,7 +278,7 @@ def main():
                 traceback.print_exc()
             app._background_asset_warmup_completed = True
 
-        if include_preview_runtime and not preview_ready:
+        if include_preview_runtime and not preview_ready and preview_preload_enabled():
             try:
                 warm_preview_after_startup()
             except Exception:
@@ -284,7 +302,7 @@ def main():
     setup_manager_driven_launch = bool(str(_known_args.geometry or '').strip())
 
     if not _known_args.hidden:
-        warm_background_assets(include_preview_runtime=False)
+        warm_background_assets(include_preview_runtime=True)
         if _known_args.geometry:
             win._pending_external_frame_geometry = str(_known_args.geometry or '').strip()
 
@@ -319,7 +337,8 @@ def main():
             app.quit()
             return
         if command == 'warm_preview_runtime':
-            schedule_background_asset_warmup(0, include_preview_runtime=True)
+            if preview_preload_enabled():
+                schedule_background_asset_warmup(0, include_preview_runtime=True)
             return
         if command == 'open_selector_preview':
             show_external_selector_preview(win, payload.get('preview'))
@@ -328,9 +347,21 @@ def main():
             close_external_selector_preview(win)
             return
         if command == 'hide_for_library_handoff':
+            editor_launch_debug(
+                "ipc.library.hide_for_library_handoff",
+                window_visible=win.isVisible(),
+                window_active=win.isActiveWindow(),
+                pending_sender_transition=bool(getattr(win, "_pending_sender_transition", None)),
+            )
             complete_setup_manager_handoff(win)
             return
         if command == SENDER_TRANSITION_COMPLETE_COMMAND:
+            editor_launch_debug(
+                "ipc.library.complete_sender_transition",
+                window_visible=win.isVisible(),
+                window_active=win.isActiveWindow(),
+                pending_sender_transition=bool(getattr(win, "_pending_sender_transition", None)),
+            )
             if _has_pending_sender_transition(win):
                 complete_setup_manager_handoff(win)
             else:
@@ -369,12 +400,12 @@ def main():
             # hidden process alive and optionally refresh catalog state, but do
             # not create detached-preview runtime surfaces or hidden selector
             # dialogs during Setup Manager startup.
-            schedule_background_asset_warmup(250, include_preview_runtime=False)
+            schedule_background_asset_warmup(250, include_preview_runtime=True)
             return
 
         if should_show:
             if not was_visible:
-                warm_background_assets(include_preview_runtime=False)
+                warm_background_assets(include_preview_runtime=True)
 
             # Selector sessions run in standalone dialogs while the main window
             # stays hidden. If quitOnLastWindowClosed is True here, closing the
@@ -478,6 +509,10 @@ def main():
 
     if splash is not None:
         splash.close()
+        splash.deleteLater()
+        splash = None
+        app.processEvents()
+        cleanup_hidden_orphan_top_levels(win, reason="post_startup_splash")
 
     # Navigate to a specific jaw or tool if requested.
     if _known_args.open_jaw:

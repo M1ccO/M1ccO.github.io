@@ -78,6 +78,7 @@ class SharedServicesRegressionTests(unittest.TestCase):
                     "jaws_models_root": str(jaws_root),
                     "setup_db_path": str(setup_db_path),
                     "enable_assembly_transform": 1,
+                    "enable_preview_preload": 0,
                     "enable_drawings_tab": 0,
                 }
             )
@@ -89,10 +90,12 @@ class SharedServicesRegressionTests(unittest.TestCase):
             self.assertTrue(Path(normalized["jaws_models_root"]).exists())
             self.assertTrue(normalized["setup_db_path"].endswith("setup.sqlite"))
             self.assertTrue(normalized["enable_assembly_transform"])
+            self.assertFalse(normalized["enable_preview_preload"])
             self.assertFalse(normalized["enable_drawings_tab"])
 
             loaded = service.load()
             self.assertEqual(loaded["language"], "fi")
+            self.assertFalse(loaded["enable_preview_preload"])
 
 
 class SharedUiHelpersRegressionTests(unittest.TestCase):

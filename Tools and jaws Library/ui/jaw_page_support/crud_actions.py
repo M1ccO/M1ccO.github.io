@@ -6,6 +6,8 @@ All public functions take the page object as their first argument.
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -15,6 +17,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from shared.ui.editor_launch_debug import (
+    attach_editor_launch_id,
+    clear_editor_launch_context,
+    editor_launch_diag_enabled,
+    editor_launch_debug,
+    set_editor_launch_context,
+)
 from shared.ui.transition_shell import cancel_receiver_ready_signal
 from shared.ui.helpers.editor_helpers import (
     apply_secondary_button_theme,
@@ -23,7 +32,6 @@ from shared.ui.helpers.editor_helpers import (
     setup_editor_dialog,
 )
 from ui.jaw_page_support.detached_preview import close_detached_preview
-from ui.jaw_editor_dialog import AddEditJawDialog
 
 __all__ = [
     "add_jaw",
@@ -33,6 +41,41 @@ __all__ = [
     "prompt_text",
     "save_from_dialog",
 ]
+
+
+def _jaw_editor_dialog_class():
+    from ui.jaw_editor_dialog import AddEditJawDialog
+    return AddEditJawDialog
+
+
+def _build_stub_editor_dialog(page, title: str, launch_id: str, parent=None) -> QDialog:
+    editor_launch_debug("crud.jaw.stub_dialog.build", launch_id=launch_id, title=title)
+    dlg = QDialog(parent)
+    setup_editor_dialog(dlg)
+    dlg.setWindowTitle(title)
+    dlg.resize(520, 220)
+    dlg.setModal(True)
+
+    root = QVBoxLayout(dlg)
+    root.setContentsMargins(18, 18, 18, 18)
+    root.setSpacing(10)
+    label = QLabel(
+        "Diagnostic stub editor.\n\n"
+        "The real Jaw Editor class was not imported or constructed because "
+        "NTX_EDITOR_DIAG_STUB_EDITOR=1 is enabled."
+    )
+    label.setWordWrap(True)
+    label.setProperty('detailHint', True)
+    root.addWidget(label, 1)
+    buttons = create_dialog_buttons(
+        dlg,
+        save_text=page._t('common.close', 'Close'),
+        cancel_text=page._t('common.cancel', 'Cancel'),
+        on_save=dlg.reject,
+        on_cancel=dlg.reject,
+    )
+    root.addWidget(buttons)
+    return dlg
 
 
 def _editor_parent(page):
@@ -74,35 +117,78 @@ def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
 
 
 def add_jaw(page) -> None:
+    launch_id = f"jaw-add-{uuid4().hex[:8]}"
+    if editor_launch_diag_enabled("NO_DIALOG"):
+        editor_launch_debug("crud.add_jaw.no_dialog_bypass", launch_id=launch_id)
+        return
     _close_open_preview(page)
-    dlg = AddEditJawDialog(translate=page._t)
+    editor_launch_debug("crud.add_jaw.begin", launch_id=launch_id)
+    editor_launch_debug("crud.add_jaw.dialog_init.before", launch_id=launch_id)
     host = getattr(page, 'window', lambda: None)()
     if host is None:
         try:
             host = page.window()
         except Exception:
             host = None
+    set_editor_launch_context(launch_id)
+    try:
+        if editor_launch_diag_enabled("STUB_EDITOR"):
+            parent = host if editor_launch_diag_enabled("PARENTED_STUB_EDITOR") else None
+            dlg = _build_stub_editor_dialog(page, page._t('jaw_editor.window_title.add', 'Add Jaw'), launch_id, parent=parent)
+            stub_editor = True
+        else:
+            dlg = _jaw_editor_dialog_class()(translate=page._t)
+            stub_editor = False
+    finally:
+        clear_editor_launch_context(launch_id)
+    attach_editor_launch_id(dlg, launch_id)
+    editor_launch_debug("crud.add_jaw.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    editor_launch_debug(
+        "crud.add_jaw.host",
+        launch_id=launch_id,
+        host_visible=bool(host and host.isVisible()),
+        host_active=bool(host and host.isActiveWindow()) if host else False,
+        pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
+    )
     _blur = None
-    if host and host.isVisible():
+    if editor_launch_diag_enabled("BYPASS_BLUR"):
+        editor_launch_debug("crud.add_jaw.blur_bypassed", launch_id=launch_id)
+    elif host and host.isVisible():
         try:
             from PySide6.QtWidgets import QGraphicsBlurEffect
             _blur = QGraphicsBlurEffect(host)
             _blur.setBlurRadius(6)
             host.setGraphicsEffect(_blur)
+            editor_launch_debug(
+                "crud.add_jaw.blur_applied",
+                launch_id=launch_id,
+                host_visible=host.isVisible(),
+                host_active=host.isActiveWindow(),
+                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+            )
         except Exception:
             _blur = None
+            editor_launch_debug("crud.add_jaw.blur_failed", launch_id=launch_id)
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
         y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
         dlg.move(x, y)
+        editor_launch_debug("crud.add_jaw.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     try:
-        if dlg.exec() == QDialog.Accepted:
+        editor_launch_debug("crud.add_jaw.exec.before", launch_id=launch_id, visible=dlg.isVisible())
+        if dlg.exec() == QDialog.Accepted and not stub_editor:
+            editor_launch_debug("crud.add_jaw.exec.accepted", launch_id=launch_id)
             save_from_dialog(page, dlg)
+        elif stub_editor:
+            editor_launch_debug("crud.add_jaw.stub.closed", launch_id=launch_id)
+        else:
+            editor_launch_debug("crud.add_jaw.exec.rejected", launch_id=launch_id)
     finally:
         if _blur and host:
             try:
                 host.setGraphicsEffect(None)
+                editor_launch_debug("crud.add_jaw.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
 
@@ -124,35 +210,79 @@ def edit_jaw(page) -> None:
             page._group_edit_jaws(selected_ids)
         return
     jaw = page.jaw_service.get_jaw(selected_ids[0])
+    launch_id = f"jaw-edit-{uuid4().hex[:8]}"
+    if editor_launch_diag_enabled("NO_DIALOG"):
+        editor_launch_debug("crud.edit_jaw.no_dialog_bypass", launch_id=launch_id, jaw_id=jaw.get("jaw_id", ""))
+        return
     _close_open_preview(page)
-    dlg = AddEditJawDialog(jaw=jaw, translate=page._t)
+    editor_launch_debug("crud.edit_jaw.begin", launch_id=launch_id, jaw_id=jaw.get("jaw_id", ""))
+    editor_launch_debug("crud.edit_jaw.dialog_init.before", launch_id=launch_id)
     host = getattr(page, 'window', lambda: None)()
     if host is None:
         try:
             host = page.window()
         except Exception:
             host = None
+    set_editor_launch_context(launch_id)
+    try:
+        if editor_launch_diag_enabled("STUB_EDITOR"):
+            jaw_id = str(jaw.get('jaw_id') or '').strip()
+            parent = host if editor_launch_diag_enabled("PARENTED_STUB_EDITOR") else None
+            dlg = _build_stub_editor_dialog(page, page._t('jaw_editor.window_title.edit', 'Edit Jaw - {jaw_id}', jaw_id=jaw_id), launch_id, parent=parent)
+            stub_editor = True
+        else:
+            dlg = _jaw_editor_dialog_class()(jaw=jaw, translate=page._t)
+            stub_editor = False
+    finally:
+        clear_editor_launch_context(launch_id)
+    attach_editor_launch_id(dlg, launch_id)
+    editor_launch_debug("crud.edit_jaw.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    editor_launch_debug(
+        "crud.edit_jaw.host",
+        launch_id=launch_id,
+        host_visible=bool(host and host.isVisible()),
+        host_active=bool(host and host.isActiveWindow()) if host else False,
+        pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
+    )
     _blur = None
-    if host and host.isVisible():
+    if editor_launch_diag_enabled("BYPASS_BLUR"):
+        editor_launch_debug("crud.edit_jaw.blur_bypassed", launch_id=launch_id)
+    elif host and host.isVisible():
         try:
             from PySide6.QtWidgets import QGraphicsBlurEffect
             _blur = QGraphicsBlurEffect(host)
             _blur.setBlurRadius(6)
             host.setGraphicsEffect(_blur)
+            editor_launch_debug(
+                "crud.edit_jaw.blur_applied",
+                launch_id=launch_id,
+                host_visible=host.isVisible(),
+                host_active=host.isActiveWindow(),
+                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+            )
         except Exception:
             _blur = None
+            editor_launch_debug("crud.edit_jaw.blur_failed", launch_id=launch_id)
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
         y = geom.y() + max(0, (geom.height() - dlg.height()) // 2)
         dlg.move(x, y)
+        editor_launch_debug("crud.edit_jaw.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     try:
-        if dlg.exec() == QDialog.Accepted:
+        editor_launch_debug("crud.edit_jaw.exec.before", launch_id=launch_id, visible=dlg.isVisible())
+        if dlg.exec() == QDialog.Accepted and not stub_editor:
+            editor_launch_debug("crud.edit_jaw.exec.accepted", launch_id=launch_id)
             save_from_dialog(page, dlg, original_jaw_id=jaw.get('jaw_id', ''))
+        elif stub_editor:
+            editor_launch_debug("crud.edit_jaw.stub.closed", launch_id=launch_id)
+        else:
+            editor_launch_debug("crud.edit_jaw.exec.rejected", launch_id=launch_id)
     finally:
         if _blur and host:
             try:
                 host.setGraphicsEffect(None)
+                editor_launch_debug("crud.edit_jaw.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
 

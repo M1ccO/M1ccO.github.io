@@ -3,10 +3,8 @@ import math
 import re
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QUrl, Signal
+from PySide6.QtCore import Qt, QTimer, QUrl, Signal
 from PySide6.QtWidgets import QApplication, QAbstractScrollArea, QGridLayout, QLabel, QVBoxLayout, QWidget
-from PySide6.QtWebEngineCore import QWebEnginePage
-from PySide6.QtWebEngineWidgets import QWebEngineView
 from config import (
     JAW_MODELS_ROOT_DEFAULT,
     PREVIEW_DIR,
@@ -15,71 +13,81 @@ from config import (
 )
 from shared.ui.preview_bridge_adapter import build_js_call, normalize_index_list, parse_title_event
 from shared.data.model_paths import read_model_roots, resolve_model_path
+from shared.ui.editor_launch_debug import editor_launch_debug, editor_launch_id
+
+_EDITOR_PREVIEW_WEBENGINE_DELAY_MS = 75
 
 
-class ScrollFriendlyWebView(QWebEngineView):
-    """Forward plain wheel scrolling to the surrounding scroll area.
+def _create_preview_web_view():
+    from PySide6.QtWebEngineCore import QWebEnginePage
+    from PySide6.QtWebEngineWidgets import QWebEngineView
 
-    Ctrl + wheel is reserved for 3D zoom inside the viewer itself.
-    """
+    class ScrollFriendlyWebView(QWebEngineView):
+        """Forward plain wheel scrolling to the surrounding scroll area.
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._wheel_zoom_mode = False
+        Ctrl + wheel is reserved for 3D zoom inside the viewer itself.
+        """
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton and self._find_parent_scroll_area() is not None:
-            # Toggle wheel mode only when this view sits inside a scroll area.
-            # First click enables 3D zoom, second click returns wheel to page scroll.
-            self._wheel_zoom_mode = not self._wheel_zoom_mode
-            self.page().runJavaScript(
-                f"window.setWheelZoomEnabled && window.setWheelZoomEnabled({str(self._wheel_zoom_mode).lower()});"
-            )
-        super().mousePressEvent(event)
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self._wheel_zoom_mode = False
 
-    def wheelEvent(self, event):
-        if event.modifiers() & Qt.ControlModifier:
-            super().wheelEvent(event)
-            return
+        def mousePressEvent(self, event):
+            if event.button() == Qt.LeftButton and self._find_parent_scroll_area() is not None:
+                # Toggle wheel mode only when this view sits inside a scroll area.
+                # First click enables 3D zoom, second click returns wheel to page scroll.
+                self._wheel_zoom_mode = not self._wheel_zoom_mode
+                self.page().runJavaScript(
+                    f"window.setWheelZoomEnabled && window.setWheelZoomEnabled({str(self._wheel_zoom_mode).lower()});"
+                )
+            super().mousePressEvent(event)
 
-        if self._wheel_zoom_mode:
-            super().wheelEvent(event)
-            return
+        def wheelEvent(self, event):
+            if event.modifiers() & Qt.ControlModifier:
+                super().wheelEvent(event)
+                return
 
-        scroll_area = self._find_parent_scroll_area()
-        if scroll_area is None:
-            super().wheelEvent(event)
-            return
+            if self._wheel_zoom_mode:
+                super().wheelEvent(event)
+                return
 
-        delta = event.pixelDelta().y()
-        if delta == 0:
-            delta = event.angleDelta().y()
+            scroll_area = self._find_parent_scroll_area()
+            if scroll_area is None:
+                super().wheelEvent(event)
+                return
 
-        if delta:
-            scrollbar = scroll_area.verticalScrollBar()
-            scrollbar.setValue(scrollbar.value() - delta)
-            event.accept()
-            return
+            delta = event.pixelDelta().y()
+            if delta == 0:
+                delta = event.angleDelta().y()
 
-        event.ignore()
+            if delta:
+                scrollbar = scroll_area.verticalScrollBar()
+                scrollbar.setValue(scrollbar.value() - delta)
+                event.accept()
+                return
 
-    def reset_wheel_mode(self):
-        self._wheel_zoom_mode = False
-        self.page().runJavaScript("window.setWheelZoomEnabled && window.setWheelZoomEnabled(false);")
+            event.ignore()
 
-    def _find_parent_scroll_area(self):
-        parent = self.parentWidget()
-        while parent is not None:
-            if isinstance(parent, QAbstractScrollArea):
-                return parent
-            parent = parent.parentWidget()
-        return None
+        def reset_wheel_mode(self):
+            self._wheel_zoom_mode = False
+            self.page().runJavaScript("window.setWheelZoomEnabled && window.setWheelZoomEnabled(false);")
 
+        def _find_parent_scroll_area(self):
+            parent = self.parentWidget()
+            while parent is not None:
+                if isinstance(parent, QAbstractScrollArea):
+                    return parent
+                parent = parent.parentWidget()
+            return None
 
-class PreviewWebPage(QWebEnginePage):
-    def javaScriptConsoleMessage(self, level, message, line_number, source_id):
-        print(f"[Preview JS] {source_id}:{line_number}: {message}")
-        super().javaScriptConsoleMessage(level, message, line_number, source_id)
+    class PreviewWebPage(QWebEnginePage):
+        def javaScriptConsoleMessage(self, level, message, line_number, source_id):
+            print(f"[Preview JS] {source_id}:{line_number}: {message}")
+            super().javaScriptConsoleMessage(level, message, line_number, source_id)
+
+    web = ScrollFriendlyWebView()
+    web.setPage(PreviewWebPage(web))
+    return web
 
 
 class StlPreviewWidget(QWidget):
@@ -92,6 +100,12 @@ class StlPreviewWidget(QWidget):
 
     def __init__(self, stl_path: str | None = None, parent=None):
         super().__init__(parent)
+        editor_launch_debug(
+            "stl_preview.init.begin",
+            launch_id=editor_launch_id(parent),
+            parent=type(parent).__name__ if parent is not None else "",
+            has_initial_stl=bool(stl_path),
+        )
 
         self._viewer_html = PREVIEW_DIR / "index.html"
 
@@ -120,6 +134,11 @@ class StlPreviewWidget(QWidget):
         self._status_overlay_enabled = False
         self._active_load_request_id = 0
         self._defer_model_state_apply = False
+        self._web_auto_start_enabled = True
+        self._web_activation_requested = False
+        self._loaded_single_model_signature = None
+        self._rendering_suspended = False
+        self._view_content_visible = True
 
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
@@ -134,9 +153,8 @@ class StlPreviewWidget(QWidget):
         self._view_layout.setContentsMargins(0, 0, 0, 0)
         self._view_layout.setSpacing(0)
 
-        self._web = ScrollFriendlyWebView()
-        self._web.setPage(PreviewWebPage(self._web))
-        self._view_layout.addWidget(self._web, 0, 0)
+        self._web = None
+        self._web_load_started = False
 
         self._selection_caption_wrap = QWidget()
         self._selection_caption_wrap.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -168,10 +186,6 @@ class StlPreviewWidget(QWidget):
             self._show_error(f"Viewer HTML not found:\n{self._viewer_html}")
             return
 
-        self._web.loadFinished.connect(self._on_load_finished)
-        self._web.page().titleChanged.connect(self._on_title_changed)
-        self._web.load(QUrl.fromLocalFile(str(self._viewer_html)))
-
         app = QApplication.instance()
         if app is not None:
             app.applicationStateChanged.connect(self._on_application_state_changed)
@@ -179,30 +193,94 @@ class StlPreviewWidget(QWidget):
 
         if stl_path:
             self.load_stl(stl_path)
+        editor_launch_debug("stl_preview.init.done", launch_id=editor_launch_id(self), visible=self.isVisible())
+
+    def _ensure_web_view(self) -> bool:
+        """Create and load the native WebEngine view only once the preview is visible."""
+        if self._web is not None:
+            return True
+
+        if not self._viewer_html.exists():
+            self._show_error(f"Viewer HTML not found:\n{self._viewer_html}")
+            return False
+
+        editor_launch_debug("stl_preview.webview.create.before", launch_id=editor_launch_id(self))
+        self._web = _create_preview_web_view()
+        editor_launch_debug("stl_preview.webview.create.after", launch_id=editor_launch_id(self))
+        self._web.loadFinished.connect(self._on_load_finished)
+        self._web.page().titleChanged.connect(self._on_title_changed)
+        self._view_layout.addWidget(self._web, 0, 0)
+        self._web.lower()
+        self._selection_caption_wrap.raise_()
+
+        if not self._web_load_started:
+            self._web_load_started = True
+            editor_launch_debug("stl_preview.webview.load.before", launch_id=editor_launch_id(self), html=self._viewer_html)
+            self._web.load(QUrl.fromLocalFile(str(self._viewer_html)))
+            editor_launch_debug("stl_preview.webview.load.after", launch_id=editor_launch_id(self))
+        return True
+
+    def set_web_auto_start_enabled(self, enabled: bool) -> None:
+        self._web_auto_start_enabled = bool(enabled)
+
+    def activate_web_view(self) -> None:
+        self._web_activation_requested = True
+        editor_launch_debug(
+            "stl_preview.webview.activate_requested",
+            launch_id=editor_launch_id(self),
+            visible=self.isVisible(),
+            auto_start=self._web_auto_start_enabled,
+        )
+        if self.isVisible():
+            self._ensure_web_view()
+
+    def _should_start_web_view(self) -> bool:
+        return bool(self._web_auto_start_enabled or self._web_activation_requested)
+
+    def _reset_wheel_mode(self) -> None:
+        if self._web is not None:
+            self._web.reset_wheel_mode()
 
     def _show_error(self, message: str):
-        self._web.hide()
+        if self._web is not None:
+            self._web.hide()
         self._selection_caption_wrap.hide()
         self._error_label.setText(message)
         self._error_label.show()
 
     def _show_web(self):
         self._error_label.hide()
-        self._web.show()
-        if self._selection_caption:
+        if self._web is not None and self._view_content_visible:
+            self._web.show()
+        if self._selection_caption and self._view_content_visible:
             self._selection_caption_wrap.show()
             self._selection_caption_wrap.raise_()
+        else:
+            self._selection_caption_wrap.hide()
 
     def _call_js(self, function_name: str, *args):
-        if not self._page_ready:
+        if not self._page_ready or self._web is None:
             return
         js = build_js_call(function_name, *args)
         self._web.page().runJavaScript(js)
 
     def _call_js_raw(self, js: str):
-        if not self._page_ready:
+        if not self._page_ready or self._web is None:
             return
         self._web.page().runJavaScript(js)
+
+    def set_view_content_visible(self, visible: bool) -> None:
+        normalized = bool(visible)
+        if normalized == self._view_content_visible:
+            return
+        self._view_content_visible = normalized
+        if self._web is not None:
+            self._web.setVisible(normalized)
+        if normalized and self._selection_caption:
+            self._selection_caption_wrap.show()
+            self._selection_caption_wrap.raise_()
+        else:
+            self._selection_caption_wrap.hide()
 
     def _apply_hint_text(self):
         if not self._page_ready:
@@ -215,27 +293,20 @@ class StlPreviewWidget(QWidget):
         self._call_js('setStatusOverlayEnabled', bool(self._status_overlay_enabled))
 
     def _sync_rendering_state(self):
-        app = QApplication.instance()
-        app_active = True
-        if app is not None:
-            app_active = app.applicationState() == Qt.ApplicationActive
-
         host_window = self.window()
-        window_ready = True
         is_detached_preview = False
+        window_ready = bool(self.isVisible())
         if host_window is not None:
             # Detached 3D preview should keep rendering while visible even when
             # the main Tool Library window is the active one.
             is_detached_preview = bool(host_window.property('detachedPreviewDialog'))
-            if is_detached_preview:
-                window_ready = host_window.isVisible()
-            else:
-                window_ready = host_window.isActiveWindow()
-
+            window_ready = bool(host_window.isVisible() and not host_window.isMinimized())
         if is_detached_preview:
-            should_render = bool(self.isVisible() and window_ready)
+            should_render = bool(window_ready)
         else:
-            should_render = bool(self.isVisible() and app_active and window_ready)
+            should_render = bool(self.isVisible() and window_ready)
+        if self._rendering_suspended:
+            should_render = False
         if should_render == self._rendering_enabled:
             return
 
@@ -250,6 +321,22 @@ class StlPreviewWidget(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        editor_launch_debug(
+            "stl_preview.show_event",
+            launch_id=editor_launch_id(self),
+            page_ready=self._page_ready,
+            visible=self.isVisible(),
+            window_active=self.window().isActiveWindow() if self.window() is not None else "",
+        )
+        if self._should_start_web_view():
+            editor_launch_debug(
+                "stl_preview.webview.ensure_scheduled",
+                launch_id=editor_launch_id(self),
+                delay_ms=_EDITOR_PREVIEW_WEBENGINE_DELAY_MS,
+                auto_start=self._web_auto_start_enabled,
+                activation_requested=self._web_activation_requested,
+            )
+            QTimer.singleShot(_EDITOR_PREVIEW_WEBENGINE_DELAY_MS, self._ensure_web_view)
         self._sync_rendering_state()
         # When transitioning from hidden → visible (e.g. detached preview
         # dialog created in a hidden state then shown later), the Chromium
@@ -257,7 +344,6 @@ class StlPreviewWidget(QWidget):
         # Three.js picks up the correct canvas dimensions after Qt has
         # finished processing the layout.
         if self._page_ready:
-            from PySide6.QtCore import QTimer
             QTimer.singleShot(0, self._deferred_viewer_resize)
 
     def hideEvent(self, event):
@@ -271,12 +357,20 @@ class StlPreviewWidget(QWidget):
         finished laying out the widget tree and the QWebEngineView's native
         window has its final size.
         """
-        if self._page_ready and self.isVisible():
+        if self._page_ready and self.isVisible() and self._web is not None:
             self._web.page().runJavaScript(
                 "window.dispatchEvent(new Event('resize'));"
             )
 
     def _on_load_finished(self, ok: bool):
+        editor_launch_debug(
+            "stl_preview.load_finished",
+            launch_id=editor_launch_id(self),
+            ok=ok,
+            visible=self.isVisible(),
+            pending_parts=bool(self._pending_parts),
+            pending_stl=bool(self._pending_stl_path),
+        )
         self._page_ready = ok
 
         if not ok:
@@ -319,8 +413,12 @@ class StlPreviewWidget(QWidget):
         return self._active_load_request_id
 
     def _send_model_to_viewer(self, stl_path: Path, label: str | None = None, *, request_id: int | None = None):
+        if self._web is None:
+            return
         stl_url = QUrl.fromLocalFile(str(stl_path)).toString()
         request_value = int(request_id or self._active_load_request_id or 0)
+        self._loaded_single_model_signature = (str(stl_path), str(label or ''))
+        self._loaded_part_files = []
 
         if label:
             js = (
@@ -367,6 +465,7 @@ class StlPreviewWidget(QWidget):
         return payload
 
     def _send_parts_to_viewer(self, payload: list[dict], *, request_id: int | None = None):
+        self._loaded_single_model_signature = None
         self._loaded_part_files = [str(part.get('file') or '') for part in payload]
         request_value = int(request_id or self._active_load_request_id or 0)
 
@@ -402,12 +501,13 @@ class StlPreviewWidget(QWidget):
         self._pending_stl_path = None
         self._pending_label = None
         self._pending_parts = None
+        self._loaded_single_model_signature = None
         self._loaded_part_files = []
         self._part_transforms_cache = []
         self._selected_part_index = -1
         self._selected_part_indices = []
         self.set_selection_caption(None)
-        self._web.reset_wheel_mode()
+        self._reset_wheel_mode()
 
         if self._page_ready:
             self._call_js('clearModel')
@@ -419,7 +519,7 @@ class StlPreviewWidget(QWidget):
         self._selected_part_index = -1
         self._selected_part_indices = []
         self.set_selection_caption(None)
-        self._web.reset_wheel_mode()
+        self._reset_wheel_mode()
 
         if not stl_path:
             self.clear()
@@ -436,16 +536,25 @@ class StlPreviewWidget(QWidget):
             self._show_error(f"STL file not found:\n{stl_path}")
             return
 
+        requested_signature = (str(stl_path), str(label or ''))
+        same_model_loaded = requested_signature == self._loaded_single_model_signature
         self._pending_stl_path = stl_path
         self._pending_label = label
         self._show_web()
+        if self.isVisible() and self._should_start_web_view():
+            self._ensure_web_view()
 
         if self._page_ready:
+            if same_model_loaded:
+                self._apply_preview_transform_state()
+                self._apply_transform_editor_state()
+                self._apply_measurement_state()
+                return
             request_id = self._next_load_request_id()
             self._send_model_to_viewer(stl_path, label, request_id=request_id)
 
     def load_parts(self, parts: list[dict] | None):
-        self._web.reset_wheel_mode()
+        self._reset_wheel_mode()
 
         self._pending_stl_path = None
         self._pending_label = None
@@ -470,6 +579,8 @@ class StlPreviewWidget(QWidget):
             for part in payload
         ]
         self._show_web()
+        if self.isVisible() and self._should_start_web_view():
+            self._ensure_web_view()
 
         if self._page_ready:
             part_files = [str(part.get('file') or '') for part in payload]
@@ -746,6 +857,13 @@ class StlPreviewWidget(QWidget):
             return
         self._call_js('setAxisOrbitVisible', bool(self._axis_orbit_visible))
 
+    def set_rendering_suspended(self, suspended: bool) -> None:
+        normalized = bool(suspended)
+        if normalized == self._rendering_suspended:
+            return
+        self._rendering_suspended = normalized
+        self._sync_rendering_state()
+
     def set_measurement_drag_enabled(self, enabled: bool):
         normalized = bool(enabled)
         if normalized == self._measurement_drag_enabled:
@@ -754,7 +872,7 @@ class StlPreviewWidget(QWidget):
         self._call_js('setMeasurementDragEnabled', bool(self._measurement_drag_enabled))
 
     def get_distance_measured_value(self, index: int, callback):
-        if not self._page_ready:
+        if not self._page_ready or self._web is None:
             callback(None)
             return
         self._web.page().runJavaScript(
@@ -763,7 +881,7 @@ class StlPreviewWidget(QWidget):
         )
 
     def get_measurement_resolved_value(self, index: int, callback):
-        if not self._page_ready:
+        if not self._page_ready or self._web is None:
             callback(None)
             return
         self._web.page().runJavaScript(
@@ -772,7 +890,7 @@ class StlPreviewWidget(QWidget):
         )
 
     def get_measurements_snapshot(self, callback):
-        if not self._page_ready:
+        if not self._page_ready or self._web is None:
             callback(None)
             return
         self._web.page().runJavaScript(
@@ -873,7 +991,7 @@ class StlPreviewWidget(QWidget):
         self._call_js('setFineTransformEnabled', bool(self._fine_transform_enabled))
 
     def get_part_transforms(self, callback):
-        if self._page_ready:
+        if self._page_ready and self._web is not None:
             self._web.page().runJavaScript(
                 "window.getPartTransforms && window.getPartTransforms();",
                 callback,
@@ -960,8 +1078,11 @@ class StlPreviewWidget(QWidget):
             self._selection_caption_wrap.hide()
             return
         self._selection_caption_label.setText(normalized)
-        self._selection_caption_wrap.show()
-        self._selection_caption_wrap.raise_()
+        if self._view_content_visible:
+            self._selection_caption_wrap.show()
+            self._selection_caption_wrap.raise_()
+        else:
+            self._selection_caption_wrap.hide()
 
     def set_point_picking_enabled(self, enabled: bool):
         self._point_picking_enabled = bool(enabled)

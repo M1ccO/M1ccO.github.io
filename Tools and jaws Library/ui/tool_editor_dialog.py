@@ -51,6 +51,7 @@ from shared.ui.helpers.editor_helpers import (
     build_editor_field_card,
     build_picker_row,
 )
+from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_launch_debug, editor_launch_id
 
 
 class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
@@ -73,12 +74,20 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._batch_label = (batch_label or '').strip()
         self._group_edit_mode = bool(group_edit_mode)
         self._group_count = int(group_count or 0)
+        self.setAttribute(Qt.WA_DontShowOnScreen, True)
+        self.setWindowTitle(self._dialog_title())
+        self.resize(1120, 760)
+        self.setMinimumSize(900, 660)
+        self.setModal(True)
 
         self.setUpdatesEnabled(False)
         try:
             setup_editor_dialog(self)
-            from shared.ui.helpers.editor_helpers import apply_host_visual_style
-            apply_host_visual_style(self, parent)
+            if editor_launch_diag_enabled("BYPASS_HOST_STYLE"):
+                editor_launch_debug("dialog.tool.host_style_bypassed", launch_id=editor_launch_id(self))
+            else:
+                from shared.ui.helpers.editor_helpers import apply_host_visual_style
+                apply_host_visual_style(self, parent)
 
             self._init_editor_state()
             self._group_target_rows: list[int] = []
@@ -94,10 +103,6 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
                 turning_tool_types=TURNING_TOOL_TYPES,
                 milling_tool_types=MILLING_TOOL_TYPES,
             )
-            self.setWindowTitle(self._dialog_title())
-            self.resize(1120, 760)
-            self.setMinimumSize(900, 660)
-            self.setModal(True)
             self._build_ui()
             self._install_local_event_filters()
             self._init_spare_parts_coordinator()
@@ -113,6 +118,7 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             self.layout().activate()
         finally:
             self.setUpdatesEnabled(True)
+            self.setAttribute(Qt.WA_DontShowOnScreen, False)
 
     def _t(self, key: str, default: str | None = None, **kwargs) -> str:
         return self._translate(key, default, **kwargs)
@@ -790,7 +796,27 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def showEvent(self, event):
         super().showEvent(event)
+        editor_launch_debug(
+            "dialog.tool.show_event",
+            launch_id=editor_launch_id(self),
+            visible=self.isVisible(),
+            active=self.isActiveWindow(),
+            title=self.windowTitle(),
+        )
         self._ensure_on_screen()
+
+    def paintEvent(self, event):
+        first_paint = not bool(getattr(self, "_editor_launch_first_paint_logged", False))
+        super().paintEvent(event)
+        if first_paint:
+            self._editor_launch_first_paint_logged = True
+            editor_launch_debug(
+                "dialog.tool.first_paint",
+                launch_id=editor_launch_id(self),
+                visible=self.isVisible(),
+                active=self.isActiveWindow(),
+                title=self.windowTitle(),
+            )
 
     # -------------------------
     # MODEL TAB HELPERS  (provided by ModelTableMixin)
