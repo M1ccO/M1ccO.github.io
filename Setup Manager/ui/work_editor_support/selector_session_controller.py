@@ -21,7 +21,7 @@ import time
 from contextlib import contextmanager
 from uuid import uuid4
 
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QSize, QTimer, Qt
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, QRect, QSequentialAnimationGroup, QSize, QTimer, Qt
 from PySide6.QtGui import QColor, QPainter
 from PySide6.QtWidgets import (
     QApplication,
@@ -270,16 +270,45 @@ class WorkEditorSelectorController:
                 dialog.activateWindow()
 
     def restore_if_waiting(self) -> None:
-        """Show dialog if hidden waiting for IPC result (cancel path)."""
+        """Recover editor state when selector was closed externally (taskbar/window X)."""
         dialog = self._dialog
-        if self._pending_ipc_request_id is None:
+        pending_wait = self._pending_ipc_request_id is not None
+        hidden_surface_pending = bool(getattr(self, "_hidden_editor_widgets", []))
+        if not pending_wait and not self._mode_active and self._restore_state is None and not hidden_surface_pending:
             return
+
         self._pending_ipc_request_id = None
         self._pending_ipc_kind = None
 
-        # Re-show: direct snap-back, no animation.  The Work Editor has a
+        collapse_anim = self._restore_state is not None and bool(
+            getattr(self._dialog, "_RESIZE_FOR_SELECTOR_MODE", False)
+        )
+
+        if pending_wait or self._mode_active:
+            try:
+                self._coordinator.cancel(caller="ipc.cancel.external_close")
+            except Exception:
+                pass
+        self._detach_active_embedded_widget()
+        if collapse_anim:
+            self._animate_collapse_for_selector()
+        if self._mode_active:
+            self._exit_mode()
+        else:
+            self._force_restore_normal_surface()
+            self._restore_state = None
+            self._open_requested = False
+            self._defer_transition_reveal_once = False
+            self._pending_enter_fade_surface = None
+            self._preexpanded_for_selector_open = False
+        try:
+            self._coordinator.mark_teardown_complete(caller="ipc.cancel.external_close.teardown")
+        except Exception:
+            pass
+
+        # Re-show: direct snap-back, no animation. The Work Editor has a
         # cached backing store so it re-appears in its last painted state
-        # instantly — fade-in on a large complex window looks like a flash.
+        # instantly; fading a large complex window looks like a flash.
         if not dialog.isVisible():
             dialog.show()
         dialog.raise_()
@@ -289,16 +318,105 @@ class WorkEditorSelectorController:
         except Exception:
             dialog.activateWindow()
 
+    def cancel_active_session_from_window_close(self) -> bool:
+        """Handle window-close while selector is active as selector CANCEL.
+
+        Returns True when the close event should be ignored because selector
+        cancel choreography was applied and the dialog must remain open.
+        """
+        has_hidden_surface = bool(getattr(self, "_hidden_editor_widgets", []))
+        has_selector_state = self._restore_state is not None
+        if not (self._mode_active or self._coordinator.is_busy or has_hidden_surface or has_selector_state):
+            return False
+
+        try:
+            self._coordinator.cancel(caller="window_close.cancel")
+        except Exception:
+            pass
+
+        collapse_anim = self._restore_state is not None and bool(
+            getattr(self._dialog, "_RESIZE_FOR_SELECTOR_MODE", False)
+        )
+        self._detach_active_embedded_widget()
+        if collapse_anim:
+            self._animate_collapse_for_selector()
+
+        if self._mode_active:
+            self._exit_mode()
+        else:
+            self._force_restore_normal_surface()
+            self._restore_state = None
+            self._open_requested = False
+            self._defer_transition_reveal_once = False
+            self._pending_enter_fade_surface = None
+            self._preexpanded_for_selector_open = False
+
+        self._pending_ipc_request_id = None
+        self._pending_ipc_kind = None
+        self._ipc_saved_geometry = None
+
+        try:
+            self._coordinator.mark_teardown_complete(caller="window_close.cancel.teardown")
+        except Exception:
+            pass
+        return True
+
+    def _force_restore_normal_surface(self) -> None:
+        """Restore normal editor widgets even when selector mode flag already dropped."""
+        dialog = self._dialog
+        try:
+            if not dialog.updatesEnabled():
+                dialog.setUpdatesEnabled(True)
+        except Exception:
+            pass
+        was_enabled = dialog.updatesEnabled()
+        if was_enabled:
+            dialog.setUpdatesEnabled(False)
+        try:
+            root_stack = getattr(dialog, "_root_stack", None)
+            normal_page = getattr(dialog, "_normal_page", None)
+            if isinstance(root_stack, QStackedWidget) and isinstance(normal_page, QWidget):
+                root_stack.setCurrentWidget(normal_page)
+            if self._host_uses_overlay_mode():
+                self._set_overlay_visible(False)
+            self._set_normal_surface_hidden(False)
+            if self._uses_transition_shield():
+                self._set_shield_visible(False)
+            state = self._restore_state
+            if isinstance(state, dict):
+                min_size = state.get("minimum_size")
+                if isinstance(min_size, QSize):
+                    dialog.setMinimumSize(min_size)
+                max_size = state.get("maximum_size")
+                if isinstance(max_size, QSize):
+                    dialog.setMaximumSize(max_size)
+        finally:
+            if was_enabled:
+                dialog.setUpdatesEnabled(True)
+        try:
+            dialog.update()
+            dialog.repaint()
+        except Exception:
+            pass
+
     def force_shutdown(self) -> None:
         """Force-close any active session. Safe to call from closeEvent."""
         with self._trace("force_shutdown"):
             self._coordinator.force_shutdown()
             self._detach_active_embedded_widget()
+            self._force_restore_normal_surface()
             dispose_embedded_selector_runtime(self._dialog)
             self._mode_active = False
             self._open_requested = False
+            self._transition_shield_pending_hide = False
+            self._hidden_editor_widgets = []
             self._pending_ipc_request_id = None
             self._pending_ipc_kind = None
+            self._ipc_saved_geometry = None
+            self._restore_state = None
+            self._defer_transition_reveal_once = False
+            self._pending_enter_fade_surface = None
+            self._preexpanded_for_selector_open = False
 
     def reset_for_reuse(self) -> None:
         """Reset controller state when the dialog is reused for a new work."""
@@ -307,6 +425,8 @@ class WorkEditorSelectorController:
                 self._exit_mode()
             except Exception:
                 _log.debug("work_editor.selector failed to exit mode during reset_for_reuse", exc_info=True)
+        else:
+            self._force_restore_normal_surface()
         if self._coordinator.is_busy:
             self._coordinator.force_shutdown()
         self._detach_active_embedded_widget()
@@ -524,9 +644,66 @@ class WorkEditorSelectorController:
                 pass
             setattr(dialog, "_selector_expand_anim", None)
 
+    def _build_staged_geometry_animation(
+        self,
+        *,
+        from_geom: QRect,
+        to_geom: QRect,
+        duration_ms: int,
+        expand: bool,
+    ) -> QSequentialAnimationGroup | None:
+        """Build a two-phase geometry animation.
+
+        Expand: horizontal then vertical.
+        Collapse: vertical then horizontal.
+        """
+        dialog = self._dialog
+        duration_ms = max(1, int(duration_ms))
+
+        collapse_mid = QRect(from_geom.x(), to_geom.y(), from_geom.width(), to_geom.height())
+        expand_mid = QRect(to_geom.x(), from_geom.y(), to_geom.width(), from_geom.height())
+        # Mirrored choreography:
+        # - expand: height -> width
+        # - collapse: width -> height
+        mid_geom = collapse_mid if expand else expand_mid
+
+        first_changes = from_geom != mid_geom
+        second_changes = mid_geom != to_geom
+        if not first_changes and not second_changes:
+            return None
+
+        if first_changes and second_changes:
+            first_duration = max(1, duration_ms // 2)
+            second_duration = max(1, duration_ms - first_duration)
+        elif first_changes:
+            first_duration = duration_ms
+            second_duration = 0
+        else:
+            first_duration = 0
+            second_duration = duration_ms
+
+        group = QSequentialAnimationGroup(dialog)
+
+        if first_changes:
+            first = QPropertyAnimation(dialog, b"geometry", group)
+            first.setDuration(first_duration)
+            first.setStartValue(from_geom)
+            first.setEndValue(mid_geom)
+            first.setEasingCurve(QEasingCurve.OutCubic)
+            group.addAnimation(first)
+
+        if second_changes:
+            second = QPropertyAnimation(dialog, b"geometry", group)
+            second.setDuration(second_duration)
+            second.setStartValue(mid_geom)
+            second.setEndValue(to_geom)
+            second.setEasingCurve(QEasingCurve.InOutCubic)
+            group.addAnimation(second)
+
+        return group
+
     def _animate_expand_for_selector(self) -> None:
         """Animate the dialog from current size to selector size after open."""
-        from PySide6.QtCore import QEasingCurve as EC, QPointF
         dialog = self._dialog
         if not self._mode_active:
             return
@@ -546,46 +723,40 @@ class WorkEditorSelectorController:
             return
 
         self._stop_selector_expand_anim()
+        duration_ms = max(1, int(getattr(dialog, "_SELECTOR_EXPAND_ANIMATION_MS", 80)))
+        group = self._build_staged_geometry_animation(
+            from_geom=from_geom,
+            to_geom=to_geom,
+            duration_ms=duration_ms,
+            expand=True,
+        )
+        if group is None:
+            dialog.setGeometry(to_geom)
+            self._preexpanded_for_selector_open = True
+            return
 
-        from PySide6.QtCore import QTimer
-        frame_interval_ms = 5  # ~200fps
-        steps = int(80 / frame_interval_ms)
-        step_size_x = (to_geom.width() - from_geom.width()) / steps
-        step_size_y = (to_geom.height() - from_geom.height()) / steps
-        step_size_x_pos = (to_geom.x() - from_geom.x()) / steps
-        step_size_y_pos = (to_geom.y() - from_geom.y()) / steps
-        current_step = [0]
+        def _finish_expand() -> None:
+            dialog.setGeometry(to_geom)
+            self._preexpanded_for_selector_open = True
+            try:
+                dl = dialog.layout()
+                if dl is not None:
+                    dl.activate()
+                dialog.updateGeometry()
+                root_stack = getattr(dialog, "_root_stack", None)
+                if isinstance(root_stack, QStackedWidget):
+                    sl = root_stack.layout()
+                    if sl is not None:
+                        sl.activate()
+                    root_stack.updateGeometry()
+            except Exception:
+                pass
+            if getattr(dialog, "_selector_expand_anim", None) is group:
+                setattr(dialog, "_selector_expand_anim", None)
 
-        def _tick():
-            current_step[0] += 1
-            if current_step[0] >= steps:
-                dialog.setGeometry(to_geom)
-                self._preexpanded_for_selector_open = True
-                try:
-                    dl = dialog.layout()
-                    if dl is not None:
-                        dl.activate()
-                    dialog.updateGeometry()
-                    root_stack = getattr(dialog, "_root_stack", None)
-                    if isinstance(root_stack, QStackedWidget):
-                        sl = root_stack.layout()
-                        if sl is not None:
-                            sl.activate()
-                        root_stack.updateGeometry()
-                except Exception:
-                    pass
-                return
-            new_x = from_geom.x() + int(step_size_x_pos * current_step[0])
-            new_y = from_geom.y() + int(step_size_y_pos * current_step[0])
-            new_w = from_geom.width() + int(step_size_x * current_step[0])
-            new_h = from_geom.height() + int(step_size_y * current_step[0])
-            dialog.setGeometry(new_x, new_y, new_w, new_h)
-
-        timer = QTimer(dialog)
-        timer.setInterval(frame_interval_ms)
-        timer.timeout.connect(_tick)
-        setattr(dialog, "_selector_expand_anim", timer)
-        timer.start()
+        group.finished.connect(_finish_expand)
+        setattr(dialog, "_selector_expand_anim", group)
+        group.start()
 
     def _animate_collapse_for_selector(self) -> None:
         """Animate the dialog back to its pre-selector geometry on close."""
@@ -604,16 +775,25 @@ class WorkEditorSelectorController:
         if from_geom == target_geom:
             return
 
-        if not bool(getattr(self, "_preexpanded_for_selector_open", False)):
+        duration_ms = max(1, int(getattr(dialog, "_SELECTOR_COLLAPSE_ANIMATION_MS", 40)))
+        group = self._build_staged_geometry_animation(
+            from_geom=from_geom,
+            to_geom=target_geom,
+            duration_ms=duration_ms,
+            expand=False,
+        )
+        if group is None:
+            dialog.setGeometry(target_geom)
             return
 
-        anim = QPropertyAnimation(dialog, b"geometry", dialog)
-        anim.setDuration(40)
-        anim.setStartValue(from_geom)
-        anim.setEndValue(target_geom)
-        anim.setEasingCurve(QEasingCurve.InOutQuart)
-        setattr(dialog, "_selector_expand_anim", anim)
-        anim.start()
+        def _finish_collapse() -> None:
+            dialog.setGeometry(target_geom)
+            if getattr(dialog, "_selector_expand_anim", None) is group:
+                setattr(dialog, "_selector_expand_anim", None)
+
+        group.finished.connect(_finish_collapse)
+        setattr(dialog, "_selector_expand_anim", group)
+        group.start()
 
     # ------------------------------------------------------------------
     # Diagnostic trace filters
@@ -1284,7 +1464,10 @@ class WorkEditorSelectorController:
             widget.activateWindow()
             # Selector is visible at Work Editor size. After a short pause so
             # the user registers the open, animate the dialog to full width.
-            QTimer.singleShot(40, self._animate_expand_for_selector)
+            QTimer.singleShot(
+                max(0, int(getattr(dialog, "_SELECTOR_EXPAND_START_DELAY_MS", 40))),
+                self._animate_expand_for_selector,
+            )
             self._schedule_preview_host_preload()
             self._log("open.embedded.ready", kind=kind_key, session_id=str(session_id))
             return True

@@ -2,6 +2,7 @@ import argparse
 import ctypes
 import ctypes.wintypes
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -27,6 +28,8 @@ from shared.ui.transition_shell import (
 )
 from shared.ui.transition_shell_config import get_transition_shell_config, init_transition_shell_config
 
+_log = logging.getLogger(__name__)
+
 
 def _is_runnable_python(candidate: Path) -> bool:
     try:
@@ -40,6 +43,13 @@ def _is_runnable_python(candidate: Path) -> bool:
     except Exception:
         return False
     return completed.returncode == 0
+
+
+def _has_pending_sender_transition(window) -> bool:
+    state = getattr(window, "_pending_sender_transition", None)
+    if state is None:
+        return False
+    return not bool(getattr(state, "completing", False))
 
 
 def _project_venv_python() -> Path | None:
@@ -317,7 +327,6 @@ def main():
     )
 
     preload_manager = get_preload_manager()
-    preload_manager.initialize(draw_service)
 
     step(7, f"{loading_header}\n\n{_lt('setup_manager.loading.load_print_service', 'Loading print service...')}")
     print_service = PrintService(APP_TITLE)
@@ -415,6 +424,20 @@ def main():
     if launch_geometry:
         _apply_frame_geometry_string(win, launch_geometry, retry_delays_ms=(0, 120))
 
+    _PRELOAD_INIT_DELAY_MS = 1500
+
+    def _deferred_preload_initialize() -> None:
+        # Keep startup interactive: preload resolver/services after the main
+        # window is already visible so heavy library imports don't block first paint.
+        if not win.isVisible():
+            return
+        try:
+            preload_manager.initialize(draw_service)
+        except Exception:
+            _log.exception("Deferred preload initialization failed")
+
+    QTimer.singleShot(_PRELOAD_INIT_DELAY_MS, _deferred_preload_initialize)
+
     # ----------------------------------------------------------------
     # IPC server (lives on the QApplication, survives live switches)
     # ----------------------------------------------------------------
@@ -470,7 +493,7 @@ def main():
         """Show Work Editor if it was hidden while waiting for a selector result (cancel path)."""
         try:
             dialog = _get_active_work_editor(target_win)
-            if dialog is None or dialog.isVisible():
+            if dialog is None:
                 return
             ctrl = getattr(dialog, "_selector_ctrl", None)
             if ctrl is not None:
@@ -606,8 +629,16 @@ def main():
 
             if request["command"] in {"", "show", "activate", "restore"}:
                 show_setup_manager(request)
-            elif request["command"] in {"hide_for_library_handoff", SENDER_TRANSITION_COMPLETE_COMMAND}:
+            elif request["command"] == "hide_for_library_handoff":
                 win._complete_tool_library_handoff()
+            elif request["command"] == SENDER_TRANSITION_COMPLETE_COMMAND:
+                if _has_pending_sender_transition(win):
+                    win._complete_tool_library_handoff()
+                else:
+                    _log.debug(
+                        "ipc: ignoring stale %r (no pending sender transition)",
+                        SENDER_TRANSITION_COMPLETE_COMMAND,
+                    )
             elif request["command"] == "selector_result":
                 _deliver_selector_result(win, request)
 

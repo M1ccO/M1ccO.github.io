@@ -47,6 +47,13 @@ def _build_launch_payload(args) -> dict:
     }
 
 
+def _has_pending_sender_transition(window) -> bool:
+    state = getattr(window, "_pending_sender_transition", None)
+    if state is None:
+        return False
+    return not bool(getattr(state, "completing", False))
+
+
 def _send_to_existing_instance(server_name: str, payload: dict) -> bool:
     socket = QLocalSocket()
     socket.connectToServer(server_name)
@@ -320,8 +327,17 @@ def main():
         if command == 'close_selector_preview':
             close_external_selector_preview(win)
             return
-        if command in {'hide_for_library_handoff', SENDER_TRANSITION_COMPLETE_COMMAND}:
+        if command == 'hide_for_library_handoff':
             complete_setup_manager_handoff(win)
+            return
+        if command == SENDER_TRANSITION_COMPLETE_COMMAND:
+            if _has_pending_sender_transition(win):
+                complete_setup_manager_handoff(win)
+            else:
+                logger.debug(
+                    "ipc: ignoring stale %r (no pending sender transition)",
+                    SENDER_TRANSITION_COMPLETE_COMMAND,
+                )
             return
 
         # Capture visibility BEFORE apply_external_request so _show_main_window

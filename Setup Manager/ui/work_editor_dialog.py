@@ -125,6 +125,10 @@ class WorkEditorDialog(QDialog):
     _SELECTOR_DIALOG_WIDTH_PAD = 420
     _SELECTOR_DIALOG_HEIGHT_PAD = 180
     _RESIZE_FOR_SELECTOR_MODE = True
+    _SELECTOR_EXPAND_ANIMATION_MS = 340
+    _SELECTOR_EXPAND_HORIZONTAL_PHASE_RATIO = 0.5
+    _SELECTOR_COLLAPSE_ANIMATION_MS = 340
+    _SELECTOR_EXPAND_START_DELAY_MS = 10
     _SELECTOR_OPEN_REVEAL_MS = 0
     _SELECTOR_LOCAL_FADE_MS = 0
     _SELECTOR_TRANSITION_SHIELD_DELAY_MS = 0
@@ -505,7 +509,15 @@ class WorkEditorDialog(QDialog):
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
-        self._selector_ctrl.force_shutdown()
+        ctrl = getattr(self, "_selector_ctrl", None)
+        if ctrl is not None:
+            try:
+                if ctrl.cancel_active_session_from_window_close():
+                    event.ignore()
+                    return
+            except Exception:
+                pass
+            ctrl.force_shutdown()
         super().closeEvent(event)
 
     # ------------------------------------------------------------------
