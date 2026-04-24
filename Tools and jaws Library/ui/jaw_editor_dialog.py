@@ -31,6 +31,7 @@ from shared.ui.helpers.editor_helpers import (
 from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_launch_debug, editor_launch_id
 from shared.data.model_paths import format_model_path_for_display, read_model_roots
 from ui.jaw_editor_support import build_models_tab
+from ui.jaw_page_support.preview_rules import apply_jaw_preview_transform
 from ui.shared.editor_dialog_helpers import EditorDialogMixin
 from ui.shared.model_table_helpers import ModelTableMixin
 from ui.tool_editor_support.transform_rules import (
@@ -290,6 +291,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self.type_badge.setText(self.jaw_type.currentText())
 
     def _load_jaw(self):
+        self._preview_orientation_applied = False
         if not self.jaw:
             self._update_measurement_summary_label()
             return
@@ -388,6 +390,12 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             self.models_preview.select_parts(self._selected_part_indices)
         self._update_header()
 
+    def _refresh_models_preview(self):
+        self._preview_controller.refresh_models_preview()
+        if self.jaw and hasattr(self.models_preview, 'set_alignment_plane') and not getattr(self, '_preview_orientation_applied', False):
+            apply_jaw_preview_transform(self.models_preview, self.jaw)
+            self._preview_orientation_applied = True
+
     # ------------------------------------------------------------------
     # Model-table helpers  (provided by ModelTableMixin)
     # ------------------------------------------------------------------
@@ -437,6 +445,22 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     def get_jaw_data(self):
         self._sync_preview_transform_snapshot_for_save()
         parts = self._model_table_to_parts()
+
+        preview = getattr(self, 'models_preview', None)
+        preview_plane = 'XZ'
+        preview_rot_x = preview_rot_y = preview_rot_z = 0
+        if preview is not None and hasattr(preview, '_alignment_plane'):
+            preview_plane = preview._alignment_plane or 'XZ'
+            rot = getattr(preview, '_rotation_deg', {})
+            preview_rot_x = int(rot.get('x', 0) or 0)
+            preview_rot_y = int(rot.get('y', 0) or 0)
+            preview_rot_z = int(rot.get('z', 0) or 0)
+        elif self.jaw:
+            preview_plane = (self.jaw.get('preview_plane', '') or 'XZ').strip()
+            preview_rot_x = int(self.jaw.get('preview_rot_x', 0) or 0)
+            preview_rot_y = int(self.jaw.get('preview_rot_y', 0) or 0)
+            preview_rot_z = int(self.jaw.get('preview_rot_z', 0) or 0)
+
         jaw = {
             'jaw_id': self.jaw_id.text().strip(),
             'jaw_type': self.jaw_type.currentData() or self.jaw_type.currentText(),
@@ -449,6 +473,10 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             'notes': self.notes.text().strip(),
             'stl_path': json.dumps(parts) if parts else '',
             'measurement_overlays': self._measurement_overlays_from_tables(),
+            'preview_plane': preview_plane,
+            'preview_rot_x': preview_rot_x,
+            'preview_rot_y': preview_rot_y,
+            'preview_rot_z': preview_rot_z,
             'preview_selected_part': self._selected_part_index,
             'preview_selected_parts': [idx for idx in self._selected_part_indices if isinstance(idx, int) and idx >= 0],
             'preview_transform_mode': self._current_transform_mode,
@@ -465,9 +493,13 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def accept(self):
         try:
-            self.get_jaw_data()
+            self._accepted_jaw_data = self.get_jaw_data()
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
             return
         super().accept()
+
+    def get_accepted_jaw_data(self) -> dict:
+        """Return the data captured at accept() time — safe to call after dialog closes."""
+        return dict(getattr(self, '_accepted_jaw_data', {}))
 

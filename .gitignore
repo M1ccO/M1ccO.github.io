@@ -5,7 +5,15 @@
 # Runtime state markers
 .library_ready
 .ntx_ready
-.runtime/
+
+# Runtime directory — ignore everything except machine config DB files
+.runtime/*
+!.runtime/configs/
+.runtime/configs/*
+!.runtime/configs/*/
+.runtime/configs/*/*
+!.runtime/configs/*/*.db
+.runtime/configs/*/.window_geometry
 
 # PyInstaller outputs
 build/

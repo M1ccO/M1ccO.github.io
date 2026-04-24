@@ -103,16 +103,18 @@ def _close_open_preview(page) -> None:
 
 def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
     try:
-        data = dlg.get_jaw_data()
+        data = dlg.get_accepted_jaw_data() if hasattr(dlg, 'get_accepted_jaw_data') else dlg.get_jaw_data()
         page.jaw_service.save_jaw(data)
         new_jaw_id = data['jaw_id']
         if original_jaw_id and original_jaw_id != new_jaw_id:
             page.jaw_service.delete_jaw(original_jaw_id)
         page.current_jaw_id = new_jaw_id
         page._current_item_id = new_jaw_id
-        page.refresh_list()
+        page.refresh_catalog()
         page.populate_details(page.jaw_service.get_jaw(new_jaw_id))
     except ValueError as exc:
+        QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
+    except Exception as exc:
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
 
 
@@ -322,7 +324,7 @@ def delete_jaw(page) -> None:
     page.item_deleted.emit(deleted_id)
     page.current_jaw_id = None
     page._current_item_id = None
-    page.refresh_list()
+    page.refresh_catalog()
     page.populate_details(None)
 
 
@@ -354,9 +356,11 @@ def copy_jaw(page) -> None:
         page.jaw_service.save_jaw(copied)
         page.current_jaw_id = copied['jaw_id']
         page._current_item_id = copied['jaw_id']
-        page.refresh_list()
+        page.refresh_catalog()
         page.populate_details(page.jaw_service.get_jaw(page.current_jaw_id))
     except ValueError as exc:
+        QMessageBox.warning(page, page._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
+    except Exception as exc:
         QMessageBox.warning(page, page._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
 
 
@@ -391,5 +395,9 @@ def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, b
     apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
     editor.setFocus()
     editor.selectAll()
+
+    captured: list[str] = []
+    buttons.accepted.connect(lambda: captured.append(editor.text()))
+
     accepted = dlg.exec() == QDialog.Accepted
-    return editor.text(), accepted
+    return captured[0] if captured else '', accepted

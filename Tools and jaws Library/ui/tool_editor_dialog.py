@@ -1016,3 +1016,11 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     def get_tool_data(self):
         return self._payload_codec.collect_from_dialog(self)
 
+    def accept(self):
+        self._accepted_tool_data = self.get_tool_data()
+        super().accept()
+
+    def get_accepted_tool_data(self) -> dict:
+        """Return the data captured at accept() time — safe to call after dialog closes."""
+        return dict(getattr(self, '_accepted_tool_data', {}))
+

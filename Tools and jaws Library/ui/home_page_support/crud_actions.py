@@ -99,9 +99,9 @@ def _close_open_preview(page) -> None:
 def save_from_dialog(page, dlg) -> int | None:
     """Validate + persist tool data from dialog; return saved uid on success."""
     try:
-        data = dlg.get_tool_data()
+        data = dlg.get_accepted_tool_data() if hasattr(dlg, 'get_accepted_tool_data') else dlg.get_tool_data()
         saved_uid = page.tool_service.save_tool(data)
-        page.refresh_list()
+        page.refresh_catalog()
         return int(saved_uid)
     except ValueError as exc:
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
@@ -341,7 +341,7 @@ def delete_tool(page) -> None:
             page.tool_service.delete_tool(tool_id)
             page.item_deleted.emit(tool_id)
 
-    page.refresh_list()
+    page.refresh_catalog()
 
 
 def copy_tool(page) -> None:
@@ -396,7 +396,7 @@ def copy_tool(page) -> None:
         QMessageBox.warning(page, page._t('tool_library.message.copy_tool', 'Copy tool'), str(exc))
         return
 
-    page.refresh_list()
+    page.refresh_catalog()
     copied_uid = int(copied.get('uid') or 0) if isinstance(copied, dict) else 0
     if copied_uid:
         page._restore_selection_by_uid(copied_uid)
@@ -433,8 +433,12 @@ def _prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, 
     apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
     editor.setFocus()
     editor.selectAll()
+
+    captured: list[str] = []
+    buttons.accepted.connect(lambda: captured.append(editor.text()))
+
     accepted = dlg.exec() == QDialog.Accepted
-    return editor.text(), accepted
+    return captured[0] if captured else '', accepted
 
 
 def _backup(page, tag: str) -> Path:
@@ -491,13 +495,13 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
                 if action == 'undo':
                     for previous in reversed(saved_before):
                         page.tool_service.save_tool(previous)
-            page.refresh_list()
+            page.refresh_catalog()
             return
 
         saved_before.append(dict(tool))
-        page.tool_service.save_tool(dlg.get_tool_data())
+        page.tool_service.save_tool(dlg.get_accepted_tool_data() if hasattr(dlg, 'get_accepted_tool_data') else dlg.get_tool_data())
 
-    page.refresh_list()
+    page.refresh_catalog()
 
 
 def _group_edit_tools(page, tool_uids: list[int]) -> None:
@@ -514,7 +518,7 @@ def _group_edit_tools(page, tool_uids: list[int]) -> None:
     if dlg.exec() != QDialog.Accepted:
         return
 
-    edited_data = dlg.get_tool_data()
+    edited_data = dlg.get_accepted_tool_data() if hasattr(dlg, 'get_accepted_tool_data') else dlg.get_tool_data()
     changed_fields = {
         key: value
         for key, value in edited_data.items()
@@ -541,4 +545,4 @@ def _group_edit_tools(page, tool_uids: list[int]) -> None:
         updated['id'] = str(tool.get('id') or '')
         page.tool_service.save_tool(updated)
 
-    page.refresh_list()
+    page.refresh_catalog()
