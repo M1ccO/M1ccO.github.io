@@ -550,7 +550,6 @@ let currentGroup = null;
 let currentMaxDim = 1;
 let wheelZoomEnabled = false;
 let alignmentPlane = 'XZ';
-let isAssemblyMode = false;
 const manualRotation = new THREE.Vector3(0, 0, 0);
 const frameDirection = new THREE.Vector3(1, 0.62, 1).normalize();
 let transformEditEnabled = false;
@@ -1026,19 +1025,15 @@ function applyModelTransformAndFrame(refit = true) {
   currentGroup.rotation.set(0, 0, 0);
   currentGroup.position.set(0, 0, 0);
 
-  if (!isAssemblyMode) {
-    orientObjectVertically(currentGroup);
-    applyAlignmentPlane(currentGroup);
-  }
+  orientObjectVertically(currentGroup);
+  applyAlignmentPlane(currentGroup);
 
   currentGroup.rotateX(manualRotation.x);
   currentGroup.rotateY(manualRotation.y);
   currentGroup.rotateZ(manualRotation.z);
   _markShadowMapDirty();
 
-  if (!isAssemblyMode) {
-    alignObjectOnGrid(currentGroup);
-  }
+  alignObjectOnGrid(currentGroup);
   updateGridForObject(currentGroup);
 
   if (refit) {
@@ -2816,7 +2811,6 @@ function clearCurrentMeshes() {
 }
 
 window.clearModel = function () {
-  isAssemblyMode = false;
   _activeLoadRequestId += 1;
   clearCurrentMeshes();
   _markShadowMapDirty();
@@ -2876,7 +2870,6 @@ window.loadModel = function (modelPath, label = null, requestId = null) {
     return;
   }
 
-  isAssemblyMode = false;
   const normalizedRequestId = _activateLoadRequest(requestId);
   _prepareForIncomingModel();
 
@@ -2921,11 +2914,9 @@ window.loadAssembly = function (parts, requestId = null) {
     return;
   }
 
-  isAssemblyMode = true;
   const normalizedRequestId = _activateLoadRequest(requestId);
 
   const nextGroup = new THREE.Group();
-  // Pre-fill with nulls so each mesh lands at its correct index regardless of load order.
   const nextMeshes = new Array(parts.length).fill(null);
   partTransforms = parts.map((p) => ({
     x: p.offset_x || 0, y: p.offset_y || 0, z: p.offset_z || 0,
@@ -2993,13 +2984,6 @@ window.loadAssembly = function (parts, requestId = null) {
           return;
         }
 
-        geometry.computeVertexNormals();
-
-        // Bake FreeCAD Z-up → Three.js Y-up into the geometry vertices so that
-        // per-part position offsets and setPartTransforms() always work in
-        // Three.js world space with no group-level rotation needed.
-        const freecadToThree = new THREE.Matrix4().makeRotationX(-Math.PI / 2);
-        geometry.applyMatrix4(freecadToThree);
         geometry.computeVertexNormals();
 
         const mesh = new THREE.Mesh(geometry, makeMaterial(color));

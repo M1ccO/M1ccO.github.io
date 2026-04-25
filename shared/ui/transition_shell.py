@@ -450,11 +450,19 @@ def complete_sender_transition(window: QWidget | None) -> bool:
     return True
 
 
+def has_pending_sender_transition(window: QWidget | None) -> bool:
+    state = getattr(window, "_pending_sender_transition", None)
+    if state is None:
+        return False
+    return not bool(getattr(state, "completing", False))
+
+
 __all__ = [
     "SENDER_TRANSITION_COMPLETE_COMMAND",
     "cancel_receiver_ready_signal",
     "cancel_sender_transition",
     "complete_sender_transition",
+    "has_pending_sender_transition",
     "prepare_sender_transition",
     "prepare_receiver_transition",
     "reveal_receiver_transition",

@@ -771,6 +771,8 @@ class MainWindow(QMainWindow):
         self.fixtures_page.populate_details(None)
 
     def _open_tool_page(self, page_key: str):
+        from shared.ui.runtime_trace import rtrace
+        rtrace("nav.open_tool_page.begin", page_key=page_key, current_cls=type(self.stack.currentWidget()).__name__)
         page_map = {
             'tools': self.home_page,
             'assemblies': self.assemblies_page,
@@ -780,13 +782,18 @@ class MainWindow(QMainWindow):
         }
         page = page_map.get(page_key, self.home_page)
         self.stack.setCurrentWidget(page)
+        rtrace("nav.open_tool_page.done", page_key=page_key, current_cls=type(self.stack.currentWidget()).__name__)
 
     def _open_jaws_view(self, jaw_view_mode: str):
+        from shared.ui.runtime_trace import rtrace
+        rtrace("nav.open_jaws_view.begin", mode=jaw_view_mode, current_cls=type(self.stack.currentWidget()).__name__)
         if jaw_view_mode == 'export':
             self.stack.setCurrentWidget(self.jaws_export_page)
+            rtrace("nav.open_jaws_view.done", mode=jaw_view_mode, target="jaws_export_page")
             return
         self.jaws_page.set_view_mode(jaw_view_mode)
         self.stack.setCurrentWidget(self.jaws_page)
+        rtrace("nav.open_jaws_view.done", mode=jaw_view_mode, target="jaws_page")
 
     def _open_fixtures_view(self, fixture_view_mode: str):
         self.fixtures_page.set_view_mode(fixture_view_mode)
@@ -810,6 +817,33 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(150, page.export_excel)
 
     def _apply_module_mode(self, module: str):
+        self._apply_module_mode_impl(module)
+
+    def _apply_module_mode_impl(self, module: str):
+        from PySide6.QtWidgets import QApplication
+        app = QApplication.instance()
+        if app is not None:
+            app.processEvents()
+
+        try:
+            _close_library_detached_previews(self)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("detached preview close failed: %s", e)
+
+        if app is not None:
+            app.processEvents()
+
+        _blur = getattr(self, '_active_editor_blur_overlay', None)
+        if _blur is not None:
+            try:
+                from shared.ui.helpers.editor_helpers import clear_modal_background_blur
+                clear_modal_background_blur(_blur)
+            except Exception as e:
+                logging.getLogger(__name__).warning("blur clear failed: %s", e)
+
+        if app is not None:
+            app.processEvents()
         if module == 'fixtures':
             self._active_module = 'fixtures'
         elif module == 'jaws':
@@ -817,27 +851,43 @@ class MainWindow(QMainWindow):
         else:
             self._active_module = 'tools'
 
-        if self._active_module == 'jaws':
-            for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
-                page.set_module_switch_target('TOOLS')
-            self._open_jaws_view('all')
-            self._set_rail_title(self._t("tool_library.rail_title.jaws", "Jaws Library"))
-            self._set_head_nav_visible(False)
-        elif self._active_module == 'fixtures':
-            for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
-                page.set_module_switch_target('TOOLS')
-            self._open_fixtures_view('all')
-            self._set_rail_title(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
-            self._set_head_nav_visible(False)
-        else:
-            sibling_target = 'FIXTURES' if self._is_machining_center() else 'JAWS'
-            for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
-                page.set_module_switch_target(sibling_target)
-            self._open_tool_page('tools')
-            self._set_rail_title(self._t("tool_library.rail_title.tools", "Tool Library"))
-            self._set_head_nav_visible(not self._is_machining_center())
-
+        self._safe_set_module_pages(module)
         self._update_module_toggle_label()
+
+    def _safe_set_module_pages(self, module: str):
+        """Switch page state with deleted-widget guards."""
+        try:
+            if module == 'jaws':
+                for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
+                    try:
+                        page.set_module_switch_target('TOOLS')
+                    except Exception:
+                        pass
+                self._open_jaws_view('all')
+                self._set_rail_title(self._t("tool_library.rail_title.jaws", "Jaws Library"))
+                self._set_head_nav_visible(False)
+            elif module == 'fixtures':
+                for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
+                    try:
+                        page.set_module_switch_target('TOOLS')
+                    except Exception:
+                        pass
+                self._open_fixtures_view('all')
+                self._set_rail_title(self._t("tool_library.rail_title.fixtures", "Fixture Library"))
+                self._set_head_nav_visible(False)
+            else:
+                sibling_target = 'FIXTURES' if self._is_machining_center() else 'JAWS'
+                for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page]:
+                    try:
+                        page.set_module_switch_target(sibling_target)
+                    except Exception:
+                        pass
+                self._open_tool_page('tools')
+                self._set_rail_title(self._t("tool_library.rail_title.tools", "Tool Library"))
+                self._set_head_nav_visible(not self._is_machining_center())
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning("_safe_set_module_pages failed: %s", e)
 
     def _on_module_toggle_clicked(self):
         """Toggle button in rail footer — switches between tools and jaws/fixtures."""
@@ -865,7 +915,9 @@ class MainWindow(QMainWindow):
 
     def _on_head_nav_clicked(self, head_key: str):
         """Handle HEAD1/HEAD2 nav button click — drives the hidden combo for page wiring."""
-        self.tool_head_filter_combo.setCurrentData(head_key)
+        for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page]:
+            page.set_head_filter_value(head_key, refresh=False)
+            page.refresh_list()
         self._update_head_nav_active(head_key)
 
     def _update_head_nav_active(self, active_key: str):

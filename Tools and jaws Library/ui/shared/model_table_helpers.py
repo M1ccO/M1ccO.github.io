@@ -99,8 +99,17 @@ class ModelTableMixin:
             }}
         """)
         c_layout.addWidget(btn, 1)
-        btn.clicked.connect(lambda _, r=row: self._choose_model_color(r))
+        btn.clicked.connect(lambda _checked=False, b=btn: self._choose_model_color(self._row_for_color_button(b)))
         self.model_table.setCellWidget(row, 2, container)
+
+    def _row_for_color_button(self, button: QPushButton) -> int:
+        for row in range(self.model_table.rowCount()):
+            widget = self.model_table.cellWidget(row, 2)
+            if widget is button:
+                return row
+            if isinstance(widget, QWidget) and widget.findChild(QPushButton) is button:
+                return row
+        return -1
 
     def _choose_model_color(self, row: int):
         if row < 0 or row >= self.model_table.rowCount():

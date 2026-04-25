@@ -11,9 +11,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QLabel,
-    QLineEdit,
     QMessageBox,
     QVBoxLayout,
 )
@@ -27,10 +25,14 @@ from shared.ui.editor_launch_debug import (
     set_editor_launch_context,
 )
 from shared.ui.transition_shell import cancel_receiver_ready_signal
+from shared.ui.runtime_trace import rtrace
 from shared.ui.helpers.editor_helpers import (
-    apply_secondary_button_theme,
+    apply_modal_background_blur,
     ask_multi_edit_mode,
+    clear_modal_background_blur,
     create_dialog_buttons,
+    prompt_line_text,
+    run_editor_modal,
     setup_editor_dialog,
 )
 from ui.home_page_support.detached_preview import close_detached_preview
@@ -38,8 +40,14 @@ from ui.home_page_support.detached_preview import close_detached_preview
 __all__ = ["add_tool", "copy_tool", "delete_tool", "edit_tool", "save_from_dialog"]
 
 
+AddEditToolDialog = None
+
+
 def _tool_editor_dialog_class():
-    from ui.tool_editor_dialog import AddEditToolDialog
+    global AddEditToolDialog
+    if AddEditToolDialog is None:
+        from ui.tool_editor_dialog import AddEditToolDialog as _AddEditToolDialog
+        AddEditToolDialog = _AddEditToolDialog
     return AddEditToolDialog
 
 
@@ -96,16 +104,56 @@ def _close_open_preview(page) -> None:
     close_detached_preview(page)
 
 
+def _dialog_visible(dlg) -> bool:
+    is_visible = getattr(dlg, 'isVisible', None)
+    return bool(is_visible()) if callable(is_visible) else False
+
+
+def _attach_editor_modal_visual_state(dlg, host, blur_effect) -> None:
+    if dlg is None:
+        return
+    try:
+        dlg._editor_blur_host = host
+        dlg._editor_blur_effect = None
+        dlg._editor_blur_overlay = blur_effect
+    except Exception:
+        pass
+
+
 def save_from_dialog(page, dlg) -> int | None:
     """Validate + persist tool data from dialog; return saved uid on success."""
+    rtrace("tool.save_from_dialog.entry", dlg_id=id(dlg), has_accepted_method=hasattr(dlg, 'get_accepted_tool_data'), has_accepted_data=hasattr(dlg, '_accepted_tool_data'))
     try:
         data = dlg.get_accepted_tool_data() if hasattr(dlg, 'get_accepted_tool_data') else dlg.get_tool_data()
+        stl_raw = str(data.get('stl_path', ''))
+        rtrace(
+            "tool.save.begin",
+            has_accepted_method=hasattr(dlg, 'get_accepted_tool_data'),
+            uid=data.get('uid'),
+            tool_id=data.get('id'),
+            stl_path_len=len(stl_raw),
+            stl_path_preview=stl_raw[:300],
+            keys=sorted(data.keys()),
+        )
         saved_uid = page.tool_service.save_tool(data)
+        try:
+            readback = page.tool_service.get_tool_by_uid(int(saved_uid)) or {}
+        except Exception as exc:
+            rtrace("tool.save.readback_failed", err=str(exc))
+            readback = {}
+        rtrace(
+            "tool.save.post",
+            saved_uid=saved_uid,
+            readback_stl_len=len(str(readback.get('stl_path', ''))) if isinstance(readback, dict) else -1,
+            readback_tool_id=readback.get('id') if isinstance(readback, dict) else None,
+        )
         page.refresh_catalog()
         return int(saved_uid)
     except ValueError as exc:
+        rtrace("tool.save.value_error", err=str(exc))
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
     except Exception as exc:
+        rtrace("tool.save.exception", err=str(exc), type=type(exc).__name__)
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
     return None
 
@@ -136,16 +184,13 @@ def add_tool(page) -> None:
         editor_launch_debug("crud.add_tool.blur_bypassed", launch_id=launch_id)
     elif host and host.isVisible():
         try:
-            from PySide6.QtWidgets import QGraphicsBlurEffect
-            _blur = QGraphicsBlurEffect(host)
-            _blur.setBlurRadius(6)
-            host.setGraphicsEffect(_blur)
+            _blur = apply_modal_background_blur(host, radius=6)
             editor_launch_debug(
                 "crud.add_tool.blur_applied",
                 launch_id=launch_id,
                 host_visible=host.isVisible(),
                 host_active=host.isActiveWindow(),
-                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+                graphics_effect=type(_blur).__name__ if _blur else "",
             )
         except Exception:
             _blur = None
@@ -168,7 +213,8 @@ def add_tool(page) -> None:
     finally:
         clear_editor_launch_context(launch_id)
     attach_editor_launch_id(dlg, launch_id)
-    editor_launch_debug("crud.add_tool.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    _attach_editor_modal_visual_state(dlg, host, _blur)
+    editor_launch_debug("crud.add_tool.dialog_init.after", launch_id=launch_id, visible=_dialog_visible(dlg))
 
     if host and host.isVisible():
         geom = host.frameGeometry()
@@ -178,8 +224,8 @@ def add_tool(page) -> None:
         dlg.move(x, y)
         editor_launch_debug("crud.add_tool.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     try:
-        editor_launch_debug("crud.add_tool.exec.before", launch_id=launch_id, visible=dlg.isVisible())
-        if dlg.exec() == QDialog.Accepted and not stub_editor:
+        editor_launch_debug("crud.add_tool.exec.before", launch_id=launch_id, visible=_dialog_visible(dlg))
+        if run_editor_modal(dlg) == QDialog.Accepted and not stub_editor:
             editor_launch_debug("crud.add_tool.exec.accepted", launch_id=launch_id)
             saved_uid = save_from_dialog(page, dlg)
             if saved_uid:
@@ -191,7 +237,7 @@ def add_tool(page) -> None:
     finally:
         if _blur and host:
             try:
-                host.setGraphicsEffect(None)
+                clear_modal_background_blur(_blur)
                 editor_launch_debug("crud.add_tool.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
@@ -243,6 +289,7 @@ def edit_tool(page) -> None:
             host = None
     editor_launch_debug("crud.edit_tool.begin", launch_id=launch_id, tool_id=tool.get("id", ""), uid=tool.get("uid", ""))
     editor_launch_debug("crud.edit_tool.dialog_init.before", launch_id=launch_id)
+    _blur = None
     set_editor_launch_context(launch_id)
     try:
         if editor_launch_diag_enabled("STUB_EDITOR"):
@@ -260,7 +307,8 @@ def edit_tool(page) -> None:
     finally:
         clear_editor_launch_context(launch_id)
     attach_editor_launch_id(dlg, launch_id)
-    editor_launch_debug("crud.edit_tool.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    _attach_editor_modal_visual_state(dlg, host, _blur)
+    editor_launch_debug("crud.edit_tool.dialog_init.after", launch_id=launch_id, visible=_dialog_visible(dlg))
     editor_launch_debug(
         "crud.edit_tool.host",
         launch_id=launch_id,
@@ -268,25 +316,22 @@ def edit_tool(page) -> None:
         host_active=bool(host and host.isActiveWindow()) if host else False,
         pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
     )
-    _blur = None
     if editor_launch_diag_enabled("BYPASS_BLUR"):
         editor_launch_debug("crud.edit_tool.blur_bypassed", launch_id=launch_id)
     elif host and host.isVisible():
         try:
-            from PySide6.QtWidgets import QGraphicsBlurEffect
-            _blur = QGraphicsBlurEffect(host)
-            _blur.setBlurRadius(6)
-            host.setGraphicsEffect(_blur)
+            _blur = apply_modal_background_blur(host, radius=6)
             editor_launch_debug(
                 "crud.edit_tool.blur_applied",
                 launch_id=launch_id,
                 host_visible=host.isVisible(),
                 host_active=host.isActiveWindow(),
-                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+                graphics_effect=type(_blur).__name__ if _blur else "",
             )
         except Exception:
             _blur = None
             editor_launch_debug("crud.edit_tool.blur_failed", launch_id=launch_id)
+        _attach_editor_modal_visual_state(dlg, host, _blur)
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
@@ -295,8 +340,10 @@ def edit_tool(page) -> None:
         editor_launch_debug("crud.edit_tool.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     saved_uid = None
     try:
-        editor_launch_debug("crud.edit_tool.exec.before", launch_id=launch_id, visible=dlg.isVisible())
-        if dlg.exec() == QDialog.Accepted and not stub_editor:
+        editor_launch_debug("crud.edit_tool.exec.before", launch_id=launch_id, visible=_dialog_visible(dlg))
+        exec_result = run_editor_modal(dlg)
+        rtrace("tool.edit.exec.returned", result=exec_result, accepted_const=int(QDialog.Accepted), has_accepted_data=hasattr(dlg, '_accepted_tool_data'))
+        if exec_result == QDialog.Accepted and not stub_editor:
             editor_launch_debug("crud.edit_tool.exec.accepted", launch_id=launch_id)
             saved_uid = save_from_dialog(page, dlg)
         elif stub_editor:
@@ -306,7 +353,7 @@ def edit_tool(page) -> None:
     finally:
         if _blur and host:
             try:
-                host.setGraphicsEffect(None)
+                clear_modal_background_blur(_blur)
                 editor_launch_debug("crud.edit_tool.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
@@ -403,42 +450,7 @@ def copy_tool(page) -> None:
 
 
 def _prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, bool]:
-    dlg = QDialog(page)
-    setup_editor_dialog(dlg)
-    dlg.setWindowTitle(title)
-    dlg.setModal(True)
-
-    root = QVBoxLayout(dlg)
-    root.setContentsMargins(12, 12, 12, 12)
-    root.setSpacing(8)
-
-    prompt_label = QLabel(label)
-    prompt_label.setProperty('detailFieldKey', True)
-    prompt_label.setWordWrap(True)
-    root.addWidget(prompt_label)
-
-    editor = QLineEdit()
-    editor.setText(initial)
-    root.addWidget(editor)
-
-    buttons = create_dialog_buttons(
-        dlg,
-        save_text=page._t('common.ok', 'OK'),
-        cancel_text=page._t('common.cancel', 'Cancel'),
-        on_save=dlg.accept,
-        on_cancel=dlg.reject,
-    )
-    root.addWidget(buttons)
-
-    apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
-    editor.setFocus()
-    editor.selectAll()
-
-    captured: list[str] = []
-    buttons.accepted.connect(lambda: captured.append(editor.text()))
-
-    accepted = dlg.exec() == QDialog.Accepted
-    return captured[0] if captured else '', accepted
+    return prompt_line_text(page, title, label, initial, translate=page._t)
 
 
 def _backup(page, tag: str) -> Path:
@@ -489,7 +501,7 @@ def _batch_edit_tools(page, tool_uids: list[int]) -> None:
             translate=page._t,
             batch_label=f"{idx}/{total}",
         )
-        if dlg.exec() != QDialog.Accepted:
+        if run_editor_modal(dlg) != QDialog.Accepted:
             if saved_before:
                 action = _prompt_batch_cancel_behavior(page)
                 if action == 'undo':
@@ -515,7 +527,7 @@ def _group_edit_tools(page, tool_uids: list[int]) -> None:
         group_count=len(tool_uids),
     )
     baseline = dlg.get_tool_data()
-    if dlg.exec() != QDialog.Accepted:
+    if run_editor_modal(dlg) != QDialog.Accepted:
         return
 
     edited_data = dlg.get_accepted_tool_data() if hasattr(dlg, 'get_accepted_tool_data') else dlg.get_tool_data()

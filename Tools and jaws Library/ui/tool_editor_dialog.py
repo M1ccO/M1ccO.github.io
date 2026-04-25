@@ -1017,8 +1017,31 @@ class AddEditToolDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         return self._payload_codec.collect_from_dialog(self)
 
     def accept(self):
-        self._accepted_tool_data = self.get_tool_data()
+        from shared.ui.runtime_trace import rtrace
+        try:
+            self._accepted_tool_data = self.get_tool_data()
+        except ValueError as exc:
+            rtrace("tool.accept.validation_error", err=str(exc))
+            QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
+            return
+        accepted = self._accepted_tool_data or {}
+        rtrace(
+            "tool.accept.captured",
+            uid=accepted.get('uid'),
+            tool_id=accepted.get('id'),
+            stl_len=len(str(accepted.get('stl_path', ''))),
+            model_table_rows=self.model_table.rowCount() if hasattr(self, 'model_table') else -1,
+            assembly_transform_enabled=bool(getattr(self, '_assembly_transform_enabled', False)),
+            models_tab_materialized=bool(getattr(self, '_models_tab_materialized', False)),
+        )
+        self._shutdown_embedded_preview()
         super().accept()
+
+    def reject(self):
+        from shared.ui.runtime_trace import rtrace
+        rtrace("tool.reject", models_tab_materialized=bool(getattr(self, '_models_tab_materialized', False)))
+        self._shutdown_embedded_preview()
+        super().reject()
 
     def get_accepted_tool_data(self) -> dict:
         """Return the data captured at accept() time — safe to call after dialog closes."""

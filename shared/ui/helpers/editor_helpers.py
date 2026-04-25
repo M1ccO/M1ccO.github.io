@@ -7,8 +7,8 @@ dialogs stay visually consistent without duplicating boilerplate.
 
 from pathlib import Path
 
-from PySide6.QtCore import QSize, Qt, QTimer
-from PySide6.QtGui import QColor, QIcon
+from PySide6.QtCore import QEventLoop, QSize, Qt, QTimer
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QBoxLayout,
@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFrame,
+    QGraphicsBlurEffect,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -227,6 +228,187 @@ def create_dialog_buttons(
         buttons.rejected.connect(on_cancel)
 
     return buttons
+
+
+class _ModalBackgroundBlurOverlay(QWidget):
+    """Static blurred snapshot used behind library editor dialogs.
+
+    Applying QGraphicsBlurEffect directly to the Library window is fragile
+    once a lazy QWebEngine preview is created inside the modal editor: the
+    native Chromium child can force the owner chain through a repaint path
+    where the live effect disappears.  A child overlay keeps the visual blur
+    independent from the host widget tree and focus state.
+    """
+
+    def __init__(self, host: QWidget, snapshot: QPixmap, radius: int) -> None:
+        super().__init__(host)
+        self._snapshot = snapshot
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self.setFocusPolicy(Qt.NoFocus)
+        self.setGeometry(host.rect())
+        effect = QGraphicsBlurEffect(self)
+        effect.setBlurRadius(max(1, int(radius)))
+        self.setGraphicsEffect(effect)
+
+    def paintEvent(self, _event) -> None:
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        if not self._snapshot.isNull():
+            painter.drawPixmap(self.rect(), self._snapshot)
+        painter.fillRect(self.rect(), QColor(234, 240, 247, 110))
+
+
+def apply_modal_background_blur(host: QWidget | None, *, radius: int = 6) -> QWidget | None:
+    """Show a non-interactive blurred host snapshot behind a modal editor."""
+    if not isinstance(host, QWidget) or not host.isVisible():
+        return None
+
+    existing = getattr(host, "_active_editor_blur_overlay", None)
+    if existing is not None:
+        clear_modal_background_blur(existing)
+
+    snapshot = host.grab()
+    if snapshot.isNull():
+        return None
+
+    overlay = _ModalBackgroundBlurOverlay(host, snapshot, radius)
+    host._active_editor_blur_overlay = overlay
+    overlay.show()
+    overlay.raise_()
+    return overlay
+
+
+def clear_modal_background_blur(overlay: QWidget | None) -> None:
+    """Remove an overlay returned by apply_modal_background_blur."""
+    if overlay is None:
+        return
+    host = overlay.parentWidget()
+    if host is not None and getattr(host, "_active_editor_blur_overlay", None) is overlay:
+        host._active_editor_blur_overlay = None
+    try:
+        overlay.hide()
+    except Exception:
+        pass
+    try:
+        overlay.deleteLater()
+    except Exception:
+        pass
+
+
+_ACCEPTED_DATA_ATTRS = (
+    '_accepted_jaw_data',
+    '_accepted_tool_data',
+    '_accepted_fixture_data',
+)
+
+
+def run_editor_modal(dlg) -> int:
+    """Run ``dlg.exec()`` and keep a fallback modal loop alive when Qt
+    returns from exec() before the dialog is actually closed.
+
+    On Windows the first QWebEngineView creation inside the Library's lazy
+    Models tab can cause ``QDialog.exec()`` to return 0 while the dialog
+    stays visible, so the user's eventual Save click reaches ``accept()``
+    but the calling CRUD flow has already taken the rejected branch. This
+    helper restarts a local event loop if the dialog is still visible after
+    exec returns, and also treats the presence of a captured
+    ``_accepted_*_data`` attribute as an implicit Accepted result.
+    """
+    result = dlg.exec()
+    guard = 0
+    while guard < 32 and dlg is not None:
+        try:
+            still_visible = bool(dlg.isVisible())
+        except Exception:
+            still_visible = False
+        if not still_visible:
+            break
+        guard += 1
+        loop = QEventLoop(dlg)
+        state = {'finished': False}
+
+        def _on_finished(_code=None, _state=state, _loop=loop):
+            _state['finished'] = True
+            try:
+                _loop.quit()
+            except Exception:
+                pass
+
+        try:
+            dlg.finished.connect(_on_finished)
+        except Exception:
+            break
+        try:
+            if not dlg.isVisible():
+                break
+            loop.exec()
+        finally:
+            try:
+                dlg.finished.disconnect(_on_finished)
+            except Exception:
+                pass
+        try:
+            result = int(dlg.result())
+        except Exception:
+            pass
+        if not state['finished']:
+            break
+    if any(hasattr(dlg, attr) for attr in _ACCEPTED_DATA_ATTRS):
+        try:
+            accepted_value = int(QDialog.Accepted)
+        except Exception:
+            accepted_value = 1
+        return accepted_value
+    try:
+        return int(result)
+    except Exception:
+        return 0
+
+
+def prompt_line_text(parent, title: str, label: str, initial: str = '', translate=None) -> tuple[str, bool]:
+    """Prompt for one line of text, capturing the value before dialog teardown."""
+    t = translate or getattr(parent, '_t', None) or (lambda _key, default=None, **_kwargs: default or '')
+    dlg = QDialog(parent)
+    setup_editor_dialog(dlg)
+    dlg.setWindowTitle(title)
+    dlg.setModal(True)
+
+    root = QVBoxLayout(dlg)
+    root.setContentsMargins(12, 12, 12, 12)
+    root.setSpacing(8)
+
+    prompt_label = QLabel(label)
+    prompt_label.setProperty('detailFieldKey', True)
+    prompt_label.setWordWrap(True)
+    root.addWidget(prompt_label)
+
+    editor = QLineEdit(dlg)
+    editor.setText(initial)
+    root.addWidget(editor)
+
+    buttons = create_dialog_buttons(
+        dlg,
+        save_text=t('common.ok', 'OK'),
+        cancel_text=t('common.cancel', 'Cancel'),
+        on_cancel=dlg.reject,
+    )
+    root.addWidget(buttons)
+    apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
+
+    captured: list[str] = []
+
+    def _accept_with_current_text() -> None:
+        captured[:] = [editor.text()]
+        dlg.accept()
+
+    buttons.accepted.connect(_accept_with_current_text)
+
+    editor.setFocus()
+    editor.selectAll()
+
+    accepted = dlg.exec() == QDialog.Accepted
+    return captured[0] if captured else '', accepted
 
 
 def ask_multi_edit_mode(parent: QDialog, count: int, translate=None) -> str | None:

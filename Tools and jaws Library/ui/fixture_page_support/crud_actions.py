@@ -8,17 +8,12 @@ from __future__ import annotations
 
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
-    QLabel,
-    QLineEdit,
     QMessageBox,
-    QVBoxLayout,
 )
 
 from shared.ui.helpers.editor_helpers import (
-    apply_secondary_button_theme,
     ask_multi_edit_mode,
-    create_dialog_buttons,
+    prompt_line_text,
     setup_editor_dialog,
 )
 from ui.fixture_editor_dialog import AddEditFixtureDialog
@@ -35,16 +30,18 @@ __all__ = [
 
 def save_from_dialog(page, dlg, original_fixture_id: str | None = None) -> None:
     try:
-        data = dlg.get_fixture_data()
+        data = dlg.get_accepted_fixture_data() if hasattr(dlg, 'get_accepted_fixture_data') else dlg.get_fixture_data()
         page.fixture_service.save_fixture(data)
         new_fixture_id = data['fixture_id']
         if original_fixture_id and original_fixture_id != new_fixture_id:
             page.fixture_service.delete_fixture(original_fixture_id)
         page.current_fixture_id = new_fixture_id
         page._current_item_id = new_fixture_id
-        page.refresh_list()
+        page.refresh_catalog()
         page.populate_details(page.fixture_service.get_fixture(new_fixture_id))
     except ValueError as exc:
+        QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
+    except Exception as exc:
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
 
 
@@ -117,7 +114,7 @@ def delete_fixture(page) -> None:
     page.item_deleted.emit(deleted_id)
     page.current_fixture_id = None
     page._current_item_id = None
-    page.refresh_list()
+    page.refresh_catalog()
     page.populate_details(None)
 
 
@@ -147,43 +144,14 @@ def copy_fixture(page) -> None:
         page.fixture_service.save_fixture(copied)
         page.current_fixture_id = copied['fixture_id']
         page._current_item_id = copied['fixture_id']
-        page.refresh_list()
+        page.refresh_catalog()
         page.populate_details(page.fixture_service.get_fixture(page.current_fixture_id))
     except ValueError as exc:
+        QMessageBox.warning(page, page._t('fixture_library.action.copy_fixture', 'Copy fixture'), str(exc))
+    except Exception as exc:
         QMessageBox.warning(page, page._t('fixture_library.action.copy_fixture', 'Copy fixture'), str(exc))
 
 
 def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, bool]:
-    dlg = QDialog(page)
-    setup_editor_dialog(dlg)
-    dlg.setWindowTitle(title)
-    dlg.setModal(True)
-
-    root = QVBoxLayout(dlg)
-    root.setContentsMargins(12, 12, 12, 12)
-    root.setSpacing(8)
-
-    prompt_label = QLabel(label)
-    prompt_label.setProperty('detailFieldKey', True)
-    prompt_label.setWordWrap(True)
-    root.addWidget(prompt_label)
-
-    editor = QLineEdit()
-    editor.setText(initial)
-    root.addWidget(editor)
-
-    buttons = create_dialog_buttons(
-        dlg,
-        save_text=page._t('common.ok', 'OK'),
-        cancel_text=page._t('common.cancel', 'Cancel'),
-        on_save=dlg.accept,
-        on_cancel=dlg.reject,
-    )
-    root.addWidget(buttons)
-
-    apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
-    editor.setFocus()
-    editor.selectAll()
-    accepted = dlg.exec() == QDialog.Accepted
-    return editor.text(), accepted
+    return prompt_line_text(page, title, label, initial, translate=page._t)
 

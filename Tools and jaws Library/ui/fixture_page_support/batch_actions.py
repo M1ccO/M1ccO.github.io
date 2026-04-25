@@ -61,11 +61,13 @@ def batch_edit_fixtures(page, fixture_ids: list[str]) -> None:
                 if action == 'undo':
                     for previous in reversed(saved_before):
                         page.fixture_service.save_fixture(previous)
-            page.refresh_list()
+            page.refresh_catalog()
             return
         saved_before.append(dict(fixture))
-        page.fixture_service.save_fixture(dlg.get_fixture_data())
-    page.refresh_list()
+        page.fixture_service.save_fixture(
+            dlg.get_accepted_fixture_data() if hasattr(dlg, 'get_accepted_fixture_data') else dlg.get_fixture_data()
+        )
+    page.refresh_catalog()
 
 
 def group_edit_fixtures(page, fixture_ids: list[str]) -> None:
@@ -78,7 +80,9 @@ def group_edit_fixtures(page, fixture_ids: list[str]) -> None:
     baseline = dlg.get_fixture_data()
     if dlg.exec() != QDialog.Accepted:
         return
-    edited_data = dlg.get_fixture_data()
+    edited_data = (
+        dlg.get_accepted_fixture_data() if hasattr(dlg, 'get_accepted_fixture_data') else dlg.get_fixture_data()
+    )
     changed_fields = {
         key: value
         for key, value in edited_data.items()
@@ -102,7 +106,7 @@ def group_edit_fixtures(page, fixture_ids: list[str]) -> None:
         updated.update(changed_fields)
         updated['fixture_id'] = fixture_id
         page.fixture_service.save_fixture(updated)
-    page.refresh_list()
+    page.refresh_catalog()
 
 
 __all__ = [

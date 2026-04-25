@@ -23,6 +23,7 @@ from shared.ui.editor_launch_debug import editor_launch_debug
 from shared.ui.main_window_helpers import apply_frame_geometry_string as _apply_frame_geometry_string
 from shared.ui.transition_shell import (
     SENDER_TRANSITION_COMPLETE_COMMAND,
+    has_pending_sender_transition,
     prepare_receiver_transition,
     reveal_receiver_transition,
     schedule_sender_transition_complete_on_receiver_ready,
@@ -44,13 +45,6 @@ def _is_runnable_python(candidate: Path) -> bool:
     except Exception:
         return False
     return completed.returncode == 0
-
-
-def _has_pending_sender_transition(window) -> bool:
-    state = getattr(window, "_pending_sender_transition", None)
-    if state is None:
-        return False
-    return not bool(getattr(state, "completing", False))
 
 
 def _project_venv_python() -> Path | None:
@@ -645,7 +639,7 @@ def main():
                     window_active=win.isActiveWindow(),
                     pending_sender_transition=bool(getattr(win, "_pending_sender_transition", None)),
                 )
-                if _has_pending_sender_transition(win):
+                if has_pending_sender_transition(win):
                     win._complete_tool_library_handoff()
                 else:
                     _log.debug(

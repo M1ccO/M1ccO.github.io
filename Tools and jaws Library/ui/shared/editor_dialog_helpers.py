@@ -21,6 +21,7 @@ import json
 
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
+    QApplication,
     QDialog,
     QFrame,
     QWidget,
@@ -90,6 +91,21 @@ class EditorDialogMixin:
         self.installEventFilter(self)
         for widget in self.findChildren(QWidget):
             widget.installEventFilter(self)
+
+    def _commit_active_edits(self) -> None:
+        """Commit in-place editors before reading table/form data."""
+        focus_widget = QApplication.focusWidget()
+        if focus_widget is not None:
+            focus_widget.clearFocus()
+
+    def _shutdown_embedded_preview(self) -> None:
+        preview = getattr(self, 'models_preview', None)
+        shutdown = getattr(preview, 'shutdown', None)
+        if callable(shutdown):
+            try:
+                shutdown()
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Assembly transform preference

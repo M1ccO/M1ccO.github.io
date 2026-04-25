@@ -364,14 +364,20 @@ class WorkEditorSelectorController:
     def _force_restore_normal_surface(self) -> None:
         """Restore normal editor widgets even when selector mode flag already dropped."""
         dialog = self._dialog
+        updates_enabled_fn = getattr(dialog, "updatesEnabled", None)
+        set_updates_enabled_fn = getattr(dialog, "setUpdatesEnabled", None)
         try:
-            if not dialog.updatesEnabled():
-                dialog.setUpdatesEnabled(True)
+            if callable(updates_enabled_fn) and callable(set_updates_enabled_fn) and not updates_enabled_fn():
+                set_updates_enabled_fn(True)
         except Exception:
             pass
-        was_enabled = dialog.updatesEnabled()
-        if was_enabled:
-            dialog.setUpdatesEnabled(False)
+        was_enabled = False
+        try:
+            was_enabled = bool(updates_enabled_fn()) if callable(updates_enabled_fn) else False
+        except Exception:
+            was_enabled = False
+        if was_enabled and callable(set_updates_enabled_fn):
+            set_updates_enabled_fn(False)
         try:
             root_stack = getattr(dialog, "_root_stack", None)
             normal_page = getattr(dialog, "_normal_page", None)
@@ -391,8 +397,8 @@ class WorkEditorSelectorController:
                 if isinstance(max_size, QSize):
                     dialog.setMaximumSize(max_size)
         finally:
-            if was_enabled:
-                dialog.setUpdatesEnabled(True)
+            if was_enabled and callable(set_updates_enabled_fn):
+                set_updates_enabled_fn(True)
         try:
             dialog.update()
             dialog.repaint()

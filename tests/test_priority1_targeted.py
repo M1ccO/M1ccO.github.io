@@ -1687,6 +1687,41 @@ class TestLibraryPreviewEditLifecycle(unittest.TestCase):
         self.assertEqual(["close", "dialog"], events)
 
 
+class TestEditorModelRegressionGuards(unittest.TestCase):
+
+    def test_copy_prompts_use_shared_pre_accept_capture_helper(self):
+        _prefer_tools_library_namespace()
+        modules = [
+            importlib.import_module("ui.home_page_support.crud_actions"),
+            importlib.import_module("ui.jaw_page_support.crud_actions"),
+            importlib.import_module("ui.fixture_page_support.crud_actions"),
+        ]
+
+        for module in modules:
+            source = Path(module.__file__).read_text(encoding="utf-8")
+            self.assertIn("prompt_line_text", source)
+            self.assertNotIn("buttons.accepted.connect(lambda: captured.append(editor.text()))", source)
+            self.assertNotIn("on_save=dlg.accept", source)
+
+    def test_model_table_color_picker_resolves_current_row_at_click_time(self):
+        _prefer_tools_library_namespace()
+        module = importlib.import_module("ui.shared.model_table_helpers")
+        source = Path(module.__file__).read_text(encoding="utf-8")
+
+        self.assertIn("def _row_for_color_button", source)
+        self.assertIn("self._choose_model_color(self._row_for_color_button(b))", source)
+        self.assertNotIn("lambda _, r=row: self._choose_model_color(r)", source)
+
+    def test_viewer_keeps_async_assembly_meshes_in_part_index_order(self):
+        viewer_path = Path(__file__).resolve().parents[1] / "Tools and jaws Library" / "preview" / "viewer.js"
+        source = viewer_path.read_text(encoding="utf-8")
+
+        self.assertIn("const nextMeshes = new Array(parts.length).fill(null);", source)
+        self.assertIn("nextMeshes[index] = mesh;", source)
+        self.assertNotIn("nextMeshes.push(mesh);", source)
+        self.assertNotIn("geometry.applyMatrix4(new THREE.Matrix4().makeRotationX", source)
+
+
 # ===========================================================================
 
 if __name__ == "__main__":

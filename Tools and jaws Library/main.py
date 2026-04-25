@@ -22,6 +22,7 @@ from shared.ui.editor_launch_debug import editor_launch_debug
 from shared.services.ui_preferences_service import UiPreferencesService
 from shared.ui.transition_shell import (
     SENDER_TRANSITION_COMPLETE_COMMAND,
+    has_pending_sender_transition,
     prepare_receiver_transition,
     reveal_receiver_transition,
     schedule_sender_transition_complete_on_receiver_ready,
@@ -48,13 +49,6 @@ def _build_launch_payload(args) -> dict:
         'master_filter_active': str(args.master_filter_active).strip() not in {'0', 'false', 'False', ''},
         'show': not bool(args.hidden),
     }
-
-
-def _has_pending_sender_transition(window) -> bool:
-    state = getattr(window, "_pending_sender_transition", None)
-    if state is None:
-        return False
-    return not bool(getattr(state, "completing", False))
 
 
 def _send_to_existing_instance(server_name: str, payload: dict) -> bool:
@@ -362,7 +356,7 @@ def main():
                 window_active=win.isActiveWindow(),
                 pending_sender_transition=bool(getattr(win, "_pending_sender_transition", None)),
             )
-            if _has_pending_sender_transition(win):
+            if has_pending_sender_transition(win):
                 complete_setup_manager_handoff(win)
             else:
                 logger.debug(

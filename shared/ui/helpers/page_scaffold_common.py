@@ -15,8 +15,15 @@ def build_page_root(page, *, spacing: int = 10) -> QVBoxLayout:
 
 
 def build_search_input(page) -> QLineEdit:
-    """Create the standard search input wired to refresh_list."""
-    search_input = QLineEdit()
+    """Create the standard search input wired to refresh_list.
+
+    Parented to the page so that layout rebuilds (rebuild_filter_row takes the
+    widget out of its layout via setParent(None)) cannot leave the QWidget
+    orphaned without a C++ owner. Without this, the Python reference on the
+    page survives while Qt reaps the underlying peer, producing
+    "Internal C++ object ... already deleted" on next .text() access.
+    """
+    search_input = QLineEdit(page if isinstance(page, QWidget) else None)
     search_input.textChanged.connect(page.refresh_list)
     return search_input
 

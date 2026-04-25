@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
 
 from config import TOOL_ICONS_DIR
 from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_launch_debug, editor_launch_id
+from shared.ui.runtime_trace import rtrace
 from shared.ui.helpers.editor_helpers import create_titled_section, style_icon_action_button, style_move_arrow_button
 from ui.widgets.parts_table import PartsTable
 
@@ -317,11 +318,12 @@ def _materialize_models_tab(
 ) -> None:
     if bool(getattr(dialog, '_models_tab_materialized', False)):
         if getattr(dialog, 'models_preview', None) is not None:
-            dialog.models_preview.activate_web_view()
+            _ensure_preview_ready(dialog, root_tabs)
         return
 
     launch_id = editor_launch_id(dialog)
     editor_launch_debug("models_tab.materialize.begin", launch_id=launch_id)
+    rtrace("models_tab.materialize.begin", launch_id=launch_id, dialog_cls=type(dialog).__name__)
     dialog._models_tab_materialized = True
 
     splitter = QSplitter(Qt.Horizontal)
@@ -475,9 +477,31 @@ def _materialize_models_tab(
     dialog._refresh_transform_selection_state()
     if dialog._assembly_transform_enabled and getattr(dialog, '_selected_part_indices', None):
         dialog.models_preview.select_parts(dialog._selected_part_indices)
-    dialog.models_preview.activate_web_view()
+    _ensure_preview_ready(dialog, root_tabs)
 
     editor_launch_debug("models_tab.materialize.done", launch_id=launch_id, tab_count=root_tabs.count())
+    rtrace(
+        "models_tab.materialize.done",
+        launch_id=launch_id,
+        preview_cls=type(dialog.models_preview).__name__,
+        dialog_cls=type(dialog).__name__,
+    )
+
+
+def _ensure_preview_ready(dialog: Any, root_tabs: QTabWidget) -> None:
+    """Immediately activate preview WebEngine when Models tab materializes.
+
+    The preview was lazily constructed to avoid editor-launch glitches.
+    Now that the tab is being shown, activate immediately without delay.
+    """
+    try:
+        preview = getattr(dialog, 'models_preview', None)
+        if preview is None:
+            return
+        editor_launch_debug("models_tab.preview.activate", launch_id=editor_launch_id(dialog))
+        preview.activate_web_view()
+    except RuntimeError:
+        return
 
 
 def build_editor_models_tab(dialog: Any, root_tabs: QTabWidget, config: ModelsTabConfig | None = None) -> QWidget:
@@ -488,6 +512,7 @@ def build_editor_models_tab(dialog: Any, root_tabs: QTabWidget, config: ModelsTa
         return _build_bypassed_models_tab(dialog, root_tabs)
 
     models_tab = QWidget()
+    dialog._models_tab_widget = models_tab
     models_tab.setProperty('editorPageSurface', True)
     models_layout = QVBoxLayout(models_tab)
     models_layout.setContentsMargins(18, 18, 18, 18)

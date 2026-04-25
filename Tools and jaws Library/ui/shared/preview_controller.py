@@ -225,30 +225,63 @@ class EditorPreviewController:
     def sync_preview_transform_snapshot_for_save(
         self, timeout_ms: int = 350
     ) -> None:
+        from shared.ui.runtime_trace import rtrace
         d = self.dialog
         if not d._assembly_transform_enabled:
+            rtrace("snapshot_for_save.skip.no_assembly_transform")
             return
         preview = getattr(d, 'models_preview', None)
         if preview is None:
+            rtrace("snapshot_for_save.skip.no_preview")
             return
-        result_holder: dict[str, Any] = {'snapshot': None, 'done': False}
-        loop = QEventLoop(d)
-        timer = QTimer(d)
-        timer.setSingleShot(True)
-        timer.timeout.connect(loop.quit)
+        # Bypass placeholder preview (lazy Models tab never opened) — no live
+        # transforms to sync. Avoid nested event loop entirely.
+        preview_cls = type(preview).__name__
+        if preview_cls == '_BypassedPreview':
+            rtrace("snapshot_for_save.skip.bypassed_preview")
+            return
+        if not bool(getattr(d, '_models_tab_materialized', False)):
+            rtrace("snapshot_for_save.skip.not_materialized")
+            return
+        result_holder: dict[str, Any] = {'snapshot': None, 'done': False, 'sync_done': False}
 
         def _on_snapshot(snapshot: Any) -> None:
             result_holder['snapshot'] = snapshot
             result_holder['done'] = True
-            loop.quit()
+            loop = result_holder.get('loop')
+            if loop is not None:
+                try:
+                    loop.quit()
+                except Exception:
+                    pass
 
         try:
             preview.get_part_transforms(_on_snapshot)
-        except Exception:
+        except Exception as exc:
+            rtrace("snapshot_for_save.get_part_transforms.raised", err=str(exc))
             return
+
+        # Synchronous callback path (cached transforms, WebEngine not ready) —
+        # skip nested QEventLoop. Prevents dialog close events from being
+        # processed mid-accept.
+        if result_holder['done']:
+            rtrace("snapshot_for_save.sync_callback", snapshot_len=len(result_holder['snapshot']) if isinstance(result_holder['snapshot'], list) else -1)
+            self.apply_preview_transforms_snapshot(result_holder['snapshot'])
+            return
+
+        loop = QEventLoop(d)
+        result_holder['loop'] = loop
+        timer = QTimer(d)
+        timer.setSingleShot(True)
+        timer.timeout.connect(loop.quit)
         timer.start(max(100, int(timeout_ms)))
-        loop.exec()
-        timer.stop()
+        rtrace("snapshot_for_save.enter_nested_loop", timeout_ms=timeout_ms)
+        try:
+            loop.exec()
+        finally:
+            timer.stop()
+            result_holder['loop'] = None
+        rtrace("snapshot_for_save.exit_nested_loop", done=result_holder['done'])
         if result_holder['done']:
             self.apply_preview_transforms_snapshot(result_holder['snapshot'])
 

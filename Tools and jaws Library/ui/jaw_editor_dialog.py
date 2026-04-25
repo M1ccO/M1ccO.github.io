@@ -131,6 +131,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         root.addWidget(self.tabs, 1)
         self.tabs.addTab(self._build_general_tab(), self._t('jaw_editor.tab.general', 'General'))
         build_models_tab(self, self.tabs)
+        self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
 
         self._dialog_buttons = create_dialog_buttons(
             self,
@@ -443,6 +444,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._ensure_on_screen()
 
     def get_jaw_data(self):
+        self._commit_active_edits()
         self._sync_preview_transform_snapshot_for_save()
         parts = self._model_table_to_parts()
 
@@ -492,12 +494,31 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         return jaw
 
     def accept(self):
+        from shared.ui.runtime_trace import rtrace
+        rtrace("jaw.accept.entry", dlg_id=id(self), visible=self.isVisible(), jaw_id_text=self.jaw_id.text() if hasattr(self, 'jaw_id') else None)
         try:
             self._accepted_jaw_data = self.get_jaw_data()
         except ValueError as exc:
+            rtrace("jaw.accept.validation_error", err=str(exc))
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
             return
+        accepted = self._accepted_jaw_data or {}
+        rtrace(
+            "jaw.accept.captured",
+            jaw_id=accepted.get('jaw_id'),
+            stl_len=len(str(accepted.get('stl_path', ''))),
+            model_table_rows=self.model_table.rowCount() if hasattr(self, 'model_table') else -1,
+            assembly_transform_enabled=bool(getattr(self, '_assembly_transform_enabled', False)),
+            models_tab_materialized=bool(getattr(self, '_models_tab_materialized', False)),
+        )
+        self._shutdown_embedded_preview()
         super().accept()
+
+    def reject(self):
+        from shared.ui.runtime_trace import rtrace
+        rtrace("jaw.reject", dlg_id=id(self), models_tab_materialized=bool(getattr(self, '_models_tab_materialized', False)))
+        self._shutdown_embedded_preview()
+        super().reject()
 
     def get_accepted_jaw_data(self) -> dict:
         """Return the data captured at accept() time — safe to call after dialog closes."""

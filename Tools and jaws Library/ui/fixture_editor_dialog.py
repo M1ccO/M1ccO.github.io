@@ -121,6 +121,7 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         root.addWidget(self.tabs, 1)
         self.tabs.addTab(self._build_general_tab(), self._t('fixture_editor.tab.general', 'General'))
         build_models_tab(self, self.tabs)
+        self.tabs.currentChanged.connect(lambda _idx: self._commit_active_edits())
 
         self._dialog_buttons = create_dialog_buttons(
             self,
@@ -387,6 +388,7 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
         self._ensure_on_screen()
 
     def get_fixture_data(self):
+        self._commit_active_edits()
         self._sync_preview_transform_snapshot_for_save()
         parts = self._model_table_to_parts()
         fixture = {
@@ -415,9 +417,18 @@ class AddEditFixtureDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def accept(self):
         try:
-            self.get_fixture_data()
+            self._accepted_fixture_data = self.get_fixture_data()
         except ValueError as exc:
             QMessageBox.warning(self, self._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
             return
+        self._shutdown_embedded_preview()
         super().accept()
+
+    def reject(self):
+        self._shutdown_embedded_preview()
+        super().reject()
+
+    def get_accepted_fixture_data(self) -> dict:
+        """Return the data captured at accept() time; safe to call after dialog closes."""
+        return dict(getattr(self, '_accepted_fixture_data', {}))
 

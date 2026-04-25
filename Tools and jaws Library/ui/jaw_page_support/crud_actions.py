@@ -10,9 +10,7 @@ from uuid import uuid4
 
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QLabel,
-    QLineEdit,
     QMessageBox,
     QVBoxLayout,
 )
@@ -25,10 +23,14 @@ from shared.ui.editor_launch_debug import (
     set_editor_launch_context,
 )
 from shared.ui.transition_shell import cancel_receiver_ready_signal
+from shared.ui.runtime_trace import rtrace
 from shared.ui.helpers.editor_helpers import (
-    apply_secondary_button_theme,
+    apply_modal_background_blur,
     ask_multi_edit_mode,
+    clear_modal_background_blur,
     create_dialog_buttons,
+    prompt_line_text,
+    run_editor_modal,
     setup_editor_dialog,
 )
 from ui.jaw_page_support.detached_preview import close_detached_preview
@@ -43,8 +45,14 @@ __all__ = [
 ]
 
 
+AddEditJawDialog = None
+
+
 def _jaw_editor_dialog_class():
-    from ui.jaw_editor_dialog import AddEditJawDialog
+    global AddEditJawDialog
+    if AddEditJawDialog is None:
+        from ui.jaw_editor_dialog import AddEditJawDialog as _AddEditJawDialog
+        AddEditJawDialog = _AddEditJawDialog
     return AddEditJawDialog
 
 
@@ -101,20 +109,55 @@ def _close_open_preview(page) -> None:
     close_detached_preview(page)
 
 
+def _dialog_visible(dlg) -> bool:
+    is_visible = getattr(dlg, 'isVisible', None)
+    return bool(is_visible()) if callable(is_visible) else False
+
+
+def _attach_editor_modal_visual_state(dlg, host, blur_effect) -> None:
+    if dlg is None:
+        return
+    try:
+        dlg._editor_blur_host = host
+        dlg._editor_blur_effect = None
+        dlg._editor_blur_overlay = blur_effect
+    except Exception:
+        pass
+
+
 def save_from_dialog(page, dlg, original_jaw_id: str | None = None) -> None:
+    rtrace("jaw.save_from_dialog.entry", dlg_id=id(dlg), original_jaw_id=original_jaw_id, has_accepted_method=hasattr(dlg, 'get_accepted_jaw_data'), has_accepted_data=hasattr(dlg, '_accepted_jaw_data'))
     try:
         data = dlg.get_accepted_jaw_data() if hasattr(dlg, 'get_accepted_jaw_data') else dlg.get_jaw_data()
+        rtrace(
+            "jaw.save.begin",
+            original_jaw_id=original_jaw_id,
+            new_jaw_id=data.get('jaw_id'),
+            stl_path_len=len(str(data.get('stl_path', ''))),
+            has_accepted_method=hasattr(dlg, 'get_accepted_jaw_data'),
+            keys=sorted(data.keys()),
+        )
         page.jaw_service.save_jaw(data)
         new_jaw_id = data['jaw_id']
         if original_jaw_id and original_jaw_id != new_jaw_id:
             page.jaw_service.delete_jaw(original_jaw_id)
         page.current_jaw_id = new_jaw_id
         page._current_item_id = new_jaw_id
+        rtrace("jaw.save.pre_refresh", new_jaw_id=new_jaw_id, initial_load_done=getattr(page, '_initial_load_done', None), page_visible=page.isVisible())
         page.refresh_catalog()
-        page.populate_details(page.jaw_service.get_jaw(new_jaw_id))
+        readback = page.jaw_service.get_jaw(new_jaw_id) or {}
+        rtrace(
+            "jaw.save.post_refresh",
+            new_jaw_id=new_jaw_id,
+            readback_stl_len=len(str(readback.get('stl_path', ''))),
+            readback_keys=sorted(readback.keys()) if isinstance(readback, dict) else None,
+        )
+        page.populate_details(readback if readback else None)
     except ValueError as exc:
+        rtrace("jaw.save.value_error", err=str(exc))
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
     except Exception as exc:
+        rtrace("jaw.save.exception", err=str(exc), type=type(exc).__name__)
         QMessageBox.warning(page, page._t('tool_library.error.invalid_data', 'Invalid data'), str(exc))
 
 
@@ -132,6 +175,7 @@ def add_jaw(page) -> None:
             host = page.window()
         except Exception:
             host = None
+    _blur = None
     set_editor_launch_context(launch_id)
     try:
         if editor_launch_diag_enabled("STUB_EDITOR"):
@@ -144,7 +188,8 @@ def add_jaw(page) -> None:
     finally:
         clear_editor_launch_context(launch_id)
     attach_editor_launch_id(dlg, launch_id)
-    editor_launch_debug("crud.add_jaw.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    _attach_editor_modal_visual_state(dlg, host, _blur)
+    editor_launch_debug("crud.add_jaw.dialog_init.after", launch_id=launch_id, visible=_dialog_visible(dlg))
     editor_launch_debug(
         "crud.add_jaw.host",
         launch_id=launch_id,
@@ -152,25 +197,22 @@ def add_jaw(page) -> None:
         host_active=bool(host and host.isActiveWindow()) if host else False,
         pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
     )
-    _blur = None
     if editor_launch_diag_enabled("BYPASS_BLUR"):
         editor_launch_debug("crud.add_jaw.blur_bypassed", launch_id=launch_id)
     elif host and host.isVisible():
         try:
-            from PySide6.QtWidgets import QGraphicsBlurEffect
-            _blur = QGraphicsBlurEffect(host)
-            _blur.setBlurRadius(6)
-            host.setGraphicsEffect(_blur)
+            _blur = apply_modal_background_blur(host, radius=6)
             editor_launch_debug(
                 "crud.add_jaw.blur_applied",
                 launch_id=launch_id,
                 host_visible=host.isVisible(),
                 host_active=host.isActiveWindow(),
-                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+                graphics_effect=type(_blur).__name__ if _blur else "",
             )
         except Exception:
             _blur = None
             editor_launch_debug("crud.add_jaw.blur_failed", launch_id=launch_id)
+        _attach_editor_modal_visual_state(dlg, host, _blur)
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
@@ -178,8 +220,8 @@ def add_jaw(page) -> None:
         dlg.move(x, y)
         editor_launch_debug("crud.add_jaw.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     try:
-        editor_launch_debug("crud.add_jaw.exec.before", launch_id=launch_id, visible=dlg.isVisible())
-        if dlg.exec() == QDialog.Accepted and not stub_editor:
+        editor_launch_debug("crud.add_jaw.exec.before", launch_id=launch_id, visible=_dialog_visible(dlg))
+        if run_editor_modal(dlg) == QDialog.Accepted and not stub_editor:
             editor_launch_debug("crud.add_jaw.exec.accepted", launch_id=launch_id)
             save_from_dialog(page, dlg)
         elif stub_editor:
@@ -189,13 +231,14 @@ def add_jaw(page) -> None:
     finally:
         if _blur and host:
             try:
-                host.setGraphicsEffect(None)
+                clear_modal_background_blur(_blur)
                 editor_launch_debug("crud.add_jaw.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
 
 
 def edit_jaw(page) -> None:
+    rtrace("jaw.edit.entry", current_jaw_id=getattr(page, 'current_jaw_id', None))
     selected_ids = page._selected_jaw_ids()
     if not selected_ids:
         QMessageBox.information(
@@ -219,6 +262,7 @@ def edit_jaw(page) -> None:
     _close_open_preview(page)
     editor_launch_debug("crud.edit_jaw.begin", launch_id=launch_id, jaw_id=jaw.get("jaw_id", ""))
     editor_launch_debug("crud.edit_jaw.dialog_init.before", launch_id=launch_id)
+    _blur = None
     host = getattr(page, 'window', lambda: None)()
     if host is None:
         try:
@@ -238,7 +282,8 @@ def edit_jaw(page) -> None:
     finally:
         clear_editor_launch_context(launch_id)
     attach_editor_launch_id(dlg, launch_id)
-    editor_launch_debug("crud.edit_jaw.dialog_init.after", launch_id=launch_id, visible=dlg.isVisible())
+    _attach_editor_modal_visual_state(dlg, host, _blur)
+    editor_launch_debug("crud.edit_jaw.dialog_init.after", launch_id=launch_id, visible=_dialog_visible(dlg))
     editor_launch_debug(
         "crud.edit_jaw.host",
         launch_id=launch_id,
@@ -246,25 +291,22 @@ def edit_jaw(page) -> None:
         host_active=bool(host and host.isActiveWindow()) if host else False,
         pending_sender_transition=bool(getattr(host, "_pending_sender_transition", None)) if host else False,
     )
-    _blur = None
     if editor_launch_diag_enabled("BYPASS_BLUR"):
         editor_launch_debug("crud.edit_jaw.blur_bypassed", launch_id=launch_id)
     elif host and host.isVisible():
         try:
-            from PySide6.QtWidgets import QGraphicsBlurEffect
-            _blur = QGraphicsBlurEffect(host)
-            _blur.setBlurRadius(6)
-            host.setGraphicsEffect(_blur)
+            _blur = apply_modal_background_blur(host, radius=6)
             editor_launch_debug(
                 "crud.edit_jaw.blur_applied",
                 launch_id=launch_id,
                 host_visible=host.isVisible(),
                 host_active=host.isActiveWindow(),
-                graphics_effect=type(host.graphicsEffect()).__name__ if host.graphicsEffect() else "",
+                graphics_effect=type(_blur).__name__ if _blur else "",
             )
         except Exception:
             _blur = None
             editor_launch_debug("crud.edit_jaw.blur_failed", launch_id=launch_id)
+        _attach_editor_modal_visual_state(dlg, host, _blur)
         geom = host.frameGeometry()
         dlg.resize(1120, 760)
         x = geom.x() + max(0, (geom.width() - dlg.width()) // 2)
@@ -272,8 +314,16 @@ def edit_jaw(page) -> None:
         dlg.move(x, y)
         editor_launch_debug("crud.edit_jaw.positioned", launch_id=launch_id, x=x, y=y, width=dlg.width(), height=dlg.height())
     try:
-        editor_launch_debug("crud.edit_jaw.exec.before", launch_id=launch_id, visible=dlg.isVisible())
-        if dlg.exec() == QDialog.Accepted and not stub_editor:
+        editor_launch_debug("crud.edit_jaw.exec.before", launch_id=launch_id, visible=_dialog_visible(dlg))
+        rtrace("jaw.edit.exec.before_call", dlg_id=id(dlg))
+        try:
+            exec_result = run_editor_modal(dlg)
+        except Exception as exc:
+            import traceback as _tb
+            rtrace("jaw.edit.exec.raised", err=str(exc), type=type(exc).__name__, tb=_tb.format_exc())
+            raise
+        rtrace("jaw.edit.exec.returned", result=exec_result, accepted_const=int(QDialog.Accepted), has_accepted_data=hasattr(dlg, '_accepted_jaw_data'), dlg_id=id(dlg))
+        if exec_result == QDialog.Accepted and not stub_editor:
             editor_launch_debug("crud.edit_jaw.exec.accepted", launch_id=launch_id)
             save_from_dialog(page, dlg, original_jaw_id=jaw.get('jaw_id', ''))
         elif stub_editor:
@@ -283,7 +333,7 @@ def edit_jaw(page) -> None:
     finally:
         if _blur and host:
             try:
-                host.setGraphicsEffect(None)
+                clear_modal_background_blur(_blur)
                 editor_launch_debug("crud.edit_jaw.blur_cleared", launch_id=launch_id, host_visible=host.isVisible())
             except Exception:
                 pass
@@ -320,11 +370,22 @@ def delete_jaw(page) -> None:
         return
 
     deleted_id = page.current_jaw_id
+    rtrace("jaw.delete.begin", jaw_id=deleted_id, initial_load_done=getattr(page, '_initial_load_done', None), page_visible=page.isVisible())
     page.jaw_service.delete_jaw(deleted_id)
     page.item_deleted.emit(deleted_id)
     page.current_jaw_id = None
     page._current_item_id = None
+    before_rows = page._item_model.rowCount() if hasattr(page, '_item_model') else -1
     page.refresh_catalog()
+    after_rows = page._item_model.rowCount() if hasattr(page, '_item_model') else -1
+    rtrace(
+        "jaw.delete.post_refresh",
+        jaw_id=deleted_id,
+        before_rows=before_rows,
+        after_rows=after_rows,
+        initial_load_done=getattr(page, '_initial_load_done', None),
+        page_visible=page.isVisible(),
+    )
     page.populate_details(None)
 
 
@@ -342,62 +403,44 @@ def copy_jaw(page) -> None:
     if not jaw:
         return
 
-    new_id, accepted = prompt_text(
-        page,
-        page._t('jaw_library.action.copy_jaw', 'Copy jaw'),
-        page._t('jaw_library.prompt.new_jaw_id', 'New Jaw ID:'),
-    )
+    rtrace("jaw.copy.prompt.before", source_jaw_id=source_jaw_id, prompt_func="prompt_line_text")
+    try:
+        new_id, accepted = prompt_text(
+            page,
+            page._t('jaw_library.action.copy_jaw', 'Copy jaw'),
+            page._t('jaw_library.prompt.new_jaw_id', 'New Jaw ID:'),
+        )
+    except Exception as exc:
+        rtrace("jaw.copy.prompt.raised", err=str(exc), type=type(exc).__name__)
+        QMessageBox.warning(page, page._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
+        return
+    rtrace("jaw.copy.prompt.after", accepted=accepted, new_id=new_id)
     if not accepted or not new_id.strip():
         return
 
     copied = dict(jaw)
     copied['jaw_id'] = new_id.strip()
     try:
+        rtrace("jaw.copy.save.before_save", new_id=copied['jaw_id'])
         page.jaw_service.save_jaw(copied)
+        rtrace("jaw.copy.save.after_save")
         page.current_jaw_id = copied['jaw_id']
         page._current_item_id = copied['jaw_id']
+        rtrace("jaw.copy.save.before_refresh")
         page.refresh_catalog()
-        page.populate_details(page.jaw_service.get_jaw(page.current_jaw_id))
+        rtrace("jaw.copy.save.after_refresh")
+        got = page.jaw_service.get_jaw(page.current_jaw_id)
+        rtrace("jaw.copy.save.before_populate", got_keys=sorted(got.keys()) if got else None)
+        page.populate_details(got)
+        rtrace("jaw.copy.save.after_populate")
     except ValueError as exc:
+        rtrace("jaw.copy.save.value_error", err=str(exc))
         QMessageBox.warning(page, page._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
     except Exception as exc:
+        import traceback as _tb
+        rtrace("jaw.copy.save.exception", err=str(exc), type=type(exc).__name__, tb=_tb.format_exc())
         QMessageBox.warning(page, page._t('jaw_library.action.copy_jaw', 'Copy jaw'), str(exc))
 
 
 def prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, bool]:
-    dlg = QDialog(page)
-    setup_editor_dialog(dlg)
-    dlg.setWindowTitle(title)
-    dlg.setModal(True)
-
-    root = QVBoxLayout(dlg)
-    root.setContentsMargins(12, 12, 12, 12)
-    root.setSpacing(8)
-
-    prompt_label = QLabel(label)
-    prompt_label.setProperty('detailFieldKey', True)
-    prompt_label.setWordWrap(True)
-    root.addWidget(prompt_label)
-
-    editor = QLineEdit()
-    editor.setText(initial)
-    root.addWidget(editor)
-
-    buttons = create_dialog_buttons(
-        dlg,
-        save_text=page._t('common.ok', 'OK'),
-        cancel_text=page._t('common.cancel', 'Cancel'),
-        on_save=dlg.accept,
-        on_cancel=dlg.reject,
-    )
-    root.addWidget(buttons)
-
-    apply_secondary_button_theme(dlg, buttons.button(QDialogButtonBox.Save))
-    editor.setFocus()
-    editor.selectAll()
-
-    captured: list[str] = []
-    buttons.accepted.connect(lambda: captured.append(editor.text()))
-
-    accepted = dlg.exec() == QDialog.Accepted
-    return captured[0] if captured else '', accepted
+    return prompt_line_text(page, title, label, initial, translate=page._t)

@@ -118,11 +118,13 @@ def batch_edit_jaws(page, jaw_ids: list[str]) -> None:
                 if action == 'undo':
                     for previous in reversed(saved_before):
                         page.jaw_service.save_jaw(previous)
-            page.refresh_list()
+            page.refresh_catalog()
             return
         saved_before.append(dict(jaw))
-        page.jaw_service.save_jaw(dlg.get_jaw_data())
-    page.refresh_list()
+        page.jaw_service.save_jaw(
+            dlg.get_accepted_jaw_data() if hasattr(dlg, 'get_accepted_jaw_data') else dlg.get_jaw_data()
+        )
+    page.refresh_catalog()
 
 
 def group_edit_jaws(page, jaw_ids: list[str]) -> None:
@@ -136,7 +138,7 @@ def group_edit_jaws(page, jaw_ids: list[str]) -> None:
     baseline = dlg.get_jaw_data()
     if dlg.exec() != QDialog.Accepted:
         return
-    edited_data = dlg.get_jaw_data()
+    edited_data = dlg.get_accepted_jaw_data() if hasattr(dlg, 'get_accepted_jaw_data') else dlg.get_jaw_data()
     changed_fields = {
         key: value
         for key, value in edited_data.items()
@@ -160,7 +162,7 @@ def group_edit_jaws(page, jaw_ids: list[str]) -> None:
         updated.update(changed_fields)
         updated['jaw_id'] = jaw_id
         page.jaw_service.save_jaw(updated)
-    page.refresh_list()
+    page.refresh_catalog()
 
 
 __all__ = [

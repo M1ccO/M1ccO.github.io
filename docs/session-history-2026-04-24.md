@@ -11,6 +11,83 @@ This session continued from a previous context that was compacted. The prior ses
 
 ---
 
+## Latest User Verification Update - April 24, 2026
+
+The user re-tested after the latest code changes and reported that **all problems still reproduce except the color picker issue**.
+
+This means several earlier entries in this file must be treated as **attempted fixes / partial fixes**, not confirmed user-facing resolutions.
+
+### User-confirmed current status
+
+Confirmed improved:
+- Model color picker no longer appears to apply color to the wrong model.
+
+Still broken in user runtime:
+- Adding or editing 3D models for a Tool ID still does not persist; reopening the Models tab shows the previous model data.
+- The detached viewer still shows the old model data after editor save attempts.
+- Opening the editor from either Library and then closing it can still freeze the UI when switching to the other Library.
+- Opening the editor from Library and visiting the `3D Models` tab still causes focus/background blur loss and the editor/background rebuild sequence.
+- The Models tab still appears to apply default rotation to some models.
+- Copy Jaw still shows `Internal C++ object (PySide6.QtWidgets.QLineEdit) already deleted.`
+- Delete Jaw still does not remove the jaw card row until closing/reopening the Library.
+
+### Latest fixes applied but not user-confirmed
+
+These changes are currently in the working tree and passed automated validation, but the user report says they are insufficient for the real runtime behavior:
+
+- `shared/ui/helpers/editor_helpers.py`
+  - Added `prompt_line_text()` so copy prompts capture text before dialog teardown.
+  - Added `apply_modal_background_blur()` / `clear_modal_background_blur()` using a static blurred overlay instead of applying `QGraphicsBlurEffect` directly to the Library window.
+- `Tools and jaws Library/ui/home_page_support/crud_actions.py`
+  - Tool copy prompt now uses `prompt_line_text()`.
+  - Tool editor launch now uses the static modal blur overlay.
+- `Tools and jaws Library/ui/jaw_page_support/crud_actions.py`
+  - Jaw copy prompt now uses `prompt_line_text()`.
+  - Jaw editor launch now uses the static modal blur overlay.
+- `Tools and jaws Library/ui/fixture_page_support/crud_actions.py`
+  - Fixture copy prompt now uses `prompt_line_text()`.
+- `Tools and jaws Library/ui/shared/model_table_helpers.py`
+  - Color button click handling now resolves the current row dynamically instead of using a captured row index.
+  - This is the only fix the user currently reports as successful.
+- `Tools and jaws Library/preview/viewer.js`
+  - Reverted the recent assembly orientation behavior that made models appear upside down.
+  - Kept async mesh index ordering with `new Array(parts.length).fill(null)` and `nextMeshes[index] = mesh`.
+- `shared/ui/stl_preview.py`
+  - Added explicit `shutdown()` for embedded previews on editor accept/reject.
+  - `get_part_transforms()` now returns cached transforms when WebEngine is not ready.
+- `Tools and jaws Library/ui/shared/preview_controller.py`
+  - Avoids entering the local event loop if a transform snapshot callback already completed synchronously.
+- `Tools and jaws Library/ui/jaw_editor_dialog.py`
+  - Commits active edits before collecting data.
+  - Shuts down embedded preview on accept/reject.
+- `Tools and jaws Library/ui/tool_editor_dialog.py`
+  - Shuts down embedded preview on accept/reject.
+- `Tools and jaws Library/ui/fixture_editor_dialog.py`
+  - Commits active edits before collecting data.
+  - Shuts down embedded preview on accept/reject.
+
+### Automated validation after these latest changes
+
+Automated validation passed:
+- Focused tests: `12 passed`
+- Full quality gate: `quality-gate: OK`
+- Shared regression tests: `104 passed`
+- Setup regression tests: `146 passed`
+
+Important: automated validation does **not** mean these runtime bugs are solved. The user's newest report overrides the previous assumed status.
+
+### Next investigation should start here
+
+Before more fixes, investigate why the real runtime still diverges from automated tests:
+- whether the running Library process is using stale code / warm-preloaded state
+- whether copy prompts are still coming from another implementation path
+- whether Tool model save is failing before `ToolService.save_tool()` or being overwritten after save
+- whether Delete Jaw refresh is blocked by model/view selection restoration, deferred refresh state, stale service data, or page instance reuse
+- whether editor Models-tab focus/blur loss is caused by WebEngine native-surface activation despite the static overlay attempt
+- whether preload/warm-cache keeps old editor or preview instances alive across library switches
+
+---
+
 ## Bugs Identified and Fixed This Session
 
 ### 1. Copy Jaw crash — `QLineEdit` C++ object already deleted
@@ -146,7 +223,9 @@ This is what introduced bugs 1–4 above: the placeholder objects had no signal 
 
 ---
 
-## 3D Viewer Fixes (viewer.js — from previous session, still uncommitted)
+## 3D Viewer Fixes (viewer.js — from previous session, partially superseded)
+
+**Superseded status:** The geometry-baking orientation change described below was later reverted because the user reported models appearing upside down. The async mesh index ordering fix is still considered valid and was retained. Treat the orientation/baking notes below as historical context, not current ground truth.
 
 ### Assembly alignment (parts misaligning relative to each other)
 
