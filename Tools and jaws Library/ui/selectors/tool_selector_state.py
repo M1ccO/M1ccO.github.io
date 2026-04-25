@@ -374,20 +374,43 @@ class ToolSelectorStateMixin:
         return self._assigned_tools_by_spindle.setdefault(key, [])
 
     def _update_assignment_list_height(self, spindle: str) -> None:
+        from PySide6.QtCore import QTimer
         assignment_list = self._assignment_list_for_spindle(spindle)
         if bool(getattr(self, '_embedded_mode', False)):
+            assignment_list.updateGeometry()
+            # Propagate geometry change up to the scroll panel.
+            p = assignment_list.parentWidget()
+            while p is not None:
+                p.updateGeometry()
+                if bool(p.property('selectorPanel')):
+                    break
+                p = p.parentWidget()
             return
-        row_count = assignment_list.count()
-        if row_count <= 0:
-            assignment_list.setFixedHeight(56 + self._ASSIGNMENT_TAIL_DROP_ZONE_PX)
-            return
-        total_rows_height = 0
-        fallback_row_height = 44
-        for row in range(row_count):
-            row_height = assignment_list.sizeHintForRow(row)
-            total_rows_height += row_height if row_height > 0 else fallback_row_height
-        frame_height = assignment_list.frameWidth() * 2
-        assignment_list.setFixedHeight(total_rows_height + frame_height + 6 + self._ASSIGNMENT_TAIL_DROP_ZONE_PX)
+        normalized = self._normalize_spindle(spindle)
+        frame = getattr(self, 'assignment_frames', {}).get(normalized)
+
+        def _apply():
+            if not assignment_list or assignment_list is None:
+                return
+            count = assignment_list.count()
+            if count <= 0:
+                assignment_list.setFixedHeight(56)
+            else:
+                h = assignment_list.frameWidth() * 2
+                for i in range(count):
+                    item = assignment_list.item(i)
+                    widget = assignment_list.itemWidget(item) if item is not None else None
+                    if widget is not None:
+                        row_h = widget.height() if widget.height() > 0 else widget.sizeHint().height()
+                    else:
+                        row_h = assignment_list.sizeHintForRow(i)
+                    h += max(row_h, 1)
+                assignment_list.setFixedHeight(max(h, 56))
+            assignment_list.updateGeometry()
+            if frame is not None:
+                frame.updateGeometry()
+
+        QTimer.singleShot(0, _apply)
 
     def _update_assignment_empty_hint(self, spindle: str) -> None:
         hints = getattr(self, 'assignment_hints', {}) or {}
@@ -504,7 +527,7 @@ class ToolSelectorStateMixin:
                 item = QListWidgetItem()
                 item.setData(Qt.UserRole, dict(assignment))
                 item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsDragEnabled)
-                item.setSizeHint(QSize(0, 50 if comment else 42))
+                item.setSizeHint(QSize(0, 57 if comment else 49))
                 assignment_list.addItem(item)
 
                 row_host = QWidget(assignment_list)

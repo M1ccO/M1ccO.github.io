@@ -10,7 +10,9 @@ from ui.work_editor_factory import create_work_editor_dialog
 from ui.setup_page_support.crud_dialogs import ask_delete_logbook_entries, confirm_delete_work
 from ui.setup_page_support.work_editor_launch import (
     exec_work_editor_dialog,
+    pause_preload_before_work_editor_launch,
     prime_work_editor_dialog,
+    resume_preload_after_work_editor_launch,
     resolve_work_editor_parent,
 )
 
@@ -95,24 +97,31 @@ def _prepare_shared_dialog_context(dialog, work_payload: dict | None) -> None:
 
 def create_work(page) -> None:
     host_window = resolve_work_editor_parent(page)
+    preload_paused = pause_preload_before_work_editor_launch(host_window)
     try:
         dialog = _get_or_create_shared_dialog(page, host_window)
         _prepare_shared_dialog_context(dialog, None)
         prime_work_editor_dialog(dialog)
     except Exception as exc:
+        if preload_paused:
+            resume_preload_after_work_editor_launch(host_window)
         QMessageBox.critical(
             page,
             page._t("setup_page.message.open_editor_failed", "Work Editor failed to open"),
             f"{exc}\n\n{traceback.format_exc()}",
         )
         return
-    if exec_work_editor_dialog(dialog) != QDialog.Accepted:
-        return
     try:
-        page.work_service.save_work(dialog.get_work_data())
-        page.refresh_works()
-    except Exception as exc:
-        QMessageBox.critical(page, page._t("setup_page.message.save_failed", "Save failed"), str(exc))
+        if exec_work_editor_dialog(dialog) != QDialog.Accepted:
+            return
+        try:
+            page.work_service.save_work(dialog.get_work_data())
+            page.refresh_works()
+        except Exception as exc:
+            QMessageBox.critical(page, page._t("setup_page.message.save_failed", "Save failed"), str(exc))
+    finally:
+        if preload_paused:
+            resume_preload_after_work_editor_launch(host_window)
 
 
 def edit_work(page) -> None:
@@ -141,24 +150,31 @@ def edit_work(page) -> None:
         return
 
     host_window = resolve_work_editor_parent(page)
+    preload_paused = pause_preload_before_work_editor_launch(host_window)
     try:
         dialog = _get_or_create_shared_dialog(page, host_window)
         _prepare_shared_dialog_context(dialog, work)
         prime_work_editor_dialog(dialog)
     except Exception as exc:
+        if preload_paused:
+            resume_preload_after_work_editor_launch(host_window)
         QMessageBox.critical(
             page,
             page._t("setup_page.message.open_editor_failed", "Work Editor failed to open"),
             f"{exc}\n\n{traceback.format_exc()}",
         )
         return
-    if exec_work_editor_dialog(dialog) != QDialog.Accepted:
-        return
     try:
-        page.work_service.save_work(dialog.get_work_data())
-        page.refresh_works()
-    except Exception as exc:
-        QMessageBox.critical(page, page._t("setup_page.message.save_failed", "Save failed"), str(exc))
+        if exec_work_editor_dialog(dialog) != QDialog.Accepted:
+            return
+        try:
+            page.work_service.save_work(dialog.get_work_data())
+            page.refresh_works()
+        except Exception as exc:
+            QMessageBox.critical(page, page._t("setup_page.message.save_failed", "Save failed"), str(exc))
+    finally:
+        if preload_paused:
+            resume_preload_after_work_editor_launch(host_window)
 
 
 def delete_work(page) -> None:

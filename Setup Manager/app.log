@@ -10078,3 +10078,27 @@ Traceback (most recent call last):
 json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 2026-04-24 13:29:46,432 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
 2026-04-25 06:29:51,910 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 06:49:29,322 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 07:21:18,508 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-25 08:24:13,335 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:26:21,662 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:27:49,708 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:33:45,774 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:41:37,898 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:45:24,403 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:50:42,348 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:51:41,322 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:52:25,305 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:53:41,605 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:54:25,442 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:55:04,575 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:55:04,759 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 08:55:32,214 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:01:59,102 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:04:40,362 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:07:17,197 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:10:48,852 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:13:55,230 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:16:20,676 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:17:02,450 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:19:27,476 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe

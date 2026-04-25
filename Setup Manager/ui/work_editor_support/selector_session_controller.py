@@ -17,6 +17,7 @@ is_busy -> bool
 from __future__ import annotations
 
 import logging
+import os
 import time
 from contextlib import contextmanager
 from uuid import uuid4
@@ -86,6 +87,18 @@ from ui.main_window_support.library_ipc import (
 from PySide6.QtCore import QEvent
 
 _log = logging.getLogger(__name__)
+_ENABLE_SELECTOR_PREVIEW_HOST_PRELOAD = str(
+    os.environ.get("NTX_ENABLE_SELECTOR_PREVIEW_HOST_PRELOAD", "1")
+).strip().lower() in {"1", "true", "yes", "on"}
+_ENABLE_SELECTOR_VISUAL_TRANSITIONS = str(
+    os.environ.get("NTX_ENABLE_WORK_EDITOR_SELECTOR_VISUAL_TRANSITIONS", "1")
+).strip().lower() in {"1", "true", "yes", "on"}
+_BYPASS_SELECTOR_PREVIEW_HOST_PRELOAD = str(
+    os.environ.get("NTX_DIAG_BYPASS_SELECTOR_PREVIEW_HOST_PRELOAD", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
+_ENABLE_HIDDEN_AUTO_LAUNCH = str(
+    os.environ.get("NTX_ENABLE_HIDDEN_TOOL_LIBRARY_AUTO_LAUNCH", "1")
+).strip().lower() in {"1", "true", "yes", "on"}
 
 _SELECTOR_TRACE_EVENT_NAMES = {
     QEvent.Show: "Show",
@@ -545,7 +558,7 @@ class WorkEditorSelectorController:
         self._hidden_editor_widgets = []
 
     def _uses_transition_shield(self) -> bool:
-        return self._host_uses_overlay_mode()
+        return _ENABLE_SELECTOR_VISUAL_TRANSITIONS and self._host_uses_overlay_mode()
 
     def _sync_shield_geometry(self) -> None:
         dialog = self._dialog
@@ -582,9 +595,14 @@ class WorkEditorSelectorController:
 
     def _reveal_mode_transition(self, fade_surface: QWidget | None = None) -> None:
         self._pending_enter_fade_surface = None
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            self._hide_shield()
+            return
         self._animate_transition_shield_out()
 
     def _preexpand_dialog_for_selector_open(self) -> None:
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            return
         dialog = self._dialog
         if not bool(getattr(dialog, "_RESIZE_FOR_SELECTOR_MODE", False)):
             return
@@ -713,6 +731,8 @@ class WorkEditorSelectorController:
         dialog = self._dialog
         if not self._mode_active:
             return
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            return
         if bool(getattr(self, "_preexpanded_for_selector_open", False)):
             return
         if not bool(getattr(dialog, "_RESIZE_FOR_SELECTOR_MODE", False)):
@@ -767,6 +787,8 @@ class WorkEditorSelectorController:
     def _animate_collapse_for_selector(self) -> None:
         """Animate the dialog back to its pre-selector geometry on close."""
         from PySide6.QtCore import QRect
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            return
         dialog = self._dialog
         state = self._restore_state
         if not isinstance(state, dict):
@@ -1002,6 +1024,8 @@ class WorkEditorSelectorController:
     def _animate_surface_fade(self, surface: QWidget | None) -> None:
         if surface is None:
             return
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            return
         duration_ms = max(0, int(getattr(self._dialog, "_SELECTOR_LOCAL_FADE_MS", 0)))
         if duration_ms <= 0:
             return
@@ -1047,6 +1071,8 @@ class WorkEditorSelectorController:
         return label
 
     def _prepare_open_transition_shield(self) -> None:
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            return
         if self._host_uses_overlay_mode():
             return
 
@@ -1092,6 +1118,9 @@ class WorkEditorSelectorController:
         shield.raise_()
 
     def _animate_transition_shield_out(self) -> bool:
+        if not _ENABLE_SELECTOR_VISUAL_TRANSITIONS:
+            self._hide_shield()
+            return False
         dialog = self._dialog
         shield = getattr(dialog, "_selector_transition_shield", None)
         if not isinstance(shield, QWidget) or not shield.isVisible():
@@ -1178,6 +1207,12 @@ class WorkEditorSelectorController:
             app.processEvents()
 
     def _schedule_preview_host_preload(self) -> None:
+        if not _ENABLE_SELECTOR_PREVIEW_HOST_PRELOAD:
+            self._log("preview_host_preload.disabled")
+            return
+        if _BYPASS_SELECTOR_PREVIEW_HOST_PRELOAD:
+            self._log("preview_host_preload.bypassed")
+            return
         if self._transport_mode != "embedded" or self._preview_host_preload_scheduled:
             return
 
@@ -1190,6 +1225,8 @@ class WorkEditorSelectorController:
         QTimer.singleShot(0, _run)
 
     def _preload_preview_host(self) -> None:
+        if not _ENABLE_SELECTOR_PREVIEW_HOST_PRELOAD or _BYPASS_SELECTOR_PREVIEW_HOST_PRELOAD:
+            return
         payload = {"command": "warm_preview_runtime", "show": False}
         if is_tool_library_ready(TOOL_LIBRARY_SERVER_NAME, TOOL_LIBRARY_READY_PATH):
             self._preview_host_launch_started = False
@@ -1586,6 +1623,21 @@ class WorkEditorSelectorController:
             # so it appears on top without any gap.  Hiding would briefly expose
             # the desktop between the hide and the selector paint.
             return True
+
+        if not _ENABLE_HIDDEN_AUTO_LAUNCH:
+            self._log("open.ipc.hidden_auto_launch.disabled", kind=kind, request_id=request_id)
+            self._pending_ipc_request_id = None
+            self._pending_ipc_kind = None
+            self._ipc_saved_geometry = None
+            QMessageBox.warning(
+                dialog,
+                dialog._t("setup_manager.library_unavailable.title", "Tool Library unavailable"),
+                dialog._t(
+                    "setup_manager.library_unavailable.body",
+                    "Tool Library is not running and hidden auto-launch is disabled.",
+                ),
+            )
+            return False
 
         launched = launch_tool_library(
             TOOL_LIBRARY_MAIN_PATH,

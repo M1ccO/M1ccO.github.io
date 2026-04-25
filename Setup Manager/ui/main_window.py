@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
 
 from config import (
     APP_TITLE,
+    ENABLE_TOOL_LIBRARY_PRELOAD,
     NAV_ITEMS,
     STYLE_PATH,
     SHARED_UI_PREFERENCES_PATH,
@@ -104,6 +105,7 @@ class MainWindow(QMainWindow):
         # are opening/closing.
         initialize_preload_state(self)
         self._runtime_initialized = False
+        self._is_shutting_down = False
         self._modal_trace_enabled = False
         self._modal_trace_started_at = 0.0
         self._modal_trace_event_count = 0
@@ -331,12 +333,21 @@ class MainWindow(QMainWindow):
     # Tool Library launcher helpers
     # ------------------------------------------------------------------
 
-    def _send_to_tool_library(self, payload: dict) -> bool:
+    def _send_to_tool_library(self, payload: dict, *, retries: int = 3, timeout_ms: int = 1500) -> bool:
         """Send an IPC message to a running Tool Library instance. Returns True on success."""
-        return send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, payload)
+        if getattr(self, "_is_shutting_down", False):
+            return False
+        return send_to_tool_library(
+            TOOL_LIBRARY_SERVER_NAME,
+            payload,
+            retries=max(1, int(retries)),
+            timeout_ms=max(50, int(timeout_ms)),
+        )
 
     def _launch_tool_library(self, extra_args: list = None) -> bool:
         """Start the Tool Library process. Returns True on success."""
+        if getattr(self, "_is_shutting_down", False):
+            return False
         return launch_tool_library(
             TOOL_LIBRARY_MAIN_PATH,
             TOOL_LIBRARY_EXE_CANDIDATES,
@@ -352,9 +363,13 @@ class MainWindow(QMainWindow):
         )
 
     def _preload_tool_library_background(self):
+        if getattr(self, "_is_shutting_down", False):
+            return
         preload_tool_library_background(self)
 
     def _retry_tool_library_preload(self):
+        if getattr(self, "_is_shutting_down", False):
+            return
         retry_tool_library_preload(self)
 
     def _fade_out_and(self, callback):
@@ -379,6 +394,8 @@ class MainWindow(QMainWindow):
         self._open_tool_library_module("tools")
 
     def _open_tool_library_module(self, module: str):
+        if getattr(self, "_is_shutting_down", False):
+            return
         open_tool_library_module(self, module)
 
     def _open_tool_library_separate(self):
@@ -389,9 +406,13 @@ class MainWindow(QMainWindow):
         )
 
     def _open_tool_library_deep_link(self, kind: str, item_id: str):
+        if getattr(self, "_is_shutting_down", False):
+            return
         open_tool_library_deep_link(self, kind, item_id)
 
     def _open_tool_library_with_master_filter(self, tool_ids, jaw_ids, module: str = "tools"):
+        if getattr(self, "_is_shutting_down", False):
+            return
         open_tool_library_with_master_filter(self, tool_ids, jaw_ids, module=module)
 
     def _send_request_with_retry(
@@ -407,6 +428,8 @@ class MainWindow(QMainWindow):
         Tool Library startup can race with the first IPC attempt; this helper smooths over
         that timing window without blocking the UI thread.
         """
+        if getattr(self, "_is_shutting_down", False):
+            return
         send_request_with_retry(
             self._send_to_tool_library,
             payload,
@@ -492,7 +515,7 @@ class MainWindow(QMainWindow):
             QApplication.instance().installEventFilter(self)
             # Keep first show free of hidden dialog warmups; the old Work Editor
             # preload was the source of the launch-time hide/show flash.
-            if not getattr(self, "_tool_library_preload_completed", False):
+            if ENABLE_TOOL_LIBRARY_PRELOAD and not getattr(self, "_tool_library_preload_completed", False):
                 # The hidden Library process is already launched during startup.
                 # This follow-up pass only syncs the active DB/profile payload and
                 # warms the hidden instance, so it can run much sooner than the
@@ -515,6 +538,13 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Save window geometry when closing for restoration on next launch."""
+        self._is_shutting_down = True
+        # Best-effort: keep Tool Library hidden if an earlier handoff/retry left
+        # a pending show payload in flight.
+        try:
+            send_to_tool_library(TOOL_LIBRARY_SERVER_NAME, {"show": False})
+        except Exception:
+            pass
         if not self._suppress_quit:
             x, y, width, height = self._current_window_rect()
             geom_file = Path(self.work_service.db.path).parent / ".window_geometry"

@@ -376,17 +376,23 @@ def main():
             bool(payload.get('show', True)),
             was_visible,
         )
-        win.apply_external_request(payload, caller_was_visible=was_visible)
+        apply_external_request_ok = True
+        try:
+            win.apply_external_request(payload, caller_was_visible=was_visible)
+        except Exception:
+            apply_external_request_ok = False
+            logger.exception("ipc: apply_external_request failed payload_keys=%s", sorted(payload.keys()))
         geometry_text = str(payload.get('geometry', '')).strip()
         selector_mode = str(payload.get('selector_mode', '')).strip().lower()
         selector_active_request = selector_mode in {'tools', 'jaws', 'fixtures'}
         handoff_hide_callback_server = str(payload.get('handoff_hide_callback_server') or '').strip()
         should_show = bool(payload.get('show', True))
         logger.debug(
-            "ipc: selector_active_request=%r handoff_hide_callback_server=%r should_show=%r",
+            "ipc: selector_active_request=%r handoff_hide_callback_server=%r should_show=%r apply_ok=%r",
             selector_active_request,
             bool(handoff_hide_callback_server),
             should_show,
+            apply_external_request_ok,
         )
 
         if not should_show:
@@ -419,61 +425,70 @@ def main():
             # Defer top-level visibility changes out of the socket callback so
             # selector/session transitions settle before foreground activation.
             def _show_main_window() -> None:
-                _pending = getattr(win, "_pending_fade_in_timer", None)
-                if _pending is not None:
-                    try:
-                        _pending.stop()
-                    except Exception:
-                        pass
-                    win._pending_fade_in_timer = None
-
-                _fade_anim = getattr(win, "_fade_anim", None)
-                if _fade_anim is not None:
-                    try:
-                        _fade_anim.stop()
-                    except Exception:
-                        pass
-                    win._fade_anim = None
-
-                if handoff_hide_callback_server:
-                    prepare_receiver_transition(win)
-                else:
-                    win.setWindowOpacity(1.0)
-                if geometry_text and not win.isVisible():
-                    win._pending_external_frame_geometry = geometry_text
-                if win.isMinimized():
-                    win.showNormal()
-                elif not win.isVisible():
-                    win.show()
-                elif geometry_text:
-                    suspend_clamp = getattr(win, '_suspend_external_geometry_clamp', None)
-                    if callable(suspend_clamp):
-                        suspend_clamp(520)
-                    _apply_frame_geometry_string(win, geometry_text, retry_delays_ms=(0, 120, 320))
-
-                win.raise_()
-                win.activateWindow()
                 try:
-                    import ctypes
-                    hwnd = int(win.winId())
-                    ctypes.windll.user32.SetForegroundWindow(hwnd)
+                    _pending = getattr(win, "_pending_fade_in_timer", None)
+                    if _pending is not None:
+                        try:
+                            _pending.stop()
+                        except Exception:
+                            pass
+                        win._pending_fade_in_timer = None
+
+                    _fade_anim = getattr(win, "_fade_anim", None)
+                    if _fade_anim is not None:
+                        try:
+                            _fade_anim.stop()
+                        except Exception:
+                            pass
+                        win._fade_anim = None
+
+                    if handoff_hide_callback_server:
+                        prepare_receiver_transition(win)
+                    else:
+                        win.setWindowOpacity(1.0)
+                    if geometry_text and not win.isVisible():
+                        win._pending_external_frame_geometry = geometry_text
+                    if win.isMinimized():
+                        win.showNormal()
+                    elif not win.isVisible():
+                        win.show()
+                    elif geometry_text:
+                        suspend_clamp = getattr(win, '_suspend_external_geometry_clamp', None)
+                        if callable(suspend_clamp):
+                            suspend_clamp(520)
+                        _apply_frame_geometry_string(win, geometry_text, retry_delays_ms=(0, 120, 320))
+
+                    win.raise_()
+                    win.activateWindow()
+                    try:
+                        import ctypes
+                        hwnd = int(win.winId())
+                        ctypes.windll.user32.SetForegroundWindow(hwnd)
+                    except Exception:
+                        pass
+
+                    if handoff_hide_callback_server:
+                        def _reveal_and_notify(server_name=handoff_hide_callback_server) -> None:
+                            reveal_receiver_transition(win)
+                            delay_ms = max(0, int(get_transition_shell_config().sender_complete_delay_ms))
+                            if delay_ms <= 0:
+                                _send_transition_complete_request(server_name)
+                            else:
+                                QTimer.singleShot(delay_ms, lambda: _send_transition_complete_request(server_name))
+
+                        schedule_sender_transition_complete_on_receiver_ready(
+                            win,
+                            callback=_reveal_and_notify,
+                            geometry_text=geometry_text,
+                        )
                 except Exception:
-                    pass
-
-                if handoff_hide_callback_server:
-                    def _reveal_and_notify(server_name=handoff_hide_callback_server) -> None:
-                        reveal_receiver_transition(win)
-                        delay_ms = max(0, int(get_transition_shell_config().sender_complete_delay_ms))
-                        if delay_ms <= 0:
-                            _send_transition_complete_request(server_name)
-                        else:
-                            QTimer.singleShot(delay_ms, lambda: _send_transition_complete_request(server_name))
-
-                    schedule_sender_transition_complete_on_receiver_ready(
-                        win,
-                        callback=_reveal_and_notify,
-                        geometry_text=geometry_text,
-                    )
+                    logger.exception("ipc: _show_main_window failed")
+                    if handoff_hide_callback_server:
+                        try:
+                            reveal_receiver_transition(win)
+                        except Exception:
+                            pass
+                        _send_transition_complete_request(handoff_hide_callback_server)
 
             QTimer.singleShot(0, _show_main_window)
 
@@ -488,6 +503,7 @@ def main():
                         process_external_request(json.loads(raw))
                 except Exception:
                     # Never fail silently here: Setup Manager handoff depends on this path.
+                    logger.exception("ipc: failed to process external request")
                     traceback.print_exc()
                 finally:
                     sock.disconnectFromServer()

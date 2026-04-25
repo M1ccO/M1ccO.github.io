@@ -70,6 +70,12 @@ from shared.ui.editor_launch_debug import editor_launch_diag_enabled, editor_lau
 from shared.ui.helpers.icon_loader import icon_from_path
 from shared.ui.layout_contract import get_container_layout_contract, get_required_rail_width
 
+try:
+    from shiboken6 import isValid as _is_valid_qobject
+except Exception:
+    def _is_valid_qobject(_obj) -> bool:
+        return True
+
 
 class RailHeadToggleButton(QPushButton):
     currentIndexChanged = Signal(int)
@@ -995,14 +1001,17 @@ class MainWindow(QMainWindow):
     def _update_master_filter_toggle_visual(self):
         if not self._master_filter_enabled:
             return
+        toggle = self._safe_master_filter_toggle()
+        if toggle is None:
+            return
         if self._master_filter_active:
-            self.master_filter_toggle.setIcon(self._icon_by_name('filter_off.svg', QSize(42, 42)))
-            self.master_filter_toggle.setToolTip(
+            toggle.setIcon(self._icon_by_name('filter_off.svg', QSize(42, 42)))
+            toggle.setToolTip(
                 self._t("tool_library.master_filter.on", "MASTER FILTER: ON (Setup Manager scope)")
             )
         else:
-            self.master_filter_toggle.setIcon(self._icon_by_name('filter_arrow_right.svg', QSize(42, 42)))
-            self.master_filter_toggle.setToolTip(self._t("tool_library.master_filter.off", "MASTER FILTER: OFF"))
+            toggle.setIcon(self._icon_by_name('filter_arrow_right.svg', QSize(42, 42)))
+            toggle.setToolTip(self._t("tool_library.master_filter.off", "MASTER FILTER: OFF"))
 
     def _on_master_filter_toggled(self, checked: bool):
         if not self._master_filter_enabled:
@@ -1611,8 +1620,10 @@ class MainWindow(QMainWindow):
             self._master_filter_active = False
             self._master_filter_tool_ids = set()
             self._master_filter_jaw_ids = set()
-            self.master_filter_toggle.setVisible(False)
-            self.master_filter_toggle.setChecked(False)
+            toggle = self._safe_master_filter_toggle()
+            if toggle is not None:
+                toggle.setVisible(False)
+                toggle.setChecked(False)
             self._apply_master_filter_to_pages()
         else:
             tool_ids = [str(v).strip() for v in (payload.get('master_filter_tools') or []) if str(v).strip()]
@@ -1622,22 +1633,45 @@ class MainWindow(QMainWindow):
                 self._master_filter_tool_ids = set(tool_ids)
                 self._master_filter_jaw_ids = set(jaw_ids)
                 self._master_filter_active = bool(payload.get('master_filter_active', False))
-                self.master_filter_toggle.setVisible(True)
-                self.master_filter_toggle.setChecked(self._master_filter_active)
+                toggle = self._safe_master_filter_toggle()
+                if toggle is not None:
+                    toggle.setVisible(True)
+                    toggle.setChecked(self._master_filter_active)
                 self._apply_master_filter_to_pages()
                 self._update_master_filter_toggle_visual()
 
         self._clear_selector_session(show=False)
 
         # Switch module only when NOT in selector mode.
-        module = selector_mode if selector_mode in ('tools', 'jaws', 'fixtures') else str(payload.get('module', '')).strip()
+        module = (
+            selector_mode
+            if selector_mode in ('tools', 'jaws', 'fixtures')
+            else str(payload.get('module', '')).strip().lower()
+        )
         if module in ('tools', 'jaws', 'fixtures'):
             self._apply_module_mode(module)
 
-        kind = str(payload.get('kind', '')).strip()
+        kind = str(payload.get('kind', '')).strip().lower()
         item_id = str(payload.get('item_id', '')).strip()
-        if kind:
-            self.navigate_to(kind, item_id)
+        # Apply deep-link navigation only when an explicit target ID is present.
+        # Plain module-open payloads (buttons in Setup Manager) must not be
+        # overridden by stale kind values from prior requests.
+        if kind in {"tool", "jaw"} and item_id:
+            # Honor explicit module requests from Setup Manager. This prevents a
+            # stale deep-link kind from flipping the active library module on
+            # reopen after editor/handoff cycles.
+            if module in {'tools', 'jaws', 'fixtures'}:
+                expected_kind = 'jaw' if module in {'jaws', 'fixtures'} else 'tool'
+                if kind != expected_kind:
+                    logger.debug(
+                        "ipc: skipping stale deep-link kind=%r while explicit module=%r",
+                        kind,
+                        module,
+                    )
+                else:
+                    self.navigate_to(kind, item_id)
+            else:
+                self.navigate_to(kind, item_id)
 
     def _apply_style(self):
         palette = install_application_theme_state(self.ui_preferences)
@@ -1654,3 +1688,13 @@ class MainWindow(QMainWindow):
         for page in [self.home_page, self.assemblies_page, self.holders_page, self.inserts_page, self.jaws_page, self.fixtures_page]:
             if hasattr(page, 'list_view') and page.list_view is not None:
                 page.list_view.viewport().update()
+    def _safe_master_filter_toggle(self):
+        toggle = getattr(self, "master_filter_toggle", None)
+        if toggle is None:
+            return None
+        try:
+            if not _is_valid_qobject(toggle):
+                return None
+        except Exception:
+            return None
+        return toggle

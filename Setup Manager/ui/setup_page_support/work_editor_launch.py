@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 
 from PySide6.QtCore import QRect
@@ -12,6 +13,27 @@ try:
 except Exception:
     pause_tool_library_preload = None
     resume_tool_library_preload = None
+
+_ENABLE_WORK_EDITOR_HOST_BLUR = str(
+    os.environ.get("NTX_ENABLE_WORK_EDITOR_HOST_BLUR", "1")
+).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def pause_preload_before_work_editor_launch(host: QWidget | None) -> bool:
+    """Pause hidden Tool Library preload for the full Work Editor launch path.
+
+    Returns True when a pause token was acquired and the caller must resume it.
+    """
+    if callable(pause_tool_library_preload) and isinstance(host, QWidget):
+        pause_tool_library_preload(host)
+        return True
+    return False
+
+
+def resume_preload_after_work_editor_launch(host: QWidget | None, *, schedule_delay_ms: int = 1800) -> None:
+    """Release one preload pause token acquired before Work Editor launch."""
+    if callable(resume_tool_library_preload) and isinstance(host, QWidget):
+        resume_tool_library_preload(host, schedule_delay_ms=schedule_delay_ms)
 
 
 def resolve_work_editor_parent(page) -> QWidget | None:
@@ -104,7 +126,7 @@ def exec_work_editor_dialog(dialog) -> int:
 
     # Blur the main window while the Work Editor is open.
     _blur_effect = None
-    if isinstance(preload_host, QWidget) and preload_host.isVisible():
+    if _ENABLE_WORK_EDITOR_HOST_BLUR and isinstance(preload_host, QWidget) and preload_host.isVisible():
         try:
             _blur_effect = QGraphicsBlurEffect(preload_host)
             _blur_effect.setBlurRadius(6)

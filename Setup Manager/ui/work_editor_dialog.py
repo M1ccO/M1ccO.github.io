@@ -1,4 +1,7 @@
+import json
 import logging
+import os
+from datetime import datetime, timezone
 from typing import Callable
 from uuid import UUID, uuid4
 
@@ -133,6 +136,30 @@ class WorkEditorDialog(QDialog):
     _SELECTOR_LOCAL_FADE_MS = 0
     _SELECTOR_TRANSITION_SHIELD_DELAY_MS = 0
     _LOGGER = logging.getLogger(__name__)
+    _DIAG_TRACE_STARTUP = str(os.environ.get("NTX_DIAG_TRACE_WORK_EDITOR_STARTUP", "1")).strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+    _DIAG_BYPASS_LOAD_EXTERNAL_REFS = str(
+        os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_LOAD_EXTERNAL_REFS", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    _DIAG_BYPASS_LOAD_WORK = str(
+        os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_LOAD_WORK", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    _DIAG_BYPASS_BUILD_ZEROS = str(
+        os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_BUILD_ZEROS_TAB", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    _DIAG_BYPASS_BUILD_TOOLS = str(
+        os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_BUILD_TOOLS_TAB", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    _DIAG_BYPASS_APPLY_TOOLS_PAYLOAD = str(
+        os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_APPLY_TOOLS_PAYLOAD", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    _DIAG_BYPASS_TOOLS_HEAD_SYNC = str(
+        os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_TOOLS_HEAD_SYNC", "0")
+    ).strip().lower() in {"1", "true", "yes", "on"}
 
     def __init__(
         self,
@@ -233,41 +260,100 @@ class WorkEditorDialog(QDialog):
         self._raw_part_combo_popup_window: QWidget | None = None
         self.setUpdatesEnabled(False)
         try:
+            self._trace_startup("init.begin")
             setup_tabs(self)
+            self._trace_startup("init.setup_tabs.done")
             self.tabs.currentChanged.connect(self._on_tabs_current_changed)
 
             self._build_general_tab()
             self._build_notes_tab()
+            self._trace_startup("init.base_tabs.done")
 
             setup_button_row(self)
+            self._trace_startup("init.button_row.done")
 
-            self._load_external_refs()
-            self._load_work()
+            if self._DIAG_BYPASS_LOAD_EXTERNAL_REFS:
+                self._trace_startup("init.load_external_refs.bypassed")
+            else:
+                self._load_external_refs()
+                self._trace_startup("init.load_external_refs.done")
+
+            if self._DIAG_BYPASS_LOAD_WORK:
+                self._trace_startup("init.load_work.bypassed")
+            else:
+                self._load_work()
+                self._trace_startup("init.load_work.done")
+
             self._initialize_family_shell()
+            self._trace_startup("init.family_shell.done")
 
             # Apply stylesheet after the full initial hierarchy exists so the
             # first visible paint is not chasing late subtree polish work.
             self._apply_host_visual_style()
+            self._trace_startup("init.host_style.done")
 
             # Keep dialog actions visually consistent with secondary gray buttons.
             self._set_secondary_button_theme()
+            self._trace_startup("init.secondary_buttons.done")
 
             finalize_ui(self)
             self._close_transient_combo_popups()
             self._setup_raw_part_combo_popup_guard()
             self._install_local_event_filters()
+            self._trace_startup("init.finalize.done")
         finally:
             self.setUpdatesEnabled(True)
+            self._trace_startup("init.end")
+
+    def _trace_startup(self, event: str, **fields) -> None:
+        if not self._DIAG_TRACE_STARTUP:
+            return
+        try:
+            from config import SOURCE_DIR
+
+            payload = {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "event": event,
+                "pid": os.getpid(),
+                "dialog_class": type(self).__name__,
+            }
+            payload.update({k: v for k, v in fields.items() if v not in (None, "")})
+            path = SOURCE_DIR / "temp" / "work_editor_startup_trace.log"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+        except Exception:
+            pass
 
     def _initialize_family_shell(self) -> None:
         """Build zeros and tools tabs eagerly during construction."""
-        self._build_zeros_tab()
-        self._apply_work_payload_to_zeros_tab()
-        self._build_tools_tab()
-        self._apply_work_payload_to_tools_tab()
-        for head_key in self._head_profiles.keys():
-            self._refresh_tool_head_widgets(head_key)
-        self._sync_tool_head_view()
+        if self._DIAG_BYPASS_BUILD_ZEROS:
+            self._trace_startup("init.zeros_tab.bypassed")
+        else:
+            self._build_zeros_tab()
+            self._trace_startup("init.zeros_tab.built")
+            self._apply_work_payload_to_zeros_tab()
+            self._trace_startup("init.zeros_tab.payload_applied")
+
+        if self._DIAG_BYPASS_BUILD_TOOLS:
+            self._trace_startup("init.tools_tab.bypassed")
+        else:
+            self._build_tools_tab()
+            self._trace_startup("init.tools_tab.built")
+            if self._DIAG_BYPASS_APPLY_TOOLS_PAYLOAD:
+                self._trace_startup("init.tools_tab.payload_apply.bypassed")
+            else:
+                self._apply_work_payload_to_tools_tab()
+                self._trace_startup("init.tools_tab.payload_applied")
+
+        if self._DIAG_BYPASS_BUILD_TOOLS or self._DIAG_BYPASS_TOOLS_HEAD_SYNC:
+            self._trace_startup("init.tool_head_sync.bypassed")
+        else:
+            for head_key in self._head_profiles.keys():
+                self._refresh_tool_head_widgets(head_key)
+            self._trace_startup("init.tool_head_widgets.refreshed")
+            self._sync_tool_head_view()
+            self._trace_startup("init.tool_head_view.synced")
 
     def _close_transient_combo_popups(self) -> None:
         """Defensively close any combo popups opened during startup wiring."""

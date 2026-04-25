@@ -246,9 +246,8 @@ FIXTURE_LIBRARY_DB_PATH = _first_existing_path(
 
 NAV_ITEMS = ["SETUPS", "DRAWINGS", "LOGBOOK"]
 
-# Preload Tool Library by default in both source and frozen runs.
-# This keeps the library process warm before the user opens it from Setup
-# Manager. Diagnostics can still disable it explicitly with the env var.
+# Tool Library preload is enabled by default so Setup Manager can warm a hidden
+# library instance and keep normal handoff behavior responsive.
 ENABLE_TOOL_LIBRARY_PRELOAD = str(
     os.environ.get("NTX_ENABLE_TOOL_LIBRARY_PRELOAD", "1")
 ).strip().lower() not in {"0", "false", "no", "off"}

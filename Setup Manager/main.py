@@ -31,6 +31,50 @@ from shared.ui.transition_shell import (
 from shared.ui.transition_shell_config import get_transition_shell_config, init_transition_shell_config
 
 _log = logging.getLogger(__name__)
+_LAUNCH_TRACE_ENABLED = str(os.environ.get("NTX_TOOL_LIBRARY_LAUNCH_TRACE", "1")).strip().lower() not in {"0", "false", "no", "off"}
+_BYPASS_STARTUP_PRELOAD = str(
+    os.environ.get("NTX_DIAG_BYPASS_STARTUP_TOOL_LIBRARY_PRELOAD", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
+_ENABLE_HIDDEN_AUTO_LAUNCH = str(
+    os.environ.get("NTX_ENABLE_HIDDEN_TOOL_LIBRARY_AUTO_LAUNCH", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
+_RESET_LAUNCH_TRACE_ON_START = str(
+    os.environ.get("NTX_TOOL_LIBRARY_LAUNCH_TRACE_RESET_ON_START", "1")
+).strip().lower() in {"1", "true", "yes", "on"}
+_ENABLE_VENV_SELF_RELAUNCH = str(
+    os.environ.get("NTX_ENABLE_VENV_SELF_RELAUNCH", "1")
+).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _write_launch_trace(event: str, **fields) -> None:
+    if not _LAUNCH_TRACE_ENABLED:
+        return
+    try:
+        payload = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "event": event,
+            "pid": os.getpid(),
+        }
+        payload.update({k: v for k, v in fields.items() if v not in (None, "")})
+        path = Path(__file__).resolve().parent / "temp" / "tool_library_launch_trace.log"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except Exception:
+        pass
+
+
+def _reset_launch_trace_if_requested() -> None:
+    if not (_LAUNCH_TRACE_ENABLED and _RESET_LAUNCH_TRACE_ON_START):
+        return
+    if str(os.environ.get("SETUP_MANAGER_VENV_RELAUNCHED", "")).strip() == "1":
+        return
+    try:
+        path = Path(__file__).resolve().parent / "temp" / "tool_library_launch_trace.log"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("", encoding="utf-8")
+    except Exception:
+        pass
 
 
 def _is_runnable_python(candidate: Path) -> bool:
@@ -61,6 +105,9 @@ def _project_venv_python() -> Path | None:
 
 
 def _maybe_relaunch_with_project_venv() -> None:
+    if not _ENABLE_VENV_SELF_RELAUNCH:
+        _write_launch_trace("venv_relaunch.disabled")
+        return
     if getattr(sys, "frozen", False):
         return
     if (
@@ -82,6 +129,11 @@ def _maybe_relaunch_with_project_venv() -> None:
     if current_python == target_resolved:
         return
 
+    _write_launch_trace(
+        "venv_relaunch.spawn",
+        current_python=str(current_python),
+        target_python=str(target_resolved),
+    )
     env = os.environ.copy()
     env["SETUP_MANAGER_VENV_RELAUNCHED"] = "1"
     env["NTX_SETUP_MANAGER_VENV_RELAUNCHED"] = "1"
@@ -92,6 +144,17 @@ def _maybe_relaunch_with_project_venv() -> None:
 
 def main():
     _maybe_relaunch_with_project_venv()
+    _reset_launch_trace_if_requested()
+    _write_launch_trace(
+        "startup.flags",
+        executable=str(Path(sys.executable)),
+        cwd=str(Path.cwd()),
+        relaunched_env=str(os.environ.get("SETUP_MANAGER_VENV_RELAUNCHED", "")),
+        enable_tool_library_preload=str(os.environ.get("NTX_ENABLE_TOOL_LIBRARY_PRELOAD", "")),
+        bypass_startup_preload=bool(_BYPASS_STARTUP_PRELOAD),
+        enable_hidden_auto_launch=bool(_ENABLE_HIDDEN_AUTO_LAUNCH),
+        reset_trace_on_start=bool(_RESET_LAUNCH_TRACE_ON_START),
+    )
 
     # Avoid fractional-scale half-pixel painting artifacts on Windows.
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(
@@ -226,8 +289,9 @@ def main():
         tool_lib_args.append(f"--geometry={launch_geometry}")
 
     # Launch Tool Library immediately only when explicitly enabled.
-    if ENABLE_TOOL_LIBRARY_PRELOAD:
+    if ENABLE_TOOL_LIBRARY_PRELOAD and not _BYPASS_STARTUP_PRELOAD and _ENABLE_HIDDEN_AUTO_LAUNCH:
         preload_started = False
+        _write_launch_trace("startup_preload.begin", args=" ".join(tool_lib_args))
         if TOOL_LIBRARY_MAIN_PATH.exists() and not getattr(sys, "frozen", False):
             launch_python = Path(sys.executable)
             pythonw_candidate = launch_python.parent / "pythonw.exe"
@@ -240,13 +304,32 @@ def main():
                     str(TOOL_LIBRARY_PROJECT_DIR),
                 )
             )
+            if preload_started:
+                _write_launch_trace(
+                    "startup_preload.detached.interpreter",
+                    candidate=str(launch_python),
+                    cmd_args=" ".join([str(TOOL_LIBRARY_MAIN_PATH)] + tool_lib_args),
+                    cwd=str(TOOL_LIBRARY_PROJECT_DIR),
+                )
         if not preload_started:
             for exe_path in TOOL_LIBRARY_EXE_CANDIDATES:
                 if not is_safe_tool_library_target(exe_path):
                     continue
                 if QProcess.startDetached(str(exe_path), tool_lib_args, str(exe_path.parent)):
                     preload_started = True
+                    _write_launch_trace(
+                        "startup_preload.detached.executable",
+                        candidate=str(exe_path),
+                        cmd_args=" ".join(tool_lib_args),
+                        cwd=str(exe_path.parent),
+                    )
                     break
+        if not preload_started:
+            _write_launch_trace("startup_preload.failed")
+    elif _BYPASS_STARTUP_PRELOAD:
+        _write_launch_trace("startup_preload.bypassed")
+    elif ENABLE_TOOL_LIBRARY_PRELOAD and not _ENABLE_HIDDEN_AUTO_LAUNCH:
+        _write_launch_trace("startup_preload.hidden_auto_launch.disabled")
 
     step(2, f"{loading_header}\n\n{_lt('setup_manager.loading.load_modules', 'Loading modules...')}")
     from data.database import Database

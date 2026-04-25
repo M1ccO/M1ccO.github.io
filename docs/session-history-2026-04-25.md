@@ -200,3 +200,75 @@ The following areas were investigated but not modified due to complexity or risk
 ## Session Duration
 
 This session covered multiple topics across several hours of investigation, testing, and code changes.
+
+---
+
+## Follow-up (Same Date): Work Editor / Library Handoff Stability
+
+### Context
+
+After the above fixes, a new round of debugging focused on persistent handoff issues between Setup Manager and Tools/Jaws Library:
+1. Setup Manager freeze during some Library open/handoff paths
+2. Setup Manager freeze after editing Tool/Jaw in Library, returning to Setup Manager, then reopening Library
+
+### Root-Cause Findings
+
+1. **Pending sender transition could remain uncleared** in edge cases, making Setup Manager look frozen.
+2. **First open IPC path could still feel blocking** under stale socket states.
+3. On failing cycles, Tool Library logs showed:
+   - `ipc: request received ... show=True`
+   - but missing the next expected `selector_active_request` line,
+   indicating `apply_external_request(...)` could throw and interrupt the handoff callback chain.
+
+### Follow-up Fixes Applied
+
+#### A) Setup Manager handoff fallback timer
+
+File:
+- `Setup Manager/ui/main_window_support/library_handoff_controller.py`
+
+Changes:
+- Added fallback timer that auto-recovers sender transition if completion callback does not arrive.
+- Timer clears on normal completion/failure paths.
+
+Env:
+- `NTX_LIBRARY_HANDOFF_FALLBACK_TIMEOUT_MS` (default `4500`, `0` disables)
+
+#### B) Fast non-blocking first IPC attempt
+
+Files:
+- `Setup Manager/ui/main_window.py`
+- `Setup Manager/ui/main_window_support/library_handoff_controller.py`
+
+Changes:
+- Extended `_send_to_tool_library(...)` to accept `retries` and `timeout_ms`.
+- First open attempt now uses short timeout + single retry, then falls back to async retry.
+- Launch path is used only when needed.
+
+Env:
+- `NTX_LIBRARY_OPEN_FAST_IPC_TIMEOUT_MS` (default `220`)
+
+#### C) Exception-safe Tool Library IPC show path
+
+File:
+- `Tools and jaws Library/main.py`
+
+Changes:
+- Wrapped `win.apply_external_request(...)` in `try/except` with `logger.exception(...)`.
+- Ensured handoff/show flow continues even if apply step fails.
+- Wrapped `_show_main_window()` in guarded `try/except`; on failure still sends transition-complete callback so Setup Manager does not remain frozen.
+- Improved socket consume exception logging.
+
+### User Validation Outcome
+
+User-confirmed result after these follow-up fixes:
+
+> "OKay, now it doesn't freeze!"
+
+### Follow-up Files Changed
+
+| File | Change |
+|---|---|
+| `Setup Manager/ui/main_window_support/library_handoff_controller.py` | Added handoff fallback timer + fast IPC open dispatch |
+| `Setup Manager/ui/main_window.py` | Added retry/timeout parameters to `_send_to_tool_library(...)` |
+| `Tools and jaws Library/main.py` | Added exception-safe external request/show flow and emergency callback completion |

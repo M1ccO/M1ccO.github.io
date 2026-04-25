@@ -1,5 +1,6 @@
 ﻿from __future__ import annotations
 
+import os
 from typing import Any, Callable
 
 from PySide6.QtCore import Qt
@@ -21,6 +22,30 @@ from .tool_actions import (
     sync_tool_head_view,
     update_shared_tool_actions,
 )
+
+_DIAG_BYPASS_ORDERED_LISTS = str(
+    os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_TOOLS_ORDERED_LISTS", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
+_DIAG_BYPASS_SHARED_ACTIONS = str(
+    os.environ.get("NTX_DIAG_BYPASS_WORK_EDITOR_TOOLS_SHARED_ACTIONS", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _trace(dialog: Any, event: str, **fields) -> None:
+    fn = getattr(dialog, "_trace_startup", None)
+    if callable(fn):
+        fn(f"tools_tab.{event}", **fields)
+
+
+def _build_shared_action_placeholders(dialog: Any, parent: QWidget, remove_drop_button_cls: type) -> None:
+    dialog.shared_tool_actions = QFrame(parent)
+    dialog.shared_tool_actions.setVisible(False)
+    dialog.shared_move_up_btn = QPushButton(dialog._t("work_editor.tools.move_up", "\u25B2"), dialog.shared_tool_actions)
+    dialog.shared_move_down_btn = QPushButton(dialog._t("work_editor.tools.move_down", "\u25BC"), dialog.shared_tool_actions)
+    dialog.shared_remove_btn = remove_drop_button_cls(dialog.shared_tool_actions)
+    dialog.shared_move_up_btn.setEnabled(False)
+    dialog.shared_move_down_btn.setEnabled(False)
+    dialog.shared_remove_btn.setEnabled(False)
 
 
 class _ElidingLabel(QLabel):
@@ -65,6 +90,7 @@ def _build_machining_center_tools_tab_ui(
     remove_drop_button_cls: type,
     section_label_factory: Callable[[str], object],
 ) -> None:
+    _trace(dialog, "mc.begin")
     layout = QVBoxLayout(dialog.tools_tab)
     layout.setContentsMargins(18, 18, 18, 18)
     layout.setSpacing(12)
@@ -89,6 +115,25 @@ def _build_machining_center_tools_tab_ui(
     toolbar.addWidget(dialog.open_tool_selector_btn, 0)
     toolbar.addStretch(1)
     layout.addLayout(toolbar)
+
+    if _DIAG_BYPASS_ORDERED_LISTS:
+        _trace(dialog, "mc.ordered_lists.bypassed")
+        placeholder = QFrame(dialog.tools_tab)
+        placeholder.setProperty("toolIdsScrollSurface", True)
+        ph_layout = QVBoxLayout(placeholder)
+        ph_layout.setContentsMargins(8, 8, 8, 8)
+        ph_layout.addWidget(
+            QLabel(
+                dialog._t("work_editor.diag.tools_lists_bypassed", "Tools list diagnostics bypass enabled."),
+                placeholder,
+            )
+        )
+        placeholder.setMinimumHeight(280)
+        layout.addWidget(placeholder, 2)
+        _build_shared_action_placeholders(dialog, dialog.tools_tab, remove_drop_button_cls)
+        layout.addWidget(dialog.shared_tool_actions, 0)
+        _trace(dialog, "mc.end")
+        return
 
     host = ResponsiveColumnsHost(switch_width=820)
     ordered = ordered_tool_list_cls(
@@ -126,6 +171,13 @@ def _build_machining_center_tools_tab_ui(
     tool_ids_scroll_surface_layout.addWidget(host, 1)
     tool_ids_scroll_surface.setMinimumHeight(280)
     layout.addWidget(tool_ids_scroll_surface, 2)
+
+    if _DIAG_BYPASS_SHARED_ACTIONS:
+        _trace(dialog, "mc.shared_actions.bypassed")
+        _build_shared_action_placeholders(dialog, dialog.tools_tab, remove_drop_button_cls)
+        layout.addWidget(dialog.shared_tool_actions, 0)
+        _trace(dialog, "mc.end")
+        return
 
     dialog.shared_tool_actions = QFrame(dialog.tools_tab)
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)
@@ -215,6 +267,7 @@ def _build_machining_center_tools_tab_ui(
 
     _refresh_mc_tools_op_options()
     update_shared_tool_actions(dialog)
+    _trace(dialog, "mc.end")
 
 
 def build_tools_tab_ui(
@@ -225,6 +278,12 @@ def build_tools_tab_ui(
     section_label_factory: Callable[[str], object],
 ) -> None:
     """Build the Tools tab while keeping dialog state ownership intact."""
+    _trace(
+        dialog,
+        "begin",
+        bypass_ordered_lists=bool(_DIAG_BYPASS_ORDERED_LISTS),
+        bypass_shared_actions=bool(_DIAG_BYPASS_SHARED_ACTIONS),
+    )
     if is_machining_center(dialog.machine_profile):
         _build_machining_center_tools_tab_ui(
             dialog,
@@ -316,6 +375,25 @@ def build_tools_tab_ui(
     dialog.print_pots_checkbox.toggled.connect(dialog._on_print_pots_toggled)
 
     layout.addLayout(toolbar)
+
+    if _DIAG_BYPASS_ORDERED_LISTS:
+        _trace(dialog, "ordered_lists.bypassed")
+        placeholder = QFrame(dialog.tools_tab)
+        placeholder.setProperty("toolIdsScrollSurface", True)
+        placeholder_layout = QVBoxLayout(placeholder)
+        placeholder_layout.setContentsMargins(8, 8, 8, 8)
+        placeholder_layout.addWidget(
+            QLabel(
+                dialog._t("work_editor.diag.tools_lists_bypassed", "Tools list diagnostics bypass enabled."),
+                placeholder,
+            )
+        )
+        placeholder.setMinimumHeight(280)
+        layout.addWidget(placeholder, 2)
+        _build_shared_action_placeholders(dialog, dialog.tools_tab, remove_drop_button_cls)
+        layout.addWidget(dialog.shared_tool_actions, 0)
+        _trace(dialog, "end")
+        return
 
     tools_scroll = QScrollArea(_tools_parent)
     tools_scroll.setProperty("toolIdsScrollArea", True)
@@ -413,6 +491,14 @@ def build_tools_tab_ui(
 
     layout.addWidget(tool_ids_scroll_surface, 2)
 
+    if _DIAG_BYPASS_SHARED_ACTIONS:
+        _trace(dialog, "shared_actions.bypassed")
+        _build_shared_action_placeholders(dialog, dialog.tools_tab, remove_drop_button_cls)
+        layout.addWidget(dialog.shared_tool_actions, 0)
+        sync_tool_head_view(dialog)
+        _trace(dialog, "end")
+        return
+
     dialog.shared_tool_actions = QFrame(dialog.tools_tab)
     shared_actions_layout = QHBoxLayout(dialog.shared_tool_actions)
     shared_actions_layout.setContentsMargins(8, 8, 8, 0)
@@ -458,4 +544,5 @@ def build_tools_tab_ui(
 
     sync_tool_head_view(dialog)
     update_shared_tool_actions(dialog)
+    _trace(dialog, "end")
 

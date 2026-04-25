@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QSize, Signal
 from PySide6.QtGui import QDrag
 from PySide6.QtWidgets import QAbstractItemView, QListWidget, QPushButton, QWidget
 
@@ -176,6 +176,17 @@ class ToolAssignmentListWidget(QListWidget):
         super().dropEvent(event)
         if event.source() is self:
             self.orderChanged.emit()
+
+    def sizeHint(self) -> QSize:
+        h = self.frameWidth() * 2
+        for i in range(self.count()):
+            item = self.item(i)
+            sh = item.sizeHint() if item is not None else QSize()
+            h += sh.height() if sh.isValid() and sh.height() > 0 else self.sizeHintForRow(i)
+        return QSize(super().sizeHint().width(), max(h, self.minimumHeight()))
+
+    def minimumSizeHint(self) -> QSize:
+        return self.sizeHint()
 
     def mousePressEvent(self, event):
         clear_selection_on_blank_click(self, event)

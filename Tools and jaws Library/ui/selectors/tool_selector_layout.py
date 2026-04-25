@@ -369,7 +369,7 @@ class ToolSelectorLayoutMixin:
             )
             assignment_frame.setProperty('selectorAssignmentsFrame', True)
             assignment_frame.setProperty('toolIdsPanel', True)
-            assignment_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            assignment_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
             assignment_layout = QVBoxLayout(assignment_frame)
             assignment_layout.setContentsMargins(8, 10, 8, 8)
             assignment_layout.setSpacing(4)
