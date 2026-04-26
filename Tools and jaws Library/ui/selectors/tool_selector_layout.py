@@ -205,6 +205,8 @@ class ToolSelectorLayoutMixin:
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        if getattr(self, '_embedded_mode', False):
+            return
         # Apply dropdown style on first show — at this point Qt's popup container
         # exists and view.window() returns the real floating popup, not the dialog.
         if hasattr(self, 'type_filter') and not getattr(self, '_type_filter_styled', False):

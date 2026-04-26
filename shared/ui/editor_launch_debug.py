@@ -331,6 +331,9 @@ def cleanup_hidden_orphan_top_levels(host: Any = None, *, reason: str = "") -> i
                 continue
 
             title = str(widget.windowTitle() or "").strip()
+            if bool(widget.property("_previewRuntimeRegistered")):
+                editor_launch_debug("cleanup.skipped_runtime_widget", class_name=type(widget).__name__)
+                continue
             should_cleanup = (
                 class_name in basic_widget_classes
                 or title in {"", "python3", "pythonw3", "pythonw", "Loading"}
@@ -351,13 +354,12 @@ def cleanup_hidden_orphan_top_levels(host: Any = None, *, reason: str = "") -> i
         except Exception:
             continue
 
-    if cleaned:
-        editor_launch_debug(
-            "cleanup.hidden_orphan_top_levels",
-            reason=reason,
-            cleaned=cleaned,
-            widgets=cleaned_items,
-        )
+    editor_launch_debug(
+        "cleanup.hidden_orphan_top_levels",
+        reason=reason,
+        cleaned=cleaned,
+        widgets=cleaned_items,
+    )
     return cleaned
 
 

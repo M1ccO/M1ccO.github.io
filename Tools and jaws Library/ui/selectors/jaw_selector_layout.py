@@ -86,7 +86,8 @@ class JawSelectorLayoutMixin:
         self.view_filter.addItem(self._t('jaw_library.nav.soft_jaws', 'Pehmeät leuat'), 'soft')
         self.view_filter.addItem(self._t('jaw_library.nav.hard_group', 'Kovat / teräkäs / erikois'), 'hard_group')
         self.view_filter.currentIndexChanged.connect(self._refresh_catalog)
-        apply_shared_dropdown_style(self.view_filter)
+        if not getattr(self, '_embedded_mode', False):
+            apply_shared_dropdown_style(self.view_filter)
 
         self.preview_window_btn = build_preview_toggle(
             TOOL_ICONS_DIR,

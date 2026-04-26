@@ -272,3 +272,75 @@ User-confirmed result after these follow-up fixes:
 | `Setup Manager/ui/main_window_support/library_handoff_controller.py` | Added handoff fallback timer + fast IPC open dispatch |
 | `Setup Manager/ui/main_window.py` | Added retry/timeout parameters to `_send_to_tool_library(...)` |
 | `Tools and jaws Library/main.py` | Added exception-safe external request/show flow and emergency callback completion |
+
+---
+
+## Session 2026-04-25 Part 2: Selector Flash Fix + Embedded-Only Migration
+
+### Context
+
+User reported seeing a "separate Python instance flash" when opening the Tool Selector from Work Editor's TOOL IDs tab. The flash appears just before the selector dialog opens.
+
+Additionally, since the embedded selector is now working, there was a decision to **remove the detached/IPC selector path entirely** and make embedded mode the only option.
+
+### Investigation
+
+1. **Initial hypothesis**: The flash came from Tool Library being launched via IPC when opening selector
+2. **Embedded vs IPC mode**: Determined selector can run in either embedded (widget inside Work Editor) or IPC (detached Tool Library window) mode
+3. **Screenshot analysis**: The selector appears embedded (shows catalog inside Work Editor window), but flash still occurs
+
+### Changes Made
+
+#### A) Removed IPC/Detached Selector Path (Embedded-Only)
+
+**Setup Manager/config.py:**
+- Removed `WORK_EDITOR_SELECTOR_MODE` environment variable
+
+**Setup Manager/ui/work_editor_support/selector_session_controller.py:**
+- Removed `_transport_mode` attribute and `_resolve_transport_mode()` method
+- Removed `_try_open_via_ipc()` method entirely
+- Simplified `_open_selector_request()` to only call `_try_open_embedded()`
+- Removed IPC fallback at end of `_open_selector_request()`
+- Removed IPC-related imports (`launch_tool_library`, `send_to_tool_library`, etc.)
+- Removed IPC state variables (`_pending_ipc_request_id`, `_pending_ipc_kind`, `_ipc_saved_geometry`)
+- Simplified `receive_ipc_result()` to a no-op (embedded selector doesn't use IPC)
+- Removed `_transport_mode` from log payload
+- Disabled preview host preload by default (`NTX_ENABLE_SELECTOR_PREVIEW_HOST_PRELOAD` defaults to "0")
+
+**Setup Manager/config.py:**
+- Disabled Tool Library preload at startup: `ENABLE_TOOL_LIBRARY_PRELOAD` now defaults to "0"
+
+#### B) Debug Logging Added
+
+Added detailed debug logging to trace selector open flow:
+- `SELECTOR_OPEN_BEGIN / END` in `_open_selector_request()`
+- `TRY_OPEN_EMBEDDED_BEGIN / coordinator_check / before_build_widget / widget_shown / returning_true` in `_try_open_embedded()`
+- Logging to help identify exactly where flash occurs
+
+### Files Changed
+
+| File | Change |
+|---|---|
+| `Setup Manager/config.py` | Removed WORK_EDITOR_SELECTOR_MODE, disabled ENABLE_TOOL_LIBRARY_PRELOAD |
+| `Setup Manager/ui/work_editor_support/selector_session_controller.py` | Full IPC/detached removal, embedded-only, debug logging |
+| `Tools and jaws Library/main.py` | Reverted changes (not needed for embedded) |
+| `Tools and jaws Library/ui/main_window.py` | Reverted changes (not needed for embedded) |
+
+### Current Status
+
+**Flash still occurring.** Debug logging added but root cause not yet identified.
+
+The flash appears to happen BEFORE the selector opens (user sees flash, then selector appears). Possible causes still under investigation:
+1. Something at import time in tools_and_jaws_library selectors triggering subprocess launch
+2. Background preload code still launching Tool Library
+3. Qt window state changes during selector initialization
+
+### Smoke Test
+
+All changes pass smoke test.
+
+---
+
+## Session Still Active
+
+The flash fix is still unresolved. Next step: Continue debugging with the added logging to pinpoint exactly when/where the flash occurs.

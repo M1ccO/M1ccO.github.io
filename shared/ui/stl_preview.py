@@ -328,7 +328,7 @@ class StlPreviewWidget(QWidget):
             visible=self.isVisible(),
             window_active=self.window().isActiveWindow() if self.window() is not None else "",
         )
-        if self._should_start_web_view():
+        if self._should_start_web_view() and self._web is None:
             editor_launch_debug(
                 "stl_preview.webview.ensure_scheduled",
                 launch_id=editor_launch_id(self),

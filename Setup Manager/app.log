@@ -10102,3 +10102,211 @@ json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 2026-04-25 09:16:20,676 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
 2026-04-25 09:17:02,450 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
 2026-04-25 09:19:27,476 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:23:12,677 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:24:34,414 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:25:00,597 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:38:38,145 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:41:44,053 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:44:02,443 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:47:57,508 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:48:40,262 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:58:45,884 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 09:59:04,629 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:00:17,742 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:00:51,556 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:04:14,976 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:07:01,287 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:12:49,476 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:13:19,170 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:19:02,944 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:19:14,277 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:19:48,481 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:23:46,348 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:24:13,578 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:24:31,386 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:24:51,266 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:25:51,272 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:25:51,810 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:26:07,462 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 10:26:58,492 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:12:17,884 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:13:53,819 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:16:05,650 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:23:37,963 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:32:29,530 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:33:58,897 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:35:19,916 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:36:18,165 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:38:29,055 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:40:33,634 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:41:57,867 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 11:46:16,900 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 12:35:12,196 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 12:42:35,631 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 12:48:00,970 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 12:54:58,330 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:07:18,187 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:07:55,857 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:08:33,875 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:10:44,214 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:13:29,349 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:20:38,909 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:22:50,022 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:26:40,740 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:29:13,588 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:31:09,817 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:32:28,782 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-25 13:37:18,957 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 06:57:06,209 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 06:58:38,412 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 06:59:50,445 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:03:28,739 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:03:29,118 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:20:56,380 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:22:38,024 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:24:51,770 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:33:11,831 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:34:18,077 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:34:35,003 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:36:16,569 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:36:50,816 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:38:20,172 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:39:47,048 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:42:07,359 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:42:27,501 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:46:47,473 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:48:30,499 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:48:54,398 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 07:53:46,274 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:03:21,709 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:08:16,531 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:10:42,032 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:11:03,361 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:15:07,109 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:15:36,565 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:15:53,190 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:19:44,270 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:20:08,131 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:21:22,269 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:21:34,864 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:40:12,317 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:40:23,729 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:40:31,661 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:46:45,209 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:50:01,080 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 08:56:03,023 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:04:37,924 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:05:28,541 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:08:52,582 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:19:45,757 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:33:25,656 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:33:25,657 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:36:55,192 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:49:17,108 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-26 09:49:17,110 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:49:17,111 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:49:17,400 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-26 09:49:17,401 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-26 09:49:17,420 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-26 09:49:17,428 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-26 09:49:17,435 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-26 09:49:17,474 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp5ezjahtl\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-26 09:49:17,475 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmp5ezjahtl\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-26 09:49:17,480 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-26 09:49:23,179 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:49:47,443 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:51:02,314 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-26 09:51:02,316 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:51:02,317 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 09:51:02,612 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-26 09:51:02,612 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-26 09:51:02,630 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-26 09:51:02,637 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-26 09:51:02,644 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-26 09:51:02,683 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmptwmjju93\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-26 09:51:02,683 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\Omistaja\AppData\Local\Temp\tmptwmjju93\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\Omistaja\Desktop\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 337, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.10_3.10.3056.0_x64__qbz5n2kfra8p0\lib\json\decoder.py", line 355, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-26 09:51:02,686 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-26 09:51:20,298 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:58:45,741 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 09:59:51,113 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:05:44,892 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:09:42,225 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:14:31,886 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:17:56,611 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:24:32,395 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:26:16,112 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:35:01,512 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:35:33,377 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:48:13,764 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:55:31,518 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 10:59:36,941 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 11:04:38,396 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 11:42:58,397 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 11:51:03,643 ui.main_window_support.library_ipc INFO Tool Library launch detached via interpreter: C:\Users\Omistaja\Desktop\NTX Setup Manager\.venv\Scripts\pythonw.exe
+2026-04-26 12:11:00,019 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=ntx_2sp_2h raw_param=ntx_2sp_2h raw_prefs=ntx_2sp_2h
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}

@@ -1213,7 +1213,7 @@ class WorkEditorSelectorController:
         if _BYPASS_SELECTOR_PREVIEW_HOST_PRELOAD:
             self._log("preview_host_preload.bypassed")
             return
-        if self._transport_mode != "embedded" or self._preview_host_preload_scheduled:
+        if self._transport_mode == "embedded" or self._preview_host_preload_scheduled:
             return
 
         self._preview_host_preload_scheduled = True
@@ -1463,13 +1463,14 @@ class WorkEditorSelectorController:
             self._detach_active_embedded_widget()
             dialog = self._dialog
 
-            # Suppress repaints for the stack switch and widget show.
-            # No resize happens (dialog already at selector size) so
-            # setUpdatesEnabled is sufficient — one composed frame on re-enable.
+            # Make the lightweight selector host current before constructing
+            # the real selector subtree. Native-heavy children must be born
+            # under their final visible parent chain, not a hidden stack page.
             _set_updates = getattr(dialog, "setUpdatesEnabled", None)
             if callable(_set_updates):
                 _set_updates(False)
             try:
+                self._enter_mode()
                 widget = build_embedded_selector_parity_widget(
                     dialog,
                     mount_container=mount,
@@ -1498,13 +1499,11 @@ class WorkEditorSelectorController:
 
                 widget.show()
                 widget.updateGeometry()
-                self._enter_mode()
             finally:
                 if callable(_set_updates):
                     _set_updates(True)
 
             widget.raise_()
-            widget.activateWindow()
             # Selector is visible at Work Editor size. After a short pause so
             # the user registers the open, animate the dialog to full width.
             QTimer.singleShot(

@@ -110,8 +110,9 @@ class SelectorWidgetBase(QWidget):
         translate: Callable[[str, str | None], str],
         on_cancel: Callable[[], None],
         parent=None,
+        window_flags: Qt.WindowType | Qt.WindowFlags = Qt.Tool,
     ):
-        super().__init__(parent)
+        super().__init__(parent, window_flags)
         self.setProperty('selectorEmbedded', True)
         self.setProperty('rowAreaSurface', True)
         self._translate = translate

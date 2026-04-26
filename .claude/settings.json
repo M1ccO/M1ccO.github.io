@@ -31,7 +31,27 @@
       "Bash(python -m py_compile \"Tools and jaws Library/ui/fixture_page_support/topbar_builder.py\")",
       "Bash(python -m py_compile \"Setup Manager/ui/main_window.py\")",
       "Bash(python -m py_compile \"Setup Manager/ui/setup_page.py\")",
-      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/home_page_support/topbar_builder.py\" \"Tools and jaws Library/ui/jaw_page_support/topbar_builder.py\" \"Tools and jaws Library/ui/fixture_page_support/topbar_builder.py\" \"Setup Manager/ui/setup_page.py\")"
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/home_page_support/topbar_builder.py\" \"Tools and jaws Library/ui/jaw_page_support/topbar_builder.py\" \"Tools and jaws Library/ui/fixture_page_support/topbar_builder.py\" \"Setup Manager/ui/setup_page.py\")",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/selectors/tool_selector_dialog.py\")",
+      "Bash(.venv/Scripts/python.exe scripts/import_path_checker.py)",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"shared/ui/cards/mini_assignment_card.py\" \"Tools and jaws Library/ui/selectors/tool_selector_dialog.py\")",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/selectors/tool_selector_dialog.py\" \"shared/ui/cards/mini_assignment_card.py\")",
+      "Bash(.venv\\\\Scripts\\\\python.exe -m py_compile \"Tools and jaws Library/ui/selectors/tool_selector_dialog.py\")",
+      "Bash(awk '/^class ToolSelectorDialog/,/^class / {print NR\": \"$0}' \"Tools and jaws Library/ui/selectors/tool_selector_dialog.py\")",
+      "Bash(tail -50 \"Tools and jaws Library/app.log\")",
+      "Bash(tail -50 \"Setup Manager/app.log\")",
+      "Bash(python -c \"from pathlib import Path; p = Path\\('Tools and jaws Library/assets/icons/tools/menu_open.svg'\\); print\\(p.exists\\(\\)\\)\")",
+      "Bash(.venv/Scripts/python.exe -c ' *)",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/main_window.py\")",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/home_page.py\")",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/jaw_page.py\")",
+      "Bash(QT_QPA_PLATFORM=offscreen timeout 10 .venv/Scripts/python.exe \"Tools and jaws Library/main.py\")",
+      "Bash(echo \"EXIT_CODE: $?\")",
+      "Bash(grep -v \"^$\\\\|GPU\\\\|raster\\\\|context\\\\|Surface\\\\|SkSurface\\\\|backing\\\\|decoder\\\\|image\")",
+      "Bash(.venv/Scripts/python.exe scripts/smoke_test.py)",
+      "Bash(QT_QPA_PLATFORM=offscreen .venv/Scripts/python.exe -m unittest tests/test_work_editor_embedded_selector.py)",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/tool_editor_dialog.py\")",
+      "Bash(.venv/Scripts/python.exe -m py_compile \"Tools and jaws Library/ui/jaw_editor_dialog.py\")"
     ]
   }
 }

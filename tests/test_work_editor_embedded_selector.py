@@ -1211,6 +1211,140 @@ class TestFixtureSelectorReset(unittest.TestCase):
         self.assertEqual([("OP20", "OP20")], dummy.target_filter.items)
 
 
+class TestEmbeddedSelectorRuntimeConstruction(unittest.TestCase):
+    class _MachineProfile:
+        supports_print_pots = True
+        supports_second_head = True
+        supports_sub_spindle = True
+
+    class _ToolService:
+        @staticmethod
+        def list_tools(**_kwargs):
+            return [
+                {
+                    "uid": 1,
+                    "id": "T1001",
+                    "tool_id": "T1001",
+                    "description": "Ulkorouhinta - 55/R1.2",
+                    "tool_type": "turning",
+                    "tool_head": "HEAD1",
+                }
+            ]
+
+    class _JawService:
+        @staticmethod
+        def list_jaws(**_kwargs):
+            return [
+                {
+                    "jaw_id": "BG00913834-1",
+                    "jaw_type": "Soft jaws",
+                    "spindle_side": "main",
+                    "diameter": "84",
+                }
+            ]
+
+    @staticmethod
+    def _t(_key, default=None, **_kwargs):
+        return default or ""
+
+    @staticmethod
+    def _import_embedded_selector_class(module_name: str, class_name: str):
+        tools_root = str(_TOOLS_ROOT)
+        previous_config = sys.modules.pop("config", None)
+        previous_ui_modules = {
+            name: sys.modules.pop(name)
+            for name in list(sys.modules.keys())
+            if name == "ui" or name.startswith("ui.")
+        }
+        if tools_root in sys.path:
+            sys.path.remove(tools_root)
+        sys.path.insert(0, tools_root)
+        try:
+            module = importlib.import_module(module_name)
+            return getattr(module, class_name)
+        finally:
+            try:
+                sys.path.remove(tools_root)
+            except ValueError:
+                pass
+            for name in list(sys.modules.keys()):
+                if name == "ui" or name.startswith("ui."):
+                    sys.modules.pop(name, None)
+            sys.modules.update(previous_ui_modules)
+            if previous_config is None:
+                sys.modules.pop("config", None)
+            else:
+                sys.modules["config"] = previous_config
+
+    def test_tool_selector_uses_flash_free_catalog_and_emits_payload(self):
+        EmbeddedToolSelectorWidget = self._import_embedded_selector_class(
+            "ui.selectors.tool_selector_dialog",
+            "EmbeddedToolSelectorWidget",
+        )
+        payloads = []
+        widget = EmbeddedToolSelectorWidget(
+            tool_service=self._ToolService(),
+            machine_profile=self._MachineProfile(),
+            translate=self._t,
+            selector_head="HEAD1",
+            selector_spindle="main",
+            initial_assignments=[
+                {
+                    "uid": 1,
+                    "id": "T1001",
+                    "tool_id": "T1001",
+                    "description": "Ulkorouhinta - 55/R1.2",
+                    "tool_type": "turning",
+                    "spindle": "main",
+                }
+            ],
+            initial_assignment_buckets=None,
+            on_submit=payloads.append,
+            on_cancel=lambda: None,
+        )
+        self.addCleanup(widget.deleteLater)
+
+        self.assertEqual("EmbeddedToolCatalogView", type(widget.list_view).__name__)
+        self.assertEqual("toolIdsOrderList", widget.assignment_lists["main"].objectName())
+        widget._send_selector_selection()
+
+        self.assertEqual("tools", payloads[-1]["kind"])
+        self.assertEqual("HEAD1", payloads[-1]["selector_head"])
+        self.assertEqual("main", payloads[-1]["selector_spindle"])
+        self.assertEqual("T1001", payloads[-1]["selected_items"][0]["tool_id"])
+
+    def test_jaw_selector_uses_flash_free_catalog_old_slot_widget_and_emits_payload(self):
+        EmbeddedJawSelectorWidget = self._import_embedded_selector_class(
+            "ui.selectors.jaw_selector_dialog",
+            "EmbeddedJawSelectorWidget",
+        )
+        payloads = []
+        widget = EmbeddedJawSelectorWidget(
+            jaw_service=self._JawService(),
+            machine_profile=self._MachineProfile(),
+            translate=self._t,
+            selector_spindle="main",
+            initial_assignments=[
+                {
+                    "jaw_id": "BG00913834-1",
+                    "jaw_type": "Soft jaws",
+                    "spindle_side": "main",
+                }
+            ],
+            on_submit=payloads.append,
+            on_cancel=lambda: None,
+        )
+        self.addCleanup(widget.deleteLater)
+
+        self.assertEqual("EmbeddedJawCatalogView", type(widget.list_view).__name__)
+        self.assertEqual("JawAssignmentSlot", type(widget.slot_main).__name__)
+        widget._send_selector_selection()
+
+        self.assertEqual("jaws", payloads[-1]["kind"])
+        self.assertEqual("BG00913834-1", payloads[-1]["selected_items"][0]["jaw_id"])
+        self.assertEqual("main", payloads[-1]["selected_items"][0]["slot"])
+
+
 class _DummyToggleButton:
     def __init__(self, checked: bool = True):
         self._checked = bool(checked)

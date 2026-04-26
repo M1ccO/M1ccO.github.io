@@ -216,6 +216,7 @@ QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][selected="true
 QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][selected="true"]:hover {
     background-color: #ffffff;
     border: 2px solid #00C8FF;
+    border-radius: 8px;
     padding: 0px;
 }
 

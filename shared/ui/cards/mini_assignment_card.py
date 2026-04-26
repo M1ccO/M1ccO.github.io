@@ -19,6 +19,57 @@ from PySide6.QtWidgets import (
 class MiniAssignmentCard(QFrame):
     editRequested = Signal()
 
+    # QSS applied per-card when inside a QListWidget (viewport blocks ancestor cascade).
+    # Mirrors the QWidget[selectorContext="true"] rules in 60-catalog.qss exactly.
+    SELECTOR_CONTEXT_QSS = """
+QFrame[miniAssignmentCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #99acbf;
+    border-radius: 8px;
+    min-height: 34px;
+    padding: 1px;
+}
+QFrame[miniAssignmentCard="true"][hasComment="true"] {
+    min-height: 42px;
+}
+QFrame[miniAssignmentCard="true"]:hover {
+    background-color: #ffffff;
+}
+QFrame[miniAssignmentCard="true"][selected="true"],
+QFrame[miniAssignmentCard="true"][selected="true"]:hover {
+    background-color: #ffffff;
+    border: 2px solid #00C8FF;
+    border-radius: 8px;
+    padding: 0px;
+}
+QFrame[miniAssignmentCard="true"] QLabel {
+    background-color: transparent;
+}
+QFrame[miniAssignmentCard="true"][selected="true"] QLabel {
+    color: #24303c;
+}
+QLabel[miniAssignmentTitle="true"] {
+    font-size: 10.8pt;
+    font-weight: 600;
+    color: #171a1d;
+}
+QLabel[miniAssignmentMeta="true"] {
+    font-size: 8.4pt;
+    font-weight: 600;
+    color: #2b3136;
+}
+QLabel[miniAssignmentHint="true"] {
+    font-size: 8.4pt;
+    font-weight: 500;
+    color: #617180;
+}
+"""
+
+    def apply_selector_context_style(self) -> None:
+        """Apply selector card QSS directly — bypasses QListWidget viewport boundary."""
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(self.SELECTOR_CONTEXT_QSS)
+
     def __init__(
         self,
         icon: QIcon,

@@ -199,6 +199,7 @@ def main():
         return str(_texts.get(key, default))
 
     app = QApplication(sys.argv)
+
     init_transition_shell_config()
     app.setStyle("Fusion")
     app.setPalette(_build_fixed_light_palette())

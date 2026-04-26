@@ -252,6 +252,7 @@ class MainWindow(QMainWindow):
         self._applying_external_frame_geometry = False
         self._external_geometry_clamp_suspended = False
         self._external_geometry_clamp_release_timer = None
+        self._disabled_graphics_effects: list = []
         self.setWindowTitle(self._t("tool_library.window_title", APP_TITLE))
         self.resize(1280, 780)
         self._build_ui(self.tool_service, self.jaw_service, self.fixture_service, self.export_service, self.settings_service)
@@ -1657,7 +1658,7 @@ class MainWindow(QMainWindow):
         # Plain module-open payloads (buttons in Setup Manager) must not be
         # overridden by stale kind values from prior requests.
         if kind in {"tool", "jaw"} and item_id:
-            # Honor explicit module requests from Setup Manager. This prevents a
+            # Honor explicit module requests from the caller. This prevents a
             # stale deep-link kind from flipping the active library module on
             # reopen after editor/handoff cycles.
             if module in {'tools', 'jaws', 'fixtures'}:

@@ -16,6 +16,9 @@ _BYPASS_BACKGROUND_PRELOAD = str(
 _ENABLE_HIDDEN_AUTO_LAUNCH = str(
     os.environ.get("NTX_ENABLE_HIDDEN_TOOL_LIBRARY_AUTO_LAUNCH", "1")
 ).strip().lower() in {"1", "true", "yes", "on"}
+_BYPASS_PRELOAD_WHEN_EMBEDDED = str(
+    os.environ.get("NTX_BYPASS_PRELOAD_IN_EMBEDDED_MODE", "0")
+).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _write_preload_trace(event: str, **fields) -> None:
@@ -171,6 +174,11 @@ def preload_tool_library_background(window) -> None:
         window._tool_library_preload_completed = True
         return
 
+    if _BYPASS_PRELOAD_WHEN_EMBEDDED:
+        _write_preload_trace("preload.background.bypassed_for_embedded")
+        window._tool_library_preload_completed = True
+        return
+
     if window._launch_tool_library(["--hidden"]):
         _write_preload_trace("preload.background.launch_started")
         window._tool_library_preload_launch_started = True
@@ -184,5 +192,3 @@ def retry_tool_library_preload(window) -> None:
         return
     window._tool_library_preload_scheduled = False
     preload_tool_library_background(window)
-
-

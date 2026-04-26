@@ -362,6 +362,78 @@ QWidget[selectorContext="true"] QFrame[selectorInfoHeader="true"] {
     border: 1px solid #c8d4e0;
     border-radius: 6px;
 }
+QWidget[selectorContext="true"] QFrame[embeddedSelectorToolbar="true"] {
+    background-color: #ffffff;
+    border: 1px solid #d5dee8;
+    border-radius: 8px;
+}
+QWidget[selectorContext="true"] QLabel[embeddedSectionTitle="true"] {
+    font-size: 10pt;
+    font-weight: 700;
+    color: #263442;
+    background: transparent;
+}
+QWidget[selectorContext="true"] QListWidget#embeddedCatalogList {
+    background-color: #ffffff;
+    border: 1px solid #d0d8e0;
+    border-radius: 8px;
+    outline: none;
+    padding: 6px;
+}
+QWidget[selectorContext="true"] QListWidget#embeddedCatalogList::item {
+    background-color: #ffffff;
+    border: 1px solid #cad6e2;
+    border-radius: 7px;
+    padding: 8px 10px;
+    margin: 3px;
+    color: #18232f;
+}
+QWidget[selectorContext="true"] QListWidget#embeddedCatalogList::item:hover {
+    background-color: #f6fbff;
+    border: 1px solid #a9c5df;
+}
+QWidget[selectorContext="true"] QListWidget#embeddedCatalogList::item:selected {
+    background-color: #e8f5ff;
+    border: 2px solid #00C8FF;
+    color: #13202b;
+}
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 4px;
+}
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList::item {
+    background-color: #ffffff;
+    border: 1px solid #99acbf;
+    border-radius: 8px;
+    padding: 7px 9px;
+    margin: 3px 1px;
+    color: #171a1d;
+}
+QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected {
+    background-color: #ffffff;
+    border: 2px solid #00C8FF;
+    color: #24303c;
+}
+QWidget[selectorContext="true"] QPushButton[embeddedSlotCard="true"] {
+    background-color: #ffffff;
+    border: 1px solid #99acbf;
+    border-radius: 8px;
+    padding: 10px;
+    color: #171a1d;
+    text-align: left;
+    font-weight: 600;
+}
+QWidget[selectorContext="true"] QPushButton[embeddedSlotCard="true"]:hover {
+    background-color: #f6fbff;
+    border: 1px solid #7fb5dc;
+}
+QWidget[selectorContext="true"] QPushButton[embeddedSlotCard="true"]:checked {
+    background-color: #ffffff;
+    border: 2px solid #00C8FF;
+    color: #24303c;
+}
 QWidget[selectorContext="true"] QLabel[toolBadge="true"] {
     background-color: #e7f1fb;
     color: #1d5f9d;
@@ -418,19 +490,19 @@ QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item {
     padding: 0px;
     margin: 0px;
 }
-QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:hover {
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList::item:hover {
     background-color: transparent;
     border: none;
 }
 
-QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected,
-QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected:active,
-QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::item:selected:!active {
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList::item:selected,
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList::item:selected:active,
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList::item:selected:!active {
     background-color: transparent;
     border: none;
     color: inherit;
 }
-QWidget[selectorContext="true"] QListWidget#toolIdsOrderList::viewport {
+QWidget[selectorContext="true"] QListWidget#legacyToolIdsOrderList::viewport {
     background: transparent;
     border: none;
     border-radius: 0px;
@@ -470,7 +542,8 @@ QWidget[selectorContext="true"] QFrame[miniAssignmentCard="true"][catalogDragOve
         if combo.objectName() == "topTypeFilter":
             combo.setProperty("modernDropdown", True)
             combo.setProperty("dropdownSizeProfile", "compact")
-            apply_shared_dropdown_style(combo)
+            if not bool(getattr(widget, "_embedded_mode", False)):
+                apply_shared_dropdown_style(combo)
     style = widget.style()
     if style is not None:
         style.unpolish(widget)
@@ -658,9 +731,8 @@ def build_embedded_selector_parity_widget(
     # mount container with child-widget flags so they cannot surface as native
     # top-level windows.
     widget.setParent(parent_widget, Qt.Widget)
-    widget.setWindowFlag(Qt.Window, False)
-    widget.setWindowModality(Qt.NonModal)
-    widget.setVisible(False)
+    widget.hide()
+
     _trace_selector_event(
         dialog,
         "factory.build.reparented",
