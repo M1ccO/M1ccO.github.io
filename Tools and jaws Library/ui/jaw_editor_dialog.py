@@ -293,6 +293,7 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
 
     def _load_jaw(self):
         self._preview_orientation_applied = False
+        self._captured_base_rotation = None
         if not self.jaw:
             self._update_measurement_summary_label()
             return
@@ -394,8 +395,39 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
     def _refresh_models_preview(self):
         self._preview_controller.refresh_models_preview()
         if self.jaw and hasattr(self.models_preview, 'set_alignment_plane') and not getattr(self, '_preview_orientation_applied', False):
+            # Restore the saved base rotation (group orientation from orientObjectVertically)
+            # before applying alignment plane so the coordinate frame is stable across sessions.
+            base_rx = float(self.jaw.get('preview_base_rot_x') or 0)
+            base_ry = float(self.jaw.get('preview_base_rot_y') or 0)
+            base_rz = float(self.jaw.get('preview_base_rot_z') or 0)
+            if base_rx or base_ry or base_rz:
+                self.models_preview.set_base_rotation(base_rx, base_ry, base_rz)
             apply_jaw_preview_transform(self.models_preview, self.jaw)
             self._preview_orientation_applied = True
+            # If no saved base rotation, capture it after the model loads so next
+            # save will persist it and stabilize the coordinate frame.
+            if not (base_rx or base_ry or base_rz) and hasattr(self.models_preview, 'model_loaded'):
+                try:
+                    self.models_preview.model_loaded.connect(self._on_first_model_loaded_capture_base)
+                except Exception:
+                    pass
+
+    def _on_first_model_loaded_capture_base(self, _payload=None):
+        try:
+            self.models_preview.model_loaded.disconnect(self._on_first_model_loaded_capture_base)
+        except Exception:
+            pass
+        if not hasattr(self.models_preview, 'get_base_rotation'):
+            return
+        self.models_preview.get_base_rotation(self._apply_captured_base_rotation)
+
+    def _apply_captured_base_rotation(self, rotation):
+        if not isinstance(rotation, dict):
+            return
+        rx = float(rotation.get('x') or 0)
+        ry = float(rotation.get('y') or 0)
+        rz = float(rotation.get('z') or 0)
+        self._captured_base_rotation = {'x': rx, 'y': ry, 'z': rz}
 
     # ------------------------------------------------------------------
     # Model-table helpers  (provided by ModelTableMixin)
@@ -463,6 +495,19 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             preview_rot_y = int(self.jaw.get('preview_rot_y', 0) or 0)
             preview_rot_z = int(self.jaw.get('preview_rot_z', 0) or 0)
 
+        # Persist group orientation so coordinate frame is stable across sessions.
+        captured = getattr(self, '_captured_base_rotation', None)
+        if captured is None and self.jaw:
+            # Preserve previously saved base rotation if we never captured a new one.
+            prev_rx = float(self.jaw.get('preview_base_rot_x') or 0)
+            prev_ry = float(self.jaw.get('preview_base_rot_y') or 0)
+            prev_rz = float(self.jaw.get('preview_base_rot_z') or 0)
+            if prev_rx or prev_ry or prev_rz:
+                captured = {'x': prev_rx, 'y': prev_ry, 'z': prev_rz}
+        preview_base_rot_x = float(captured.get('x', 0)) if captured else 0.0
+        preview_base_rot_y = float(captured.get('y', 0)) if captured else 0.0
+        preview_base_rot_z = float(captured.get('z', 0)) if captured else 0.0
+
         jaw = {
             'jaw_id': self.jaw_id.text().strip(),
             'jaw_type': self.jaw_type.currentData() or self.jaw_type.currentText(),
@@ -479,6 +524,9 @@ class AddEditJawDialog(QDialog, EditorDialogMixin, ModelTableMixin):
             'preview_rot_x': preview_rot_x,
             'preview_rot_y': preview_rot_y,
             'preview_rot_z': preview_rot_z,
+            'preview_base_rot_x': preview_base_rot_x,
+            'preview_base_rot_y': preview_base_rot_y,
+            'preview_base_rot_z': preview_base_rot_z,
             'preview_selected_part': self._selected_part_index,
             'preview_selected_parts': [idx for idx in self._selected_part_indices if isinstance(idx, int) and idx >= 0],
             'preview_transform_mode': self._current_transform_mode,

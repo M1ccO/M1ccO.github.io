@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout, QWidget, QFrame, QLabel, QGroupBox,
     QPushButton, QLineEdit, QSplitter, QListWidget, QListWidgetItem,
-    QAbstractItemView, QStackedWidget, QSizePolicy,
+    QAbstractItemView, QStackedWidget, QSizePolicy, QApplication,
 )
 from config import TOOL_ICONS_DIR
 from shared.ui.stl_preview import StlPreviewWidget
@@ -140,10 +140,12 @@ class MeasurementEditorDialog(QDialog):
         parts: list | None = None,
         parent=None,
         translate: Callable[[str, str | None], str] | None = None,
+        preview_context: dict | None = None,
     ):
         super().__init__(parent)
         self._tool_data = tool_data or {}
         self._parts = parts or []
+        self._preview_context = dict(preview_context or {})
         self._translate = translate or (lambda key, default=None, **_kwargs: default or '')
         self._pick_coordinator = None
         self._current_distance_item: QListWidgetItem | None = None
@@ -151,6 +153,7 @@ class MeasurementEditorDialog(QDialog):
         self._current_radius_item: QListWidgetItem | None = None
         self._current_angle_item: QListWidgetItem | None = None
         self._pending_add_return_meta: dict | None = None
+        self._axis_overlay_app_filter_installed = False
         self._measurement_uid_counter = 0
         self._commit_timer = QTimer(self)
         self._commit_timer.setSingleShot(True)
@@ -261,6 +264,8 @@ class MeasurementEditorDialog(QDialog):
 
         if self._parts:
             self._preview_widget.load_parts(self._parts)
+        self._apply_preview_context()
+        self._install_axis_overlay_mouse_filters()
         self._preview_widget.set_measurements_visible(True)
         self._preview_widget.set_measurement_drag_enabled(True)
         self._preview_widget.point_picked.connect(self._on_point_picked)
@@ -279,6 +284,78 @@ class MeasurementEditorDialog(QDialog):
     def _install_inline_enter_commit_behavior(self):
         for edit in self.findChildren(QLineEdit):
             edit.installEventFilter(self)
+
+    def _install_axis_overlay_mouse_filters(self):
+        app = QApplication.instance()
+        if app is not None and not self._axis_overlay_app_filter_installed:
+            app.installEventFilter(self)
+            self._axis_overlay_app_filter_installed = True
+        if hasattr(self, '_preview_widget') and self._preview_widget is not None:
+            try:
+                self._preview_widget.installEventFilter(self)
+            except Exception:
+                pass
+            web_view = getattr(self._preview_widget, '_web', None)
+            if web_view is not None:
+                try:
+                    web_view.installEventFilter(self)
+                except Exception:
+                    pass
+
+    def _uninstall_axis_overlay_mouse_filters(self):
+        if not self._axis_overlay_app_filter_installed:
+            return
+        app = QApplication.instance()
+        if app is not None:
+            try:
+                app.removeEventFilter(self)
+            except Exception:
+                pass
+        self._axis_overlay_app_filter_installed = False
+
+    def _apply_preview_context(self):
+        if not self._preview_context or not hasattr(self, '_preview_widget'):
+            return
+        preview = self._preview_widget
+
+        base_rotation = self._preview_context.get('base_rotation')
+        if isinstance(base_rotation, dict) and hasattr(preview, 'set_base_rotation'):
+            try:
+                preview.set_base_rotation(
+                    float(base_rotation.get('x', 0) or 0),
+                    float(base_rotation.get('y', 0) or 0),
+                    float(base_rotation.get('z', 0) or 0),
+                )
+            except Exception:
+                pass
+
+        plane = str(self._preview_context.get('alignment_plane') or '').strip().upper()
+        if plane and hasattr(preview, 'set_alignment_plane'):
+            try:
+                preview.set_alignment_plane(plane)
+            except Exception:
+                pass
+
+        rotation = self._preview_context.get('rotation')
+        if not isinstance(rotation, dict):
+            return
+        if hasattr(preview, 'reset_model_rotation'):
+            try:
+                preview.reset_model_rotation()
+            except Exception:
+                pass
+        if not hasattr(preview, 'rotate_model'):
+            return
+        for axis in ('x', 'y', 'z'):
+            try:
+                degrees = float(rotation.get(axis, 0) or 0)
+            except Exception:
+                degrees = 0
+            if degrees:
+                try:
+                    preview.rotate_model(axis, degrees)
+                except Exception:
+                    pass
 
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # UI BUILD
@@ -412,6 +489,7 @@ class MeasurementEditorDialog(QDialog):
         # renders on top of the QWebEngineView native window on Windows.
         self._axis_pick_overlay = QFrame(self._preview_container)
         self._axis_pick_overlay.setAttribute(Qt.WA_NativeWindow)
+        self._axis_pick_overlay.setAttribute(Qt.WA_AlwaysStackOnTop, True)
         self._axis_pick_overlay.setAttribute(Qt.WA_StyledBackground, True)
         self._axis_pick_overlay.setAutoFillBackground(True)
         self._axis_pick_overlay.setFocusPolicy(Qt.StrongFocus)
@@ -695,6 +773,16 @@ class MeasurementEditorDialog(QDialog):
         return f"m{self._measurement_uid_counter}"
 
     def _active_measurement_kind(self) -> str | None:
+        if hasattr(self, '_edit_stack'):
+            stack_index = self._edit_stack.currentIndex()
+            if stack_index == 1:
+                return 'length'
+            if stack_index == 2:
+                return 'diameter'
+            if stack_index == 3:
+                return 'radius'
+            if stack_index == 4:
+                return 'angle'
         if self._current_distance_item is not None:
             return 'length'
         if self._current_diameter_item is not None:
@@ -850,6 +938,10 @@ class MeasurementEditorDialog(QDialog):
 
     def _set_diameter_axis(self, axis: str, commit: bool = True, store_adjust_edits: bool = True):
         self._diameter_editor.set_axis(axis, commit, store_adjust_edits)
+        if self._current_diameter_item is not None and self._diameter_editor.edit_model is not None:
+            self._current_diameter_item.setData(Qt.UserRole, dict(self._diameter_editor.edit_model))
+            self._refresh_preview_measurements()
+            self._update_axis_overlay_buttons()
 
     def _diameter_adjust_mode(self) -> str:
         return self._diameter_editor.adjust_mode()
@@ -1251,6 +1343,8 @@ class MeasurementEditorDialog(QDialog):
             if isinstance(watched, QLineEdit):
                 watched.clearFocus()
                 return True
+        if self._handle_axis_overlay_mouse_event(watched, event):
+            return True
         if hasattr(self, '_dist_adjust_axis_by_edit') and watched in self._dist_adjust_axis_by_edit:
             if event.type() == QEvent.FocusIn:
                 self._dist_adjust_active_axis = self._dist_adjust_axis_by_edit[watched]
@@ -1264,6 +1358,41 @@ class MeasurementEditorDialog(QDialog):
             if hasattr(self, '_axis_hint_overlay') and self._axis_hint_overlay.isVisible():
                 self._position_axis_hint_overlay()
         return super().eventFilter(watched, event)
+
+    def _handle_axis_overlay_mouse_event(self, watched, event) -> bool:
+        if event.type() not in {QEvent.MouseButtonPress, QEvent.MouseButtonDblClick}:
+            return False
+        if not hasattr(self, '_axis_pick_overlay') or not self._axis_pick_overlay.isVisible():
+            return False
+        if not self.isVisible():
+            return False
+
+        if hasattr(event, 'globalPosition'):
+            global_pos = event.globalPosition().toPoint()
+        elif hasattr(event, 'globalPos'):
+            global_pos = event.globalPos()
+        else:
+            local_pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+            try:
+                global_pos = watched.mapToGlobal(local_pos)
+            except Exception:
+                global_pos = local_pos
+
+        try:
+            preview_pos = self._preview_container.mapFromGlobal(global_pos)
+        except Exception:
+            return False
+
+        overlay_rect = self._axis_pick_overlay.geometry()
+        if not overlay_rect.contains(preview_pos):
+            return False
+
+        overlay_pos = self._axis_pick_overlay.mapFrom(self._preview_container, preview_pos)
+        for axis_val, btn in self._axis_overlay_btns.items():
+            if btn.isVisible() and btn.geometry().contains(overlay_pos):
+                self._on_axis_overlay_selected(axis_val)
+                return True
+        return False
 
     def _on_point_picked(self, data: dict):
         self._pick_coordinator.on_point_picked(data)
@@ -1365,5 +1494,14 @@ class MeasurementEditorDialog(QDialog):
             self._commit_timer.stop()
         self._sync_preview_measurements_before_save()
         self._commit_current_edit()
+        self._uninstall_axis_overlay_mouse_filters()
         super().accept()
+
+    def reject(self):
+        self._uninstall_axis_overlay_mouse_filters()
+        super().reject()
+
+    def closeEvent(self, event):
+        self._uninstall_axis_overlay_mouse_filters()
+        super().closeEvent(event)
 

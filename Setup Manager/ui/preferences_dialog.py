@@ -605,19 +605,41 @@ class PreferencesDialog(PreferencesDialogBase):
         if self._machine_config_svc is None:
             return
 
-        from ui.machine_config_dialog import MachineConfigDialog
+        try:
+            from ui.machine_config_dialog import MachineConfigDialog
 
-        dlg = MachineConfigDialog(
-            translate=self._translate,
-            machine_config_svc=self._machine_config_svc,
-            config_id=None,
-            parent=self,
-        )
-        if dlg.exec() != QDialog.Accepted:
-            return
+            dlg = MachineConfigDialog(
+                translate=self._translate,
+                machine_config_svc=self._machine_config_svc,
+                config_id=None,
+                parent=self,
+            )
+            dlg.raise_()
+            dlg.activateWindow()
+            if dlg.exec() != QDialog.Accepted:
+                return
 
-        result = dlg.result_config()
-        if result is None:
+            result = dlg.result_config()
+            if result is None:
+                QMessageBox.warning(
+                    self,
+                    self._t("machine_config.error.title", "Validation Error"),
+                    self._t(
+                        "machine_config.error.create_failed",
+                        "The new configuration dialog closed without creating a configuration.",
+                    ),
+                )
+                return
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                self._t("machine_config.error.title", "Validation Error"),
+                self._t(
+                    "machine_config.error.create_failed",
+                    "Could not open the new configuration dialog:\n{error}",
+                    error=exc,
+                ),
+            )
             return
 
         self._refresh_config_combo()

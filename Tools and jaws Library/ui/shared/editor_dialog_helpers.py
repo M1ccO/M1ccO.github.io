@@ -137,6 +137,28 @@ class EditorDialogMixin:
             translate=lambda key, default: self._t(key, default),
         )
 
+    def _measurement_preview_context(self) -> dict:
+        preview = getattr(self, 'models_preview', None)
+        if preview is None:
+            return {}
+        rotation = getattr(preview, '_rotation_deg', {}) or {}
+        base_rotation = getattr(preview, '_base_rotation', None)
+        context = {
+            'alignment_plane': getattr(preview, '_alignment_plane', ''),
+            'rotation': {
+                'x': rotation.get('x', 0) if isinstance(rotation, dict) else 0,
+                'y': rotation.get('y', 0) if isinstance(rotation, dict) else 0,
+                'z': rotation.get('z', 0) if isinstance(rotation, dict) else 0,
+            },
+        }
+        if isinstance(base_rotation, dict):
+            context['base_rotation'] = {
+                'x': base_rotation.get('x', 0),
+                'y': base_rotation.get('y', 0),
+                'z': base_rotation.get('z', 0),
+            }
+        return context
+
     def _update_measurement_summary_label(self):
         if not hasattr(self, 'measurement_summary_label'):
             return
@@ -156,6 +178,7 @@ class EditorDialogMixin:
             parts=self._model_table_to_parts(),
             parent=self,
             translate=self._translate,
+            preview_context=self._measurement_preview_context(),
         )
         dialog.resize(max(dialog.width(), 1180), max(dialog.height(), 780))
         dialog.setMinimumSize(980, 700)
@@ -165,6 +188,7 @@ class EditorDialogMixin:
             dialog.get_measurements()
         )
         self._update_measurement_summary_label()
+        self._refresh_models_preview()
 
     # ------------------------------------------------------------------
     # Shared init state  (call from __init__ after setting _translate)

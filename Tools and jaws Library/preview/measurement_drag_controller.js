@@ -201,7 +201,10 @@ export function createMeasurementDragController(deps) {
         didUpdate = true;
       } else if (dragState.dragKind === 'diameter-axis-position') {
         const shiftAmount = snap(delta.dot(dragState.axisDir));
-        const shiftLocal = dragState.axisLocalDir.clone().multiplyScalar(shiftAmount);
+        const shiftWorld = dragState.axisDir.clone().multiplyScalar(shiftAmount);
+        const shiftLocal = typeof deps.overlayVectorWorldToLocal === 'function'
+          ? deps.overlayVectorWorldToLocal(overlay, shiftWorld)
+          : shiftWorld;
         const nextCenter = dragState.originalCenter.clone().add(shiftLocal);
         overlay.center_xyz = deps.formatVec3(nextCenter);
         if (dragState.originalEdge) {

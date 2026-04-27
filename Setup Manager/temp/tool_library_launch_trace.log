@@ -1,91 +1,10 @@
-{"ts": "2026-04-26T12:23:11", "event": "startup.flags", "pid": 34032, "executable": "C:\\Users\\Omistaja\\Desktop\\NTX Setup Manager\\.venv\\Scripts\\pythonw.exe", "cwd": "C:\\Users\\Omistaja\\Desktop\\NTX Setup Manager", "bypass_startup_preload": false, "enable_hidden_auto_launch": false, "reset_trace_on_start": true}
-{"ts": "2026-04-26T12:23:11", "event": "startup_preload.hidden_auto_launch.disabled", "pid": 34032}
-{"ts": "2026-04-26T09:23:12.887659+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:12.888159+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:12.888659+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:13.240718+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:13.241719+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:13.242218+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:13.604669+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:13.605670+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:13.605670+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:13.963172+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:13.963674+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:13.964172+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:14.325116+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.326119+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.326619+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:14.627164+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 1, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:14.628164+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.628664+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:14.629163+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.685179+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.685678+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.686179+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:14.793434+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:14.794437+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:14.979641+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:14.980639+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.046817+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.047819+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.047819+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:15.210688+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:15.211187+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.395663+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.396162+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.396663+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:15.518873+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:15.519875+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.780827+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.781327+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:15.781828+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:15.904140+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:15.904639+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.150042+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.151042+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.151543+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:16.376265+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:16.376765+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.520253+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.521256+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.521256+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:16.890950+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.891946+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:16.892447+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:16.952989+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:16.953990+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.241171+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.242170+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.242668+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:17.600275+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.601271+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.601771+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:17.664767+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:17.665766+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.978307+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.978805+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:17.979308+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:18.339219+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:18.339719+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:18.340217+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:18.555202+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:18.556700+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:18.693196+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:18.694194+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:18.694696+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:19.062242+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.063241+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.063743+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:19.433107+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.434108+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.434608+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:19.663788+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
-{"ts": "2026-04-26T09:23:19.664790+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.787160+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.788163+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:19.788163+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:20.243215+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:20.244214+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
-{"ts": "2026-04-26T09:23:20.244712+00:00", "event": "preload.background.wait_ready", "pid": 34032, "launch_started": false, "is_ready": true}
-{"ts": "2026-04-26T09:23:20.245213+00:00", "event": "ipc.send.begin", "pid": 34032, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:545:closeEvent"}
-{"ts": "2026-04-26T09:23:20.245712+00:00", "event": "ipc.send.failed", "pid": 34032, "server": "tool_library_single_instance", "caller": "main_window.py:545:closeEvent"}
+{"ts": "2026-04-27T09:50:21", "event": "startup.flags", "pid": 18156, "executable": "C:\\Users\\pz9079\\NTX Setup Manager\\.venv\\Scripts\\pythonw.exe", "cwd": "C:\\Users\\pz9079\\NTX Setup Manager", "bypass_startup_preload": false, "enable_hidden_auto_launch": true, "reset_trace_on_start": true}
+{"ts": "2026-04-27T09:50:21", "event": "startup_preload.begin", "pid": 18156, "args": "--hidden --geometry=145,41,1647,1051"}
+{"ts": "2026-04-27T09:50:21", "event": "startup_preload.detached.interpreter", "pid": 18156, "candidate": "C:\\Users\\pz9079\\NTX Setup Manager\\.venv\\Scripts\\pythonw.exe", "cmd_args": "C:\\Users\\pz9079\\NTX Setup Manager\\Tools and jaws Library\\main.py --hidden --geometry=145,41,1647,1051", "cwd": "C:\\Users\\pz9079\\NTX Setup Manager\\Tools and jaws Library"}
+{"ts": "2026-04-27T06:50:24.329477+00:00", "event": "ipc.send.begin", "pid": 18156, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:340:_send_to_tool_library"}
+{"ts": "2026-04-27T06:50:24.462502+00:00", "event": "ipc.send.success", "pid": 18156, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
+{"ts": "2026-04-27T06:50:24.463987+00:00", "event": "preload.background.ipc_success", "pid": 18156}
+{"ts": "2026-04-27T06:50:24.977389+00:00", "event": "ipc.send.begin", "pid": 18156, "server": "tool_library_single_instance", "retries": 1, "caller": "main_window.py:340:_send_to_tool_library", "show": "True"}
+{"ts": "2026-04-27T06:50:24.979459+00:00", "event": "ipc.send.success", "pid": 18156, "server": "tool_library_single_instance", "caller": "main_window.py:340:_send_to_tool_library"}
+{"ts": "2026-04-27T06:55:00.068124+00:00", "event": "ipc.send.begin", "pid": 18156, "server": "tool_library_single_instance", "retries": 3, "caller": "main_window.py:545:closeEvent"}
+{"ts": "2026-04-27T06:55:00.071552+00:00", "event": "ipc.send.success", "pid": 18156, "server": "tool_library_single_instance", "caller": "main_window.py:545:closeEvent"}

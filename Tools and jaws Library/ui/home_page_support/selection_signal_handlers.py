@@ -32,6 +32,8 @@ def on_item_selected_internal(page, item_id: str, uid: int) -> None:
     """Handle CatalogPageBase item_selected signal for HomePage."""
     page.current_tool_id = item_id
     page.current_tool_uid = uid
+    page._current_item_id = item_id or None
+    page._current_item_uid = int(uid or 0) or None
 
     if not page._details_hidden:
         tool = page.tool_service.get_tool_by_uid(uid) if uid else None
@@ -49,6 +51,8 @@ def on_item_deleted_internal(page, item_id: str) -> None:
     if page.current_tool_id == item_id:
         page.current_tool_id = None
         page.current_tool_uid = None
+        page._current_item_id = None
+        page._current_item_uid = None
         page.populate_details(None)
 
     preview_btn = getattr(page, 'preview_window_btn', None)
@@ -86,6 +90,8 @@ def on_current_item_changed(page, current, previous) -> None:
     if not current.isValid():
         page.current_tool_id = None
         page.current_tool_uid = None
+        page._current_item_id = None
+        page._current_item_uid = None
         if not page._details_hidden:
             page.populate_details(None)
         if preview_btn and preview_btn.isChecked():
@@ -96,6 +102,8 @@ def on_current_item_changed(page, current, previous) -> None:
     uid = current.data(ROLE_TOOL_UID)
     page.current_tool_id = tool_id or None
     page.current_tool_uid = int(uid or 0) or None
+    page._current_item_id = page.current_tool_id
+    page._current_item_uid = page.current_tool_uid
 
     if not page._details_hidden:
         page.populate_details(page._get_selected_tool())
@@ -111,6 +119,8 @@ def on_item_double_clicked(page, index) -> None:
     page.current_tool_id = str(index.data(ROLE_TOOL_ID) or '').strip() or None
     uid = index.data(ROLE_TOOL_UID)
     page.current_tool_uid = int(uid or 0) or None
+    page._current_item_id = page.current_tool_id
+    page._current_item_uid = page.current_tool_uid
 
     if QApplication.keyboardModifiers() & Qt.ControlModifier:
         page.edit_tool()

@@ -600,29 +600,41 @@ class MachineConfigDialog(QDialog):
         tools_db = self._tools_db_row.get_value()
         jaws_db = self._jaws_db_row.get_value()
         fixtures_db = self._fixtures_db_row.get_value()
-        if self._is_mc_profile():
-            jaws_db = ""
+        try:
+            if self._is_mc_profile():
+                jaws_db = ""
 
-        if self._is_create:
-            config = self._svc.create_config(
-                name=name,
-                machine_profile_key=self._profile_key,
-                setup_db_path=setup_db,
-                tools_db_path=tools_db,
-                jaws_db_path=jaws_db,
-                fixtures_db_path=fixtures_db,
+            if self._is_create:
+                config = self._svc.create_config(
+                    name=name,
+                    machine_profile_key=self._profile_key,
+                    setup_db_path=setup_db,
+                    tools_db_path=tools_db,
+                    jaws_db_path=jaws_db,
+                    fixtures_db_path=fixtures_db,
+                )
+                self._bootstrap_new_db(config)
+            else:
+                config = self._svc.update_config(
+                    self._config_id,
+                    name=name,
+                    machine_profile_key=self._profile_key,
+                    setup_db_path=setup_db,
+                    tools_db_path=tools_db,
+                    jaws_db_path=jaws_db,
+                    fixtures_db_path=fixtures_db,
+                )
+        except Exception as exc:
+            QMessageBox.warning(
+                self,
+                self._t("machine_config.error.title", "Validation Error"),
+                self._t(
+                    "machine_config.error.save_failed",
+                    "Could not save the configuration:\n{error}",
+                    error=exc,
+                ),
             )
-            self._bootstrap_new_db(config)
-        else:
-            config = self._svc.update_config(
-                self._config_id,
-                name=name,
-                machine_profile_key=self._profile_key,
-                setup_db_path=setup_db,
-                tools_db_path=tools_db,
-                jaws_db_path=jaws_db,
-                fixtures_db_path=fixtures_db,
-            )
+            return
 
         self._result_config = config
         self.accept()

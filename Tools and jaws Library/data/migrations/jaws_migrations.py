@@ -58,6 +58,9 @@ def create_or_migrate_jaws_schema(conn: sqlite3.Connection) -> None:
         'preview_selected_parts': "TEXT DEFAULT '[]'",
         'preview_transform_mode': "TEXT DEFAULT 'translate'",
         'preview_fine_transform': "INTEGER DEFAULT 0",
+        'preview_base_rot_x': "REAL DEFAULT 0",
+        'preview_base_rot_y': "REAL DEFAULT 0",
+        'preview_base_rot_z': "REAL DEFAULT 0",
     }
     with conn:
         for name, ddl in additions.items():

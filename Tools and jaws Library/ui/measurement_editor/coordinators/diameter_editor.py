@@ -502,8 +502,12 @@ class DiameterEditorCoordinator:
         self.update_measured_value_box()
         pt = self._get_pick_target()
         if pt == 'diameter_center':
+            axis_label = self._axis_value.upper() if self._axis_value in {'x', 'y', 'z'} else '3D'
             self._refs.pick_status_label.setText(
-                self._t('tool_editor.measurements.pick_center_status', 'Click center point on Z axis')
+                self._t(
+                    'tool_editor.measurements.pick_center_status_axis',
+                    f'Click center point on {axis_label} axis',
+                )
             )
         elif pt == 'diameter_edge:all':
             self._refs.pick_status_label.setText(
@@ -607,7 +611,6 @@ class DiameterEditorCoordinator:
             return
         if self.edit_model is None:
             self.edit_model = dict(current.data(Qt.UserRole) or {})
-        self.set_axis('z', commit=False, store_adjust_edits=False)
         if reset_points:
             self.edit_model['part'] = ''
             self.edit_model['part_index'] = -1

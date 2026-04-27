@@ -388,7 +388,19 @@ def delete_tool(page) -> None:
             page.tool_service.delete_tool(tool_id)
             page.item_deleted.emit(tool_id)
 
+    page.current_tool_id = None
+    page.current_tool_uid = None
+    page._current_item_id = None
+    page._current_item_uid = None
+    before_rows = page._item_model.rowCount() if getattr(page, '_item_model', None) is not None else -1
     page.refresh_catalog()
+    after_rows = page._item_model.rowCount() if getattr(page, '_item_model', None) is not None else -1
+    rtrace(
+        "tool.delete.post_refresh",
+        before_rows=before_rows,
+        after_rows=after_rows,
+    )
+    page.populate_details(None)
 
 
 def copy_tool(page) -> None:
@@ -418,7 +430,7 @@ def copy_tool(page) -> None:
         return
 
     source_id = str(source_tool.get('id') or '').strip()
-    initial_id = f"{source_id}_copy" if source_id else ''
+    initial_id = source_id
     new_id, accepted = _prompt_text(
         page,
         page._t('tool_library.message.copy_tool', 'Copy tool'),
@@ -444,9 +456,8 @@ def copy_tool(page) -> None:
         return
 
     page.refresh_catalog()
-    copied_uid = int(copied.get('uid') or 0) if isinstance(copied, dict) else 0
-    if copied_uid:
-        page._restore_selection_by_uid(copied_uid)
+    if isinstance(copied, dict):
+        page.populate_details(page._get_selected_tool())
 
 
 def _prompt_text(page, title: str, label: str, initial: str = '') -> tuple[str, bool]:

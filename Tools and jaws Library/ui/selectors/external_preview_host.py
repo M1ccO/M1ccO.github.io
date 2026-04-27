@@ -182,6 +182,19 @@ def _apply_transform_payload(viewer, payload: dict | None) -> None:
     if viewer is None or not isinstance(payload, dict):
         return
 
+    # Restore saved group orientation (base rotation from orientObjectVertically)
+    # before applying alignment plane so the coordinate frame matches the editor.
+    base_rx = payload.get("base_rot_x")
+    base_ry = payload.get("base_rot_y")
+    base_rz = payload.get("base_rot_z")
+    if base_rx is not None or base_ry is not None or base_rz is not None:
+        if hasattr(viewer, 'set_base_rotation'):
+            viewer.set_base_rotation(
+                float(base_rx or 0),
+                float(base_ry or 0),
+                float(base_rz or 0),
+            )
+
     plane = str(payload.get("alignment_plane") or "XZ").strip().upper()
     if plane not in {"XZ", "XY", "YZ"}:
         plane = "XZ"

@@ -98,7 +98,7 @@ class AxisOverlayController:
         show = False
         kind = self._active_kind()
         if kind == 'diameter' and self._current_diam_item() is not None:
-            show = self._diam_is_complete()
+            show = True
         else:
             pt = self._pick_target()
             if pt and pt.startswith('target_xyz:'):
@@ -108,6 +108,10 @@ class AxisOverlayController:
             self.position_axis_overlay()
             self._axis_pick_overlay.setVisible(True)
             self._axis_pick_overlay.raise_()
+            try:
+                self._axis_pick_overlay.activateWindow()
+            except Exception:
+                pass
         else:
             self._axis_pick_overlay.setVisible(False)
 

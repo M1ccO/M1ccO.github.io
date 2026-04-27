@@ -178,7 +178,9 @@ class PickCoordinator:
         target_name = target_parts[0] if target_parts else ''
         axis = target_parts[-1] if len(target_parts) >= 2 else 'all'
         if target_name == 'diameter_center':
-            axis = 'z'
+            axis = self._diameter_editor.axis_value
+            if axis not in {'x', 'y', 'z'}:
+                axis = 'all'
 
         def apply_pick_to_edits(edits: tuple[QLineEdit, QLineEdit, QLineEdit]):
             if axis == 'x':
@@ -243,7 +245,14 @@ class PickCoordinator:
             model = self._diameter_editor.edit_model
             picked = local_values if (part_index >= 0 or str(part_name or '').strip()) else values
             center_x, center_y, center_z = _xyz_to_tuple(model.get('center_xyz', '0, 0, 0'))
-            center_z = picked['z']
+            if axis == 'x':
+                center_x = picked['x']
+            elif axis == 'y':
+                center_y = picked['y']
+            elif axis == 'z':
+                center_z = picked['z']
+            else:
+                center_x, center_y, center_z = picked['x'], picked['y'], picked['z']
             model['center_xyz'] = (
                 f"{_fmt_coord(center_x)}, {_fmt_coord(center_y)}, {_fmt_coord(center_z)}"
             )
@@ -260,7 +269,7 @@ class PickCoordinator:
                 self._diameter_editor.start_edge_pick()
             else:
                 entered = self._diameter_editor.prompt_value_near_cursor()
-                model['diameter'] = entered or ''
+                model['diameter'] = entered or str(model.get('diameter') or '').strip() or '10'
                 if self._diam_value_edit is not None:
                     self._diam_value_edit.setText(model['diameter'])
                 self.cancel()

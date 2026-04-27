@@ -36,7 +36,7 @@ _BYPASS_STARTUP_PRELOAD = str(
     os.environ.get("NTX_DIAG_BYPASS_STARTUP_TOOL_LIBRARY_PRELOAD", "0")
 ).strip().lower() in {"1", "true", "yes", "on"}
 _ENABLE_HIDDEN_AUTO_LAUNCH = str(
-    os.environ.get("NTX_ENABLE_HIDDEN_TOOL_LIBRARY_AUTO_LAUNCH", "0")
+    os.environ.get("NTX_ENABLE_HIDDEN_TOOL_LIBRARY_AUTO_LAUNCH", "1")
 ).strip().lower() in {"1", "true", "yes", "on"}
 _RESET_LAUNCH_TRACE_ON_START = str(
     os.environ.get("NTX_TOOL_LIBRARY_LAUNCH_TRACE_RESET_ON_START", "1")
@@ -273,6 +273,7 @@ def main():
         TOOL_LIBRARY_MAIN_PATH,
         TOOL_LIBRARY_PROJECT_DIR,
         TOOL_LIBRARY_SERVER_NAME,
+        TOOL_LIBRARY_READY_PATH,
         RUNTIME_DIR,
         SETUP_MANAGER_SERVER_NAME,
     )
@@ -494,7 +495,16 @@ def main():
         )
 
     if ENABLE_TOOL_LIBRARY_PRELOAD:
-        step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_tool_library', 'Tool Library warming up in background...')}")
+        step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.warm_tool_library', 'Prewarming Libraries...')}")
+        from ui.main_window_support.library_ipc import is_tool_library_ready as _is_lib_ready
+        # Wait up to ~12 s for the hidden Library process to finish loading.
+        # time.sleep keeps the OS thread asleep (no Qt events processed) so
+        # the splash stays simple and no IPC callbacks fire during the wait.
+        _lib_wait_attempts = 120
+        for _i in range(_lib_wait_attempts):
+            if _is_lib_ready(TOOL_LIBRARY_SERVER_NAME, TOOL_LIBRARY_READY_PATH, timeout_ms=80):
+                break
+            time.sleep(0.1)
     else:
         step(9, f"{loading_header}\n\n{_lt('setup_manager.loading.skip_preload', 'Skipping Tool Library preload...')}")
 

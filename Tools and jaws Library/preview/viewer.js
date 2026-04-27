@@ -551,6 +551,7 @@ let currentMaxDim = 1;
 let wheelZoomEnabled = false;
 let alignmentPlane = 'XZ';
 const manualRotation = new THREE.Vector3(0, 0, 0);
+let _lockedBaseRotation = null; // {x,y,z} in radians — skips orientObjectVertically when set
 const frameDirection = new THREE.Vector3(1, 0.62, 1).normalize();
 let transformEditEnabled = false;
 let selectedMeshIndex = -1;
@@ -1025,7 +1026,15 @@ function applyModelTransformAndFrame(refit = true) {
   currentGroup.rotation.set(0, 0, 0);
   currentGroup.position.set(0, 0, 0);
 
-  orientObjectVertically(currentGroup);
+  if (_lockedBaseRotation !== null) {
+    currentGroup.rotation.set(
+      _lockedBaseRotation.x,
+      _lockedBaseRotation.y,
+      _lockedBaseRotation.z
+    );
+  } else {
+    orientObjectVertically(currentGroup);
+  }
   applyAlignmentPlane(currentGroup);
 
   currentGroup.rotateX(manualRotation.x);
@@ -1998,9 +2007,7 @@ function _diameterAxisInfoForOverlay(definition) {
     axisLocal = new THREE.Vector3(0, 0, 1);
   }
 
-  const axisWorld =
-    _resolveAxisDirection(definition.part, [axisLocal.x, axisLocal.y, axisLocal.z], definition.part_index)
-    || axisLocal.clone().normalize();
+  const axisWorld = axisLocal.clone().normalize();
   if (
     !axisWorld
     || !Number.isFinite(axisWorld.x)
@@ -2812,6 +2819,7 @@ function clearCurrentMeshes() {
 
 window.clearModel = function () {
   _activeLoadRequestId += 1;
+  _lockedBaseRotation = null;
   clearCurrentMeshes();
   _markShadowMapDirty();
   hideStatus();
@@ -3162,6 +3170,29 @@ window.setFineTransformEnabled = function (enabled) {
 
 window.getPartTransforms = function () {
   return JSON.parse(JSON.stringify(partTransforms));
+};
+
+window.getBaseRotation = function () {
+  if (!currentGroup) return {x: 0, y: 0, z: 0};
+  return {
+    x: currentGroup.rotation.x,
+    y: currentGroup.rotation.y,
+    z: currentGroup.rotation.z,
+  };
+};
+
+window.setBaseRotation = function (rx, ry, rz) {
+  _lockedBaseRotation = {x: rx || 0, y: ry || 0, z: rz || 0};
+  if (currentGroup) {
+    applyModelTransformAndFrame(false);
+  }
+};
+
+window.clearBaseRotation = function () {
+  _lockedBaseRotation = null;
+  if (currentGroup) {
+    applyModelTransformAndFrame(false);
+  }
 };
 
 window.setPartTransforms = function (transforms) {

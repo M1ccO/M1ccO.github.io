@@ -117,6 +117,7 @@ class StlPreviewWidget(QWidget):
         self._rendering_enabled = True
         self._alignment_plane = 'XZ'
         self._rotation_deg = {'x': 0, 'y': 0, 'z': 0}
+        self._base_rotation = None  # {x, y, z} in radians; None = use orientObjectVertically
         self._transform_edit_enabled = False
         self._transform_mode = 'translate'
         self._fine_transform_enabled = False
@@ -381,6 +382,10 @@ class StlPreviewWidget(QWidget):
         self._apply_hint_text()
         self._apply_status_overlay_mode()
 
+        # Apply transform state (base rotation + alignment plane) BEFORE sending
+        # the model so the JS globals are set before loadAssembly runs applyModelTransformAndFrame.
+        self._apply_preview_transform_state()
+
         deferred_model_state = False
         if self._pending_parts:
             request_id = self._next_load_request_id()
@@ -392,7 +397,6 @@ class StlPreviewWidget(QWidget):
             deferred_model_state = True
 
         if not deferred_model_state:
-            self._apply_preview_transform_state()
             self._apply_transform_editor_state()
             self._apply_measurement_state()
         self._apply_axis_orbit_state()
@@ -596,6 +600,11 @@ class StlPreviewWidget(QWidget):
     def _apply_preview_transform_state(self):
         if not self._page_ready:
             return
+        if self._base_rotation is not None:
+            b = self._base_rotation
+            self._call_js('setBaseRotation', b['x'], b['y'], b['z'])
+        else:
+            self._call_js('clearBaseRotation')
         self._call_js('setAlignmentPlane', self._alignment_plane)
         self._call_js('resetModelRotation')
         for axis, deg in self._rotation_deg.items():
@@ -996,6 +1005,21 @@ class StlPreviewWidget(QWidget):
                 "window.getPartTransforms && window.getPartTransforms();",
                 callback,
             )
+
+    def get_base_rotation(self, callback):
+        if self._page_ready and self._web is not None:
+            self._web.page().runJavaScript(
+                "window.getBaseRotation && window.getBaseRotation();",
+                callback,
+            )
+
+    def set_base_rotation(self, rx: float, ry: float, rz: float):
+        self._base_rotation = {'x': float(rx), 'y': float(ry), 'z': float(rz)}
+        self._call_js('setBaseRotation', float(rx), float(ry), float(rz))
+
+    def clear_base_rotation(self):
+        self._base_rotation = None
+        self._call_js('clearBaseRotation')
 
     def set_part_transforms(self, transforms: list[dict]):
         self._part_transforms_cache = [

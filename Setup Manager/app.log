@@ -10310,3 +10310,85 @@ json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
 2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
 2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
 2026-04-26 12:24:20,499 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': -2013204480, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:38,501 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-27 06:37:38,503 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-27 06:37:38,503 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:38,504 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:38,508 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:38,508 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-27 06:37:38,508 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:38,508 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:38,508 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 06:37:39,195 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-27 06:37:39,195 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-27 06:37:39,215 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-27 06:37:39,235 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-27 06:37:39,252 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-27 06:37:39,315 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmptgzvf90l\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-27 06:37:39,317 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmptgzvf90l\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-27 06:37:39,322 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}
+2026-04-27 07:25:15,861 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'submit.applied', 'transport': 'ipc', 'kind': 'tools', 'applied': True, 'selected_count': 1}
+2026-04-27 07:25:15,863 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-27 07:25:15,863 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 07:25:15,863 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 07:25:15,867 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 07:25:15,867 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.begin', 'kind': 'fixtures', 'parent_type': 'QWidget', 'diagnostic_kind': ''}
+2026-04-27 07:25:15,867 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.constructed', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 07:25:15,868 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.reparented', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 07:25:15,868 ui.work_editor_support.selector_parity_factory INFO embedded.selector {'event': 'factory.build.ready', 'kind': 'fixtures', 'snapshot': {'widget_type': '_FakeFixtureSelectorDialog', 'parent_type': 'QWidget', 'is_window': False, 'window_type': 0, 'window_flags': 134279168, 'visible': False, 'dont_show_on_screen': False}}
+2026-04-27 07:25:16,485 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.begin', 'transport': 'embedded'}
+2026-04-27 07:25:16,486 ui.work_editor_support.selector_session_controller INFO work_editor.selector {'event': 'force_shutdown.end', 'transport': 'embedded', 'duration_ms': 0}
+2026-04-27 07:25:16,506 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=lathe_1sp_1h raw_param=lathe_1sp_1h raw_prefs=
+2026-04-27 07:25:16,527 ui.work_editor_dialog INFO work_editor.profile_resolved source=default resolved=ntx_2sp_2h raw_param= raw_prefs=
+2026-04-27 07:25:16,549 ui.work_editor_dialog INFO work_editor.profile_resolved source=parameter resolved=machining_center_3ax raw_param=machining_center_3ax raw_prefs=
+2026-04-27 07:25:16,627 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpssbzhepn\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-27 07:25:16,629 shared.services.localization_service WARNING localization: failed to load catalog C:\Users\pz9079\AppData\Local\Temp\tmpssbzhepn\i18n\en.json
+Traceback (most recent call last):
+  File "C:\Users\pz9079\NTX Setup Manager\shared\services\localization_service.py", line 53, in _read_catalog_file
+    payload = json.loads(path.read_text(encoding="utf-8"))
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\__init__.py", line 352, in loads
+    return _default_decoder.decode(s)
+           ~~~~~~~~~~~~~~~~~~~~~~~^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 345, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.13_3.13.3568.0_x64__qbz5n2kfra8p0\Lib\json\decoder.py", line 363, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+2026-04-27 07:25:16,633 shared.services.localization_service DEBUG localization: format failed for key='msg' kwargs={'wrong_kwarg': 'x'}

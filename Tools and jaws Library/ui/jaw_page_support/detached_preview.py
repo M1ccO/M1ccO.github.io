@@ -104,7 +104,7 @@ def _build_transform_payload(jaw: dict) -> dict:
                 normalized_selected_parts.append(int(idx))
             except Exception:
                 continue
-    return {
+    payload = {
         "alignment_plane": jaw_preview_plane(jaw),
         "rot_x": rot_x,
         "rot_y": rot_y,
@@ -114,6 +114,14 @@ def _build_transform_payload(jaw: dict) -> dict:
         "selected_part": int(jaw.get("preview_selected_part", -1) or -1),
         "selected_parts": normalized_selected_parts,
     }
+    base_rx = float(jaw.get("preview_base_rot_x") or 0)
+    base_ry = float(jaw.get("preview_base_rot_y") or 0)
+    base_rz = float(jaw.get("preview_base_rot_z") or 0)
+    if base_rx or base_ry or base_rz:
+        payload["base_rot_x"] = base_rx
+        payload["base_rot_y"] = base_ry
+        payload["base_rot_z"] = base_rz
+    return payload
 
 
 def _build_preview_payload(page, jaw: dict) -> dict:
